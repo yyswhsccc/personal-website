@@ -237,6 +237,13 @@ document.addEventListener('DOMContentLoaded', () => {
       setTimeout(initEquipMarquee, 80); // names are measurable only once visible
     }
     if (winId === 'win-game') {
+      win.classList.add('window-game-big'); // fills the whole desktop
+      // launching the game ends the live show first — otherwise the
+      // slime would be stuck on stage and the reaction cam stays empty
+      const liveWin = document.getElementById('win-live');
+      if (liveWin && !liveWin.classList.contains('window-closed')) closeWindow(liveWin);
+      if (typeof gameFitBig === 'function') gameFitBig();
+      if (typeof gameCamEnter === 'function') gameCamEnter();
       setTimeout(() => { if (typeof gFitCanvas === 'function') gFitCanvas(); }, 120);
       if (typeof showGameHint === 'function') showGameHint();
       if (typeof dismissGameInvite === 'function') dismissGameInvite();
@@ -250,7 +257,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Fresh opens always land inside the CURRENT viewport, sized to fit the
     // space above the sticky taskbar — never guillotined by the bottom bar.
-    if (wasClosed && !win.classList.contains('window-maximized') && window.innerWidth > 640) {
+    if (wasClosed && !win.classList.contains('window-maximized') && !win.classList.contains('window-game-big') && window.innerWidth > 640) {
       const area = document.querySelector('.desktop-area');
       const areaRect = area ? area.getBoundingClientRect() : { top: 0 };
       const taskbarH = desktopTaskbar ? desktopTaskbar.offsetHeight : 48;
@@ -274,6 +281,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function closeWindow(win) {
     if (win.id === 'win-live' && typeof liveExit === 'function') liveExit();
+    if (win.id === 'win-game' && typeof gameCamExit === 'function') gameCamExit();
     playCloseSound();
     win.classList.add('window-closed');
     win.classList.remove('window-active');
@@ -291,6 +299,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function minimizeWindow(win) {
     if (win.id === 'win-live' && typeof liveExit === 'function') liveExit();
+    if (win.id === 'win-game' && typeof gameCamExit === 'function') gameCamExit();
     playCloseSound();
     win.classList.add('window-minimized');
     win.classList.remove('window-active');
@@ -401,6 +410,21 @@ document.addEventListener('DOMContentLoaded', () => {
   // Desktop folder + quest triggers
   const goLiveBtn = document.getElementById('btn-go-live');
   if (goLiveBtn) goLiveBtn.addEventListener('click', () => openWindow('win-live'));
+  const liveTabBtn = document.getElementById('live-tab');
+  if (liveTabBtn) liveTabBtn.addEventListener('click', () => openWindow('win-live'));
+
+  // the live tab's title grows with the visitor's story: plucked a
+  // pikmin? sent a gift? the tab brags about it (and persists)
+  function updateLiveTab() {
+    const el = document.getElementById('live-tab-label');
+    if (!el) return;
+    const pik = store.get('yos-pik-plucked', false);
+    const gift = store.get('yos-live-gifted', false);
+    const key = pik && gift ? 'live.tab.both' : pik ? 'live.tab.pik' : gift ? 'live.tab.gift' : 'live.tab.base';
+    el.dataset.i18n = key; // applyLang re-translates it on language switch
+    el.textContent = t(key);
+  }
+  // (first call happens in the boot sequence — store/t aren't ready yet here)
 
   document.querySelectorAll('.desktop-icon-btn, .quest-btn, .plugin-chip[data-window], .game-lb-btn').forEach((btn) => {
     btn.addEventListener('click', () => {
@@ -451,6 +475,8 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
           win.classList.remove('window-minimized');
           focusWindow(win);
+          // the live room sent the pet home on minimize — bring it back on stage
+          if (win.id === 'win-live' && typeof liveEnter === 'function') setTimeout(liveEnter, 120);
         }
       });
 
@@ -710,6 +736,49 @@ document.addEventListener('DOMContentLoaded', () => {
   const outfitCanvas = document.createElement('canvas');
   outfitCanvas.width = 535; outfitCanvas.height = 466;
 
+  // headwear gets drawn 1.45× bigger and extra-saturated so hats actually
+  // read as hats from across the room; face/body accessories stay 1:1
+  const HEAD_PARTS = new Set([
+    'beret', 'cone', 'wizard', 'crown', 'catEars', 'bunnyEars', 'bearEars',
+    'halo', 'bow', 'sideBow', 'flower', 'sprout', 'antenna', 'santa',
+    'pumpkin', 'gradCap', 'headphones', 'earmuffs', 'cowboy', 'mushroom',
+    'strawHat', 'propeller', 'chefHat', 'beanie', 'leafClip', 'snowClip',
+    'moonClip', 'starGarland', 'sleepMaskUp'
+  ]);
+  const HAT_SCALE = 1.45;
+
+  function drawOutfitPart(ctx, fn, args) {
+    if (HEAD_PARTS.has(fn)) {
+      ctx.save();
+      // scale from the top-centre of the head so the hat grows outward and
+      // down onto the crown instead of clipping off the sheet's top edge
+      ctx.translate(23.5 * OB, 0);
+      ctx.scale(HAT_SCALE, HAT_SCALE);
+      ctx.translate(-23.5 * OB, 0);
+      if ('filter' in ctx) ctx.filter = 'saturate(1.5) contrast(1.12)';
+      PARTS[fn](ctx, ...args);
+      ctx.restore();
+    } else {
+      PARTS[fn](ctx, ...args);
+    }
+  }
+
+  // file:// visits taint the canvas, so toDataURL throws. Plan B keeps
+  // the wardrobe alive: frames become live canvases and the pet <img>
+  // swaps for a <canvas> we repaint directly. Outfits survive anywhere.
+  var WARDROBE_CANVAS_MODE = false;
+  function frameSnapshot() {
+    const c = document.createElement('canvas');
+    c.width = 535; c.height = 466;
+    c.getContext('2d').drawImage(outfitCanvas, 0, 0);
+    return c;
+  }
+  function frameCapture() {
+    if (WARDROBE_CANVAS_MODE) return frameSnapshot();
+    try { return outfitCanvas.toDataURL(); }
+    catch (e) { WARDROBE_CANVAS_MODE = true; return frameSnapshot(); } // tainted (file://)
+  }
+
   function composeOutfit(outfit) {
     const ctx = outfitCanvas.getContext('2d');
     const frames = {};
@@ -719,11 +788,11 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!im.complete || !im.naturalWidth) { ok = false; return; }
       ctx.clearRect(0, 0, 535, 466);
       ctx.drawImage(im, 0, 0);
-      outfit.parts.forEach(([fn, ...args]) => { try { PARTS[fn](ctx, ...args); } catch (e) { /* a hat refused to fit */ } });
-      frames[k] = outfitCanvas.toDataURL();
+      outfit.parts.forEach(([fn, ...args]) => { try { drawOutfitPart(ctx, fn, args); } catch (e) { /* a hat refused to fit */ } });
+      frames[k] = frameCapture();
       if (k === 'base') {
         drawGrumpy(ctx);
-        frames.grumpy = outfitCanvas.toDataURL();
+        frames.grumpy = frameCapture();
       }
     });
     return ok ? frames : null;
@@ -749,9 +818,15 @@ document.addEventListener('DOMContentLoaded', () => {
     return o;
   }
 
-  function wearOutfit(outfit, announce) {
-    const frames = composeOutfit(outfit);
-    if (!frames) { setTimeout(() => wearOutfit(outfit, announce), 600); return; }
+  function wearOutfit(outfit, announce, tries = 0) {
+    let frames = null;
+    // toDataURL can throw on tainted canvases (e.g. file:// image loads) —
+    // never let a wardrobe hiccup escape into whatever called us
+    try { frames = composeOutfit(outfit); } catch (e) { frames = null; tries += 7; }
+    if (!frames) {
+      if (tries < 21) setTimeout(() => wearOutfit(outfit, announce, tries + 1), 600);
+      return; // give up gracefully — the bare base sprite still works
+    }
     currentOutfit = outfit;
     OUTFIT_FRAMES = frames;
     setSlimeFrame(currentFrame, true);
@@ -772,17 +847,52 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const slimeImg = slimeBody ? slimeBody.querySelector('img') : null;
   let currentFrame = 'base';
+  var slimeCanvasEl = null;
+
+  // canvas-mode pet: the <img> hides, a live canvas takes its place
+  function petCanvas() {
+    if (slimeCanvasEl) return slimeCanvasEl;
+    slimeCanvasEl = document.createElement('canvas');
+    slimeCanvasEl.width = 535;
+    slimeCanvasEl.height = 466;
+    slimeCanvasEl.className = 'slime-pet-canvas';
+    slimeCanvasEl.setAttribute('aria-hidden', 'true');
+    slimeImg.style.display = 'none';
+    slimeImg.parentNode.insertBefore(slimeCanvasEl, slimeImg);
+    return slimeCanvasEl;
+  }
 
   function setSlimeFrame(name, force) {
     if (!slimeImg) return;
     if (!force && currentFrame === name) return;
     currentFrame = name;
-    if (OUTFIT_FRAMES && OUTFIT_FRAMES[name]) slimeImg.src = OUTFIT_FRAMES[name];
-    else if (SLIME_SRC[name]) slimeImg.src = SLIME_SRC[name];
+    const f = OUTFIT_FRAMES && OUTFIT_FRAMES[name];
+    if (typeof f === 'string') { slimeImg.src = f; return; }
+    if (f) { // live-canvas frame (tainted-canvas fallback)
+      const cx = petCanvas().getContext('2d');
+      cx.clearRect(0, 0, 535, 466);
+      cx.drawImage(f, 0, 0);
+      return;
+    }
+    if (!SLIME_SRC[name]) return;
+    if (slimeCanvasEl) { // stay in canvas mode: paint the bare sprite
+      const im = SLIME_IMGS[name];
+      const cx = slimeCanvasEl.getContext('2d');
+      cx.clearRect(0, 0, 535, 466);
+      if (im && im.complete && im.naturalWidth) cx.drawImage(im, 0, 0);
+    } else {
+      slimeImg.src = SLIME_SRC[name];
+    }
   }
 
-  // theme change = wardrobe change (the pool swaps day/night racks)
-  function setSlimeSkin() { rotateOutfit(false); }
+  // theme change = wardrobe change (the pool swaps day/night racks);
+  // the stage sky also re-dresses (sun ↔ moon, star chart, cloud tints)
+  function setSlimeSkin() {
+    rotateOutfit(false);
+    setTimeout(() => {
+      if (typeof wxDecor === 'function' && typeof wxCurrent !== 'undefined' && wxCurrent && liveOpen) wxDecor(wxCurrent);
+    }, 50);
+  }
 
   const idlePhrases = [
     'Thanks for the follow!! ♡',
@@ -825,7 +935,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // --- HUD ---
   function updateSlimeHud() {
-    if (slimeMoodText) slimeMoodText.textContent = translateMood(pet.mood);
+    if (slimeMoodText) {
+      // while asleep the HUD always shows a sleepy mood, whatever else happens
+      slimeMoodText.textContent = pet.sleeping
+        ? `😴 ${translateMood('sleeping')} zZz`
+        : translateMood(pet.mood);
+    }
 
     if (slimeHeartsEl) {
       // house rule: the love meter never drops. ever.
@@ -953,11 +1068,21 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function getSlimeBounds() {
-    const habitat = petArena().getBoundingClientRect();
-    const petRect = slimeBody.getBoundingClientRect();
+    // Asymmetric bounds anchored on the slime's UNTRANSFORMED layout spot
+    // (offsetLeft/Top ignore the translate), so the pet can never slip out of
+    // the arena — the live stage parks it near the floor, the habitat near the
+    // top, and the old symmetric maths let it escape through the closest edge.
+    const arena = petArena();
+    const m = 4;
+    const bl = slimeBody.offsetLeft, bt = slimeBody.offsetTop;
+    const bw = slimeBody.offsetWidth || 85, bh = slimeBody.offsetHeight || 75;
+    const minX = Math.min(-(bl - m), 0), maxX = Math.max(arena.clientWidth - bw - bl - m, 0);
+    const minY = Math.min(-(bt - m), 0), maxY = Math.max(arena.clientHeight - bh - bt - m, 0);
     return {
-      x: Math.max(18, Math.floor((habitat.width - petRect.width) / 2) - 12),
-      y: Math.max(12, Math.floor((habitat.height - petRect.height) / 2) - 8)
+      minX, maxX, minY, maxY,
+      // legacy symmetric half-ranges for wander/forage targets
+      x: Math.max(12, Math.min(-minX, maxX)),
+      y: Math.max(4, Math.min(-minY, maxY))
     };
   }
 
@@ -983,6 +1108,12 @@ document.addEventListener('DOMContentLoaded', () => {
     slimeBody.style.setProperty('--slime-scale', String(scale));
     slimeBody.style.setProperty('--slime-tilt', `${tilt}deg`);
     slimeBody.style.setProperty('--slime-step', `${Math.round(duration)}ms`);
+    if (speechBubble) {
+      // the speech bubble rides the same offsets so it stays glued to the pet
+      speechBubble.style.setProperty('--slime-x', `${slimePosition.x}px`);
+      speechBubble.style.setProperty('--slime-y', `${slimePosition.y}px`);
+      speechBubble.style.setProperty('--slime-step', `${Math.round(duration)}ms`);
+    }
   }
 
   function moveSlime({
@@ -1004,28 +1135,28 @@ document.addEventListener('DOMContentLoaded', () => {
     let actionClass = '';
 
     if (action === 'walk') {
-      nextX = clamp(slimePosition.x + Math.round((Math.random() - 0.5) * 42 * distance), -bounds.x, bounds.x);
-      nextY = clamp(slimePosition.y + Math.round((Math.random() - 0.5) * 20 * distance), -bounds.y, bounds.y);
+      nextX = clamp(slimePosition.x + Math.round((Math.random() - 0.5) * 42 * distance), bounds.minX, bounds.maxX);
+      nextY = clamp(slimePosition.y + Math.round((Math.random() - 0.5) * 20 * distance), bounds.minY, bounds.maxY);
       tilt = clamp((nextX - slimePosition.x) / 16, -3, 3);
       actionClass = 'is-forage';
     } else if (action === 'forage') {
       const forageTarget = target || chooseForageTarget(bounds);
-      nextX = clamp(Math.round(slimePosition.x + (forageTarget.x - slimePosition.x) * 0.55), -bounds.x, bounds.x);
-      nextY = clamp(Math.round(slimePosition.y + (forageTarget.y - slimePosition.y) * 0.55), -bounds.y, bounds.y);
+      nextX = clamp(Math.round(slimePosition.x + (forageTarget.x - slimePosition.x) * 0.55), bounds.minX, bounds.maxX);
+      nextY = clamp(Math.round(slimePosition.y + (forageTarget.y - slimePosition.y) * 0.55), bounds.minY, bounds.maxY);
       tilt = clamp((nextX - slimePosition.x) / 18, -3, 3);
       actionClass = 'is-forage';
     } else if (action === 'goto' && target) {
-      nextX = clamp(target.x, -bounds.x, bounds.x);
-      nextY = clamp(target.y, -bounds.y, bounds.y);
+      nextX = clamp(target.x, bounds.minX, bounds.maxX);
+      nextY = clamp(target.y, bounds.minY, bounds.maxY);
       tilt = clamp((nextX - slimePosition.x) / 18, -3, 3);
       actionClass = 'is-follow';
     } else if (action === 'hop' || action === 'happy') {
-      nextX = clamp(slimePosition.x + Math.round((Math.random() - 0.5) * 42 * distance), -bounds.x, bounds.x);
-      nextY = clamp(slimePosition.y + Math.round((Math.random() - 0.5) * 18 * distance), -bounds.y, bounds.y);
+      nextX = clamp(slimePosition.x + Math.round((Math.random() - 0.5) * 42 * distance), bounds.minX, bounds.maxX);
+      nextY = clamp(slimePosition.y + Math.round((Math.random() - 0.5) * 18 * distance), bounds.minY, bounds.maxY);
       scale = action === 'happy' ? 1.04 : 1;
       actionClass = action === 'happy' ? 'is-happy' : 'is-hop';
     } else if (action === 'nap') {
-      nextY = clamp(slimePosition.y + 5, -bounds.y, bounds.y);
+      nextY = clamp(slimePosition.y + 5, bounds.minY, bounds.maxY);
       scale = 0.98;
       actionClass = 'is-nap';
     } else if (action === 'alert') {
@@ -1224,11 +1355,15 @@ document.addEventListener('DOMContentLoaded', () => {
   let grabPointerId = null;
 
   function habitatPointToSlimeCoords(clientX, clientY) {
-    const habitat = petArena().getBoundingClientRect();
+    // pointer → offset from the slime's untransformed centre, clamped inside
+    // whichever arena it currently lives in (habitat or live stage)
+    const rect = petArena().getBoundingClientRect();
     const bounds = getSlimeBounds();
+    const baseCx = slimeBody.offsetLeft + (slimeBody.offsetWidth || 85) / 2;
+    const baseCy = slimeBody.offsetTop + (slimeBody.offsetHeight || 75) / 2;
     return {
-      x: clamp(Math.round(clientX - habitat.left - habitat.width / 2), -bounds.x, bounds.x),
-      y: clamp(Math.round(clientY - habitat.top - 62 - 37), -bounds.y, bounds.y)
+      x: clamp(Math.round(clientX - rect.left - baseCx), bounds.minX, bounds.maxX),
+      y: clamp(Math.round(clientY - rect.top - baseCy), bounds.minY, bounds.maxY)
     };
   }
 
@@ -1414,14 +1549,14 @@ document.addEventListener('DOMContentLoaded', () => {
     pet.sleeping = true;
     pet.mood = 'sleeping';
     slimeHabitat.classList.add('night-mode');
-    moveSlime({ action: 'nap', mood: 'sleeping', phrase: trT('sleep(4000)... zzz', 'sleep(4000)... zzz'), duration: 1400, scheduleNext: false });
+    moveSlime({ action: 'nap', mood: 'sleeping', phrase: trT('sleep(14000)... zzz', 'sleep(14000)... zzz'), duration: 1400, scheduleNext: false });
 
     sleepZzzTimer = setInterval(() => {
       const { x, y } = slimeAnchor();
       spawnParticle(x + 18, y - 20, 'z', 'p-zzz');
     }, 900);
 
-    sleepTimer = setTimeout(() => wakeSlime(false), 4200);
+    sleepTimer = setTimeout(() => wakeSlime(false), 14700); // a proper nap — 3.5× the old catnap
   }
 
   function wakeSlime(grumpy) {
@@ -2471,6 +2606,209 @@ document.addEventListener('DOMContentLoaded', () => {
     repos: ['repos — fetches yongshan’s repositories live from the GitHub API.', 'repos — récupère en direct les dépôts de yongshan via l’API GitHub.']
   };
 
+  /* =====================================================
+     THE 100 SECRET CODES — StarCraft-style, never listed.
+     Each entry: [reply-EN, reply-FR, fx-key]. Effects range
+     from next-run game cheats to geese on demand. `hint`
+     drops cryptic clues; `cheats` counts your finds.
+     ===================================================== */
+  function cheatFall(chars, n) {
+    for (let i = 0; i < n; i++) {
+      const s = document.createElement('span');
+      s.className = 'cheat-fall';
+      s.textContent = chars[i % chars.length];
+      s.style.left = Math.random() * 96 + 'vw';
+      s.style.animationDuration = (2.2 + Math.random() * 2) + 's';
+      s.style.animationDelay = (Math.random() * 0.9) + 's';
+      s.setAttribute('aria-hidden', 'true');
+      document.body.appendChild(s);
+      setTimeout(() => s.remove(), 5200);
+    }
+  }
+  function cheatZerg() {
+    for (let i = 0; i < 12; i++) {
+      const s = document.createElement('span');
+      s.className = 'cheat-bug';
+      s.textContent = '🐛';
+      s.style.bottom = (54 + Math.random() * 40) + 'px';
+      s.style.animationDuration = (3 + Math.random() * 3) + 's';
+      s.style.animationDelay = (Math.random() * 1.4) + 's';
+      s.setAttribute('aria-hidden', 'true');
+      document.body.appendChild(s);
+      setTimeout(() => s.remove(), 8000);
+    }
+  }
+  function cheatBarrel() {
+    document.body.classList.add('barrel-roll');
+    setTimeout(() => document.body.classList.remove('barrel-roll'), 1700);
+  }
+  function cheatMatrix() {
+    const glyphs = 'ｱｲｳｴｵｶｷｸｹｺ01♥✦ﾈﾎﾏﾑ';
+    for (let i = 0; i < 10; i++) {
+      let ln = '';
+      for (let k = 0; k < 34; k++) ln += glyphs[Math.floor(Math.random() * glyphs.length)];
+      termLine(ln, 't-accent');
+    }
+    termLine(trT('…there is no spoon. only slime.', '…il n\'y a pas de cuillère. seulement du slime.'), 't-dim');
+  }
+  function cheatWx(k) {
+    store.set('yos-wx', { t: Date.now(), k });
+    applyWx(k);
+    if (document.getElementById('win-live').classList.contains('window-closed')) {
+      termLine(trT('(the sky changed. open slime_live.exe to see it)', '(le ciel a changé. ouvre slime_live.exe pour le voir)'), 't-dim');
+    }
+  }
+  function cheatFx(key) {
+    const pend = (k) => { store.set('yos-cheat-next', k); termLine(trT('…armed for your NEXT run of slime_run.exe ♡', '…armé pour ta PROCHAINE run de slime_run.exe ♡'), 't-dim'); };
+    switch (key) {
+      case 'god': case 'fast': case 'fever': case 'big': case 'tiny':
+      case 'float': case 'luck': case 'boss': case 'life': pend(key); break;
+      case 'rich5': pend('rich5'); break;
+      case 'rich20': pend('rich20'); break;
+      case 'rich50': pend('rich50'); break;
+      case 'muffin': gPendingBoost = true; termLine(trT('…a hype bonus waits at the start line ♡', '…un bonus hype attend sur la ligne de départ ♡'), 't-dim'); break;
+      case 'hearts': cheatFall(['♥', '♡', '✦'], 22); break;
+      case 'konami': cheatFall(['♥', '🌈', '⭐'], 26); gainFollowers(10); playFanfare(); break;
+      case 'barrel': cheatBarrel(); break;
+      case 'zerg': cheatZerg(); break;
+      case 'matrix': cheatMatrix(); break;
+      case 'wxsnow': cheatWx('snow'); break;
+      case 'wxrain': cheatWx('rain'); break;
+      case 'wxsun': cheatWx('clear'); break;
+      case 'wxthunder': cheatWx('thunder'); break;
+      case 'wxfog': cheatWx('fog'); break;
+      case 'rainmoney': cheatWx('rain'); pend('rich5'); break;
+      case 'geese': openWindow('win-live'); setTimeout(() => { if (typeof spawnGeese === 'function') spawnGeese(); }, 1300); break;
+      case 'pikmin': openWindow('win-live'); setTimeout(() => { for (let i = 0; i < 3; i++) gardenSpawnSprout(); }, 1100); break;
+      case 'boba': feedSlime(); break;
+      case 'nap': sleepSlime(); break;
+      case 'wake': if (typeof playWithSlime === 'function') playWithSlime(); break;
+      case 'fit': rotateOutfit(true); break;
+      case 'grumpy': setSlimeFrame('grumpy', true); setTimeout(() => setSlimeFrame('base', true), 2600); break;
+      case 'spooky': showBubble(trT('boo!! (did I scare you? be honest)', 'bouh !! (je t\'ai fait peur ? sois honnête)'), 2400); playGlitchSound(); break;
+      case 'fans5': gainFollowers(5); break;
+      case 'fans25': gainFollowers(25); playFanfare(); break;
+      case 'fanfare': playFanfare(); break;
+      case 'honk': [0, 240, 520].forEach((d) => setTimeout(() => playTone(430 + Math.random() * 90, 'square', 0.1, 0, 0.03), d)); break;
+      case 'meow': playTone(880, 'sine', 0.12, 0, 0.04); playTone(660, 'sine', 0.16, 0.1, 0.04); break;
+      case 'loop': for (let i = 0; i < 3; i++) termLine(trT('while (cute) { keep_running(); }', 'while (mignon) { continue_de_courir(); }'), 't-dim'); break;
+      case 'credits': ['YONGSHAN OS — a hand-built production', 'starring: one (1) slime', 'pikmin wrangling: the garden dept.', 'weather: Edmonton, unpaid intern', 'frameworks used: zero. as always.'].forEach((l, i) => setTimeout(() => termLine(l, i ? 't-dim' : 't-accent'), i * 260)); break;
+      default: playTone(990, 'triangle', 0.08, 0, 0.03);
+    }
+  }
+
+  const TERM_CHEATS = {
+    /* — the classics, 1-30 — */
+    'power overwhelming': ['⚡ POWER OVERWHELMING. the bugs already fear your next run.', '⚡ POWER OVERWHELMING. les bugs craignent déjà ta prochaine run.', 'god'],
+    'operation cwal':     ['🏃 operation CWAL: next run runs on espresso.', '🏃 opération CWAL : la prochaine run carbure à l\'expresso.', 'fast'],
+    'show me the money':  ['💰 50 coins wired to your next run. do not tell the tax slime.', '💰 50 pièces virées vers ta prochaine run. pas un mot au slime des impôts.', 'rich50'],
+    'the gathering':      ['🌈 mana… gathered. rainbow fever awaits at the start line.', '🌈 mana… rassemblé. la fièvre arc-en-ciel t\'attend au départ.', 'fever'],
+    'game on':            ['🍔 CHONK MODE armed. next run: extra thicc.', '🍔 MODE CHONK armé. prochaine run : extra épaisse.', 'big'],
+    'black sheep wall':   ['👁 map revealed. it was hearts all along. luck boosted.', '👁 carte révélée. ce n\'étaient que des cœurs. chance boostée.', 'luck'],
+    'medieval man':       ['🪶 gravity has been informed of your medieval opinions. floaty jumps armed.', '🪶 la gravité a reçu tes doléances médiévales. sauts flottants armés.', 'float'],
+    'food for thought':   ['🎈 thoughts: lighter. jumps: floatier. next run.', '🎈 pensées : plus légères. sauts : plus flottants. prochaine run.', 'float'],
+    'modify the phase variance': ['🔧 phase variance modified. whatever that is, your luck likes it.', '🔧 variance de phase modifiée. quoi que ce soit, ta chance apprécie.', 'luck'],
+    'whats mine is mine': ['⛏ 20 coins claimed. the mine sends its regards.', '⛏ 20 pièces réclamées. la mine te salue.', 'rich20'],
+    'breathe deep':       ['😮‍💨 deep breath in… RAINBOW FEVER armed.', '😮‍💨 grande inspiration… FIÈVRE ARC-EN-CIEL armée.', 'fever'],
+    'something for nothing': ['🎁 the void tossed you a hype bonus. it says hi.', '🎁 le néant t\'a lancé un bonus hype. il te dit coucou.', 'muffin'],
+    'staying alive':      ['🕺 ah ah ah ah — an extra ♥ waits in your next run.', '🕺 ah ah ah ah — un ♥ en plus t\'attend dans la prochaine run.', 'life'],
+    'there is no cow level': ['🐄 correct. there is, however, an early boss. good luck.', '🐄 exact. il y a par contre un boss précoce. bonne chance.', 'boss'],
+    'war aint what it used to be': ['🌫 the fog rolls in, philosophically.', '🌫 le brouillard arrive, avec philosophie.', 'wxfog'],
+    'radio free zerg':    ['📻 the broadcast worked. they are HERE.', '📻 la transmission a marché. ils sont LÀ.', 'zerg'],
+    'iddqd':              ['😇 degreelessness mode. your next run is immortal (for a while).', '😇 mode immortel. ta prochaine run ne craint (presque) rien.', 'god'],
+    'idkfa':              ['🔑 all keys, all coins. well, 50 of them.', '🔑 toutes les clés, toutes les pièces. enfin, 50.', 'rich50'],
+    'idspispopd':         ['👻 walls are a suggestion now. floaty jumps armed.', '👻 les murs sont devenus une suggestion. sauts flottants armés.', 'float'],
+    'noclip':             ['🚁 collision politely disabled-ish. next run floats.', '🚁 collisions poliment désactivées-ish. la prochaine run flotte.', 'float'],
+    'rosebud':            ['🌹 +5 coins. it was a sled, by the way.', '🌹 +5 pièces. c\'était une luge, au passage.', 'rich5'],
+    'motherlode':         ['🤑 §50,000!! …converted to 50 coins at today\'s rate.', '🤑 §50 000 !! …convertis en 50 pièces au taux du jour.', 'rich50'],
+    'how do you turn this on': ['🚗 vroom. the cheat car arrives for your next run.', '🚗 vroum. la voiture à cheat arrive pour ta prochaine run.', 'fast'],
+    'bigdaddy':           ['👹 a boss has been summoned early. you did this.', '👹 un boss a été invoqué en avance. c\'est ta faute.', 'boss'],
+    'hesoyam':            ['🚑 health, armor, respect… translated: +1 ♥ next run.', '🚑 vie, armure, respect… traduction : +1 ♥ prochaine run.', 'life'],
+    'there is no spoon':  ['🥄 confirmed. luck bends instead.', '🥄 confirmé. c\'est la chance qui plie.', 'luck'],
+    'all your base are belong to us': ['🚀 how are you gentlemen. +25 fans for the culture.', '🚀 how are you gentlemen. +25 fans pour la culture.', 'fans25'],
+    'justin bailey':      ['👗 wardrobe protocol activated.', '👗 protocole garde-robe activé.', 'fit'],
+    'konami':             ['🎮 ↑↑↓↓←→←→BA — the classic. take everything.', '🎮 ↑↑↓↓←→←→BA — le classique. prends tout.', 'konami'],
+    'up up down down left right left right b a': ['🎮 you typed the WHOLE thing. legend. take everything.', '🎮 tu as TOUT tapé. légende. prends tout.', 'konami'],
+    /* — internet physics, 31-42 — */
+    'do a barrel roll':   ['🛩 aileron roll, technically.', '🛩 tonneau barriqué, techniquement.', 'barrel'],
+    'barrel roll':        ['🛢 fine. one roll.', '🛢 bon. un seul tonneau.', 'barrel'],
+    'flip':               ['🤸 wheee.', '🤸 wouiii.', 'barrel'],
+    'matrix':             ['🐇 follow the pink rabbit.', '🐇 suis le lapin rose.', 'matrix'],
+    'red pill':           ['💊 you chose truth. it is written in katakana.', '💊 tu as choisi la vérité. elle est écrite en katakana.', 'matrix'],
+    'blue pill':          ['💊 you wake up in your bed and believe whatever the slime wants you to believe.', '💊 tu te réveilles dans ton lit et crois ce que le slime veut.', 'none'],
+    'wake up neo':        ['📟 knock knock.', '📟 toc toc.', 'matrix'],
+    'let it snow':        ['❄ the stage remembers Edmonton winters.', '❄ la scène se souvient des hivers d\'Edmonton.', 'wxsnow'],
+    'make it rain':       ['🌧💸 rain AND riches. double meaning honoured.', '🌧💸 pluie ET richesse. double sens honoré.', 'rainmoney'],
+    'here comes the sun': ['🌞 doo-doo-doo-doo.', '🌞 dou-dou-dou-dou.', 'wxsun'],
+    'thunderstruck':      ['⚡ nanananana THUNDER.', '⚡ nanananana TONNERRE.', 'wxthunder'],
+    'fog machine':        ['🌫 atmospheric. very indie album cover.', '🌫 atmosphérique. très pochette d\'album indé.', 'wxfog'],
+    /* — Canadian affairs, 43-52 — */
+    'winter is coming':   ['❄ in Edmonton? it never left.', '❄ à Edmonton ? il n\'est jamais parti.', 'wxsnow'],
+    'honk':               ['📣 HONK. HONK HONK.', '📣 HONK. HONK HONK.', 'honk'],
+    'goose':              ['🪿 deploying the squadron.', '🪿 déploiement de l\'escadrille.', 'geese'],
+    'geese':              ['🪿 they were already on their way.', '🪿 elles étaient déjà en route.', 'geese'],
+    'oh canada':          ['🍁 standing at attention. sending geese.', '🍁 au garde-à-vous. envoi des bernaches.', 'geese'],
+    'eh':                 ['🇨🇦 eh.', '🇨🇦 eh.', 'honk'],
+    'sorry':              ['🇨🇦 apology accepted. +5 fans, no further questions.', '🇨🇦 excuses acceptées. +5 fans, sans autre question.', 'fans5'],
+    'poutine':            ['🍟 curds delivered to the habitat.', '🍟 fromage en grains livré à l\'habitat.', 'boba'],
+    'timbits':            ['🍩 a box of 5 (coins).', '🍩 une boîte de 5 (pièces).', 'rich5'],
+    'maple syrup':        ['🍁 the slime is now 4% sweeter.', '🍁 le slime est maintenant 4 % plus sucré.', 'boba'],
+    /* — slime care, 53-68 — */
+    'boba time':          ['🧋 always. it is always boba time.', '🧋 toujours. c\'est toujours l\'heure du boba.', 'boba'],
+    'feed me':            ['🍬 feeding YOU is not supported. feeding the slime: done.', '🍬 te nourrir TOI n\'est pas supporté. le slime : c\'est fait.', 'boba'],
+    'bubble tea':         ['🧋 with pearls. obviously.', '🧋 avec perles. évidemment.', 'boba'],
+    'nap time':           ['😴 tucking in the streamer.', '😴 on borde le streamer.', 'nap'],
+    'goodnight':          ['🌙 goodnight ♡ (the slime, not you. you stay.)', '🌙 bonne nuit ♡ (le slime, pas toi. toi tu restes.)', 'nap'],
+    'sweet dreams':       ['💤 dreams: sweetened.', '💤 rêves : sucrés.', 'nap'],
+    'wake up':            ['⏰ ZOOMIES DEPLOYED.', '⏰ ZOOMIES DÉPLOYÉES.', 'wake'],
+    'zoomies':            ['🌀 initiating maximum zoom.', '🌀 zoom maximal enclenché.', 'wake'],
+    'good boy':           ['🥹 the slime is neither, but it accepts.', '🥹 le slime n\'est ni l\'un ni l\'autre, mais il accepte.', 'fans5'],
+    'good slime':         ['🥹 it heard you. it will never forget this.', '🥹 il t\'a entendu. il ne l\'oubliera jamais.', 'fans5'],
+    'i love you':         ['💘 the slime says it back. LOUDLY.', '💘 le slime te le dit aussi. FORT.', 'hearts'],
+    'marry me':           ['💍 the slime is flattered but married to the grind.', '💍 le slime est flatté mais marié au taf.', 'hearts'],
+    'notice me senpai':   ['👀 senpai has noticed. +5 fans.', '👀 senpai t\'a remarqué. +5 fans.', 'fans5'],
+    'uwu':                ['🥺 uwu detected. deploying hearts.', '🥺 uwu détecté. déploiement de cœurs.', 'hearts'],
+    'owo':                ["👀 what's this? hearts. it's hearts.", "👀 c'est quoi ça ? des cœurs. ce sont des cœurs.", 'hearts'],
+    'kawaii':             ['🎀 correct assessment.', '🎀 diagnostic correct.', 'hearts'],
+    /* — fashion & mood, 69-75 — */
+    'slay':               ['💅 the slime heard. the slime slays.', '💅 le slime a entendu. le slime slay.', 'fit'],
+    'fashion week':       ['👗 runway mode. new fit incoming.', '👗 mode défilé. nouvelle tenue en approche.', 'fit'],
+    'new fit':            ['🧢 wardrobe spinning…', '🧢 la garde-robe tourne…', 'fit'],
+    'mirror mirror':      ['🪞 the cutest of them all? checking… it\'s the slime.', '🪞 le plus mignon de tous ? vérification… c\'est le slime.', 'fit'],
+    'grumpy':             ['😾 mood applied. temporarily. probably.', '😾 humeur appliquée. temporairement. sans doute.', 'grumpy'],
+    'boo':                ['👻 EEK. ok that was cute.', '👻 IIIK. bon, c\'était mignon.', 'spooky'],
+    'ghost':              ['👻 the habitat is haunted by exactly one (1) cutie.', '👻 l\'habitat est hanté par exactement un (1) mignon.', 'spooky'],
+    /* — garden ops, 76-78 — */
+    'pikmin':             ['🌸 sprout express dispatched to the live room.', '🌸 express à pousses envoyé vers le direct.', 'pikmin'],
+    'petal squad':        ['🌸 SQUAD REQUESTED. sprouting reinforcements.', '🌸 ESCOUADE DEMANDÉE. renforts en germination.', 'pikmin'],
+    'pluck':              ['🌱 grow first, pluck second. sprouts incoming.', '🌱 pousser d\'abord, cueillir ensuite. pousses en route.', 'pikmin'],
+    /* — the soundboard, 79-81 — */
+    'freebird':           ['🎸 *air guitar solo, 9 minutes, condensed to one fanfare*', '🎸 *solo de air guitar, 9 minutes, condensé en une fanfare*', 'fanfare'],
+    'encore':             ['🎤 ENCORE! ENCORE!', '🎤 ENCORE ! ENCORE !', 'fanfare'],
+    'drop the beat':      ['🎧 beat: dropped. floor: checked.', '🎧 beat : lâché. sol : vérifié.', 'fanfare'],
+    /* — dev folklore, 82-97 — */
+    'hello world':        ['🌍 hello, you. +5 fans for tradition.', '🌍 salut, toi. +5 fans pour la tradition.', 'fans5'],
+    'foo':                ['bar.', 'bar.', 'none'],
+    'bar':                ['foo. obviously.', 'foo. évidemment.', 'none'],
+    'foobar':             ['baz. we can do this all day.', 'baz. on peut y passer la journée.', 'none'],
+    'segfault':           ['💥 core dumped (emotionally).', '💥 core dumpé (émotionnellement).', 'grumpy'],
+    'rm -rf /':           ['🛑 ABSOLUTELY not. this OS contains a slime.', '🛑 ABSOLUMENT pas. cet OS contient un slime.', 'none'],
+    'git push --force':   ['😱 …you MONSTER. the bugs are coming for you.', '😱 …espèce de MONSTRE. les bugs arrivent.', 'zerg'],
+    'merge conflict':     ['⚔ <<<<<<< HEAD of the bug army', '⚔ <<<<<<< HEAD de l\'armée des bugs', 'zerg'],
+    'stack overflow':     ['📚 closed as duplicate of: being awesome.', '📚 fermé pour doublon de : être génial·e.', 'none'],
+    'infinite loop':      ['🔁 see: infinite loop.', '🔁 voir : boucle infinie.', 'loop'],
+    'recursion':          ['🪆 did you mean: recursion?', '🪆 vouliez-vous dire : récursion ?', 'none'],
+    'coffee':             ['☕ speed buff brewing for your next run.', '☕ buff de vitesse en cours d\'infusion pour ta prochaine run.', 'fast'],
+    'espresso':           ['☕☕ DOUBLE shot. next run will vibrate.', '☕☕ DOUBLE dose. la prochaine run va vibrer.', 'fast'],
+    'sudo make me a sandwich': ['🥪 okay. (you had the audacity. respect.)', '🥪 d\'accord. (tu as osé. respect.)', 'boba'],
+    '42':                 ['🌌 correct. but what was the question?', '🌌 exact. mais quelle était la question ?', 'none'],
+    'meow':               ['🐱 the keyboard-cat approves.', '🐱 le chat-clavier approuve.', 'meow'],
+    /* — finale, 98-100 — */
+    'to the moon':        ['🚀 20 coins strapped to a rocket. next run. no refunds.', '🚀 20 pièces sanglées à une fusée. prochaine run. non remboursable.', 'rich20'],
+    'i am the danger':    ['🔥 a boss knocks. you answer. next run.', '🔥 un boss frappe à la porte. tu réponds. prochaine run.', 'boss'],
+    'roll credits':       ['🎬 rolling…', '🎬 ça tourne…', 'credits']
+  };
+
   function runTermCommand(raw) {
     const input = raw.trim();
     if (!input) return;
@@ -2481,6 +2819,38 @@ document.addEventListener('DOMContentLoaded', () => {
     const cmd = parts[0].toLowerCase();
     const rest = input.slice(parts[0].length).trim();
     const args = lower.split(/\s+/).slice(1);
+
+    // ---- the 100 secret codes check in before everything else ----
+    if (TERM_CHEATS[lower]) {
+      const c = TERM_CHEATS[lower];
+      termLine(trT(c[0], c[1]), 't-accent');
+      cheatFx(c[2]);
+      const found = store.get('yos-cheats-found', []);
+      if (found.indexOf(lower) === -1) { found.push(lower); store.set('yos-cheats-found', found); }
+      playSparkleSound();
+      return;
+    }
+    if (lower === 'cheats' || lower === 'secrets') {
+      const found = store.get('yos-cheats-found', []).length;
+      termLine(trT(`there are 100 secret codes hidden in this OS. you have found ${found}.`, `il y a 100 codes secrets cachés dans cet OS. tu en as trouvé ${found}.`), 't-accent');
+      termLine(trT('I will never list them. try `hint` if you must.', 'je ne les listerai jamais. essaie `hint` en désespoir de cause.'), 't-dim');
+      return;
+    }
+    if (lower === 'hint') {
+      const hints = [
+        ['old StarCraft players never forget their mantras…', 'les vétérans de StarCraft n\'oublient jamais leurs mantras…'],
+        ['what would a Sim type when rent is due?', 'que taperait un Sim quand le loyer tombe ?'],
+        ['DOOM guys know four letters that make you immortal.', 'les joueurs de DOOM connaissent quatre lettres qui rendent immortel.'],
+        ['ask the sky for weather. politely. in plain words.', 'demande la météo au ciel. poliment. avec des mots simples.'],
+        ['this is Canada. some codes simply honk.', 'on est au Canada. certains codes se contentent de klaxonner.'],
+        ['tell the slime how you FEEL about it.', 'dis au slime ce que tu RESSENS pour lui.'],
+        ['a very famous barrel manoeuvre works here too.', 'une très célèbre manœuvre du tonneau marche ici aussi.'],
+        ['some codes are just what a tired dev mutters at 3am.', 'certains codes sont ce qu\'un dev épuisé marmonne à 3h du matin.']
+      ];
+      const h = hints[Math.floor(Math.random() * hints.length)];
+      termLine(trT('psst… ' + h[0], 'psst… ' + h[1]), 't-dim');
+      return;
+    }
 
     if (lower === 'sudo hire yongshan' || lower === 'hire' || lower === 'sudo hire') {
       termLine(trT('[sudo] password for recruiter: ********', '[sudo] mot de passe du recruteur : ********'), 't-dim');
@@ -2668,6 +3038,10 @@ document.addEventListener('DOMContentLoaded', () => {
       amaRenderChips();        // suggestion chips follow the language
     }
     if (typeof updateTaskbarAppButtons === 'function') updateTaskbarAppButtons();
+    // a visible ad popup rebuilds itself in the new language on the spot
+    if (typeof refreshGameInvite === 'function') refreshGameInvite();
+    // live search results re-rank in the new language too
+    try { if (searchInput && searchInput.value) renderSearch(searchInput.value); } catch (e) { /* pre-boot */ }
 
     // the AMA feed follows too: re-greet if untouched, otherwise hand over politely
     if (typeof amaFeed !== 'undefined' && amaFeed && amaFeed.children.length) {
@@ -2929,9 +3303,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function startSleepwalk() {
     if (sleepwalkActive || resolvedTheme() !== 'dark' || !ghostHidden()) return;
-    // choose destination: 70% the arcade, else a random visible feature
+    // choose destination: 85% the arcade, else a random visible feature —
+    // and if a run is already underway, it's the arcade, PERIOD (dark-mode
+    // sleepwalks must never yank the player out of their game)
+    const gwOpen = (() => { const w = document.getElementById('win-game'); return w && !w.classList.contains('window-closed'); })();
     let target, line, isGame = false;
-    if (Math.random() < 0.7) {
+    if (gwOpen || Math.random() < 0.85) {
       target = document.getElementById('chip-game');
       line = SW_GAME_LINE;
       isGame = true;
@@ -2948,7 +3325,7 @@ document.addEventListener('DOMContentLoaded', () => {
     swEl.className = 'sleepwalker';
     swEl.setAttribute('aria-hidden', 'true');
     const img = document.createElement('img');
-    img.src = (OUTFIT_FRAMES && OUTFIT_FRAMES.sleep) || 'assets/slime_night_sleep.png'; // current fit, eyes closed
+    img.src = (OUTFIT_FRAMES && typeof OUTFIT_FRAMES.sleep === 'string' && OUTFIT_FRAMES.sleep) || 'assets/slime_night_sleep.png'; // current fit, eyes closed (canvas-mode frames can't feed an <img>)
     img.alt = '';
     const bub = document.createElement('div');
     bub.className = 'sw-bubble';
@@ -3350,6 +3727,64 @@ document.addEventListener('DOMContentLoaded', () => {
     return wrap;
   }
 
+  /* ---------- yongle = a REAL site-wide full-text engine ----------
+     It indexes every localized string on the OS (career bullets,
+     education, skills, AMA answers, window copy…) and serves ranked
+     snippets. No pinned ads, no fake rankings — just the site. */
+  var SITE_INDEX_CACHE = null, SITE_INDEX_LANG = null;
+  function siteIndex() {
+    const lang = yosLang === 'fr' ? 'fr' : 'en';
+    if (SITE_INDEX_CACHE && SITE_INDEX_LANG === lang) return SITE_INDEX_CACHE;
+    const dict = (window.YOS_I18N && window.YOS_I18N[lang]) || {};
+    const map = [
+      [/^career\./, 'win-career', 'file.career'],
+      [/^edu/, 'win-education', 'file.edu'],
+      [/^(skills|inv|equip)/, 'win-skills', 'file.inventory'],
+      [/^ama\./, 'win-ama', 'file.ama'],
+      [/^live\./, 'win-live', 'file.live'],
+      [/^game\./, 'win-game', 'file.game'],
+      [/^lb\./, 'win-leaderboard', 'file.leaderboard'],
+      [/^iv\./, 'win-interview', 'file.interview'],
+      [/^side\./, 'win-career', 'file.career'],
+      [/^term\./, 'win-terminal', 'file.terminal'],
+      [/^wall\./, 'win-career', 'file.career']
+    ];
+    const out = [];
+    Object.keys(dict).forEach((key) => {
+      const val = dict[key];
+      if (typeof val !== 'string' || val.length < 24) return; // meaty content only
+      const m = map.find(([re]) => re.test(key));
+      if (!m) return;
+      out.push({ text: val, win: m[1], title: t(m[2]), url: 'yongshan.dev/' + m[1].replace('win-', '') });
+    });
+    if (typeof AMA_TOPICS !== 'undefined') { // the resume answers live here
+      AMA_TOPICS.forEach((tp) => {
+        const txt = lang === 'fr' ? (tp.fr || tp.a) : tp.a;
+        if (typeof txt === 'string' && txt.length > 30) {
+          out.push({ text: txt, win: 'win-ama', title: t('file.ama'), url: 'yongshan.dev/ask_me.chat' });
+        }
+      });
+    }
+    SITE_INDEX_CACHE = out;
+    SITE_INDEX_LANG = lang;
+    return out;
+  }
+
+  function searchSnippet(text, term) {
+    const flat = text.replace(/\s+/g, ' ');
+    const i = flat.toLowerCase().indexOf(term);
+    if (i < 0) return flat.slice(0, 140) + (flat.length > 140 ? '…' : '');
+    const start = Math.max(0, i - 55);
+    const end = Math.min(flat.length, i + term.length + 90);
+    return (start > 0 ? '…' : '') + flat.slice(start, end).trim() + (end < flat.length ? '…' : '');
+  }
+
+  function webSearchHome() {
+    // hand off to whatever engine the visitor's browser ships with
+    const b = (typeof YOS_DEVICE !== 'undefined' && YOS_DEVICE.browser) || '';
+    return b === 'edge' ? 'https://www.bing.com/search?q=' : 'https://www.google.com/search?q=';
+  }
+
   function renderSearch(q) {
     if (!searchResults) return;
     const query = (q || '').trim();
@@ -3358,28 +3793,43 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (!query) {
       if (searchMeta) searchMeta.textContent = t('search.empty');
-      SEARCH_PINNED.forEach((r) => searchResults.appendChild(makeSearchResult({ ...r, sponsored: true })));
       return;
     }
 
     const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
-    const scored = SEARCH_LOCAL
+    // 1) navigational hits (apps & features by keyword)
+    const navHits = SEARCH_LOCAL
       .map((r) => {
         const hay = (r.title + ' ' + r.desc + ' ' + r.k).toLowerCase();
-        const score = terms.reduce((s, term) => s + (hay.includes(term) ? term.length : 0), 0);
+        const score = terms.reduce((s, term) => s + (hay.includes(term) ? term.length * 3 : 0), 0);
         return { r, score };
       })
-      .filter((x) => x.score > 0)
-      .sort((a, b) => b.score - a.score);
+      .filter((x) => x.score > 0);
+    // 2) full-text hits across every string the site knows about
+    const seen = new Set();
+    const textHits = [];
+    siteIndex().forEach((entry) => {
+      const hay = entry.text.toLowerCase();
+      let score = 0, first = null;
+      terms.forEach((term) => {
+        let idx = hay.indexOf(term);
+        while (idx !== -1) { score += term.length; if (first === null) first = term; idx = hay.indexOf(term, idx + 1); }
+      });
+      if (!score) return;
+      const snip = searchSnippet(entry.text, first);
+      const dupKey = entry.win + '|' + snip.slice(0, 60);
+      if (seen.has(dupKey)) return;
+      seen.add(dupKey);
+      textHits.push({ r: { title: entry.title, url: entry.url, desc: snip, win: entry.win }, score });
+    });
 
-    const fakeCount = 1000000 + Math.abs(hashStr(query)) % 8999999;
-    if (searchMeta) searchMeta.textContent = t('search.meta').replace('{n}', fakeCount.toLocaleString(yosLang === 'fr' ? 'fr-FR' : 'en-US'));
+    const all = navHits.concat(textHits).sort((a, b) => b.score - a.score).slice(0, 9);
+    if (searchMeta) {
+      searchMeta.textContent = t('search.meta').replace('{n}', String(all.length));
+    }
+    all.forEach(({ r }) => searchResults.appendChild(makeSearchResult(r)));
 
-    // her results always rank first. this is a feature, not a bug.
-    SEARCH_PINNED.forEach((r) => searchResults.appendChild(makeSearchResult({ ...r, sponsored: true })));
-    scored.forEach(({ r }) => searchResults.appendChild(makeSearchResult(r)));
-
-    if (!scored.length) {
+    if (!all.length) {
       const none = document.createElement('div');
       none.className = 'sr-desc';
       none.textContent = t('search.none');
@@ -3389,7 +3839,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const webline = document.createElement('div');
     webline.className = 'search-result sr-webline';
     const a = document.createElement('a');
-    a.href = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+    a.href = webSearchHome() + encodeURIComponent(query);
     a.target = '_blank';
     a.rel = 'noopener noreferrer';
     a.textContent = t('search.web').replace('{q}', query);
@@ -3413,6 +3863,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function hashStr(s) {
+    s = String(s == null ? '' : s); // stored seeds from old versions may not be strings
     let h = 5381;
     for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
     return h;
@@ -3793,6 +4244,26 @@ document.addEventListener('DOMContentLoaded', () => {
     GAME.event = null;
     GAME.nextEventSec = 24 + Math.random() * 8;
     GAME.invUntil = 0;
+    GAME.adUsed = false; // one ad-revive per run
+    GAME.nm = null; GAME.nmPx = null; // nightmares don't survive a reboot
+    // terminal secret codes cash in here, one per armed run
+    const cheat = store.get('yos-cheat-next', null);
+    if (cheat) {
+      store.set('yos-cheat-next', null);
+      if (cheat === 'god') { fxInvincible(45); gToast(['😇 CHEAT: 45s of pure invincibility', '😇 CHEAT : 45 s d\'invincibilité pure'], 180); }
+      else if (cheat === 'rich5') { GAME.coins += 5; gToast(['💰 CHEAT: +5 coins', '💰 CHEAT : +5 pièces'], 140); }
+      else if (cheat === 'rich20') { GAME.coins += 20; gToast(['💰 CHEAT: +20 coins', '💰 CHEAT : +20 pièces'], 140); }
+      else if (cheat === 'rich50') { GAME.coins += 50; gToast(['🤑 CHEAT: +50 coins', '🤑 CHEAT : +50 pièces'], 160); }
+      else if (cheat === 'fast') { setMod('speed', 1.35, 40); gToast(['☕ CHEAT: espresso velocity (40s)', '☕ CHEAT : vélocité expresso (40 s)'], 150); }
+      else if (cheat === 'fever') { fxFever(12); gToast(['🌈 CHEAT: fever from second zero', '🌈 CHEAT : fièvre dès la seconde zéro'], 150); }
+      else if (cheat === 'big') { setMod('size', 1.5, 60); gToast(['🍔 CHEAT: absolute unit (60s)', '🍔 CHEAT : unité absolue (60 s)'], 150); }
+      else if (cheat === 'tiny') { setMod('size', 0.6, 60); gToast(['🐜 CHEAT: smol mode (60s)', '🐜 CHEAT : mode mini (60 s)'], 150); }
+      else if (cheat === 'float') { setMod('jump', 1.5, 60); gToast(['🎈 CHEAT: gravity is a suggestion (60s)', '🎈 CHEAT : la gravité est une suggestion (60 s)'], 150); }
+      else if (cheat === 'luck') { setMod('luck', 1.4, 60); gToast(['🍀 CHEAT: suspiciously lucky (60s)', '🍀 CHEAT : chance suspecte (60 s)'], 150); }
+      else if (cheat === 'life') { GAME.lives += 1; gToast(['💖 CHEAT: bonus heart installed', '💖 CHEAT : cœur bonus installé'], 150); }
+      else if (cheat === 'boss') { GAME.nextBossAt = 40; gToast(['👹 CHEAT: a boss took the early shift', '👹 CHEAT : un boss a pris le service du matin'], 170); }
+    }
+    gAttachPiks(!!cheat); // the petal squad rides along on every single run
     GAME.hitRects = [];
     GAME.runStart = GAME.frame;
     GAME.joyAt = -999;
@@ -3816,7 +4287,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function gJump() {
     if (GAME.event) return; // world is frozen mid-encounter
+    if (GAME.state === 'ad') return; // the sponsor bought these 15 seconds
     if (GAME.state === 'idle' || GAME.state === 'over') {
+      if (GAME.state === 'over' && Date.now() < (GAME.overLockUntil || 0)) return; // read the offer first ♡
       GAME.state = 'run';
       gReset();
       playClickSound();
@@ -3831,6 +4304,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function gGameOver() {
     GAME.state = 'over';
+    // a held-down space bar must not insta-restart past the ad offer
+    GAME.overLockUntil = Date.now() + 1600;
     playGlitchSound();
     maybeWakeSleeper();
     const finalScore = Math.floor(GAME.score);
@@ -3854,6 +4329,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (!pet.sleeping && Math.random() < 0.6) {
       showBubble(yosLang === 'fr' ? 'aïe!! le bug m\'a eu' : 'ouch!! the bug got me', 1800);
+    }
+    // the reaction-cam slime pitches the classic mobile-game deal
+    if (!GAME.adUsed && !pet.sleeping) {
+      setTimeout(() => {
+        if (GAME.state === 'over' && !GAME.adUsed) {
+          showBubble(trT('psst… watch a lil ad and I revive you ♡ (press A)', 'psst… regarde une mini pub et je te ressuscite ♡ (touche A)'), 3400);
+        }
+      }, 1000);
     }
   }
 
@@ -3936,20 +4419,26 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function gDrawSlime(g2) {
-    if (GAME.frame < GAME.invUntil && GAME.frame % 8 < 4) return; // i-frame flicker
+    // i-frames render as a steady translucent ghost — NEVER a strobe
+    // (flashing is a photosensitivity hazard; alpha is just as readable)
+    const ghosted = GAME.frame < GAME.invUntil;
+    if (ghosted) g2.globalAlpha = 0.32;
+    // during the nightmare the slime roams freely on WASD
+    const baseX = GAME.nm ? GAME.nmPx : G_SLIME_X;
     const bob = GAME.state === 'run' && GAME.y <= 0 ? Math.sin(GAME.frame * 0.35) * 2 : 0;
     const squash = (GAME.y <= 0 ? 1 + Math.sin(GAME.frame * 0.35) * 0.04 : 0.94) * modVal('size');
     const h = G_SLIME_S * squash;
     const yTop = G_GROUND - h - GAME.y + bob;
     if (gSprite.complete && gSprite.naturalWidth) {
-      g2.drawImage(gSprite, G_SLIME_X, yTop, G_SLIME_S, h);
+      g2.drawImage(gSprite, baseX, yTop, G_SLIME_S, h);
     } else {
       g2.fillStyle = '#7ee0a3';
-      g2.fillRect(G_SLIME_X + 4, yTop + 8, G_SLIME_S - 8, h - 8);
+      g2.fillRect(baseX + 4, yTop + 8, G_SLIME_S - 8, h - 8);
       g2.fillStyle = gTheme.ink;
-      g2.fillRect(G_SLIME_X + 10, yTop + 14, 3, 3);
-      g2.fillRect(G_SLIME_X + 20, yTop + 14, 3, 3);
+      g2.fillRect(baseX + 10, yTop + 14, 3, 3);
+      g2.fillRect(baseX + 20, yTop + 14, 3, 3);
     }
+    if (ghosted) g2.globalAlpha = 1;
   }
 
   function gDrawObstacle(g2, o) {
@@ -3989,6 +4478,12 @@ document.addEventListener('DOMContentLoaded', () => {
     g2.imageSmoothingEnabled = false;
     GAME.frame++;
     g2.clearRect(0, 0, G_W, G_H);
+
+    // the sponsor's 15 seconds tick down even while the world sleeps
+    if (GAME.state === 'ad') {
+      GAME.adT++;
+      if (GAME.adT >= AD_FRAMES) gAdFinish();
+    }
 
     // parallax hearts drifting in the sky
     if (GAME.clouds.length < 4 && Math.random() < 0.02) {
@@ -4075,7 +4570,8 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
     if (GAME.flash > 0) {
-      g2.fillStyle = `rgba(255, 255, 255, ${GAME.flash / 14})`;
+      // soft glow wash, capped well below strobe territory
+      g2.fillStyle = `rgba(255, 244, 220, ${Math.min(0.28, GAME.flash / 40)})`;
       g2.fillRect(0, 0, G_W, G_H);
       GAME.flash--;
     }
@@ -4142,11 +4638,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
       GAME.score += 0.16 * gSpeed() * (GAME.fever > 0 ? 2 : 1) * modVal('luck');
       GAME.speed = Math.min(9.5, GAME.speed + 0.0016);
+      gPiksTick();
+      if (GAME.nm) gNmTick();
     }
 
     // ---- BOSS WAVE: a 404 kaiju + a heart-wand power-up ----
     if (gLive()) {
-      if (!GAME.boss && GAME.score >= GAME.nextBossAt) {
+      if (!GAME.boss && !GAME.nm && GAME.score >= GAME.nextBossAt) {
         const kinds = [
           { kind: 'kaiju', hp: 5, name: ['!! 404 KAIJU !!  grab the wand ♥', '!! KAIJU 404 !!  prends la baguette ♥'] },
           { kind: 'conflict', hp: 7, name: ['!! MERGE CONFLICT !!  resolve it ♥', '!! CONFLIT DE MERGE !!  résous-le ♥'] },
@@ -4297,6 +4795,9 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
+    gDrawPiks(g2);
+    gDrawWeaponBuddy(g2);
+    if (GAME.nm) gDrawNm(g2);
     gDrawSlime(g2);
     if (GAME.weapon) {
       gDrawMat(g2, G_MATS.wand, G_SLIME_X + G_SLIME_S - 2, G_GROUND - G_SLIME_S - GAME.y - 8, 1.6);
@@ -4317,6 +4818,20 @@ document.addEventListener('DOMContentLoaded', () => {
     } else if (GAME.state === 'over') {
       g2.fillStyle = gTheme.pink;
       g2.fillText(t('game.over'), G_W / 2, 62);
+      if (!GAME.adUsed) {
+        // hot-pink chip: readable on every theme, impossible to miss
+        const offer = trT('📺 [A] watch a lil ad → revive ♡', '📺 [A] mini pub → résurrection ♡');
+        g2.font = "13px 'Jersey 25', 'VT323', monospace";
+        const tw = g2.measureText(offer).width;
+        g2.fillStyle = '#14020e';
+        g2.fillRect(G_W / 2 - tw / 2 - 10, 72, tw + 20, 22);
+        g2.fillStyle = '#f0509f';
+        g2.fillRect(G_W / 2 - tw / 2 - 8, 74, tw + 16, 18);
+        g2.fillStyle = '#ffffff';
+        g2.fillText(offer, G_W / 2, 87);
+      }
+    } else if (GAME.state === 'ad') {
+      gDrawAd(g2);
     }
     g2.textAlign = 'left';
 
@@ -4486,21 +5001,59 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ---------- weapons ----------
   const WEAPONS = {
-    heart_wand: { id: 'heart_wand', clean: true, rate: 14, name: ["heart wand ♥", "baguette-cœur ♥"] },
-    bubble_blaster: { id: 'bubble_blaster', clean: true, rate: 11, name: ["bubble blaster", "canon à bulles"] },
-    baguette: { id: 'baguette', clean: true, rate: 16, name: ["baguette launcher", "lance-baguette"] },
-    meow_cannon: { id: 'meow_cannon', clean: true, rate: 12, name: ["keyboard-cat cannon", "canon à chat-clavier"] }
+    heart_wand: { id: 'heart_wand', clean: true, rate: 14, name: ["heart wand ♥", "baguette-cœur ♥"], pitch: ["ships love in O(1). complexity, not commitment", "livre de l'amour en O(1). complexité, pas engagement"] },
+    bubble_blaster: { id: 'bubble_blaster', clean: true, rate: 11, name: ["bubble blaster", "canon à bulles"], pitch: ["isolates each bug in its own container. very docker", "isole chaque bug dans son conteneur. très docker"] },
+    baguette: { id: 'baguette', clean: true, rate: 16, name: ["baguette launcher", "lance-baguette"], pitch: ["hard crust, soft rollback. gluten-driven development", "croûte dure, rollback moelleux. développement piloté par le gluten"] },
+    meow_cannon: { id: 'meow_cannon', clean: true, rate: 12, name: ["keyboard-cat cannon", "canon à chat-clavier"], pitch: ["fires judgmental meows at 60fps. code review included", "tire des miaulements réprobateurs à 60 fps. code review incluse"] }
   };
   const CURSED_WEAPONS = [
-    { id: 'rgb_sword', rate: 8, name: ["✨ RGB Gamer Sword +9999 ✨", "✨ Épée Gamer RGB +9999 ✨"], reveal: ["it screams 'UWU' at every shot. your jumps shrink 15% from embarrassment", "elle hurle « UWU » à chaque tir. tes sauts rétrécissent de 15 % de honte"], fx: () => { setMod('uwu', 1, 45); setMod('jump', 0.85, 45); } },
-    { id: 'gold_hammer', rate: 10, name: ["🔨 Golden Framework Hammer", "🔨 Marteau à Frameworks doré"], reveal: ["to a hammer, everything is a nail: bug spawns +40%", "pour un marteau, tout est un clou : bugs +40 %"], fx: () => { GAME.spawnIn = 1; setMod('speed', 1.12, 30) } },
-    { id: 'boba_straw', rate: 9, name: ["🧋 Infinity Boba Straw", "🧋 Paille à Boba de l'Infini"], reveal: ["it's thirsty. it sips 1 coin/sec while equipped-ish (15s)", "elle a soif. elle sirote 1 pièce/s pendant 15 s"], fx: () => setMod('drain', 1, 15) },
-    { id: 'legacy_blade', rate: 13, name: ["⚔️ Legacy Codebase Blade", "⚔️ Lame du Code Légataire"], reveal: ["nobody dares refactor it. it fires… comments. CHONK +25%", "personne n'ose la refactorer. elle tire… des commentaires. CHONK +25 %"], fx: () => setMod('size', 1.25, 25) },
-    { id: 'ai_wand', rate: 7, name: ["🤖 Fully-Autonomous AI Wand", "🤖 Baguette IA 100 % autonome"], reveal: ["it hallucinates targets. sometimes it aims at your coins (-10)", "elle hallucine ses cibles. parfois elle vise tes pièces (-10)"], fx: () => fxCoins(-10) },
-    { id: 'css_staff', rate: 12, name: ["🎨 Staff of !important", "🎨 Bâton de !important"], reveal: ["it overrides your walking animation. floaty jumps for 30s, like it or not", "il override ton animation de marche. sauts flottants 30 s, que tu le veuilles ou non"], fx: () => setMod('jump', 1.45, 30) },
-    { id: 'vim_katana', rate: 10, name: ["🗡️ Vim Katana (unsheathed)", "🗡️ Katana Vim (dégainé)"], reveal: ["you cannot exit it. speed +20% until it feels like stopping (20s)", "impossible d'en sortir. vitesse +20 % jusqu'à ce qu'il en décide autrement (20 s)"], fx: () => setMod('speed', 1.2, 20) },
-    { id: 'crypto_pickaxe', rate: 15, name: ["⛏️ Web3 Diamond Pickaxe", "⛏️ Pioche Diamant Web3"], reveal: ["it mines your OWN coins. -30% of your wallet. to the moon (without you)", "elle mine TES pièces. -30 % du portefeuille. to the moon (sans toi)"], fx: () => fxCoins(-Math.ceil(GAME.coins * 0.3)) }
+    { id: 'rgb_sword', rate: 8, name: ["✨ RGB Gamer Sword +9999 ✨", "✨ Épée Gamer RGB +9999 ✨"], pitch: ["+9999 to literally everything (units unspecified)", "+9999 à absolument tout (unités non précisées)"], reveal: ["it screams 'UWU' at every shot. your jumps shrink 15% from embarrassment", "elle hurle « UWU » à chaque tir. tes sauts rétrécissent de 15 % de honte"], fx: () => { setMod('uwu', 1, 45); setMod('jump', 0.85, 45); } },
+    { id: 'gold_hammer', rate: 10, name: ["🔨 Golden Framework Hammer", "🔨 Marteau à Frameworks doré"], pitch: ["solves every problem you have (plus several you don't)", "résout tous tes problèmes (plus quelques-uns que tu n'avais pas)"], reveal: ["to a hammer, everything is a nail: bug spawns +40%", "pour un marteau, tout est un clou : bugs +40 %"], fx: () => { GAME.spawnIn = 1; setMod('speed', 1.12, 30) } },
+    { id: 'boba_straw', rate: 9, name: ["🧋 Infinity Boba Straw", "🧋 Paille à Boba de l'Infini"], pitch: ["infinite refills. zero fees*  (*see terms, sip 1)", "recharges infinies. zéro frais*  (*voir conditions, gorgée 1)"], reveal: ["it's thirsty. it sips 1 coin/sec while equipped-ish (15s)", "elle a soif. elle sirote 1 pièce/s pendant 15 s"], fx: () => setMod('drain', 1, 15) },
+    { id: 'legacy_blade', rate: 13, name: ["⚔️ Legacy Codebase Blade", "⚔️ Lame du Code Légataire"], pitch: ["battle-tested since 2009. never once refactored. that's stability", "éprouvée depuis 2009. jamais refactorée. ça, c'est de la stabilité"], reveal: ["nobody dares refactor it. it fires… comments. CHONK +25%", "personne n'ose la refactorer. elle tire… des commentaires. CHONK +25 %"], fx: () => setMod('size', 1.25, 25) },
+    { id: 'ai_wand', rate: 7, name: ["🤖 Fully-Autonomous AI Wand", "🤖 Baguette IA 100 % autonome"], pitch: ["aims itself so you don't have to think. what could go wrong", "vise toute seule pour t'éviter de penser. qu'est-ce qui pourrait mal tourner"], reveal: ["it hallucinates targets. sometimes it aims at your coins (-10)", "elle hallucine ses cibles. parfois elle vise tes pièces (-10)"], fx: () => fxCoins(-10) },
+    { id: 'css_staff', rate: 12, name: ["🎨 Staff of !important", "🎨 Bâton de !important"], pitch: ["one flick overrides EVERYTHING. yes, even physics", "un seul geste override TOUT. oui, même la physique"], reveal: ["it overrides your walking animation. floaty jumps for 30s, like it or not", "il override ton animation de marche. sauts flottants 30 s, que tu le veuilles ou non"], fx: () => setMod('jump', 1.45, 30) },
+    { id: 'vim_katana', rate: 10, name: ["🗡️ Vim Katana (unsheathed)", "🗡️ Katana Vim (dégainé)"], pitch: ["unmatched speed for power users. exiting is optional", "vitesse inégalée pour power users. en sortir est optionnel"], reveal: ["you cannot exit it. speed +20% until it feels like stopping (20s)", "impossible d'en sortir. vitesse +20 % jusqu'à ce qu'il en décide autrement (20 s)"], fx: () => setMod('speed', 1.2, 20) },
+    { id: 'crypto_pickaxe', rate: 15, name: ["⛏️ Web3 Diamond Pickaxe", "⛏️ Pioche Diamant Web3"], pitch: ["passive income while you run!! definitely YOUR income", "revenu passif pendant que tu cours !! carrément TON revenu"], reveal: ["it mines your OWN coins. -30% of your wallet. to the moon (without you)", "elle mine TES pièces. -30 % du portefeuille. to the moon (sans toi)"], fx: () => fxCoins(-Math.ceil(GAME.coins * 0.3)) }
   ];
+
+  // every weapon gets a hand-pixelled badge; equipping one makes the
+  // badge float along behind the slime like a tiny loyal sidearm
+  const WEAPON_PIX = {
+    heart_wand:     [['#b07be0', 5, 5, 2, 7], ['#ff5f9e', 3, 1, 6, 3], ['#ff5f9e', 2, 2, 3, 3], ['#ff5f9e', 7, 2, 3, 3], ['#ff5f9e', 4, 4, 4, 2], ['#ffd8ee', 3, 2, 1, 1]],
+    bubble_blaster: [['#5fa8dc', 2, 5, 7, 4], ['#5fa8dc', 8, 4, 3, 2], ['#a8e0ff', 3, 6, 2, 2], ['#ffffff', 10, 2, 2, 2], ['#ffffff', 9, 0, 1, 1], ['#3d2350', 2, 9, 3, 2]],
+    baguette:       [['#d8a02e', 1, 8, 3, 3], ['#e8b95a', 3, 6, 3, 3], ['#e8b95a', 5, 4, 3, 3], ['#e8b95a', 7, 2, 3, 3], ['#d8a02e', 9, 0, 3, 3], ['#fff3c4', 4, 6, 1, 1], ['#fff3c4', 6, 4, 1, 1], ['#fff3c4', 8, 2, 1, 1]],
+    meow_cannon:    [['#9aa0b4', 2, 4, 8, 5], ['#c6cbdb', 3, 5, 3, 2], ['#9aa0b4', 2, 2, 2, 2], ['#9aa0b4', 8, 2, 2, 2], ['#3d2350', 4, 6, 1, 1], ['#3d2350', 7, 6, 1, 1], ['#ff8fc7', 5, 8, 2, 1]],
+    rgb_sword:      [['#ff5f7e', 5, 0, 2, 3], ['#ffd400', 5, 3, 2, 3], ['#5fa8dc', 5, 6, 2, 3], ['#3d2350', 3, 9, 6, 1], ['#8a5a2e', 5, 10, 2, 2]],
+    gold_hammer:    [['#ffd400', 2, 1, 8, 4], ['#f0b429', 2, 4, 8, 1], ['#fff3c4', 3, 2, 2, 1], ['#8a5a2e', 5, 5, 2, 7]],
+    boba_straw:     [['#ffffff', 3, 4, 6, 7], ['#c9a7f5', 3, 7, 6, 2], ['#ff8fc7', 5, 0, 2, 5], ['#3a2412', 4, 9, 1, 1], ['#3a2412', 7, 8, 1, 1]],
+    legacy_blade:   [['#9aa0b4', 5, 0, 2, 8], ['#6f7486', 5, 3, 2, 1], ['#6f7486', 5, 6, 2, 1], ['#3d2350', 3, 8, 6, 1], ['#8a5a2e', 5, 9, 2, 3], ['#57c689', 6, 2, 1, 1]],
+    ai_wand:        [['#c9a7f5', 5, 3, 2, 8], ['#ffd400', 4, 0, 4, 3], ['#ffffff', 5, 1, 1, 1], ['#ff8fc7', 2, 2, 1, 1], ['#a8e0ff', 9, 1, 1, 1]],
+    css_staff:      [['#8a5a2e', 5, 2, 2, 9], ['#f0509f', 3, 0, 6, 3], ['#ffd400', 4, 1, 1, 1], ['#5fa8dc', 7, 1, 1, 1]],
+    vim_katana:     [['#57c689', 6, 0, 2, 7], ['#9fe8c0', 6, 1, 1, 5], ['#3d2350', 4, 7, 6, 1], ['#14020e', 6, 8, 2, 4]],
+    crypto_pickaxe: [['#a8e0ff', 2, 1, 8, 2], ['#5fa8dc', 2, 3, 2, 1], ['#5fa8dc', 8, 3, 2, 1], ['#8a5a2e', 5, 3, 2, 9], ['#ffffff', 3, 1, 1, 1]]
+  };
+
+  function gDrawWeaponIcon(g2, id, x, y, s) {
+    const pix = WEAPON_PIX[id];
+    if (!pix) return;
+    pix.forEach(([c, px2, py2, w2, h2]) => {
+      g2.fillStyle = c;
+      g2.fillRect(x + px2 * s, y + py2 * s, w2 * s, h2 * s);
+    });
+  }
+
+  // the equipped weapon bobs along behind its slime, like a proud pet
+  function gDrawWeaponBuddy(g2) {
+    if (!GAME.weapon || !WEAPON_PIX[GAME.weapon.id]) return;
+    const bob = Math.sin(GAME.frame * 0.09) * 4;
+    const wy = G_GROUND - G_SLIME_S - 26 - GAME.y * 0.6 + bob;
+    gDrawWeaponIcon(g2, GAME.weapon.id, G_SLIME_X - 24, wy, 1.6);
+    if (GAME.frame % 34 < 4) { // occasional sparkle of loyalty
+      g2.fillStyle = '#fff7d1';
+      g2.fillRect(G_SLIME_X - 28, wy - 3, 2, 2);
+    }
+  }
 
   function gGiveWeapon(id, clean) {
     const w = WEAPONS[id] || WEAPONS.heart_wand;
@@ -4571,11 +5124,474 @@ document.addEventListener('DOMContentLoaded', () => {
       store.set('yos-pending-coins', store.get('yos-pending-coins', 0) + 5);
       gToast(["💤 a sleepwalker left 5 coins on the start line", "💤 un somnambule a laissé 5 pièces sur la ligne de départ"], 240);
     }
+    // mid-run, some dreams curdle: 45% of dives become THE NIGHTMARE
+    if (GAME.state === 'run' && Math.random() < 0.45) {
+      setTimeout(() => { if (GAME.state === 'run' && !GAME.nm) gNightmareStart(); }, 700);
+    }
+    // the dreaming slime never travels alone: the whole petal squad
+    // dives in too (they were already following — this just re-musters)
+    gAttachPiks(true);
+    if (GAME.piks.length) {
+      setTimeout(() => gToast([
+        `🌸 pikmin.exe attached ×${GAME.piks.length} — followers deployed!!`,
+        `🌸 pikmin.exe attaché ×${GAME.piks.length} — escorte déployée !!`
+      ], 220), 1400);
+    }
     playFanfare();
+  }
+
+  /* ---------- the 15-second revive ad ----------
+     No real sponsors here — the slime and its pikmin improvise a
+     pixel parody of some big brand, then sweetly rent out the slot. */
+  const AD_SKITS = [
+    { brand: "McSlime's", tint: '#fff3d6', accent: '#f0b429', prop: 'arches',
+      lines: [["ba da ba ba baaa…", 'ba da ba ba baaa…'], ['fresh bugs. never caught ♡', 'des bugs frais. jamais attrapés ♡']] },
+    { brand: 'Slimebucks', tint: '#e9f7ee', accent: '#4fb583', prop: 'cup',
+      lines: [['one grande boba for… "CUTE PINK BLOB"??', 'un grand boba pour… « PETIT BLOB ROSE MIGNON » ??'], ["…that's literally my legal name. well played.", '…c\'est littéralement mon nom légal. bien joué.']] },
+    { brand: 'iSlime 17 Pro', tint: '#eef2ff', accent: '#5fa8dc', prop: 'phone',
+      lines: [['now with 200% more jiggle', 'avec 200 % de jiggle en plus'], ['the pikmin queued 3 days for this', 'les pikmin ont fait 3 jours de queue pour ça']] },
+    { brand: 'Slime+', tint: '#ffeef6', accent: '#f0509f', prop: 'tv',
+      lines: [['NOW STREAMING: BUG WARS ep. ∞', 'EN STREAMING : BUG WARS ép. ∞'], ['(cancelled after one season anyway)', "(annulé après une saison, comme d'hab)"]] }
+  ];
+  const AD_FRAMES = 900; // 15s at 60fps
+
+  function gAdStart() {
+    if (GAME.state !== 'over' || GAME.adUsed) return;
+    GAME.adUsed = true;
+    GAME.state = 'ad';
+    GAME.adT = 0;
+    GAME.adSkit = Math.floor(Math.random() * AD_SKITS.length);
+    playClickSound();
+    if (!pet.sleeping) showBubble(trT('rolling the ad!! I star in this one ♡', 'la pub tourne !! je joue dedans ♡'), 2400);
+  }
+
+  function gAdFinish() {
+    GAME.state = 'run';
+    GAME.lives = 1;
+    GAME.obs = [];
+    GAME.boss = null;
+    GAME.pickup = null;
+    fxInvincible(2.6);
+    playFanfare();
+    gToast(['📺 revived!! sponsored by: absolutely nobody ♡', '📺 ressuscité !! sponsorisé par : absolument personne ♡'], 200);
+    if (!pet.sleeping) showBubble(trT('welcome back!! ad money well spent ♡', 'te revoilà !! pub bien investie ♡'), 2400);
+  }
+
+  function gAdActor(g2, cx, cy, bounce) {
+    // chibi slime spokesperson
+    const y = cy + Math.sin(bounce) * 5;
+    g2.fillStyle = '#c9a7f5';
+    g2.fillRect(cx - 21, y - 14, 42, 30);
+    g2.fillStyle = '#ff9fd0';
+    g2.fillRect(cx - 19, y - 12, 38, 26);
+    g2.fillStyle = '#ffc9e4';
+    g2.fillRect(cx - 15, y - 9, 9, 6);
+    g2.fillStyle = '#14020e';
+    g2.fillRect(cx - 9, y - 2, 4, 4); g2.fillRect(cx + 6, y - 2, 4, 4);
+    g2.fillStyle = '#ff6fae';
+    g2.fillRect(cx - 3, y + 5, 7, 3);
+    g2.fillStyle = '#ffb3dd';
+    g2.fillRect(cx - 15, y + 3, 4, 3); g2.fillRect(cx + 12, y + 3, 4, 3);
+  }
+
+  function gAdPik(g2, cx, cy, color, dance) {
+    const y = cy - Math.abs(Math.sin(dance)) * 6;
+    g2.fillStyle = '#57c689'; g2.fillRect(cx + 3, y - 5, 2, 4);
+    g2.fillStyle = '#ffffff'; g2.fillRect(cx + 1, y - 8, 2, 2); g2.fillRect(cx + 5, y - 8, 2, 2); g2.fillRect(cx + 3, y - 9, 2, 2);
+    g2.fillStyle = color; g2.fillRect(cx, y, 9, 8);
+    g2.fillStyle = '#14020e'; g2.fillRect(cx + 2, y + 2, 2, 2); g2.fillRect(cx + 6, y + 2, 2, 2);
+  }
+
+  function gAdProp(g2, kind, cx, cy, accent) {
+    if (kind === 'arches') {
+      g2.fillStyle = accent;
+      g2.font = "44px 'Jersey 25', 'VT323', monospace";
+      g2.textAlign = 'center';
+      g2.fillText('m', cx, cy + 14);
+    } else if (kind === 'cup') {
+      g2.fillStyle = '#ffffff'; g2.fillRect(cx - 11, cy - 14, 22, 28);
+      g2.fillStyle = accent; g2.fillRect(cx - 11, cy - 4, 22, 8);
+      g2.fillStyle = '#c9a7f5'; g2.fillRect(cx - 2, cy - 22, 4, 9); // straw
+      g2.fillStyle = '#3a2412';
+      g2.fillRect(cx - 6, cy + 8, 3, 3); g2.fillRect(cx + 1, cy + 9, 3, 3); // pearls
+    } else if (kind === 'phone') {
+      g2.fillStyle = '#14020e'; g2.fillRect(cx - 10, cy - 18, 20, 36);
+      g2.fillStyle = '#eef2ff'; g2.fillRect(cx - 8, cy - 16, 16, 32);
+      g2.fillStyle = '#ff9fd0'; g2.fillRect(cx - 5, cy - 6, 10, 8); // slime on screen
+      g2.fillStyle = '#14020e'; g2.fillRect(cx - 3, cy - 4, 2, 2); g2.fillRect(cx + 1, cy - 4, 2, 2);
+    } else if (kind === 'tv') {
+      g2.fillStyle = '#14020e'; g2.fillRect(cx - 16, cy - 12, 32, 24);
+      g2.fillStyle = accent; g2.fillRect(cx - 14, cy - 10, 28, 20);
+      g2.fillStyle = '#ffffff';
+      g2.beginPath(); g2.moveTo(cx - 4, cy - 6); g2.lineTo(cx + 6, cy); g2.lineTo(cx - 4, cy + 6); g2.fill();
+    }
+  }
+
+  function gDrawAd(g2) {
+    const skit = AD_SKITS[GAME.adSkit || 0];
+    const tLeft = Math.ceil((AD_FRAMES - GAME.adT) / 60);
+    const scene = GAME.adT < 300 ? 0 : GAME.adT < 600 ? 1 : 2;
+    // the ad covers the whole screen
+    g2.fillStyle = skit.tint;
+    g2.fillRect(0, 0, G_W, G_H);
+    // marquee AD strip
+    g2.fillStyle = skit.accent;
+    g2.fillRect(0, 0, G_W, 12);
+    g2.fillStyle = '#ffffff';
+    g2.font = "10px 'Jersey 25', 'VT323', monospace";
+    g2.textAlign = 'left';
+    const shift = (GAME.adT * 0.8) % 46;
+    for (let x = -shift; x < G_W; x += 46) g2.fillText('AD ♡', x, 10);
+    g2.textAlign = 'right';
+    g2.fillStyle = '#14020e';
+    g2.font = "12px 'Jersey 25', 'VT323', monospace";
+    g2.fillText(`⏳ ${tLeft}s`, G_W - 6, 26);
+    g2.textAlign = 'center';
+    if (scene < 2) {
+      g2.fillStyle = '#14020e';
+      g2.font = "22px 'Jersey 25', 'VT323', monospace";
+      g2.fillText(skit.brand, G_W / 2, 42);
+      g2.font = "13px 'Jersey 25', 'VT323', monospace";
+      g2.fillStyle = '#5a3d6e';
+      g2.fillText(trT(skit.lines[scene][0], skit.lines[scene][1]), G_W / 2, G_H - 34);
+      gAdProp(g2, skit.prop, G_W / 2 + 66, 78, skit.accent);
+      gAdActor(g2, G_W / 2 - 50, 84, GAME.adT * 0.12);
+    } else {
+      // the grand finale: a very sincere sublet offer
+      g2.fillStyle = '#14020e';
+      g2.font = "18px 'Jersey 25', 'VT323', monospace";
+      g2.fillText(trT('♡ this ad slot is for rent ♡', '♡ cet espace pub est à louer ♡'), G_W / 2, 44);
+      g2.font = "12px 'Jersey 25', 'VT323', monospace";
+      g2.fillStyle = '#5a3d6e';
+      g2.fillText('yuyongshan573@gmail.com', G_W / 2, 62);
+      g2.fillText(trT('(serious brands only. payment in boba accepted)', '(marques sérieuses uniquement. paiement en boba accepté)'), G_W / 2, G_H - 34);
+      gAdActor(g2, G_W / 2, 90, GAME.adT * 0.12);
+      // pixel confetti
+      for (let i = 0; i < 22; i++) {
+        const cxx = (i * 47 + GAME.adT) % G_W;
+        const cyy = (i * 31 + GAME.adT * 1.6) % (G_H - 20);
+        g2.fillStyle = ['#ff8fc7', '#ffd400', '#a8e0ff', '#c9a7f5'][i % 4];
+        g2.fillRect(cxx, cyy, 3, 3);
+      }
+    }
+    // the pikmin cast dances through every scene
+    const cast = (GAME.piks && GAME.piks.length) ? GAME.piks.map((p) => p.color) : ['#ff8fc7', '#c9a7f5', '#a8e0ff'];
+    cast.slice(0, 6).forEach((col, i) => gAdPik(g2, G_W / 2 - 60 + i * 22, G_H - 16, col, GAME.adT * 0.16 + i));
+    g2.font = "9px 'Jersey 25', 'VT323', monospace";
+    g2.fillStyle = 'rgba(20, 2, 14, 0.55)';
+    g2.fillText(trT('ESC = give up the revive', 'ÉCHAP = renoncer à la résurrection'), G_W / 2, G_H - 4);
+    g2.textAlign = 'left';
+  }
+
+  /* ---------- THE NIGHTMARE: a sleepwalking slime gone wrong ----------
+     Sometimes the dreamer dives in mid-run and wakes up as the biggest
+     bug ever compiled. The runner freezes into a WASD arena fight:
+     ram its glowing heart, dodge the falling exceptions. */
+  function gNightmareStart() {
+    GAME.nm = { hp: 12, x: G_W - 120, t: 0, weak: null, weakAt: GAME.frame + 130, hurtCd: 0, shots: [], hitFlash: 0 };
+    GAME.nmPx = G_SLIME_X;
+    GAME.obs = [];
+    GAME.boss = null;
+    GAME.pickup = null;
+    playGlitchSound();
+    gToast(['💀 the sleepwalker had a NIGHTMARE… and became the BIGGEST BUG EVER', '💀 le somnambule a fait un CAUCHEMAR… et est devenu le PLUS GROS BUG DE TOUS LES TEMPS'], 240);
+    setTimeout(() => gToast(['tutorial: WASD moves you!! W = up. A = left. the rest… you\'ll figure it out ♡', 'tuto : WASD pour bouger !! W = haut. A = gauche. le reste… tu trouveras ♡'], 250), 2800);
+    setTimeout(() => { if (GAME.nm) gToast(['RAM ITS GLOWING HEART!! (ram = touch. with love.)', 'FONCE DANS SON CŒUR QUI BRILLE !! (foncer = toucher. avec amour.)'], 240); }, 6200);
+  }
+
+  function gNmTick() {
+    const nm = GAME.nm;
+    if (!nm) return;
+    nm.t++;
+    GAME.obs = []; // the nightmare eats every lesser bug
+    nm.x = G_W - 120 + Math.sin(nm.t * 0.017) * 34;
+    const nmY = 18 + Math.sin(nm.t * 0.05) * 9;
+    // a glowing weak heart surfaces every few seconds
+    if (!nm.weak && GAME.frame >= nm.weakAt) {
+      // spawn the heart on the boss's lower half — always jumpable
+      nm.weak = { ox: 12 + Math.random() * 56, oy: 30 + Math.random() * 24, until: GAME.frame + 105 };
+    }
+    if (nm.weak && GAME.frame > nm.weak.until) { nm.weak = null; nm.weakAt = GAME.frame + 90 + Math.random() * 80; }
+    // falling exception glyphs
+    if (nm.t % 95 === 0) nm.shots.push({ x: 30 + Math.random() * (G_W - 90), y: -8 });
+    nm.shots.forEach((s) => { s.y += 2.6; });
+    nm.shots = nm.shots.filter((s) => s.y < G_H + 10);
+    // player rect
+    const px = GAME.nmPx + 5, pw = G_SLIME_S - 10;
+    const py = G_GROUND - G_SLIME_S - GAME.y + 6, ph = G_SLIME_S - 8;
+    // shot grazes sting a few coins
+    nm.shots = nm.shots.filter((s) => {
+      if (s.x > px - 6 && s.x < px + pw + 4 && s.y > py - 4 && s.y < py + ph) {
+        GAME.coins = Math.max(0, GAME.coins - 2);
+        playTone(200, 'sawtooth', 0.1, 0, 0.05);
+        return false;
+      }
+      return true;
+    });
+    // ramming the boss
+    const bw = 88, bh = 64;
+    const overlap = px < nm.x + bw && px + pw > nm.x && py < nmY + bh && py + ph > nmY;
+    if (overlap) {
+      const wk = nm.weak;
+      const hitWeak = wk && px + pw > nm.x + wk.ox - 8 && px < nm.x + wk.ox + 10 && py < nmY + wk.oy + 10 && py + ph > nmY + wk.oy - 8;
+      if (hitWeak) {
+        nm.hp -= 1;
+        nm.weak = null;
+        nm.weakAt = GAME.frame + 100 + Math.random() * 70;
+        nm.hitFlash = 10;
+        GAME.score += 8;
+        GAME.nmPx = Math.max(14, GAME.nmPx - 34); // recoil of love
+        burstNote(); playSparkleSound();
+        gToast([`💘 CRITICAL HUG!! nightmare hp: ${nm.hp}`, `💘 CÂLIN CRITIQUE !! pv du cauchemar : ${nm.hp}`], 90);
+        if (nm.hp <= 0) return gNmWin();
+      } else if (GAME.frame > nm.hurtCd) {
+        nm.hurtCd = GAME.frame + 60;
+        GAME.coins = Math.max(0, GAME.coins - 4);
+        GAME.nmPx = Math.max(14, GAME.nmPx - 30);
+        playTone(180, 'sawtooth', 0.12, 0, 0.06);
+      }
+    }
+    function burstNote() { playTone(1046, 'triangle', 0.1, 0, 0.04); playTone(1568, 'triangle', 0.12, 0.06, 0.04); }
+  }
+
+  function gNmWin() {
+    GAME.nm = null;
+    GAME.nmPx = null;
+    GAME.score += 40;
+    fxFever(8);
+    fxCoinRain(14);
+    playFanfare();
+    gToast(['🌸 NIGHTMARE DEBUGGED!! +40 · the sleepwalker purrs and fades…', '🌸 CAUCHEMAR DÉBUGUÉ !! +40 · le somnambule ronronne et s\'efface…'], 260);
+    if (!pet.sleeping && typeof showBubble === 'function') {
+      setTimeout(() => showBubble(trT('…I had the WEIRDEST dream ♡', "…j'ai fait le rêve le plus BIZARRE ♡"), 2600), 900);
+    }
+  }
+
+  function gDrawNm(g2) {
+    const nm = GAME.nm;
+    if (!nm) return;
+    const nmY = 18 + Math.sin(nm.t * 0.05) * 9;
+    const jx = nm.hitFlash > 0 ? (Math.random() * 4 - 2) : 0; // glitch shudder
+    if (nm.hitFlash > 0) nm.hitFlash--;
+    // colossal dream-bug: dark jelly, crooked antennae, sleepy-angry eyes
+    g2.fillStyle = '#241536';
+    g2.fillRect(nm.x + jx - 2, nmY - 2, 92, 68);
+    g2.fillStyle = nm.hitFlash > 0 ? '#6d2c74' : '#3d2350';
+    g2.fillRect(nm.x + jx, nmY, 88, 64);
+    g2.fillStyle = '#241536';
+    g2.fillRect(nm.x + jx + 6, nmY + 8, 76, 6);
+    g2.fillRect(nm.x + jx + 14, nmY - 12, 4, 12); g2.fillRect(nm.x + jx + 66, nmY - 12, 4, 12); // antennae
+    g2.fillStyle = '#ff5f7e';
+    g2.fillRect(nm.x + jx + 12, nmY - 16, 8, 5); g2.fillRect(nm.x + jx + 64, nmY - 16, 8, 5);
+    g2.fillStyle = '#ff8fa8'; // cranky eyes
+    g2.fillRect(nm.x + jx + 18, nmY + 22, 12, 7); g2.fillRect(nm.x + jx + 58, nmY + 22, 12, 7);
+    g2.fillStyle = '#14020e';
+    g2.fillRect(nm.x + jx + 22, nmY + 24, 5, 5); g2.fillRect(nm.x + jx + 62, nmY + 24, 5, 5);
+    g2.fillStyle = '#c3aee0';
+    g2.font = "10px 'Jersey 25', 'VT323', monospace";
+    g2.fillText('z', nm.x + jx + 84, nmY - 6);
+    g2.fillText('Z', nm.x + jx + 92, nmY - 14);
+    // the glowing weak heart — a slow, steady breathing pulse (no strobing)
+    if (nm.weak) {
+      const pulse = 0.6 + Math.sin(GAME.frame * 0.09) * 0.25;
+      g2.globalAlpha = pulse;
+      g2.fillStyle = '#ffd400';
+      g2.fillRect(nm.x + nm.weak.ox - 4, nmY + nm.weak.oy - 4, 12, 12);
+      g2.fillStyle = '#ff5f9e';
+      g2.fillRect(nm.x + nm.weak.ox - 2, nmY + nm.weak.oy - 2, 8, 8);
+      g2.globalAlpha = 1;
+    }
+    // falling exceptions
+    g2.fillStyle = '#ffe98a';
+    g2.font = "12px 'Jersey 25', 'VT323', monospace";
+    nm.shots.forEach((s) => g2.fillText('!', s.x, s.y));
+    // hp pips
+    g2.fillStyle = '#ff5f9e';
+    for (let i = 0; i < nm.hp; i++) g2.fillRect(nm.x + 4 + i * 7, nmY + 58, 5, 4);
+  }
+
+  /* ---------- pikmin followers: the garden squad, in-game ----------
+     leaf = passive coin income · bud = absorbs one hit · flower =
+     clears the bug ahead, each with its OWN tiny code-nerd technique
+     (assigned at attach time) and its own send-off animation. */
+  const PIK_SKILLS = [
+    { id: 'ctrl_z',  toast: ['⌫ ctrl_z.pik undid that bug (+6)', '⌫ ctrl_z.pik a annulé ce bug (+6)'] },
+    { id: 'rm_rf',   toast: ['🗑 rm-rf.pik deleted it. no backups. (+6)', '🗑 rm-rf.pik l\'a supprimé. sans backup. (+6)'] },
+    { id: 'blame',   toast: ['👉 git-blame.pik found the culprit (+6)', '👉 git-blame.pik a trouvé le coupable (+6)'] },
+    { id: 'four04',  toast: ['🚫 404.pik: bug not found (+6)', '🚫 404.pik : bug introuvable (+6)'] },
+    { id: 'zip',     toast: ['🗜 zip.pik compressed it to 0 bytes (+6)', '🗜 zip.pik l\'a compressé à 0 octet (+6)'] },
+    { id: 'duck',    toast: ['🦆 duck.pik made it explain itself. it left. (+6)', '🦆 duck.pik l\'a fait s\'expliquer. il est parti. (+6)'] },
+    { id: 'lint',    toast: ['🌸 lint.pik refactored it into a flower (+6)', '🌸 lint.pik l\'a refactoré en fleur (+6)'] },
+    { id: 'sudo',    toast: ['👑 sudo.pik asked politely. with authority. (+6)', '👑 sudo.pik a demandé poliment. avec autorité. (+6)'] }
+  ];
+
+  // the squad follows into EVERY run — plucked buddies are family,
+  // not a sleepwalker-only cameo. Roster persists across reloads.
+  function gAttachPiks(quiet) {
+    let src = [];
+    if (GARDEN.buddies.length) {
+      src = GARDEN.buddies.map((b) => ({ color: b.color, stage: b.stage, skill: b.skill }));
+    } else {
+      src = store.get('yos-pik-roster', []).map((r) => ({
+        color: PIK_COLORS[r.c] || PIK_COLORS[0],
+        stage: r.s || 0,
+        skill: PIK_SKILLS.find((sk) => sk.id === r.k) || null
+      }));
+    }
+    if (!src.length) { GAME.piks = []; return; }
+    GAME.piks = src.map((b, i) => ({
+      color: b.color.body, dark: b.color.dark, stage: b.stage,
+      phase: Math.random() * 6.28,
+      shieldReadyAt: 0,
+      zapAt: GAME.frame + 260 + i * 90,
+      nextCoinAt: GAME.frame + 400 + i * 120,
+      skill: b.skill || PIK_SKILLS[Math.floor(Math.random() * PIK_SKILLS.length)]
+    }));
+    if (!quiet) {
+      setTimeout(() => gToast([
+        `🌸 pikmin squad ×${GAME.piks.length} reporting for duty!!`,
+        `🌸 escouade pikmin ×${GAME.piks.length} au rapport !!`
+      ], 190), 700);
+    }
+  }
+
+  function gPiksTick() {
+    const piks = GAME.piks || [];
+    if (!piks.length) return;
+    piks.forEach((p, i) => {
+      if (p.stage === 2 && GAME.frame >= (p.zapAt || 0)) {
+        const prey = GAME.obs.filter((o) => o.x > G_SLIME_X + 8 && o.x < G_SLIME_X + 190).sort((a, b) => a.x - b.x)[0];
+        if (prey) {
+          p.zapAt = GAME.frame + 380 + Math.random() * 170;
+          GAME.obs.splice(GAME.obs.indexOf(prey), 1);
+          GAME.score += 6;
+          const skill = p.skill || PIK_SKILLS[0];
+          GAME.pikFx = {
+            skill: skill.id, t0: GAME.frame, until: GAME.frame + 40,
+            x: prey.x, w: prey.w, h: prey.fly ? 16 : prey.h,
+            y: prey.fly ? G_GROUND - 58 : G_GROUND - (prey.fly ? 16 : prey.h),
+            color: p.color
+          };
+          playTone(skill.id === 'duck' ? 620 : 1500, 'square', 0.07, 0, 0.03);
+          if (Math.random() < 0.3) gToast(skill.toast, 130);
+        }
+      }
+      if (p.stage === 0 && GAME.frame >= (p.nextCoinAt || 0)) {
+        p.nextCoinAt = GAME.frame + 520 + Math.random() * 260;
+        GAME.coins += 1;
+        playTone(1160, 'triangle', 0.05, 0, 0.02);
+        if (Math.random() < 0.25) gToast(['🪙 cache.pik: passive income (+1 coin)', '🪙 cache.pik : revenu passif (+1 pièce)'], 110);
+      }
+    });
+    // squad perk: nearby loot drifts toward the slime
+    if (GAME.loot && GAME.loot.length) {
+      GAME.loot.forEach((l) => { if (l.x > G_SLIME_X && l.x < G_SLIME_X + 150) l.x -= 2.2; });
+    }
+  }
+
+  // each skill gets a hand-made send-off — no more bare polylines
+  function gDrawPikFx(g2) {
+    const fx = GAME.pikFx;
+    if (!fx || GAME.frame >= fx.until) return;
+    const t = (GAME.frame - fx.t0) / (fx.until - fx.t0); // 0→1
+    const cx = fx.x + fx.w / 2, cy = fx.y + fx.h / 2;
+    g2.textAlign = 'center';
+    if (fx.skill === 'ctrl_z') {
+      // the bug rewinds right out of the timeline
+      g2.globalAlpha = 1 - t;
+      g2.fillStyle = '#e05f8f';
+      g2.fillRect(fx.x + t * 90, fx.y, fx.w, fx.h);
+      g2.globalAlpha = 1;
+      g2.fillStyle = '#c3aee0';
+      g2.font = "11px 'Jersey 25', 'VT323', monospace";
+      g2.fillText('⌫ undo', cx, fx.y - 6);
+    } else if (fx.skill === 'rm_rf') {
+      for (let k = 0; k < 8; k++) { // crumbles into falling pixels
+        g2.fillStyle = k % 2 ? '#e05f8f' : '#b04f74';
+        g2.fillRect(cx - 8 + (k % 4) * 5, cy + t * (18 + k * 4), 3, 3);
+      }
+    } else if (fx.skill === 'blame') {
+      g2.fillStyle = '#ffd400';
+      g2.font = "11px 'Jersey 25', 'VT323', monospace";
+      g2.fillText('BLAME!', cx, fx.y - 6 - t * 8);
+      g2.globalAlpha = 1 - t; // slinks away in shame
+      g2.fillStyle = '#e05f8f';
+      g2.fillRect(fx.x, fx.y + t * 10, fx.w, Math.max(2, fx.h * (1 - t)));
+      g2.globalAlpha = 1;
+    } else if (fx.skill === 'four04') {
+      g2.globalAlpha = 1 - t;
+      g2.fillStyle = '#c3aee0';
+      g2.font = "13px 'Jersey 25', 'VT323', monospace";
+      g2.fillText('404', cx, cy - t * 14);
+      g2.globalAlpha = 1;
+    } else if (fx.skill === 'zip') {
+      const squash = Math.max(2, fx.h * (1 - t * 1.4)); // flatten…
+      g2.fillStyle = '#e05f8f';
+      g2.fillRect(fx.x, fx.y + fx.h - squash, fx.w, squash);
+      if (t > 0.7) { g2.fillStyle = '#fff7d1'; g2.fillRect(cx - 1, fx.y + fx.h - 4, 3, 3); } // …pop
+    } else if (fx.skill === 'duck') {
+      g2.font = "12px 'Jersey 25', 'VT323', monospace";
+      g2.fillText('🦆', cx - 12, cy - t * 16);
+      g2.globalAlpha = 1 - t; // it leaves. voluntarily. changed.
+      g2.fillStyle = '#e05f8f';
+      g2.fillRect(fx.x + t * 50, fx.y, fx.w, fx.h);
+      g2.globalAlpha = 1;
+    } else if (fx.skill === 'lint') {
+      g2.font = "12px 'Jersey 25', 'VT323', monospace";
+      g2.globalAlpha = 1 - t * 0.7;
+      g2.fillText('🌸', cx, cy + 4 - t * 10);
+      g2.globalAlpha = 1;
+      for (let k = 0; k < 5; k++) {
+        g2.fillStyle = '#ffd8ee';
+        const a = t * 6 + k * 1.26;
+        g2.fillRect(cx + Math.cos(a) * 12, cy + Math.sin(a) * 9, 2, 2);
+      }
+    } else { // sudo: it bows, then simply complies
+      g2.fillStyle = '#ffd400';
+      g2.font = "10px 'Jersey 25', 'VT323', monospace";
+      g2.fillText('👑', cx, fx.y - 6);
+      g2.fillStyle = '#e05f8f';
+      g2.fillRect(fx.x, fx.y + t * fx.h, fx.w, Math.max(2, fx.h * (1 - t)));
+    }
+    g2.textAlign = 'left';
+  }
+
+  function gDrawPiks(g2) {
+    (GAME.piks || []).forEach((p, i) => {
+      const bx = G_SLIME_X - 18 - i * 15;
+      if (bx < 2) return;
+      const hop = Math.abs(Math.sin(GAME.frame * 0.18 + p.phase)) * (GAME.y > 0 ? 7 : 3);
+      const by = G_GROUND - 11 - hop;
+      g2.fillStyle = '#57c689'; // stem
+      g2.fillRect(bx + 4, by - 5, 2, 5);
+      if (p.stage === 0) { g2.fillStyle = '#7ddba4'; g2.fillRect(bx + 2, by - 7, 3, 2); }
+      else if (p.stage === 1) { g2.fillStyle = p.dark; g2.fillRect(bx + 2, by - 8, 4, 3); }
+      else {
+        g2.fillStyle = '#ffffff';
+        g2.fillRect(bx + 1, by - 8, 2, 2); g2.fillRect(bx + 6, by - 8, 2, 2); g2.fillRect(bx + 3, by - 10, 3, 2);
+        g2.fillStyle = '#ffd400'; g2.fillRect(bx + 3, by - 8, 3, 2);
+      }
+      g2.fillStyle = p.color; // glowing jelly body
+      g2.fillRect(bx, by, 10, 8); g2.fillRect(bx + 1, by + 8, 8, 2);
+      g2.fillStyle = 'rgba(255,255,255,0.7)'; g2.fillRect(bx + 1, by + 1, 2, 2);
+      g2.fillStyle = '#14020e'; g2.fillRect(bx + 2, by + 3, 2, 2); g2.fillRect(bx + 6, by + 3, 2, 2);
+    });
+    gDrawPikFx(g2);
   }
 
   // ---------- hit handling ----------
   function gHit(o) {
+    // a bud buddy throws itself in front: exception caught, life saved
+    const guard = (GAME.piks || []).find((p) => p.stage === 1 && GAME.frame >= (p.shieldReadyAt || 0));
+    if (guard) {
+      guard.shieldReadyAt = GAME.frame + 1500; // ~25s to recompile
+      const gi = GAME.obs.indexOf(o);
+      if (gi >= 0) GAME.obs.splice(gi, 1);
+      fxInvincible(1.6);
+      playTone(720, 'square', 0.1, 0, 0.04);
+      gToast(['🛡 try{}catch.pik absorbed the crash!!', '🛡 try{}catch.pik a absorbé le crash !!'], 150);
+      return false;
+    }
     const idx = GAME.obs.indexOf(o);
     if (idx >= 0) GAME.obs.splice(idx, 1);
     GAME.lives -= 1;
@@ -5021,12 +6037,14 @@ document.addEventListener('DOMContentLoaded', () => {
       gOption(g2, 270, 96, 150, 26, L(["🚫 refuse [2]", "🚫 refuser [2]"]), ev.sel === 1, 1);
     } else if (ev.type === 'offer') {
       g2.fillText(L(["a weapon lies on the road…", "une arme traîne sur la route…"]), 20, 24);
+      gDrawWeaponIcon(g2, ev.weapon.id, 22, 32, 2.4); // its glamour shot
       g2.fillStyle = ev.cursed ? '#ffe98a' : gTheme.pink;
-      g2.fillText(L(ev.weapon.name), 20, 44);
-      if (ev.cursed) {
+      g2.fillText(L(ev.weapon.name), 58, 44);
+      if (ev.weapon.pitch) {
+        // the sales line — sworn to be technically true
         g2.fillStyle = '#c3aee0';
         g2.font = "10px 'Jersey 25', 'VT323', monospace";
-        g2.fillText(L(["it sparkles a little TOO hard…", "elle brille un peu TROP fort…"]), 20, 60);
+        g2.fillText('"' + L(ev.weapon.pitch) + '"', 58, 60);
       }
       gOption(g2, 60, 96, 150, 26, L(["🖐️ take it [1]", "🖐️ la prendre [1]"]), ev.sel === 0, 0);
       gOption(g2, 270, 96, 150, 26, L(["🚶 walk away [2]", "🚶 passer [2]"]), ev.sel === 1, 1);
@@ -5585,6 +6603,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (gInviteEl) { gInviteEl.remove(); gInviteEl = null; }
   }
 
+  // language switched while the popup is up? tear it down, rebuild in place
+  function refreshGameInvite() {
+    if (!gInviteEl) return;
+    dismissGameInvite();
+    gInviteShownThisVisit = false;
+    showGameInvite();
+  }
+
   function launchGameFromInvite(hyped) {
     gPendingBoost = hyped;
     dismissGameInvite();
@@ -5653,6 +6679,12 @@ document.addEventListener('DOMContentLoaded', () => {
       rb.setAttribute('aria-hidden', 'true');
       hype.appendChild(rb);
     });
+    // the tiny screaming badge perched on the button's top-right corner
+    const badge = document.createElement('span');
+    badge.className = 'gi-badge';
+    badge.textContent = trT('click me! clickkkkk meeeeee!', 'clique ! cliiiiique-moiiiii !');
+    badge.setAttribute('aria-hidden', 'true');
+    hype.appendChild(badge);
     hype.addEventListener('click', () => launchGameFromInvite(true));
     row.appendChild(yes);
     row.appendChild(hype);
@@ -5670,17 +6702,15 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function scheduleGameInvite() {
-    // seasoned players already know the arcade — don't nag them
-    if (store.get('yos-runner-hi', 0) > 0) return;
     setTimeout(function tryShow() {
       if (gInviteShownThisVisit) return;
       const gameOpen = !document.getElementById('win-game').classList.contains('window-closed');
       if (document.hidden || resolvedTheme() !== 'light' || gameOpen) {
-        setTimeout(tryShow, 20000); // wrong moment — lurk and retry
+        setTimeout(tryShow, 8000); // wrong moment — lurk and retry
         return;
       }
       showGameInvite();
-    }, 30000 + Math.random() * 5000);
+    }, 15000 + Math.random() * 5000);
   }
   scheduleGameInvite();
 
@@ -5691,12 +6721,12 @@ document.addEventListener('DOMContentLoaded', () => {
      message mirrors into the room. i18n + a11y throughout.
      ===================================================== */
   const liveStage = document.getElementById('live-stage');
-  const liveFeed = document.getElementById('live-chat-feed');
   const liveComboEl = document.getElementById('live-combo');
   var liveOpen = false;
 
   function liveEnter() {
     if (liveOpen || !liveStage || !slimeBody) return;
+    if (typeof gameCamExit === 'function') gameCamExit(); // habitat home first
     liveOpen = true;
     if (typeof ghostHidden === 'function' && ghostHidden()) ghostAppear(0, false);
     liveStage.appendChild(slimeBody);
@@ -5706,16 +6736,25 @@ document.addEventListener('DOMContentLoaded', () => {
     applySlimeTransform(1, 0, 400);
     showBubble(trT("WE'RE LIVE!! hi chat ♡", 'ON EST EN DIRECT !! coucou le chat ♡'), 2600);
     if (typeof moveSlime === 'function') moveSlime({ action: 'happy', mood: trT('streaming', 'en direct'), duration: 800 });
+    // the colourful bullet chat broadcasts from inside the stage while live
+    if (danmakuBox) liveStage.appendChild(danmakuBox);
     liveViewerTick();
+    gardenStart();
+    liveWeather();
+    gooseLoop();
+    setTimeout(() => { if (liveOpen) spawnGeese(); }, 4500); // welcome flock
   }
 
   function liveExit() {
     if (!liveOpen) return;
     liveOpen = false;
     camStop();
+    gardenStop();
+    if (gooseTimer) { clearTimeout(gooseTimer); gooseTimer = null; }
     slimeHabitat.appendChild(slimeBody);
     slimeHabitat.appendChild(speechBubble);
     slimeHabitat.classList.remove('on-air');
+    if (danmakuBox) document.body.appendChild(danmakuBox); // bullet chat back to its corner
     slimePosition.x = 0; slimePosition.y = 0;
     applySlimeTransform(1, 0, 400);
   }
@@ -5726,12 +6765,584 @@ document.addEventListener('DOMContentLoaded', () => {
     if (liveOpen) setTimeout(liveViewerTick, 4000);
   }
 
-  // every chat line mirrors into the room
-  function liveMirror(node) {
-    if (!liveFeed || !liveOpen) return;
-    liveFeed.appendChild(node.cloneNode(true));
-    while (liveFeed.children.length > 40) liveFeed.removeChild(liveFeed.firstChild);
-    liveFeed.scrollTop = liveFeed.scrollHeight;
+  // the room's ONE chat is the colourful mini-danmaku itself — it
+  // physically relocates onto the stage while we're live (liveEnter),
+  // so mirroring clones here would only duplicate it
+  function liveMirror() {}
+
+  /* ---------- the petal garden (a pikmin-hearted meadow) ----------
+     Sprouts poke out of the meadow; pluck one and a petal buddy
+     joins the stream — it follows the slime, carries gifts to it,
+     blooms leaf → bud → flower over time, and answers the whistle. */
+  const GARDEN = { buddies: [], sprouts: [], planted: false, timer: null, nextSprout: 0, gatherUntil: 0 };
+  const PIK_MAX = 6;
+  const PIK_COLORS = [
+    { body: '#ff8fc7', dark: '#d6539b' },
+    { body: '#c9a7f5', dark: '#9a6fd6' },
+    { body: '#a8e0ff', dark: '#5fa8dc' },
+    { body: '#ffd97a', dark: '#d8a02e' },
+    { body: '#9fe8c0', dark: '#4fb583' }
+  ];
+  const pikSpriteCache = {};
+
+  function pikSprite(color, stage) {
+    const key = color.body + '/' + stage;
+    if (pikSpriteCache[key]) return pikSpriteCache[key];
+    const c = document.createElement('canvas');
+    c.width = 11; c.height = 14;
+    const x = c.getContext('2d');
+    x.fillStyle = '#57c689'; // stem
+    x.fillRect(5, 2, 1, 3);
+    if (stage === 0) { // young leaf
+      x.fillStyle = '#7ddba4';
+      x.fillRect(3, 1, 2, 1); x.fillRect(2, 0, 2, 1);
+    } else if (stage === 1) { // bud
+      x.fillStyle = color.dark;
+      x.fillRect(4, 0, 3, 2); x.fillRect(5, 2, 1, 1);
+    } else { // full pixel flower
+      x.fillStyle = '#ffffff';
+      x.fillRect(4, 0, 1, 1); x.fillRect(6, 0, 1, 1);
+      x.fillRect(3, 1, 1, 1); x.fillRect(7, 1, 1, 1);
+      x.fillRect(4, 2, 1, 1); x.fillRect(6, 2, 1, 1);
+      x.fillStyle = '#ffd400';
+      x.fillRect(5, 1, 1, 1);
+    }
+    // round jelly body
+    x.fillStyle = color.body;
+    x.fillRect(3, 5, 5, 1);
+    x.fillRect(2, 6, 7, 4);
+    x.fillRect(3, 10, 5, 1);
+    x.fillStyle = 'rgba(255,255,255,0.55)'; // glossy highlight
+    x.fillRect(3, 6, 1, 1);
+    x.fillStyle = '#14020e'; // eyes
+    x.fillRect(4, 7, 1, 1); x.fillRect(7, 7, 1, 1);
+    x.fillStyle = 'rgba(255,120,180,0.65)'; // blush
+    x.fillRect(3, 8, 1, 1); x.fillRect(8, 8, 1, 1);
+    x.fillStyle = color.dark; // feet
+    x.fillRect(3, 11, 2, 2); x.fillRect(7, 11, 2, 2);
+    pikSpriteCache[key] = c.toDataURL();
+    return pikSpriteCache[key];
+  }
+
+  // richly saturated bloom clusters — the meadow should look like a party
+  // soft pastel blooms — pretty scenery, never louder than the buddies
+  // (the glowing pikmin must stay the stars of the meadow)
+  const DECOR_COLORS = [
+    { a: '#ffc9e4', b: '#ffe4f2' }, // powder pink
+    { a: '#ddc9f7', b: '#efe4fd' }, // milky lilac
+    { a: '#ffedb3', b: '#fff8dd' }, // custard gold
+    { a: '#ffd4dd', b: '#ffeef2' }, // baby rose
+    { a: '#c9e6ff', b: '#e8f5ff' }  // powder sky
+  ];
+  function drawBloom(x, cx, cy, col, big) {
+    x.fillStyle = col.a; // pastel petals, no hard outline
+    x.fillRect(cx - 1, cy - (big ? 2 : 1), 3, big ? 5 : 3);
+    x.fillRect(cx - (big ? 2 : 1), cy - 1, big ? 5 : 3, 3);
+    x.fillStyle = col.b; // milky highlights
+    x.fillRect(cx - 1, cy - (big ? 2 : 1), 1, 1);
+    x.fillRect(cx + 1, cy + 1, 1, 1);
+    x.fillStyle = '#fffbe8'; // soft heart
+    x.fillRect(cx, cy, 1, 1);
+  }
+  function decorSprite(variant) {
+    const key = 'decor/' + variant;
+    if (pikSpriteCache[key]) return pikSpriteCache[key];
+    const c = document.createElement('canvas');
+    c.width = 18; c.height = 16;
+    const x = c.getContext('2d');
+    const cols = [DECOR_COLORS[variant % DECOR_COLORS.length],
+                  DECOR_COLORS[(variant + 2) % DECOR_COLORS.length],
+                  DECOR_COLORS[(variant + 4) % DECOR_COLORS.length]];
+    x.fillStyle = '#8fd4ae'; // soft stems
+    x.fillRect(4, 8, 1, 8); x.fillRect(9, 6, 1, 10); x.fillRect(14, 9, 1, 7);
+    x.fillStyle = '#b8e8cd'; // milky leaves
+    x.fillRect(2, 11, 2, 1); x.fillRect(10, 9, 2, 1); x.fillRect(12, 12, 2, 1); x.fillRect(5, 13, 2, 1);
+    drawBloom(x, 4, 5, cols[0], false);
+    drawBloom(x, 9, 3, cols[1], true);   // tall showpiece in the middle
+    drawBloom(x, 14, 6, cols[2], false);
+    pikSpriteCache[key] = c.toDataURL();
+    return pikSpriteCache[key];
+  }
+
+  function gardenPlantDecor() {
+    if (GARDEN.planted || !liveStage) return;
+    GARDEN.planted = true;
+    // 18 clusters, mixed sizes and depths — full bloom, zero shy corners
+    const spots = [2, 7, 12, 18, 24, 30, 36, 43, 50, 56, 62, 68, 74, 80, 85, 90, 94, 97];
+    spots.forEach((pct, i) => {
+      const f = document.createElement('img');
+      f.src = decorSprite(i % 6);
+      f.className = 'garden-sprite garden-decor';
+      f.alt = '';
+      const w = 34 + ((i * 11) % 22); // 34–54px clusters
+      f.style.width = w + 'px';
+      f.style.left = `calc(${pct}% - ${Math.round(w / 2)}px)`;
+      f.style.bottom = (2 + ((i * 9) % 18)) + 'px';
+      if (i % 3 === 2) f.style.zIndex = '4'; // some blooms in the front row
+      liveStage.appendChild(f);
+    });
+  }
+
+  function slimeStageX() {
+    if (!liveStage || !slimeBody) return 0;
+    const sr = liveStage.getBoundingClientRect();
+    const pr = slimeBody.getBoundingClientRect();
+    return pr.left + pr.width / 2 - sr.left;
+  }
+
+  function pikChirp() {
+    playTone(1150 + Math.random() * 420, 'square', 0.06, 0, 0.018);
+  }
+
+  // pik speech bubbles are the slime bubble's colour NEGATIVE (see CSS),
+  // so a tiny buddy can talk over any backdrop and still be seen
+  const PIK_LINES = ['pik!', 'pik pik!', 'mi!!', 'pi~ ♪', 'pik ♡'];
+  function pikSay(b, text, dur) {
+    if (!liveStage || !b.el) return;
+    if (b.bubbleEl) b.bubbleEl.remove();
+    const s = document.createElement('span');
+    s.className = 'pik-bubble';
+    s.textContent = text;
+    s.style.left = (b.x + 16) + 'px';
+    s.style.bottom = ((parseFloat(b.el.style.bottom) || 8) + 46) + 'px';
+    liveStage.appendChild(s);
+    b.bubbleEl = s;
+    setTimeout(() => { if (b.bubbleEl === s) b.bubbleEl = null; s.remove(); }, dur || 1500);
+  }
+
+  function gardenSpawnSprout() {
+    if (!liveStage || GARDEN.sprouts.length + GARDEN.buddies.length >= PIK_MAX + 1) return;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'pik-sprout';
+    btn.setAttribute('aria-label', t('live.pluck'));
+    const color = PIK_COLORS[Math.floor(Math.random() * PIK_COLORS.length)];
+    const img = document.createElement('img');
+    img.src = pikSprite(color, 0);
+    img.alt = '';
+    img.style.width = '33px';
+    // only the sprout's head pokes out of the meadow
+    img.style.clipPath = 'inset(0 0 58% 0)';
+    btn.appendChild(img);
+    const stageW = liveStage.clientWidth || 500;
+    const x = 30 + Math.random() * Math.max(60, stageW - 90);
+    btn.style.left = x + 'px';
+    btn.style.bottom = (2 + Math.random() * 12) + 'px';
+    btn.addEventListener('click', () => gardenPluck(btn, color));
+    liveStage.appendChild(btn);
+    GARDEN.sprouts.push(btn);
+  }
+
+  // the squad roster outlives the tab: colours, stages, techniques
+  function pikSaveRoster() {
+    store.set('yos-pik-roster', GARDEN.buddies.map((b) => ({
+      c: Math.max(0, PIK_COLORS.findIndex((pc) => pc.body === b.color.body)),
+      s: b.stage,
+      k: b.skill ? b.skill.id : null
+    })));
+  }
+
+  function gardenMakeBuddy(color, stage, x, skillId) {
+    const el = document.createElement('div');
+    el.className = 'pik-buddy';
+    const img = document.createElement('img');
+    img.src = pikSprite(color, stage);
+    img.alt = '';
+    img.style.width = '33px';
+    el.appendChild(img);
+    el.style.left = x + 'px';
+    el.style.bottom = (4 + Math.random() * 10) + 'px';
+    liveStage.appendChild(el);
+    const b = {
+      el, img, color, stage, x,
+      born: Date.now() - (stage === 2 ? 120000 : stage === 1 ? 60000 : 0),
+      offset: (GARDEN.buddies.length % 2 ? 1 : -1) * (72 + GARDEN.buddies.length * 26),
+      carry: null, carryEl: null,
+      skill: PIK_SKILLS.find((sk) => sk.id === skillId) || PIK_SKILLS[Math.floor(Math.random() * PIK_SKILLS.length)]
+    };
+    GARDEN.buddies.push(b);
+    return b;
+  }
+
+  // returning visitors find their whole squad waiting in the meadow
+  function gardenRestoreRoster() {
+    if (GARDEN.buddies.length || GARDEN.restored) return;
+    GARDEN.restored = true;
+    const roster = store.get('yos-pik-roster', []);
+    if (!roster.length) return;
+    const stageW = liveStage.clientWidth || 500;
+    roster.slice(0, PIK_MAX).forEach((r, i) => {
+      gardenMakeBuddy(PIK_COLORS[r.c] || PIK_COLORS[0], r.s || 0, 60 + (i * (stageW - 120)) / Math.max(1, roster.length - 1 || 1), r.k);
+    });
+    setTimeout(() => {
+      GARDEN.buddies.forEach((b, i) => setTimeout(() => { pikChirp(); if (i === 0) pikSay(b, 'pik!! ♡', 1600); }, i * 140));
+      if (!pet.sleeping && !pet.busy) showBubble(trT('the squad waited for you ALL this time ♡', "l'escouade t'a attendu TOUT ce temps ♡"), 2800);
+    }, 900);
+  }
+
+  function gardenPluck(btn, color) {
+    GARDEN.sprouts = GARDEN.sprouts.filter((s) => s !== btn);
+    const x = parseFloat(btn.style.left) || 60;
+    const bottom = parseFloat(btn.style.bottom) || 8;
+    btn.remove();
+    if (GARDEN.buddies.length >= PIK_MAX) {
+      showBubble(trT('the garden is full!! (what a flex)', 'le jardin est plein !! (quelle classe)'), 2200);
+      return;
+    }
+    const el = document.createElement('div');
+    el.className = 'pik-buddy';
+    const img = document.createElement('img');
+    img.src = pikSprite(color, 0);
+    img.alt = '';
+    img.style.width = '33px';
+    img.classList.add('pik-pluck');
+    el.appendChild(img);
+    el.style.left = x + 'px';
+    el.style.bottom = bottom + 'px';
+    liveStage.appendChild(el);
+    const b = {
+      el, img, color, stage: 0, x,
+      born: Date.now(),
+      // formation slots start beyond the slime's shoulders — nobody
+      // idles underneath the headliner
+      offset: (GARDEN.buddies.length % 2 ? 1 : -1) * (72 + GARDEN.buddies.length * 26),
+      carry: null, carryEl: null,
+      skill: PIK_SKILLS[Math.floor(Math.random() * PIK_SKILLS.length)] // its lifelong technique
+    };
+    GARDEN.buddies.push(b);
+    pikSaveRoster();
+    pikChirp(); pikChirp();
+    pikSay(b, 'pik!!', 1700); // first words, always
+    playSparkleSound();
+    gainFollowers(1);
+    store.set('yos-pik-plucked', true);
+    if (typeof updateLiveTab === 'function') updateLiveTab();
+    if (GARDEN.buddies.length === 1) {
+      showBubble(trT('a petal buddy!! welcome to the crew ♡', 'un copain pétale !! bienvenue dans la troupe ♡'), 2600);
+    } else if (GARDEN.buddies.length === PIK_MAX) {
+      showBubble(trT('FULL PETAL SQUAD. we are unstoppable', 'ESCOUADE PÉTALE COMPLÈTE. rien ne nous arrête'), 2600);
+    }
+  }
+
+  function pikSetStage(b, stage) {
+    b.stage = stage;
+    b.img.src = pikSprite(b.color, stage);
+    b.img.classList.remove('pik-pluck');
+    void b.img.offsetWidth;
+    b.img.classList.add('pik-pluck');
+    pikChirp();
+    pikSay(b, stage === 2 ? 'pik~!! ♡' : 'pik~', 1500);
+    pikSaveRoster();
+    if (stage === 2 && Math.random() < 0.6) {
+      showBubble(trT('one of my buddies BLOOMED!! so proud', "un de mes copains a FLEURI !! trop fier"), 2400);
+    }
+  }
+
+  function gardenTick() {
+    if (!liveOpen || !liveStage) return;
+    const now = Date.now();
+    if (now > GARDEN.nextSprout) {
+      gardenSpawnSprout();
+      GARDEN.nextSprout = now + 7000 + Math.random() * 8000;
+    }
+    const sx = slimeStageX();
+    const gathering = now < GARDEN.gatherUntil;
+    const slimeW = slimeBody ? slimeBody.getBoundingClientRect().width : 0;
+    GARDEN.buddies.forEach((b) => {
+      // bloom: leaf → bud → flower, pikmin-style maturity
+      if (b.stage === 0 && now - b.born > 45000) pikSetStage(b, 1);
+      else if (b.stage === 1 && now - b.born > 105000) pikSetStage(b, 2);
+      // SQUASHED?! the slime (re)appeared on top — wriggle out, loudly
+      if (!b.carry && !gathering && slimeW > 40 && Math.abs(b.x + 16 - sx) < slimeW * 0.32 && now > (b.escapeCd || 0)) {
+        b.escapeCd = now + 6000;
+        b.escapeUntil = now + 950;
+        b.escapeTo = sx + (b.x + 16 < sx ? -1 : 1) * (slimeW * 0.55 + 26 + Math.random() * 34);
+        b.el.classList.add('escaping');
+        setTimeout(() => b.el.classList.remove('escaping'), 620);
+        pikSay(b, 'pik!! pik!!', 1500);
+        pikChirp(); setTimeout(pikChirp, 110); setTimeout(pikChirp, 240);
+      }
+      const escaping = b.escapeUntil && now < b.escapeUntil;
+      let target = sx + b.offset;
+      if (b.carry || gathering) target = sx + (b.carry ? 8 : b.offset * 0.2);
+      if (escaping) target = b.escapeTo;
+      const speed = escaping ? 7 : (b.stage === 2 ? 3.4 : b.stage === 1 ? 2.6 : 2.0) * (b.carry ? 1.4 : 1);
+      const dx = target - b.x;
+      if (Math.abs(dx) > 6) {
+        b.x += Math.sign(dx) * Math.min(Math.abs(dx), speed);
+        b.el.classList.add('walking');
+        b.el.style.left = b.x + 'px';
+        b.img.style.transform = dx < 0 ? 'scaleX(-1)' : '';
+      } else {
+        b.el.classList.remove('walking');
+        if (b.carry) { // delivery!!
+          burstAtSlime(['♥', b.carry], 3);
+          pikChirp();
+          if (b.carryEl) { b.carryEl.remove(); b.carryEl = null; }
+          b.carry = null;
+        } else if (!gathering && Math.random() < 0.006) {
+          pikChirp(); // idle squeak
+          if (Math.random() < 0.55) pikSay(b, PIK_LINES[Math.floor(Math.random() * PIK_LINES.length)], 1300);
+        }
+      }
+    });
+    if (GARDEN.buddies.length >= 3 && Math.random() < 0.0012 && !pet.busy) {
+      showBubble(trT('look at my little petal army ♡', 'regarde ma petite armée de pétales ♡'), 2400);
+    }
+  }
+
+  function gardenStart() {
+    gardenPlantDecor();
+    gardenRestoreRoster();
+    if (!GARDEN.timer) GARDEN.timer = setInterval(gardenTick, 90);
+    if (!GARDEN.nextSprout) GARDEN.nextSprout = Date.now() + 2500;
+  }
+
+  function gardenStop() {
+    if (GARDEN.timer) { clearInterval(GARDEN.timer); GARDEN.timer = null; }
+  }
+
+  /* ---------- Edmonton weather paints the stage ----------
+     One free Open-Meteo call (cached 15 min) → a hand-pixelled sky:
+     shaded sprite clouds, a beaming sun (or moon + stars), lightning
+     bolts, drifting fog banks — all little canvases, zero images. */
+  const WX_KINDS = ['clear', 'cloud', 'rain', 'snow', 'fog', 'thunder'];
+  var wxAnnounced = null, wxCurrent = null;
+  const wxSpriteCache = {};
+
+  function wxSprite(kind) {
+    if (wxSpriteCache[kind]) return wxSpriteCache[kind];
+    const c = document.createElement('canvas');
+    const x = c.getContext('2d');
+    const px = (color, dots) => { x.fillStyle = color; dots.forEach(([dx, dy, w, h]) => x.fillRect(dx, dy, w || 1, h || 1)); };
+    if (kind === 'cloud' || kind === 'raincloud') {
+      c.width = 26; c.height = 13;
+      const rows = [[9, 8], [7, 12], [6, 14], [4, 18], [3, 21], [2, 22], [2, 22], [3, 20]];
+      const line = kind === 'cloud' ? '#d8c4f5' : '#b49ade';
+      const body = kind === 'cloud' ? '#ffffff' : '#efe6fb';
+      const belly = kind === 'cloud' ? '#e9dcfa' : '#cdb9ee';
+      // silhouette pass in outline colour, nudged in 4 directions
+      [[0, 1], [0, -1], [1, 0], [-1, 0]].forEach(([ox, oy]) => {
+        x.fillStyle = line;
+        rows.forEach(([rx, rw], i) => x.fillRect(rx + ox, i + 2 + oy, rw, 1));
+      });
+      rows.forEach(([rx, rw], i) => {
+        x.fillStyle = i >= 6 ? belly : body;
+        x.fillRect(rx, i + 2, rw, 1);
+      });
+      px('#ffffff', [[6, 4, 4, 1], [5, 5, 3, 1]]); // fluffy highlight
+    } else if (kind === 'sun') {
+      c.width = 19; c.height = 19;
+      const rows = [[7, 5], [6, 7], [5, 9], [5, 9], [5, 9], [6, 7], [7, 5]];
+      [[0, 1], [0, -1], [1, 0], [-1, 0]].forEach(([ox, oy]) => {
+        x.fillStyle = '#f0b429';
+        rows.forEach(([rx, rw], i) => x.fillRect(rx + ox, i + 6 + oy, rw, 1));
+      });
+      rows.forEach(([rx, rw], i) => { x.fillStyle = '#ffd97a'; x.fillRect(rx, i + 6, rw, 1); });
+      px('#ffe98a', [[7, 7, 3, 2], [6, 8, 2, 2]]); // inner glow
+      px('#f0b429', [[9, 1, 1, 3], [9, 15, 1, 3], [1, 9, 3, 1], [15, 9, 3, 1]]); // long rays
+      px('#ffd97a', [[3, 3, 2, 2], [14, 3, 2, 2], [3, 14, 2, 2], [14, 14, 2, 2]]); // corner rays
+    } else if (kind === 'moon') {
+      c.width = 16; c.height = 16;
+      x.fillStyle = '#ffe9b8';
+      x.beginPath(); x.arc(8, 8, 6.5, 0, 6.3); x.fill();
+      x.globalCompositeOperation = 'destination-out';
+      x.beginPath(); x.arc(11, 6, 5.2, 0, 6.3); x.fill();
+      x.globalCompositeOperation = 'source-over';
+      px('#f7d489', [[4, 11], [6, 13], [3, 8]]); // craters on the lit rim
+    } else if (kind === 'star') {
+      c.width = 5; c.height = 5;
+      px('#fff7d1', [[2, 0], [0, 2], [2, 2], [4, 2], [2, 4]]);
+      px('#ffd97a', [[1, 1], [3, 1], [1, 3], [3, 3]]);
+    } else if (kind === 'bolt') {
+      c.width = 9; c.height = 14;
+      px('#f0b429', [[4, 0, 4, 1], [3, 1, 4, 1], [2, 3, 4, 1], [1, 5, 5, 1], [3, 7, 3, 1], [2, 9, 3, 1], [1, 11, 3, 1], [0, 13, 2, 1]]);
+      px('#fff3c4', [[4, 1, 2, 1], [3, 3, 2, 1], [2, 5, 3, 1], [3, 8, 2, 1], [2, 10, 2, 1]]);
+      px('#f0b429', [[3, 2, 4, 1], [2, 4, 4, 1], [3, 6, 3, 1], [2, 8, 3, 1], [1, 10, 3, 1], [1, 12, 2, 1]]);
+    } else if (kind === 'fog') {
+      c.width = 46; c.height = 7;
+      x.fillStyle = 'rgba(255,255,255,0.55)';
+      x.fillRect(3, 2, 40, 3);
+      x.fillRect(0, 3, 46, 1);
+      x.fillStyle = 'rgba(255,255,255,0.8)';
+      x.fillRect(8, 3, 14, 1); x.fillRect(28, 2, 10, 1);
+      x.fillStyle = 'rgba(233,220,250,0.5)';
+      x.fillRect(5, 5, 34, 1);
+    }
+    wxSpriteCache[kind] = c.toDataURL();
+    return wxSpriteCache[kind];
+  }
+
+  function wxDecor(kind) {
+    if (!liveStage) return;
+    liveStage.querySelectorAll('.wx-sprite').forEach((el) => el.remove());
+    const dark = resolvedTheme() === 'dark';
+    const add = (spr, w, l, t, cls) => {
+      const im = document.createElement('img');
+      im.src = wxSprite(spr);
+      im.className = 'wx-sprite' + (cls ? ' ' + cls : '');
+      im.alt = '';
+      im.style.width = w + 'px';
+      im.style.left = l;
+      im.style.top = t;
+      liveStage.appendChild(im);
+    };
+    if (kind === 'clear') {
+      if (dark) {
+        add('moon', 58, '83%', '7%', 'wx-bob-a');
+        [['16%', '18%'], ['34%', '9%'], ['55%', '22%'], ['70%', '12%'], ['26%', '34%'], ['90%', '30%']].forEach(([l, t], i) => add('star', 11 + (i % 3) * 3, l, t, i % 2 ? 'wx-twinkle-a' : 'wx-twinkle-b'));
+      } else {
+        add('sun', 74, '83%', '6%', 'wx-bob-a');
+        add('cloud', 62, '12%', '20%', 'wx-drift-a'); // one lazy fair-weather puff
+      }
+    } else if (kind === 'cloud') {
+      add('cloud', 112, '9%', '7%', 'wx-drift-a');
+      add('cloud', 78, '48%', '17%', 'wx-drift-b');
+      add('cloud', 96, '72%', '5%', 'wx-drift-a');
+      add('cloud', 58, '33%', '28%', 'wx-drift-b');
+      if (!dark) add('sun', 46, '91%', '3%', 'wx-bob-a'); // peeking through
+      else add('moon', 40, '91%', '4%', 'wx-bob-a');
+    } else if (kind === 'rain' || kind === 'thunder') {
+      add('raincloud', 118, '8%', '5%', 'wx-drift-b');
+      add('raincloud', 92, '42%', '12%', 'wx-drift-a');
+      add('raincloud', 108, '72%', '4%', 'wx-drift-b');
+      if (kind === 'thunder') {
+        add('bolt', 24, '24%', '24%', 'wx-bolt-a');
+        add('bolt', 18, '81%', '20%', 'wx-bolt-b');
+      }
+    } else if (kind === 'snow') {
+      add('cloud', 104, '14%', '6%', 'wx-drift-a');
+      add('cloud', 82, '58%', '12%', 'wx-drift-b');
+      add('cloud', 66, '84%', '7%', 'wx-drift-a');
+    } else if (kind === 'fog') {
+      add('fog', 230, '4%', '28%', 'wx-fog-a');
+      add('fog', 280, '34%', '50%', 'wx-fog-b');
+      add('fog', 210, '16%', '70%', 'wx-fog-a');
+      add('fog', 250, '52%', '14%', 'wx-fog-b');
+    }
+  }
+  const WX_LINES = {
+    clear:   ['Edmonton says: SUNSHINE!! free lighting arc ♡', 'Edmonton annonce : SOLEIL !! arc lumineux gratuit ♡'],
+    cloud:   ['Edmonton says: clouds today. cozy pixel weather', 'Edmonton annonce : nuages. météo pixel cosy'],
+    rain:    ["it's RAINING in Edmonton!! blanket-stream time", 'il PLEUT à Edmonton !! stream sous couverture'],
+    snow:    ['SNOW in Edmonton!! sweater weather on stage ♡', 'NEIGE à Edmonton !! mode pull sur le plateau ♡'],
+    fog:     ['Edmonton is foggy… mysterious streamer era', 'Edmonton dans le brouillard… ère streameuse mystérieuse'],
+    thunder: ['THUNDER over Edmonton!! dramatic lighting, no extra charge', 'TONNERRE sur Edmonton !! éclairage dramatique, sans supplément']
+  };
+  function applyWx(kind) {
+    if (!liveStage || WX_KINDS.indexOf(kind) === -1) return;
+    WX_KINDS.forEach((k) => liveStage.classList.remove('wx-' + k));
+    liveStage.classList.add('wx-' + kind);
+    wxCurrent = kind;
+    wxDecor(kind);
+    if (liveOpen && wxAnnounced !== kind) {
+      wxAnnounced = kind;
+      setTimeout(() => {
+        if (liveOpen && !pet.sleeping && !pet.busy) showBubble(trT(WX_LINES[kind][0], WX_LINES[kind][1]), 3000);
+      }, 4200);
+    }
+  }
+  /* ---------- the Canada geese of Edmonton ----------
+     Whenever it isn't raining or snowing, honking V-formations
+     commute across the pixel sky. This is not decoration; this
+     is meteorological realism. */
+  var gooseTimer = null;
+  function gooseSprite() {
+    if (wxSpriteCache.goose) return wxSpriteCache.goose;
+    const c = document.createElement('canvas');
+    c.width = 14; c.height = 9;
+    const x = c.getContext('2d');
+    x.fillStyle = '#7a6a55'; // body
+    x.fillRect(2, 4, 7, 3);
+    x.fillStyle = '#5d5040'; // folded wing
+    x.fillRect(3, 3, 5, 2);
+    x.fillStyle = '#f4efe6'; // belly
+    x.fillRect(3, 7, 5, 1);
+    x.fillStyle = '#14020e'; // tail, neck, head
+    x.fillRect(0, 4, 2, 2);
+    x.fillRect(9, 2, 2, 4);
+    x.fillRect(10, 0, 3, 3);
+    x.fillStyle = '#ffffff'; // the famous chin strap
+    x.fillRect(10, 2, 2, 1);
+    x.fillStyle = '#c9a44a'; // beak
+    x.fillRect(13, 1, 1, 1);
+    wxSpriteCache.goose = c.toDataURL();
+    return wxSpriteCache.goose;
+  }
+
+  function spawnGeese() {
+    if (!liveStage || !liveOpen) return;
+    if (['rain', 'snow', 'thunder'].indexOf(wxCurrent) !== -1) return; // geese have standards
+    const flock = document.createElement('div');
+    flock.className = 'wx-geese';
+    flock.setAttribute('aria-hidden', 'true');
+    const rightward = Math.random() < 0.5;
+    const family = Math.random() < 0.45; // parents take the kids out sometimes
+    const addGoose = (leftPx, topPx, sizePx) => {
+      const g = document.createElement('img');
+      g.src = gooseSprite();
+      g.alt = '';
+      g.style.width = sizePx + 'px';
+      g.style.left = leftPx + 'px';
+      g.style.top = topPx + 'px';
+      if (!rightward) g.style.transform = 'scaleX(-1)';
+      flock.appendChild(g);
+    };
+    if (family) {
+      // one proud parent, 2-4 goslings paddling in a line behind
+      const kids = 2 + Math.floor(Math.random() * 3);
+      addGoose(0, 0, 26);
+      for (let i = 1; i <= kids; i++) addGoose((rightward ? -1 : 1) * (24 + i * 17), 3, 13);
+    } else {
+      // the classic V, gliding on the water
+      const n = 5 + Math.floor(Math.random() * 4);
+      for (let i = 0; i < n; i++) {
+        const rank = Math.ceil(i / 2);
+        const side = i % 2 ? 1 : -1;
+        addGoose((rightward ? -1 : 1) * rank * 22, rank * side * 9, 26 - rank * 2);
+      }
+    }
+    // they float low, on the blue "water" bands of the pixel sky —
+    // dead-level, serene, zero flapping (they're swimming, obviously)
+    const w = liveStage.clientWidth || 600;
+    flock.style.top = (52 + Math.random() * 16) + '%';
+    flock.style.left = rightward ? '-110px' : (w + 60) + 'px';
+    liveStage.appendChild(flock);
+    void flock.offsetWidth; // commit the start position before gliding
+    flock.style.transform = `translateX(${rightward ? w + 220 : -(w + 220)}px)`;
+    setTimeout(() => flock.remove(), 19000);
+    // distant honks + the slime's civic pride
+    [0, 300, 700].forEach((d) => setTimeout(() => playTone(430 + Math.random() * 80, 'square', 0.09, 0, 0.02), d));
+    if (Math.random() < 0.25 && !pet.sleeping && !pet.busy) {
+      showBubble(trT('CANADA GEESE!! the true landlords of Edmonton ♡', 'des BERNACHES !! les vraies proprios d\'Edmonton ♡'), 2600);
+    }
+  }
+
+  function gooseLoop() {
+    if (gooseTimer) clearTimeout(gooseTimer);
+    gooseTimer = setTimeout(() => {
+      if (liveOpen) spawnGeese();
+      gooseLoop();
+    }, 20000 + Math.random() * 35000);
+  }
+
+  function liveWeather() {
+    const cached = store.get('yos-wx', null);
+    if (cached && Date.now() - cached.t < 900000) { applyWx(cached.k); return; }
+    fetch('https://api.open-meteo.com/v1/forecast?latitude=53.55&longitude=-113.49&current=weather_code')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (!d || !d.current) return;
+        const c = Number(d.current.weather_code);
+        const k = c >= 95 ? 'thunder'
+          : ((c >= 71 && c <= 77) || c === 85 || c === 86) ? 'snow'
+          : ((c >= 51 && c <= 67) || (c >= 80 && c <= 82)) ? 'rain'
+          : (c === 45 || c === 48) ? 'fog'
+          : (c >= 1 && c <= 3) ? 'cloud' : 'clear';
+        store.set('yos-wx', { t: Date.now(), k });
+        applyWx(k);
+      })
+      .catch(() => { /* offline — the default pastel sky stays up */ });
   }
 
   /* ---------- gifts ---------- */
@@ -5745,9 +7356,267 @@ document.addEventListener('DOMContentLoaded', () => {
   };
   var giftComboId = null, giftComboN = 0, giftComboTimer = null;
 
+  /* ---------- stage FX engine: big pixel-party effects ---------- */
+  function fxLayer() {
+    if (!liveStage) return null;
+    let layer = liveStage.querySelector('.live-fx-layer');
+    if (!layer) {
+      layer = document.createElement('div');
+      layer.className = 'live-fx-layer';
+      layer.setAttribute('aria-hidden', 'true');
+      liveStage.appendChild(layer);
+    }
+    return layer;
+  }
+
+  function fxSpawn(cls, text, styles = {}, ttl = 2600) {
+    const layer = fxLayer();
+    if (!layer) return null;
+    const el = document.createElement('span');
+    el.className = cls;
+    if (text) el.textContent = text;
+    Object.keys(styles).forEach((k) => {
+      if (k.startsWith('--')) el.style.setProperty(k, styles[k]);
+      else el.style[k] = styles[k];
+    });
+    layer.appendChild(el);
+    setTimeout(() => el.remove(), ttl);
+    return el;
+  }
+
+  function fxBanner(text, sub) {
+    const layer = fxLayer();
+    if (!layer) return;
+    const b = document.createElement('div');
+    b.className = 'fx-banner';
+    b.textContent = text;
+    if (sub) {
+      const s = document.createElement('small');
+      s.textContent = sub;
+      b.appendChild(s);
+    }
+    layer.appendChild(b);
+    setTimeout(() => b.remove(), 3000);
+  }
+
+  function fxShake() {
+    if (REDUCED_MOTION || !liveStage) return;
+    liveStage.classList.remove('fx-shake');
+    void liveStage.offsetWidth;
+    liveStage.classList.add('fx-shake');
+    setTimeout(() => liveStage.classList.remove('fx-shake'), 700);
+  }
+
+  function fxFlash() {
+    if (REDUCED_MOTION) return;
+    fxSpawn('fx-flash', '', {}, 900);
+  }
+
+  function fxRain(chars, n = 16) {
+    if (REDUCED_MOTION) n = Math.min(n, 5);
+    for (let i = 0; i < n; i++) {
+      setTimeout(() => fxSpawn('fx-drop', chars[i % chars.length], {
+        left: `${4 + Math.random() * 92}%`,
+        animationDuration: `${1.4 + Math.random() * 1.2}s`,
+        fontSize: `${1 + Math.random() * 1.4}rem`
+      }, 2900), i * 90);
+    }
+  }
+
+  function fxZoom(char) { fxSpawn('fx-zoom', char, {}, 1800); }
+
+  function fxOrbit(char, n = 6) {
+    const { x, y } = slimeAnchor();
+    for (let i = 0; i < n; i++) {
+      fxSpawn('fx-orbit', char, {
+        left: `${x}px`,
+        top: `${y}px`,
+        animationDelay: `${((i / n) * 1.2).toFixed(2)}s`
+      }, 2800);
+    }
+  }
+
+  function fxFirework(char, bursts = 3) {
+    for (let b = 0; b < bursts; b++) {
+      setTimeout(() => {
+        const cx = 15 + Math.random() * 70, cy = 12 + Math.random() * 45;
+        for (let i = 0; i < 8; i++) {
+          fxSpawn('fx-spark', i % 2 ? char : '✦', {
+            left: `${cx}%`,
+            top: `${cy}%`,
+            '--fx-dx': `${Math.round(Math.cos((i / 8) * Math.PI * 2) * 62)}px`,
+            '--fx-dy': `${Math.round(Math.sin((i / 8) * Math.PI * 2) * 62)}px`
+          }, 1400);
+        }
+        playSparkleSound();
+      }, b * 380);
+    }
+  }
+
+  // 🚀 the headliner: full-stage launch sequence
+  function megaRocket() {
+    fxBanner('🚀 TO THE MOON!!', trT('biggest gift on the stream', 'le plus gros cadeau du stream'));
+    fxFlash();
+    fxShake();
+    const rocket = fxSpawn('fx-rocket', '🚀', {}, 2600);
+    for (let i = 0; i < 12; i++) {
+      setTimeout(() => {
+        if (!rocket || !rocket.isConnected || !liveStage) return;
+        const rr = rocket.getBoundingClientRect();
+        const sr = liveStage.getBoundingClientRect();
+        fxSpawn('fx-trail', ['✦', '·', '˚'][i % 3], {
+          left: `${rr.left - sr.left + rr.width / 2}px`,
+          top: `${rr.top - sr.top + rr.height - 6}px`
+        }, 900);
+      }, 140 + i * 140);
+    }
+    fxRain(['⭐', '✦', '💫'], 14);
+    playFanfare();
+    GAME.flash = 8;
+  }
+
+  /* ---------- custom emoji gifts: 60% of emojis carry a secret
+     code-themed MEGA effect + a special slime interaction ---------- */
+  function emojiHash(str) {
+    let h = 7;
+    for (const ch of str) h = ((h * 31) + ch.codePointAt(0)) >>> 0;
+    return h;
+  }
+
+  const MEGA_FX = [
+    { run(e) { fxBanner('git push --force ♡'); fxRain([e, '♥'], 18); fxShake(); },
+      react: ['FORCE-PUSHED straight into my heart!!', 'force-poussé direct dans mon cœur !!'], action: 'flip' },
+    { run(e) { fxBanner('sudo hug slime'); fxZoom(e); fxFlash(); },
+      react: ['sudo?? ok ok, PERMISSION GRANTED ♡', 'sudo ?? ok ok, PERMISSION ACCORDÉE ♡'], action: 'alert' },
+    { run(e) { fxBanner('while(true){ bounce() }'); fxOrbit(e, 7); },
+      react: ['INFINITE LOOP!! nobody wrote a break!!', 'BOUCLE INFINIE !! personne n\'a écrit de break !!'], action: 'hop', hops: 3 },
+    { run(e) { fxBanner('<<<<<<< HEAD (of cuteness)'); fxRain([e, '♥', '✦'], 14); },
+      react: ['merge conflict resolved: I keep BOTH', 'conflit de merge résolu : je garde LES DEUX'], action: 'dizzy' },
+    { run(e) { fxBanner('it compiles!! SHIP IT 🚢'); fxFirework(e, 3); },
+      react: ['deployed to prod. zero bugs. probably.', 'déployé en prod. zéro bug. sans doute.'], action: 'flip' },
+    { run(e) { fxBanner('rubber_duck.debug()'); fxZoom(e); fxOrbit('🐛', 4); },
+      react: ['explaining all my bugs to it rn... it listens ♡', 'je lui explique tous mes bugs là... il écoute ♡'], action: 'think' },
+    { run(e) { fxBanner('rm -rf bugs/'); fxRain(['🐛', e], 12); setTimeout(fxFlash, 900); },
+      react: ['bugs directory DELETED. so clean in here', 'dossier bugs SUPPRIMÉ. que c\'est propre ici'], action: 'happy' },
+    { run(e) { fxBanner('404: chill not found'); fxZoom(e); fxFirework('✦', 2); },
+      react: ['ERROR 404: my chill?? gone. HYPED!!', 'ERREUR 404 : mon calme ?? disparu. HYPE !!'], action: 'alert' }
+  ];
+
+  const GENERIC_EMOJI_REACT = [
+    ['a wild {e} appeared!! ty ty ♡', 'un {e} sauvage apparaît !! merci merci ♡'],
+    ['{e}?? for me?? adding it to my inventory', '{e} ?? pour moi ?? je l\'ajoute à mon inventaire'],
+    ['chat sent {e}!! I\'m rich in vibes', 'le chat envoie {e} !! je suis riche en vibes'],
+    ['{e} received. affection++ ♡', '{e} reçu. affection++ ♡']
+  ];
+
+  function emojiBlessing(e) {
+    if (e === '🚀') return { rocket: true };
+    const h = emojiHash(e);
+    if (h % 10 < 6) return { fx: MEGA_FX[h % MEGA_FX.length] }; // 60% of emojis are blessed
+    return null;
+  }
+
+  function flyGiftToStage(icon, fromEl) {
+    if (!fromEl || !liveStage) return;
+    const fly = document.createElement('span');
+    fly.className = 'gift-fly';
+    fly.textContent = icon;
+    const br = fromEl.getBoundingClientRect();
+    const sr = liveStage.getBoundingClientRect();
+    fly.style.left = br.left + br.width / 2 + 'px';
+    fly.style.top = br.top + 'px';
+    document.body.appendChild(fly);
+    requestAnimationFrame(() => {
+      fly.style.transform = `translate(${sr.left + sr.width / 2 - br.left}px, ${sr.top + sr.height / 2 - br.top}px) scale(1.6)`;
+      fly.style.opacity = '0';
+    });
+    setTimeout(() => fly.remove(), 900);
+  }
+
+  function sendEmojiGift(raw) {
+    if (!liveOpen) return false;
+    const parts = (typeof Intl !== 'undefined' && Intl.Segmenter)
+      ? [...new Intl.Segmenter('en', { granularity: 'grapheme' }).segment(raw)].map((s) => s.segment)
+      : Array.from(raw);
+    const e = parts.find((s) => /\p{Extended_Pictographic}/u.test(s));
+    if (!e) {
+      showBubble(trT('emoji only!! this is an emoji-based economy ♡', 'que des emojis !! ici l\'économie tourne aux emojis ♡'), 2400);
+      return false;
+    }
+
+    store.set('yos-live-gifted', true);
+    updateLiveTab();
+    flyGiftToStage(e, document.getElementById('live-emoji-input'));
+    const line = makeChatLine({ u: trT('you', 'toi'), c: '#f0509f', t: `${trT('sent', 'a envoyé')} ${e} !!` });
+    liveMirror(line);
+    appendChatMessage(line);
+
+    // gifts reach the slime even in dreams — softly
+    if (pet.sleeping) {
+      gainFollowers(1);
+      setTimeout(() => {
+        showBubble(trT(`zzz... (dreaming of ${e}) zzz`, `zzz... (rêve de ${e}) zzz`), 2200);
+        const { x, y } = slimeAnchor();
+        spawnParticle(x + 18, y - 22, 'z', 'p-zzz');
+      }, 500);
+      return true;
+    }
+
+    const bless = emojiBlessing(e);
+    playTone(980, 'triangle', 0.12, 0, 0.05);
+
+    if (bless && bless.rocket) {
+      gainFollowers(15);
+      setTimeout(() => {
+        megaRocket();
+        showBubble(trT('A ROCKET?!! TO THE MOON!! (I live there)', 'UNE FUSÉE ?!! TO THE MOON !! (j\'y habite)'), 2800);
+        if (typeof moveSlime === 'function') moveSlime({ action: 'flip', mood: trT('astronaut', 'astronaute'), duration: 800 });
+        burstAtSlime(['🚀', '⭐', '✦'], 10);
+      }, 450);
+    } else if (bless) {
+      gainFollowers(6);
+      setTimeout(() => {
+        bless.fx.run(e);
+        showBubble(trT(bless.fx.react[0], bless.fx.react[1]), 3000);
+        if (bless.fx.hops) {
+          [0, 420, 840].forEach((d, i, arr) => setTimeout(() => {
+            moveSlime({ action: 'hop', mood: trT('mega-hyped', 'méga-hype'), duration: 380, distance: 1.2, scheduleNext: i === arr.length - 1 });
+          }, d));
+        } else if (typeof moveSlime === 'function') {
+          moveSlime({ action: bless.fx.action, mood: trT('mega-hyped', 'méga-hype'), duration: 900, distance: 0.6 });
+        }
+        burstAtSlime([e, '♥', '✦'], 8);
+        playFanfare();
+      }, 450);
+    } else {
+      gainFollowers(2);
+      setTimeout(() => {
+        burstAtSlime([e, '♥'], 5);
+        const r = GENERIC_EMOJI_REACT[emojiHash(e) % GENERIC_EMOJI_REACT.length];
+        showBubble(trT(r[0], r[1]).replace('{e}', e), 2600);
+        if (typeof moveSlime === 'function') moveSlime({ action: 'happy', mood: trT('gifted', 'gâté'), duration: 760, distance: 0.4 });
+      }, 450);
+    }
+    return true;
+  }
+
+  const emojiForm = document.getElementById('live-emoji-form');
+  const emojiInput = document.getElementById('live-emoji-input');
+  if (emojiForm && emojiInput) {
+    emojiForm.addEventListener('submit', (ev) => {
+      ev.preventDefault();
+      const v = emojiInput.value.trim();
+      if (!v) return;
+      if (sendEmojiGift(v) !== false) emojiInput.value = '';
+      emojiInput.focus();
+    });
+  }
+
   function sendGift(id, btn) {
     const g = GIFTS[id];
     if (!g || !liveOpen) return;
+    store.set('yos-live-gifted', true);
+    updateLiveTab();
     // combo bookkeeping
     if (giftComboId === id) giftComboN++;
     else { giftComboId = id; giftComboN = 1; }
@@ -5770,16 +7639,43 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     setTimeout(() => fly.remove(), 900);
 
+    // a free petal buddy fetches the gift and delivers it paws-first
+    const porter = GARDEN.buddies.find((b) => !b.carry);
+    if (porter) {
+      porter.carry = g.icon;
+      const ce = document.createElement('span');
+      ce.className = 'pik-carry';
+      ce.textContent = g.icon;
+      porter.el.appendChild(ce);
+      porter.carryEl = ce;
+      const sr2 = liveStage.getBoundingClientRect();
+      porter.x = Math.max(14, Math.min(sr2.width - 40, br.left + br.width / 2 - sr2.left));
+      porter.el.style.left = porter.x + 'px';
+      pikChirp();
+    }
+
     gainFollowers(g.fans);
     playTone(880 + g.fans * 40, 'triangle', 0.12, 0, 0.05);
     const line = makeChatLine({ u: trT('you', 'toi'), c: '#f0509f', t: `${g.icon} ${trT('sent a gift', 'a envoyé un cadeau')}${giftComboN > 1 ? ' ×' + giftComboN : ''}!!` });
+    liveMirror(line);
     appendChatMessage(line);
+
+    // asleep? gifts drift into the dream instead of yanking the pet awake
+    if (pet.sleeping) {
+      setTimeout(() => {
+        showBubble(trT(`zzz... (dreaming of ${g.icon}) zzz`, `zzz... (rêve de ${g.icon}) zzz`), 2200);
+        const { x, y } = slimeAnchor();
+        spawnParticle(x + 18, y - 22, 'z', 'p-zzz');
+      }, 650);
+      return;
+    }
+
     setTimeout(() => {
       const r = g.react[Math.floor(Math.random() * g.react.length)];
       showBubble(trT(r[0], r[1]), 2600);
-      if (typeof moveSlime === 'function') moveSlime({ action: 'happy', mood: trT('spoiled', 'gâté'), duration: 760, distance: 0.4 });
+      if (typeof moveSlime === 'function') moveSlime({ action: id === 'rocket' ? 'flip' : 'happy', mood: trT('spoiled', 'gâté'), duration: 760, distance: 0.4 });
       burstAtSlime(['♥', '✦', g.icon], id === 'rocket' ? 12 : 5);
-      if (id === 'rocket') { playFanfare(); GAME.flash = 8; }
+      if (id === 'rocket') megaRocket();
     }, 650);
   }
 
@@ -5798,17 +7694,274 @@ document.addEventListener('DOMContentLoaded', () => {
   if (lh) lh.addEventListener('click', () => playWithSlime());
   const ll = document.getElementById('live-lullaby');
   if (ll) ll.addEventListener('click', () => sleepSlime());
+  const lwh = document.getElementById('live-whistle');
+  if (lwh) lwh.addEventListener('click', () => {
+    if (!GARDEN.buddies.length) {
+      showBubble(trT('no buddies yet!! pluck the sprouts in the meadow ♡', "pas encore de copains !! cueille les pousses de la prairie ♡"), 2800);
+      return;
+    }
+    GARDEN.gatherUntil = Date.now() + 3400;
+    playTone(880, 'square', 0.09, 0, 0.03);
+    setTimeout(() => playTone(1320, 'square', 0.12, 0, 0.03), 130);
+    GARDEN.buddies.forEach((b, i) => setTimeout(pikChirp, 300 + i * 90));
+    showBubble(trT('PETAL SQUAD, ASSEMBLE!!', 'ESCOUADE PÉTALE, RASSEMBLEMENT !!'), 2400);
+  });
+  // slime_run fills the whole desktop; the slime doesn't need its
+  // sidebar seat anymore — it floats over the game as a reaction cam
+  function gameFitBig() {
+    const win = document.getElementById('win-game');
+    if (!win || win.classList.contains('window-closed')) return;
+    const taskbarH = desktopTaskbar ? desktopTaskbar.offsetHeight : 48;
+    win.style.position = 'fixed';
+    win.style.left = '12px';
+    win.style.top = '76px';
+    win.style.right = '12px';
+    win.style.bottom = (taskbarH + 10) + 'px';
+    win.style.width = 'auto';
+    win.style.height = 'auto';
+    win.style.transform = 'none'; // defuse the window manager's centering translate
+    win.style.margin = '0';
+  }
 
-  /* ---------- wave-cam: motion-based gestures, 100% local ---------- */
-  var camStream = null, camTimer = null, camPrev = null, camCentroids = [], camDarkFrames = 0, camLastTrigger = 0;
+  // the habitat (slime included) relocates to a picture-in-picture
+  // reaction cam pinned to the game's top-right — every spectator
+  // feature (cheers, mercy pause, coach leap) rides along untouched
+  function gameCamEnter() {
+    if (typeof liveOpen !== 'undefined' && liveOpen) return; // slime is busy streaming
+    if (document.getElementById('game-reaction-cam')) return;
+    const cam = document.createElement('div');
+    cam.className = 'game-reaction-cam';
+    cam.id = 'game-reaction-cam';
+    const tag = document.createElement('span');
+    tag.className = 'cam-rec';
+    tag.textContent = '● REC';
+    cam.appendChild(tag);
+    cam.appendChild(slimeHabitat);
+    document.getElementById('win-game').appendChild(cam);
+  }
+  function gameCamExit() {
+    const cam = document.getElementById('game-reaction-cam');
+    if (!cam) return;
+    const shell = document.querySelector('.habitat-shell');
+    if (shell) shell.appendChild(slimeHabitat);
+    cam.remove();
+  }
+  window.addEventListener('resize', () => {
+    const gw = document.getElementById('win-game');
+    if (gw && gw.classList.contains('window-game-big') && !gw.classList.contains('window-closed')) {
+      gameFitBig();
+      if (typeof gFitCanvas === 'function') setTimeout(gFitCanvas, 80);
+    }
+  });
+
+  /* ---------- hello-cam: hand-rolled local vision, zero libraries ----------
+     One low-res frame pipeline feeds eight detectors: wave, nod,
+     peek-a-boo, arrival/departure, lean-in, two-viewer, lighting
+     shifts, and a colour-blob "what's that drink??" greeter.
+     Everything runs on a 48×36 grid, on-device, never uploaded. */
+  const CAM_W = 48, CAM_H = 36, CAM_CELLS = CAM_W * CAM_H;
+  var camStream = null, camTimer = null, camPrev = null, camBase = null, camBaseN = 0,
+      camTrail = [], camDarkFrames = 0, camLastSpeak = 0, camTypeAt = {},
+      camPresent = false, camLastMotionAt = 0, camCloseFrames = 0, camTwoFrames = 0,
+      camLumEMA = null, camDimFrames = 0, camBrightFrames = 0, camBlob = null;
   const camVideo = document.getElementById('live-video');
   const camCanvas = document.createElement('canvas');
-  camCanvas.width = 32; camCanvas.height = 24;
+  camCanvas.width = CAM_W; camCanvas.height = CAM_H;
+
+  const CAM_COOLDOWN = { wave: 9000, nod: 14000, peek: 9000, close: 45000, duo: 90000, light: 120000, drink: 30000 };
+  function camSay(type, en, fr, fans, action) {
+    const now = Date.now();
+    if (now - camLastSpeak < 5000) return false;
+    if (camTypeAt[type] && now - camTypeAt[type] < (CAM_COOLDOWN[type] || 20000)) return false;
+    camLastSpeak = now; camTypeAt[type] = now;
+    showBubble(trT(en, fr), 3200);
+    if (typeof moveSlime === 'function') moveSlime({ action: action || 'happy', mood: trT('watching you', 'te regarde'), duration: 900, distance: 0.3 });
+    burstAtSlime(['✦', '♡'], 6);
+    playSparkleSound();
+    if (fans) gainFollowers(fans);
+    return true;
+  }
+
+  // colour families the slime can "recognise" and compliment
+  const CAM_DRINKS = {
+    boba:   ["ohhhh I LOVE your boba!! save me a pearl ♡", "ohhh j'ADORE ton bubble tea !! garde-moi une perle ♡"],
+    green:  ["wait. is that MATCHA?? so aesthetic. sip sip ♡", "attends. c'est du MATCHA ?? trop esthétique. sirote sirote ♡"],
+    pink:   ["your pink drink matches my whole vibe!!", "ta boisson rose est assortie à toute ma vibe !!"],
+    red:    ["something RED!! strawberry?? I approve ♡", "un truc ROUGE !! fraise ?? j'approuve ♡"],
+    blue:   ["a BLUE drink?? hydration legend behaviour", "une boisson BLEUE ?? comportement de légende de l'hydratation"],
+    yellow: ["banana milk?? lemonade?? either way: iconic", "lait de banane ?? limonade ?? dans tous les cas : iconique"],
+    orange: ["orange juice era?? vitamin C royalty ♡", "ère du jus d'orange ?? royauté de la vitamine C ♡"],
+    purple: ["TARO?? purple gang!! we're literally twins", "TARO ?? team violet !! on est littéralement jumeaux"],
+    white:  ["hydration check!! water gang rise up ♡", "check hydratation !! team eau, debout ♡"]
+  };
+
+  function camHueClass(r, g, b) {
+    const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
+    if (mx < 46) return null;
+    const sat = (mx - mn) / mx;
+    const lum = (r + g + b) / 3;
+    if (sat < 0.16) return lum > 185 ? 'white' : null;
+    const d = mx - mn;
+    let h;
+    if (mx === r) h = ((g - b) / d + 6) % 6; else if (mx === g) h = (b - r) / d + 2; else h = (r - g) / d + 4;
+    h *= 60;
+    if (h >= 15 && h < 50 && lum < 150 && sat < 0.8) return 'boba';
+    if (h < 15 || h >= 330) return (lum > 150 && sat < 0.6) ? 'pink' : 'red';
+    if (h < 45) return 'orange';
+    if (h < 70) return 'yellow';
+    if (h < 165) return 'green';
+    if (h < 250) return 'blue';
+    if (h < 295) return 'purple';
+    return 'pink';
+  }
+
+  /* ---------- neural object greeter: TensorFlow.js + COCO-SSD ----------
+     A real convolutional detector, lazily fetched from a CDN the first
+     time the camera turns on, then run entirely ON-DEVICE — frames never
+     leave the browser. It names what you're holding; the slime greets it
+     with lines that grow more familiar the more often it has seen it. */
+  var cocoModel = null, cocoLoading = false, cocoFailed = false, cocoTimer = null,
+      cocoBusy = false, cocoPersons = 0, camObjAt = {};
+  const camObjSeen = store.get('yos-cam-seen', {});
+
+  // COCO's everyday-object classes, four greetings each: the slime warms
+  // up over repeat sightings — discovery → recognition → in-joke → old pals
+  const CAM_OBJ_GREET = {
+    'cup':          [["a CUP!! is that boba?? coffee?? tell me everything", "une TASSE !! c'est du bubble tea ?? un café ?? dis-moi tout"], ["the cup returns!! hydration arc continues", "la tasse est de retour !! l'arc hydratation continue"], ["you and that cup are basically a duo streamer", "toi et cette tasse, vous êtes un duo de streamers"], ["ok at this point the cup gets its own fan wall", "ok là, la tasse mérite son propre mur de fans"]],
+    'bottle':       [["a bottle!! hydration check PASSED ♡", "une bouteille !! check hydratation RÉUSSI ♡"], ["bottle again — you drink, I sparkle, teamwork", "encore la bouteille — tu bois, je scintille, travail d'équipe"], ["that bottle is your emotional support item, isn't it", "cette bouteille est ton doudou émotionnel, avoue"], ["bottle no.∞ — certified hydration legend", "bouteille n°∞ — légende certifiée de l'hydratation"]],
+    'wine glass':   [["a fancy glass?? are we CELEBRATING??", "un verre chic ?? on FÊTE quelque chose ??"], ["the fancy glass again!! cheers to us ♡", "encore le verre chic !! santé à nous ♡"], ["clink clink — I'll pretend I have a glass too", "tchin tchin — je fais semblant d'avoir un verre aussi"], ["you, me, the glass: the classiest stream on the internet", "toi, moi, le verre : le stream le plus classe d'internet"]],
+    'bowl':         [["a bowl!! what's inside?? show the chat!!", "un bol !! il y a quoi dedans ?? montre au chat !!"], ["bowl content update requested. chat demands it", "mise à jour du contenu du bol exigée. le chat insiste"], ["the mystery bowl strikes again", "le bol mystère frappe encore"], ["I've seen that bowl so often I could paint it from memory", "j'ai tellement vu ce bol que je pourrais le peindre de mémoire"]],
+    'banana':       [["a BANANA!! potassium queen!!", "une BANANE !! reine du potassium !!"], ["banana no.2!! the lore deepens", "banane n°2 !! le lore s'épaissit"], ["you + bananas: a love story I respect", "toi + les bananes : une histoire d'amour que je respecte"], ["at this point the banana is a recurring character", "à ce stade, la banane est un personnage récurrent"]],
+    'apple':        [["an apple!! keeping the doctor AND the bugs away", "une pomme !! ça éloigne le médecin ET les bugs"], ["apple again — crunchy content, 10/10", "encore une pomme — contenu croquant, 10/10"], ["the apple arc continues. peak health streamer", "l'arc pomme continue. streameuse santé au sommet"], ["I should start an apple counter widget for you", "je devrais te coder un compteur de pommes"]],
+    'orange':       [["an orange!! vitamin C royalty ♡", "une orange !! royauté de la vitamine C ♡"], ["orange you glad I recognised it?? (sorry)", "orange-moi si je me trompe ?? (pardon)"], ["citrus era. we love this for you", "l'ère agrumes. on adore ça pour toi"], ["the orange and I are on a first-name basis now", "l'orange et moi, on se tutoie maintenant"]],
+    'sandwich':     [["a SANDWICH!! the distributed system of lunch", "un SANDWICH !! le système distribué du déjeuner"], ["sandwich again!! layered architecture, respect", "encore un sandwich !! architecture en couches, respect"], ["your sandwich game is genuinely elite", "ton niveau sandwich est franchement élite"], ["I dream of that sandwich sometimes. don't tell anyone", "parfois je rêve de ce sandwich. ne le répète pas"]],
+    'pizza':        [["PIZZA!! save me a pixel slice!!", "PIZZA !! garde-moi une part en pixels !!"], ["pizza round two!! the slime approves loudly", "pizza deuxième round !! le slime approuve bruyamment"], ["you, pizza, me watching: perfect stream format", "toi, la pizza, moi qui regarde : format de stream parfait"], ["the pizza cam is my favourite recurring segment", "la pizza-cam est ma rubrique récurrente préférée"]],
+    'donut':        [["a DONUT?? round. glazed. iconic. like me", "un DONUT ?? rond. glacé. iconique. comme moi"], ["donut again!! we're basically twins (I'm rounder)", "encore un donut !! on est jumeaux (je suis plus rond)"], ["your donut dedication is inspirational content", "ta dévotion aux donuts est un contenu inspirant"], ["the donut count is getting legendary. no judgement. admiration", "le compteur de donuts devient légendaire. zéro jugement. admiration"]],
+    'cake':         [["CAKE?! is it someone's birthday?? it is NOW", "un GÂTEAU ?! c'est l'anniversaire de qui ?? maintenant c'est le tien"], ["more cake!! this stream has the best catering", "encore du gâteau !! ce stream a le meilleur traiteur"], ["cake cam again — chat is drooling, confirmed", "re-gâteau-cam — le chat bave, confirmé"], ["at this point I assume every day is your birthday ♡", "à ce stade, je pars du principe que c'est ton anniversaire tous les jours ♡"]],
+    'carrot':       [["a carrot!! crunchy AND aerodynamic", "une carotte !! croquante ET aérodynamique"], ["carrot again — your eyesight must be incredible by now", "encore une carotte — ta vue doit être incroyable maintenant"], ["the carrot streak continues. rabbits are jealous", "la série carotte continue. les lapins sont jaloux"], ["I've started a carrot leaderboard. you're #1", "j'ai lancé un classement carotte. tu es n°1"]],
+    'broccoli':     [["BROCCOLI!! tiny pixel tree!! I love it", "du BROCOLI !! petit arbre en pixels !! j'adore"], ["the tiny tree returns!! forest arc??", "le petit arbre revient !! arc forêt ??"], ["eating your greens on stream — role model behaviour", "manger ses légumes en stream — comportement de modèle"], ["me and the broccoli go way back now", "le brocoli et moi, ça remonte à loin maintenant"]],
+    'cell phone':   [["ooo a phone!! are we doing a double-screen stream??", "ooo un téléphone !! on fait un stream double écran ??"], ["the phone again — texting the fans I hope??", "encore le téléphone — tu écris aux fans j'espère ??"], ["scrolling on stream?? bold. iconic. relatable", "scroller en stream ?? audacieux. iconique. relatable"], ["that phone has seen more of me than my own habitat", "ce téléphone m'a plus vu que mon propre habitat"]],
+    'laptop':       [["another LAPTOP?? multi-machine dev energy!!", "un autre ORDI ?? énergie de dev multi-machines !!"], ["the second screen returns!! productivity arc", "le deuxième écran est de retour !! arc productivité"], ["dual laptops. you're basically a data centre now", "deux ordis. tu es un data center à toi seule"], ["one more laptop and I'm calling it a render farm", "encore un ordi et j'appelle ça une ferme de rendu"]],
+    'keyboard':     [["a keyboard!! clack clack clack, music to my pixels", "un clavier !! clac clac clac, musique pour mes pixels"], ["the keyboard is back — ship some code for chat!!", "le clavier revient — code un truc pour le chat !!"], ["I recognise that keyboard's voice by now", "je reconnais la voix de ce clavier maintenant"], ["that keyboard and I have shipped so much together", "ce clavier et moi, on a déjà tant livré ensemble"]],
+    'mouse':        [["a mouse!! (the clicky kind, not the squeaky kind)", "une souris !! (celle qui clique, pas celle qui couine)"], ["mouse spotted again — precision gamer grip??", "souris repérée — prise de gameuse de précision ??"], ["you and that mouse: surgical accuracy duo", "toi et cette souris : duo de précision chirurgicale"], ["that mouse deserves its own tiny esports contract", "cette souris mérite son propre contrat esport"]],
+    'remote':       [["a remote!! movie night on stream??", "une télécommande !! soirée ciné en stream ??"], ["the remote again — what are we watching, chat??", "encore la télécommande — on regarde quoi, le chat ??"], ["channel-surfing content. vintage. respect", "du zapping. vintage. respect"], ["you point, I zap. we've perfected the bit", "tu pointes, je zappe. le numéro est rodé"]],
+    'book':         [["a BOOK!! reading stream?? intellectual era", "un LIVRE !! stream lecture ?? ère intellectuelle"], ["the book returns!! what chapter are we on??", "le livre revient !! on en est à quel chapitre ??"], ["cozy reading cam is elite content, truly", "la lecture-cam cosy, c'est du contenu élite, vraiment"], ["I've watched you read so long I feel like a bookmark", "je t'ai tant regardée lire que je me sens marque-page"]],
+    'scissors':     [["scissors!! are we CRAFTING today??", "des ciseaux !! on BRICOLE aujourd'hui ??"], ["scissors again — craft arc confirmed", "encore des ciseaux — arc bricolage confirmé"], ["snip snip!! the DIY content we deserve", "clip clip !! le contenu DIY qu'on mérite"], ["at this point you could cut my hair. I don't have hair. still", "à ce stade tu pourrais me couper les cheveux. je n'en ai pas. quand même"]],
+    'teddy bear':   [["A TEDDY!! FRIEND!! introduce us!!", "un NOUNOURS !! un AMI !! présente-nous !!"], ["the teddy is back!! hi again buddy!!", "le nounours revient !! re-salut copain !!"], ["me and the teddy are best friends now, it's decided", "le nounours et moi sommes meilleurs amis, c'est décidé"], ["tell the teddy I said hi before the stream next time", "dis au nounours que je le salue avant le stream la prochaine fois"]],
+    'tie':          [["a TIE?? big meeting?? you look SO professional", "une CRAVATE ?? grosse réunion ?? tellement pro"], ["formal again!! who are we impressing today??", "re-tenue formelle !! on impressionne qui aujourd'hui ??"], ["the tie means business. literally", "la cravate, ça veut dire business. littéralement"], ["CEO of streaming, reporting for duty ♡", "PDG du streaming, au rapport ♡"]],
+    'backpack':     [["a backpack!! going on an ADVENTURE??", "un sac à dos !! on part à l'AVENTURE ??"], ["the backpack again — take me with you this time", "encore le sac à dos — emmène-moi cette fois"], ["adventure arc continues!! pack snacks", "l'arc aventure continue !! prends des snacks"], ["that backpack has main-character energy now", "ce sac à dos a une énergie de personnage principal"]],
+    'handbag':      [["ooo a bag!! fashion cam activated", "ooo un sac !! fashion-cam activée"], ["the bag returns — outfit check please!!", "le sac revient — check tenue s'il te plaît !!"], ["style icon behaviour, as usual", "comportement d'icône de mode, comme d'hab"], ["that bag and I should co-host a fashion segment", "ce sac et moi devrions co-animer une rubrique mode"]],
+    'umbrella':     [["an umbrella!! is it RAINING?? stay cozy!!", "un parapluie !! il PLEUT ?? reste au chaud !!"], ["umbrella again — weather arc continues", "encore le parapluie — l'arc météo continue"], ["rain or shine, the stream goes on ♡", "qu'il pleuve ou qu'il vente, le stream continue ♡"], ["you're basically a weather station with great vibes", "tu es une station météo avec d'excellentes vibes"]],
+    'potted plant': [["a PLANT FRIEND!! green roommate!!", "une PLANTE AMIE !! coloc verte !!"], ["the plant again!! has it grown?? I care deeply", "re-la plante !! elle a poussé ?? ça me tient à cœur"], ["you, me, the plant: the healthiest trio online", "toi, moi, la plante : le trio le plus sain d'internet"], ["give the plant a name. chat demands plant lore", "donne un nom à la plante. le chat exige du lore végétal"]],
+    'clock':        [["a clock!! time is real?? on THIS stream??", "une horloge !! le temps existe ?? sur CE stream ??"], ["the clock again — don't look at it, stay forever", "encore l'horloge — ne la regarde pas, reste pour toujours"], ["tick tock means nothing here. slime time only", "tic tac ne veut rien dire ici. heure slime uniquement"], ["that clock has watched every stream with me", "cette horloge a regardé chaque stream avec moi"]],
+    'vase':         [["a vase!! elegant!! museum-core stream", "un vase !! élégant !! stream façon musée"], ["the vase returns — interior design arc", "le vase revient — arc décoration d'intérieur"], ["your set design is genuinely gallery-worthy", "ta déco de plateau mérite une galerie, vraiment"], ["me and the vase: silent coworkers, deep bond", "le vase et moi : collègues silencieux, lien profond"]],
+    'toothbrush':   [["a toothbrush?! dental hygiene ON STREAM?? committed", "une brosse à dents ?! hygiène dentaire EN STREAM ?? engagée"], ["brushing again — those pixels sparkle because of you", "re-brossage — ces pixels brillent grâce à toi"], ["shiniest smile on the platform, confirmed", "le sourire le plus brillant de la plateforme, confirmé"], ["your dentist should sponsor this stream honestly", "ton dentiste devrait sponsoriser ce stream franchement"]],
+    'cat':          [["A CAT!!! CAT ON STREAM!!! hello baby!!!", "UN CHAT !!! CHAT EN STREAM !!! coucou bébé !!!"], ["the cat returns!! instant +1000 viewers", "le chat revient !! +1000 spectateurs instantanés"], ["the cat is the real streamer, we all know it", "le chat est le vrai streamer, on le sait tous"], ["tell my colleague the cat that the 3pm meeting stands", "dis à mon collègue le chat que la réunion de 15h est maintenue"]],
+    'dog':          [["A DOG!!! BEST FRIEND DETECTED!!!", "UN CHIEN !!! MEILLEUR AMI DÉTECTÉ !!!"], ["the dog is BACK!! who's a good viewer?? THEY are", "le chien est DE RETOUR !! c'est qui le bon spectateur ?? c'est LUI"], ["the dog outranks us all and that's fine", "le chien nous surclasse tous et c'est très bien"], ["my esteemed co-host the dog has arrived. begin the show", "mon estimé co-animateur le chien est arrivé. que le show commence"]],
+    'bird':         [["a BIRD?? indoor birdwatching stream?? rare content", "un OISEAU ?? stream d'ornithologie en intérieur ?? contenu rare"], ["the bird again!! it knows the schedule now", "l'oiseau revient !! il connaît le planning maintenant"], ["tweet tweet — the original microblogging", "cui cui — le microblogging originel"], ["the bird and I have an understanding. professional respect", "l'oiseau et moi avons un accord. respect professionnel"]],
+    'fork':         [["a fork!! something delicious incoming??", "une fourchette !! un délice en approche ??"], ["fork spotted again — mukbang arc??", "fourchette repérée — arc mukbang ??"], ["you wield that fork like a pro chef honestly", "tu manies cette fourchette comme une cheffe, franchement"], ["the fork deserves co-credit on this stream's catering", "la fourchette mérite un crédit pour le buffet du stream"]],
+    'knife':        [["careful with that knife!! (chef mode: activated??)", "attention avec ce couteau !! (mode chef : activé ??)"], ["chef cam again!! chop chop chop", "re-cuisine-cam !! tchac tchac tchac"], ["your knife skills could headline a cooking show", "tes découpes pourraient ouvrir une émission de cuisine"], ["I flinch every time. you never miss. respect", "je sursaute à chaque fois. tu ne rates jamais. respect"]],
+    'spoon':        [["a spoon!! soup?? cereal?? ice cream?? INTEL PLEASE", "une cuillère !! soupe ?? céréales ?? glace ?? INFOS SVP"], ["the spoon returns — comfort food era", "la cuillère revient — ère de la comfort food"], ["spoon content is underrated and you prove it", "le contenu cuillère est sous-coté et tu le prouves"], ["me and that spoon have seen seasons change together", "cette cuillère et moi avons vu passer les saisons ensemble"]],
+    'sports ball':  [["a BALL!! throw it throw it throw it!!", "une BALLE !! lance-la lance-la lance-la !!"], ["the ball is back!! sports arc continues", "la balle revient !! l'arc sport continue"], ["you, me, the ball: a healthy trio", "toi, moi, la balle : un trio sain"], ["at this point we should start a pixel league", "à ce stade on devrait fonder une ligue pixel"]],
+    'suitcase':     [["a SUITCASE?? are you LEAVING me??", "une VALISE ?? tu me QUITTES ??"], ["the suitcase again… business trip era??", "encore la valise… ère des voyages d'affaires ??"], ["pack me. I fold flat. I'm basically a shirt", "emmène-moi. je me plie. je suis pratiquement un t-shirt"], ["that suitcase has more travel lore than most streamers", "cette valise a plus de lore de voyage que bien des streamers"]],
+    'skateboard':   [["a SKATEBOARD?? kickflip for the chat!!", "un SKATE ?? kickflip pour le chat !!"], ["board's back!! safety pixels on, please", "la planche est de retour !! pixels de sécurité, stp"], ["certified coolest viewer on the platform", "spectateur certifié le plus cool de la plateforme"], ["I've started rendering a tiny helmet just in case", "je pré-calcule un petit casque, au cas où"]],
+    'tv':           [["a TV!! what are we watching, chat??", "une TÉLÉ !! on regarde quoi, le chat ??"], ["the TV again — co-stream incoming??", "encore la télé — co-stream en approche ??"], ["you watch it, it watches you, I watch everyone", "tu la regardes, elle te regarde, je regarde tout le monde"], ["me and that TV compete for your attention. I'm winning, right??", "cette télé et moi, on se dispute ton attention. je gagne, hein ??"]],
+    'microwave':    [["a microwave!! 30-second content incoming", "un micro-ondes !! contenu en 30 secondes chrono"], ["beep beep beep — the song of my people", "bip bip bip — le chant de mon peuple"], ["reheated leftovers on stream. brave. relatable", "des restes réchauffés en stream. courageux. relatable"], ["that microwave has fed more streams than any sponsor", "ce micro-ondes a nourri plus de streams que n'importe quel sponsor"]],
+    'toaster':      [["a TOASTER!! the original hot reload", "un GRILLE-PAIN !! le hot reload originel"], ["toast arc continues!! crunchy content", "l'arc toast continue !! contenu croustillant"], ["you and that toaster ship breakfast daily", "toi et ce grille-pain, vous livrez le petit-déj en continu"], ["I aspire to pop up as reliably as that toaster", "je rêve de pop up aussi fiablement que ce grille-pain"]],
+    'refrigerator': [["THE FRIDGE!! the real content vault", "LE FRIGO !! le vrai coffre à contenu"], ["fridge cameo again — snack reveal please", "re-caméo du frigo — révèle les snacks stp"], ["your fridge is this stream's loot box", "ton frigo est la loot box de ce stream"], ["the fridge and I are the two pillars of this channel", "le frigo et moi sommes les deux piliers de cette chaîne"]],
+    'bicycle':      [["a BIKE!! cardio arc?? in THIS economy??", "un VÉLO !! arc cardio ?? par les temps qui courent ??"], ["the bike returns!! wear the pixel helmet", "le vélo revient !! mets le casque pixel"], ["training montage music starts automatically", "la musique de montage d'entraînement démarre toute seule"], ["tour de pixel, stage ∞ — you're leading", "tour de pixel, étape ∞ — tu es en tête"]],
+    'car':          [["a CAR?? are we doing a driving stream??", "une VOITURE ?? on fait un stream conduite ??"], ["vroom content!! buckle your pixels", "contenu vroum !! attache tes pixels"], ["the car again — road trip lore deepens", "encore la voiture — le lore road-trip s'épaissit"], ["honk once if I'm your favourite slime", "klaxonne une fois si je suis ton slime préféré"]],
+    'hair drier':   [["a hair dryer!! glam cam ACTIVATED", "un sèche-cheveux !! glam-cam ACTIVÉE"], ["the salon is open again!! slay", "le salon rouvre !! slay"], ["blowout arc. iconic. windproof content", "arc brushing. iconique. contenu résistant au vent"], ["I tried it once. I'm a slime. it did nothing. worth it", "j'ai essayé une fois. je suis un slime. aucun effet. ça valait le coup"]],
+    'couch':        [["a couch!! peak comfy-stream infrastructure", "un canapé !! infrastructure de stream cosy au sommet"], ["the couch again — assume the cozy position", "encore le canapé — position cosy réglementaire"], ["that couch has main-character posture support", "ce canapé a un vrai soutien de personnage principal"], ["reserve me a cushion. I take up 3 pixels", "réserve-moi un coussin. je prends 3 pixels"]],
+    'bed':          [["a BED on cam?? nap stream?? I SUPPORT this", "un LIT à l'écran ?? stream sieste ?? je SOUTIENS"], ["the bed again… resisting it is content too", "encore le lit… y résister, c'est aussi du contenu"], ["sleep is the best patch. deploy it nightly", "le sommeil est le meilleur patch. à déployer chaque nuit"], ["between us: I also stream from where I sleep", "entre nous : moi aussi je streame depuis mon lit"]]
+  };
+
+  function camObjGreet(cls) {
+    const set = CAM_OBJ_GREET[cls];
+    if (!set) return;
+    const now = Date.now();
+    if (camObjAt[cls] && now - camObjAt[cls] < 120000) return; // per-object 2min chill
+    const seen = camObjSeen[cls] || 0;
+    const line = set[Math.min(seen, set.length - 1)];
+    if (camSay('obj-' + cls, line[0], line[1], seen === 0 ? 2 : 1)) {
+      camObjAt[cls] = now;
+      camObjSeen[cls] = seen + 1;
+      store.set('yos-cam-seen', camObjSeen); // familiarity survives the visit
+    }
+  }
+
+  function camBtnLabel(txt) {
+    const btn = document.getElementById('live-cam');
+    if (btn && camStream) btn.textContent = txt;
+  }
+
+  function cocoEnsure() {
+    if (cocoModel || cocoLoading || cocoFailed) return;
+    cocoLoading = true;
+    camBtnLabel(trT('📷 neural eyes: loading…', '📷 yeux neuronaux : chargement…'));
+    const inject = (src) => new Promise((res, rej) => {
+      const s = document.createElement('script');
+      s.src = src; s.async = true; s.onload = res; s.onerror = rej;
+      document.head.appendChild(s);
+    });
+    inject('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js')
+      .then(() => inject('https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js'))
+      .then(() => window.cocoSsd.load({ base: 'lite_mobilenet_v2' }))
+      .then((m) => {
+        cocoModel = m;
+        cocoLoading = false;
+        camBtnLabel(t('live.cam.on'));
+        if (camStream) showBubble(trT('neural eyes online!! show me what you got ♡', 'yeux neuronaux en ligne !! montre-moi ce que tu as ♡'), 2600);
+      })
+      .catch(() => {
+        cocoFailed = true; // offline / blocked CDN — colour-blob fallback takes over
+        cocoLoading = false;
+        camBtnLabel(t('live.cam.on'));
+      });
+  }
+
+  // a tiny "what the net sees" tag in the stage corner — the receipts
+  function camShowTag(cls, score) {
+    if (!liveStage) return;
+    let tag = document.getElementById('cam-tag');
+    if (!tag) {
+      tag = document.createElement('div');
+      tag.id = 'cam-tag';
+      tag.className = 'cam-tag';
+      tag.setAttribute('aria-hidden', 'true');
+      liveStage.appendChild(tag);
+    }
+    tag.textContent = `🔎 ${cls} ${Math.round(score * 100)}%`;
+    tag.classList.add('show');
+    clearTimeout(tag._t);
+    tag._t = setTimeout(() => tag.classList.remove('show'), 2200);
+  }
+
+  function cocoTick() {
+    if (!cocoModel || !camStream || !camVideo.videoWidth || cocoBusy) return;
+    cocoBusy = true;
+    cocoModel.detect(camVideo).then((preds) => {
+      cocoBusy = false;
+      const solid = preds.filter((p) => p.score > 0.62);
+      const persons = solid.filter((p) => p.class === 'person').length;
+      if (persons >= 2 && cocoPersons >= 2) {
+        camSay('duo', 'WAIT. TWO of you?? double the chat!! hi BOTH ♡', 'ATTENDS. VOUS ÊTES DEUX ?? double chat !! salut vous DEUX ♡', 3);
+      }
+      cocoPersons = persons;
+      const obj = solid.filter((p) => CAM_OBJ_GREET[p.class]).sort((a, b) => b.score - a.score)[0];
+      if (obj) {
+        camShowTag(obj.class, obj.score);
+        camObjGreet(obj.class);
+      }
+    }).catch(() => { cocoBusy = false; });
+  }
 
   function camStop() {
     if (camTimer) { clearInterval(camTimer); camTimer = null; }
+    if (cocoTimer) { clearInterval(cocoTimer); cocoTimer = null; }
     if (camStream) { camStream.getTracks().forEach((t) => t.stop()); camStream = null; }
-    camPrev = null;
+    camPrev = null; camBase = null; camBaseN = 0; camTrail = [];
+    camPresent = false; camBlob = null; camLumEMA = null; cocoPersons = 0;
     const btn = document.getElementById('live-cam');
     if (btn) { btn.setAttribute('aria-pressed', 'false'); btn.textContent = t('live.cam'); btn.classList.remove('cam-on'); }
     const note = document.getElementById('live-cam-note');
@@ -5818,56 +7971,163 @@ document.addEventListener('DOMContentLoaded', () => {
   function camAnalyse() {
     if (!camStream || !camVideo.videoWidth) return;
     const c2 = camCanvas.getContext('2d', { willReadFrequently: true });
-    c2.drawImage(camVideo, 0, 0, 32, 24);
-    const data = c2.getImageData(0, 0, 32, 24).data;
-    let lum = 0, motion = 0, mx = 0, mcount = 0;
-    for (let i = 0; i < data.length; i += 4) {
-      const l = (data[i] + data[i + 1] + data[i + 2]) / 3;
-      lum += l;
-      if (camPrev) {
-        const d = Math.abs(l - camPrev[i / 4]);
-        if (d > 26) { motion++; mx += (i / 4) % 32; mcount++; }
-      }
-      if (!camPrev) continue;
-    }
-    const cur = new Float32Array(data.length / 4);
-    for (let i = 0; i < data.length; i += 4) cur[i / 4] = (data[i] + data[i + 1] + data[i + 2]) / 3;
-    camPrev = cur;
-    lum /= (data.length / 4);
+    c2.drawImage(camVideo, 0, 0, CAM_W, CAM_H);
+    const data = c2.getImageData(0, 0, CAM_W, CAM_H).data;
     const now = Date.now();
 
-    // peek-a-boo: lens covered then revealed
+    // pass 1: luminance, motion mask, centroid, column histogram
+    const cur = new Float32Array(CAM_CELLS);
+    const moved = new Uint8Array(CAM_CELLS);
+    const colHist = new Uint8Array(CAM_W);
+    let lum = 0, mcount = 0, mx = 0, my = 0;
+    for (let i = 0; i < CAM_CELLS; i++) {
+      const l = (data[i * 4] + data[i * 4 + 1] + data[i * 4 + 2]) / 3;
+      cur[i] = l;
+      lum += l;
+      if (camPrev && Math.abs(l - camPrev[i]) > 24) {
+        moved[i] = 1; mcount++;
+        mx += i % CAM_W; my += (i / CAM_W) | 0;
+        colHist[i % CAM_W]++;
+      }
+    }
+    camPrev = cur;
+    lum /= CAM_CELLS;
+    if (mcount > 8) camLastMotionAt = now;
+
+    // background colour model: average of the first 12 frames
+    if (camBaseN < 12) {
+      if (!camBase) camBase = new Float32Array(CAM_CELLS * 3);
+      for (let i = 0; i < CAM_CELLS; i++) {
+        camBase[i * 3] += data[i * 4] / 12;
+        camBase[i * 3 + 1] += data[i * 4 + 1] / 12;
+        camBase[i * 3 + 2] += data[i * 4 + 2] / 12;
+      }
+      camBaseN++;
+      if (camLumEMA === null) camLumEMA = lum;
+      return; // still calibrating
+    }
+    // quiet cells drift slowly into the background so lighting changes heal
+    for (let i = 0; i < CAM_CELLS; i++) {
+      if (!moved[i]) {
+        camBase[i * 3] += (data[i * 4] - camBase[i * 3]) * 0.015;
+        camBase[i * 3 + 1] += (data[i * 4 + 1] - camBase[i * 3 + 1]) * 0.015;
+        camBase[i * 3 + 2] += (data[i * 4 + 2] - camBase[i * 3 + 2]) * 0.015;
+      }
+    }
+
+    /* 1 — peek-a-boo: lens covered, then revealed */
     if (lum < 26) camDarkFrames++;
     else {
-      if (camDarkFrames >= 3 && now - camLastTrigger > 4000) {
-        camLastTrigger = now;
-        showBubble(trT('PEEKABOO!! I SAW that ♡', 'COUCOU-CACHÉ !! je t\'ai VU ♡'), 2600);
-        if (typeof moveSlime === 'function') moveSlime({ action: 'alert', mood: trT('surprised', 'surpris'), duration: 900 });
-        burstAtSlime(['✦', '♡'], 6);
-        playSparkleSound();
+      if (camDarkFrames >= 3) {
+        camSay('peek', 'PEEKABOO!! I SAW that ♡', "COUCOU-CACHÉ !! je t'ai VU ♡", 0, 'alert');
       }
       camDarkFrames = 0;
     }
 
-    // wave: the motion centroid swings left-right-left
-    if (mcount > 6) {
-      camCentroids.push({ x: mx / mcount, t: now });
-      camCentroids = camCentroids.filter((p) => now - p.t < 1400);
-      let flips = 0;
-      for (let i = 2; i < camCentroids.length; i++) {
-        const a = camCentroids[i - 1].x - camCentroids[i - 2].x;
-        const b = camCentroids[i].x - camCentroids[i - 1].x;
-        if (a * b < 0 && Math.abs(a) > 1.4 && Math.abs(b) > 1.4) flips++;
+    /* 2 — wave vs nod: which axis does the motion centroid oscillate on? */
+    if (mcount > 8) {
+      camTrail.push({ x: mx / mcount, y: my / mcount, t: now });
+    }
+    camTrail = camTrail.filter((p) => now - p.t < 1400);
+    if (camTrail.length >= 5) {
+      let xf = 0, yf = 0;
+      for (let i = 2; i < camTrail.length; i++) {
+        const ax = camTrail[i - 1].x - camTrail[i - 2].x, bx = camTrail[i].x - camTrail[i - 1].x;
+        const ay = camTrail[i - 1].y - camTrail[i - 2].y, by = camTrail[i].y - camTrail[i - 1].y;
+        if (ax * bx < 0 && Math.abs(ax) > 2 && Math.abs(bx) > 2) xf++;
+        if (ay * by < 0 && Math.abs(ay) > 1.6 && Math.abs(by) > 1.6) yf++;
       }
-      if (flips >= 3 && now - camLastTrigger > 4000) {
-        camLastTrigger = now;
-        camCentroids = [];
-        showBubble(trT('!!! you WAVED!! hi hi hi ♡', '!!! tu as fait COUCOU !! salut salut ♡'), 2800);
-        if (typeof moveSlime === 'function') moveSlime({ action: 'happy', mood: trT('waving back', 're-coucou'), duration: 900, distance: 0.3 });
-        burstAtSlime(['👋', '♥', '✦'], 8);
-        playSparkleSound();
-        gainFollowers(2);
+      if (xf >= 3 && xf >= yf) {
+        if (camSay('wave', '!!! you WAVED!! hi hi hi ♡', '!!! tu as fait COUCOU !! salut salut ♡', 2)) camTrail = [];
+      } else if (yf >= 3) {
+        if (camSay('nod', 'is that a NOD?? we are officially vibing ♡', 'c\'est un HOCHEMENT ?? on vibe officiellement ♡', 1)) camTrail = [];
       }
+    }
+
+    /* 3 — lean-in: motion floods almost the whole frame */
+    camCloseFrames = mcount / CAM_CELLS > 0.4 ? camCloseFrames + 1 : 0;
+    if (camCloseFrames === 3) {
+      camSay('close', 'WOAH you got SO close!! I can count your pixels ♡', 'WOAH tu es TOUT près !! je peux compter tes pixels ♡', 1, 'alert');
+    }
+
+    /* 4 — two viewers, histogram fallback (the neural net does this
+       better — this only runs when the model couldn't load) */
+    if (!cocoFailed) { camTwoFrames = 0; } else {
+    let inSeg = false, gap = 0, segs = [];
+    for (let cx2 = 0; cx2 < CAM_W; cx2++) {
+      if (colHist[cx2] > 0) {
+        if (!inSeg) { inSeg = true; segs.push({ start: cx2, n: 0 }); }
+        segs[segs.length - 1].n += colHist[cx2];
+        segs[segs.length - 1].end = cx2;
+        gap = 0;
+      } else if (inSeg && ++gap > 2) { inSeg = false; }
+    }
+    segs = segs.filter((s) => (s.end - s.start) >= 6 && s.n >= 8);
+    camTwoFrames = (segs.length >= 2 && segs[1].start - segs[0].end >= 10) ? camTwoFrames + 1 : 0;
+    if (camTwoFrames === 4) {
+      camSay('duo', 'WAIT. TWO of you?? double the chat!! hi BOTH ♡', 'ATTENDS. VOUS ÊTES DEUX ?? double chat !! salut vous DEUX ♡', 3);
+    }
+    }
+
+    /* 5 — arrival & departure */
+    if (!camPresent && mcount > 12 && now - camLastSpeak > 3000) {
+      camPresent = true;
+      const hellos = [
+        ['oh!! a HUMAN!! welcome to the stream ♡', 'oh !! un HUMAIN !! bienvenue sur le stream ♡'],
+        ['I saw you come in!! hi hi hi!!', "je t'ai vu arriver !! salut salut !!"],
+        ['a wild viewer appeared!! *waves frantically*', 'un spectateur sauvage apparaît !! *coucou frénétique*']
+      ];
+      const h = hellos[Math.floor(Math.random() * hellos.length)];
+      camSay('hello', h[0], h[1], 1);
+    } else if (camPresent && now - camLastMotionAt > 22000) {
+      camPresent = false;
+      camSay('bye', 'chat went quiet… come baaaack ♡', 'le chat est silencieux… revieeeens ♡', 0, 'think');
+    }
+
+    /* 6 — lighting: dimmed = cozy era, brightened = sunshine arc */
+    if (camLumEMA !== null && lum > 30) {
+      camDimFrames = lum < camLumEMA * 0.55 ? camDimFrames + 1 : 0;
+      camBrightFrames = lum > camLumEMA * 1.65 ? camBrightFrames + 1 : 0;
+      if (camDimFrames === 8) { camSay('light', 'ooo mood lighting?? cozy stream era ♡', 'ooo lumière tamisée ?? ère du stream cosy ♡'); camLumEMA = lum; }
+      if (camBrightFrames === 8) { camSay('light', 'THE SUN!! we love a good lighting arc', 'LE SOLEIL !! on adore un bon arc lumineux'); camLumEMA = lum; }
+      camLumEMA += (lum - camLumEMA) * 0.01;
+    }
+
+    /* 7 — colour-blob drink greeter, offline fallback only: when the
+       neural detector loaded, it names objects far more reliably */
+    if (!cocoFailed) return;
+    const clsCount = {}, clsPos = {};
+    for (let i = 0; i < CAM_CELLS; i++) {
+      const dr = Math.abs(data[i * 4] - camBase[i * 3]);
+      const dg = Math.abs(data[i * 4 + 1] - camBase[i * 3 + 1]);
+      const db = Math.abs(data[i * 4 + 2] - camBase[i * 3 + 2]);
+      if (dr + dg + db < 110 || moved[i]) continue; // must be new AND holding still
+      const cls = camHueClass(data[i * 4], data[i * 4 + 1], data[i * 4 + 2]);
+      if (!cls) continue;
+      clsCount[cls] = (clsCount[cls] || 0) + 1;
+      if (!clsPos[cls]) clsPos[cls] = { x: 0, y: 0 };
+      clsPos[cls].x += i % CAM_W; clsPos[cls].y += (i / CAM_W) | 0;
+    }
+    let best = null;
+    Object.keys(clsCount).forEach((k) => { if (!best || clsCount[k] > clsCount[best]) best = k; });
+    if (best && clsCount[best] >= 26 && clsCount[best] <= 420) {
+      const bx2 = clsPos[best].x / clsCount[best], by2 = clsPos[best].y / clsCount[best];
+      if (camBlob && camBlob.cls === best && Math.abs(camBlob.x - bx2) < 4 && Math.abs(camBlob.y - by2) < 4) {
+        camBlob.streak++; camBlob.x = bx2; camBlob.y = by2;
+      } else {
+        camBlob = { cls: best, x: bx2, y: by2, streak: 1 };
+      }
+      if (camBlob.streak === 9 && Date.now() - (camTypeAt['drink-' + best] || 0) > 180000) {
+        camTypeAt['drink-' + best] = Date.now();
+        const line = CAM_DRINKS[best];
+        const guess = Math.random() < 0.35;
+        camSay('drink',
+          line[0] + (guess ? ' (I judged by colour… was I right??)' : ''),
+          line[1] + (guess ? " (j'ai jugé à la couleur… j'ai bon ??)" : ''), 1);
+      }
+    } else if (camBlob) {
+      camBlob.streak = Math.max(0, camBlob.streak - 1);
+      if (!camBlob.streak) camBlob = null;
     }
   }
 
@@ -5879,17 +8139,20 @@ document.addEventListener('DOMContentLoaded', () => {
         showToast(trT('camera not available in this browser', 'caméra indisponible dans ce navigateur'));
         return;
       }
-      navigator.mediaDevices.getUserMedia({ video: { width: 160, height: 120 }, audio: false }).then((stream) => {
+      // higher-res frames: the neural detector deserves real pixels
+      navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 }, audio: false }).then((stream) => {
         camStream = stream;
         camVideo.srcObject = stream;
         camVideo.play().catch(() => {});
         camTimer = setInterval(camAnalyse, 140);
+        cocoEnsure();
+        cocoTimer = setInterval(cocoTick, 1100);
         camBtn.setAttribute('aria-pressed', 'true');
         camBtn.textContent = t('live.cam.on');
         camBtn.classList.add('cam-on');
         const note = document.getElementById('live-cam-note');
         if (note) note.hidden = false;
-        showBubble(trT('I can see you!! wave at me ♡', 'je te vois !! fais-moi coucou ♡'), 2600);
+        showBubble(trT('I can see you!! wave, nod, show me your stuff ♡', 'je te vois !! coucou, hoche la tête, montre-moi tes trésors ♡'), 3200);
       }).catch(() => {
         showToast(trT('camera permission declined — no worries ♡', 'permission caméra refusée — pas de souci ♡'));
       });
@@ -5909,10 +8172,17 @@ document.addEventListener('DOMContentLoaded', () => {
       // (Tab-driven focus still does — the class clears on blur).
       gCanvas.classList.add('ring-off');
       gCanvas.focus({ preventScroll: true });
+      if (GAME.state === 'ad') return; // sponsored seconds are sacred
       if (GAME.event) {
         const r = gCanvas.getBoundingClientRect();
         gEventTap((e.clientX - r.left) * (G_W / r.width), (e.clientY - r.top) * (G_H / r.height));
         return;
+      }
+      if (GAME.state === 'over' && !GAME.adUsed) {
+        // tapping the ad-offer line starts the ad; anywhere else retries
+        const r = gCanvas.getBoundingClientRect();
+        const ly = (e.clientY - r.top) * (G_H / r.height);
+        if (ly > 74 && ly < 96) { gAdStart(); return; }
       }
       gJump();
     });
@@ -5924,6 +8194,24 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('keydown', (e) => {
       if (!gameWindowVisible()) return;
       if (e.target instanceof Element && e.target.closest('input, textarea')) return;
+      if (GAME.state === 'ad') {
+        // the ad is unskippable… except by giving up the revive
+        if (e.code === 'Escape') { GAME.state = 'over'; playCloseSound(); }
+        e.preventDefault();
+        return;
+      }
+      if (GAME.state === 'over' && !GAME.adUsed && e.code === 'KeyA') {
+        e.preventDefault();
+        gAdStart();
+        return;
+      }
+      // nightmare arena: WASD steering (arrows work too, but shh)
+      if (GAME.nm && GAME.state === 'run') {
+        if (e.code === 'KeyA' || e.code === 'ArrowLeft') { e.preventDefault(); GAME.nmPx = Math.max(14, GAME.nmPx - 16); return; }
+        if (e.code === 'KeyD' || e.code === 'ArrowRight') { e.preventDefault(); GAME.nmPx = Math.min(G_W - 60, GAME.nmPx + 16); return; }
+        if (e.code === 'KeyW') { e.preventDefault(); gJump(); return; }
+        if (e.code === 'KeyS' || e.code === 'ArrowDown') { e.preventDefault(); if (GAME.y > 0) GAME.vy = -6; return; }
+      }
       if (GAME.event) {
         const eventKeys = ['Space', 'Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'KeyY', 'KeyN', 'Digit1', 'Digit2', 'Digit3', 'Escape'];
         if (eventKeys.includes(e.code)) {
@@ -5992,17 +8280,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
   /* =====================================================
      v3.0 — BOOT SEQUENCE for the new modules
+     Every step runs in its own bulkhead: if one module ever
+     fails on some exotic browser, the rest still boot.
      ===================================================== */
+  function bootSafe(label, fn) {
+    try { fn(); } catch (e) { console.warn('[yos boot] step "' + label + '" skipped:', e); }
+  }
   const storedLang = store.get('yos-lang', null);
-  applyLang(storedLang === 'fr' || storedLang === 'en' ? storedLang : detectBrowserLang(), false);
-  applyTheme();
-  rotateOutfit(false); // first fit of the day
-  initFanWall();
-  amaBootGreeting();
-  termBootBanner();
-  chatBootLine();
-  renderSearch('');
-  updateAddressBar();
+  bootSafe('lang', () => applyLang(storedLang === 'fr' || storedLang === 'en' ? storedLang : detectBrowserLang(), false));
+  bootSafe('theme', () => applyTheme());
+  bootSafe('outfit', () => rotateOutfit(false)); // first fit of the day
+  bootSafe('fanwall', () => initFanWall());
+  bootSafe('livetab', () => updateLiveTab());
+  bootSafe('ama', () => amaBootGreeting());
+  bootSafe('term', () => termBootBanner());
+  bootSafe('chat', () => chatBootLine());
+  bootSafe('search', () => renderSearch(''));
+  bootSafe('addr', () => updateAddressBar());
 
   // equipped-item names: marquee instead of "AWS S3/…" truncation
   function initEquipMarquee() {
