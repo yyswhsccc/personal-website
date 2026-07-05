@@ -3417,23 +3417,6 @@ html[data-theme="incognito"] ::selection {
   background: #5d5470;
 }
 
-/* redacted-name flavor */
-.incog-redact {
-  position: relative;
-}
-html[data-theme="incognito"] .incog-redact::after {
-  content: '█▓▒░ CLASSIFIED ░▒▓█';
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--font-pixel);
-  font-size: 0.9em;
-  letter-spacing: 2px;
-  color: var(--pink-hot);
-  background: var(--panel);
-}
 
 /* dark/incognito: keep white-ink details readable */
 html[data-theme="dark"] .profile-card { box-shadow: 0 0 0 2px #170d29, 0 0 18px rgba(255,110,192,.3), 6px 6px 0 var(--shadow); }
@@ -3451,55 +3434,12 @@ html.is-booting body {
   overflow: hidden !important;
 }
 
-/* ---------- slime outfits (theme-gated, hidden by default) ---------- */
-.slime-outfit {
-  position: absolute;
-  display: none;
-  pointer-events: none;
-}
-.slime-outfit svg {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
+/* (slime outfits are baked into the sprite frames — see assets/slime_night_* and slime_spy_*) */
 .slime-pet img {
   position: relative;
   z-index: 2;
 }
 .slime-halo { z-index: 4; }
-
-/* midnight nightcap: sits on the head, pompom to the right */
-.outfit-night {
-  top: -15px;
-  left: 8px;
-  width: 62px;
-  height: 46px;
-  z-index: 3;
-  transform: rotate(-4deg);
-  filter: drop-shadow(1px 2px 0 rgba(10, 4, 24, 0.45));
-}
-html[data-theme="dark"] .outfit-night { display: block; }
-
-/* spy shades: across the eyes */
-.outfit-spy-shades {
-  top: 27px;
-  left: 19px;
-  width: 47px;
-  height: 13px;
-  z-index: 3;
-  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.4));
-}
-html[data-theme="incognito"] .outfit-spy-shades { display: block; }
-
-/* spy cloak: wraps behind the body */
-.outfit-spy-cloak {
-  top: 5px;
-  left: 0;
-  width: 85px;
-  height: 70px;
-  z-index: 1;
-}
-html[data-theme="incognito"] .outfit-spy-cloak { display: block; }
 
 /* ---------- ghost engine (incognito) ---------- */
 .slime-pet {
@@ -3831,4 +3771,128 @@ html[data-theme="incognito"] {
 html[data-theme="incognito"] .window-title,
 html[data-theme="incognito"] .panel-heading {
   color: #cfc5e6;
+}
+
+/* =====================================================
+   v3.2 — a11y & polish pass
+   ===================================================== */
+
+/* dark themes: drop the ruled-paper lines that fought the text */
+html[data-theme="dark"] .notepad-container,
+html[data-theme="incognito"] .notepad-container {
+  background-image: none;
+}
+
+/* skip link: invisible until a keyboard user reaches it */
+.skip-link {
+  position: fixed;
+  top: -60px;
+  left: 12px;
+  z-index: 100001;
+  padding: 8px 14px;
+  background: var(--pink-hot);
+  color: #fff;
+  font-family: var(--font-pixel);
+  font-size: 1rem;
+  border: 3px solid var(--ink);
+  box-shadow: 3px 3px 0 var(--ink);
+  text-decoration: none;
+  transition: top 0.15s;
+}
+.skip-link:focus-visible {
+  top: 10px;
+}
+
+/* one loud, consistent keyboard focus ring everywhere */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+summary:focus-visible,
+canvas:focus-visible,
+[tabindex]:focus-visible {
+  outline: 3px solid var(--pink-deep);
+  outline-offset: 2px;
+  border-radius: 1px;
+}
+.window:focus-visible {
+  outline: 3px dashed var(--pink-deep);
+  outline-offset: -3px;
+}
+#main-desktop:focus-visible {
+  outline: none;
+}
+
+/* screen-reader-only utility */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* users who ask for more contrast get thicker ink + darker text */
+@media (prefers-contrast: more) {
+  :root {
+    --text: #3d2450;
+    --text-soft: #5a3d6e;
+    --border: #7a4fd0;
+  }
+  .window,
+  .profile-card,
+  .fan-wall-widget {
+    border-width: 4px;
+  }
+  .icon-label,
+  .quest-blurb,
+  .edu-meta {
+    text-shadow: none;
+  }
+  .crt-overlay {
+    display: none;
+  }
+}
+
+/* Windows High Contrast / forced colors: keep structure visible */
+@media (forced-colors: active) {
+  .window,
+  .profile-card,
+  .fan-wall-widget,
+  .slime-hud,
+  .plugin-chip,
+  .tray-btn,
+  .pet-action-btn {
+    border: 2px solid CanvasText;
+  }
+  .crt-overlay,
+  .incog-noise,
+  .decorations-bg,
+  .trail-sparkle {
+    display: none;
+  }
+}
+
+/* AMA → yongle hand-off button */
+.ama-msg-action {
+  padding: 4px;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+.ama-search-btn {
+  font-family: var(--font-pixel);
+  font-size: 0.95rem;
+  padding: 6px 10px;
+  background: linear-gradient(var(--panel-blue), var(--blue));
+  border: 2px solid var(--ink);
+  box-shadow: 2px 2px 0 var(--ink);
+  color: var(--text);
+}
+.ama-search-btn:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.05);
 }

@@ -45,6 +45,9 @@
 </head>
 <body>
 
+  <!-- keyboard users: jump straight past the chrome -->
+  <a class="skip-link" href="#main-desktop" data-i18n="a11y.skip">Skip to desktop content</a>
+
   <!-- ================= LOADING SCREEN ================= -->
   <div class="loading-screen" id="loader">
     <div class="loader-content">
@@ -123,11 +126,12 @@
         <circle cx="25" cy="8" r="1.1" fill="#ffffff" opacity="0.8" />
       </g>
 
-      <!-- AMA heart bubble -->
+      <!-- AMA heart bubble: solid pink heart, small white "?" -->
       <g id="y2k-ama-icon">
-        <path d="M 16 28 C 2 18, 2 6, 9 6 C 13 6, 15 9, 16 11 C 17 9, 19 6, 23 6 C 30 6, 30 18, 16 28 Z" fill="url(#pink-folder-grad)" stroke="#5a3d6e" stroke-width="2" />
-        <text x="16" y="19" text-anchor="middle" font-family="monospace" font-size="12" font-weight="bold" fill="#ffffff">?</text>
-        <circle cx="10" cy="10" r="1.4" fill="#ffffff" opacity="0.9" />
+        <path d="M 16 28 C 2 18, 2 6, 9 6 C 13 6, 15 9, 16 11 C 17 9, 19 6, 23 6 C 30 6, 30 18, 16 28 Z" fill="#ff5fb0" stroke="#5a3d6e" stroke-width="2" />
+        <path d="M 16 26 C 4.5 17, 4.5 8, 9.5 8 C 12.8 8, 15 10.5, 16 12.5 C 17 10.5, 19.2 8, 22.5 8 C 27.5 8, 27.5 17, 16 26 Z" fill="#ff8fc7" opacity="0.55" />
+        <text x="16" y="19.5" text-anchor="middle" font-family="monospace" font-size="9" font-weight="bold" fill="#ffffff">?</text>
+        <circle cx="10.5" cy="10.5" r="1.3" fill="#ffffff" opacity="0.95" />
       </g>
 
       <!-- Retro terminal -->
@@ -249,7 +253,7 @@
     </div>
 
     <!-- Main Desktop Area -->
-    <main class="desktop-area">
+    <main class="desktop-area" id="main-desktop" tabindex="-1">
       <div class="desktop-layout">
 
         <!-- Left Area: Folder grid -->
@@ -280,6 +284,12 @@
             <div class="icon-label">inventory.sav</div>
           </button>
 
+          <!-- AMA bot (about_me lives in here now) -->
+          <button class="desktop-icon-btn" data-window="win-ama" aria-haspopup="dialog">
+            <svg class="icon-visual" viewBox="0 0 32 32" width="46" height="46"><use href="#y2k-ama-icon" /></svg>
+            <div class="icon-label">ask_me.chat</div>
+          </button>
+
           <!-- Terminal -->
           <button class="desktop-icon-btn" data-window="win-terminal" aria-haspopup="dialog">
             <svg class="icon-visual" viewBox="0 0 32 32" width="46" height="46"><use href="#y2k-term-icon" /></svg>
@@ -290,12 +300,6 @@
           <button class="desktop-icon-btn" data-window="win-education" aria-haspopup="dialog">
             <svg class="icon-visual" viewBox="0 0 32 32" width="46" height="46"><use href="#y2k-txt-icon" /></svg>
             <div class="icon-label">education_awards.txt</div>
-          </button>
-
-          <!-- About -->
-          <button class="desktop-icon-btn" data-window="win-profile-intro" aria-haspopup="dialog">
-            <svg class="icon-visual" viewBox="0 0 32 32" width="46" height="46"><use href="#y2k-tools-icon" /></svg>
-            <div class="icon-label">about_me.ini</div>
           </button>
 
         </div>
@@ -331,52 +335,9 @@
 
             <!-- Slime Habitat -->
             <div class="profile-avatar-wrapper" id="slime-habitat">
-              <button class="slime-pet" id="slime-pet" type="button" aria-label="Interact with the pixel slime pet: click to pet, drag to carry, double-click for a trick">
+              <button class="slime-pet" id="slime-pet" type="button" aria-label="Interact with the pixel slime pet: click or press Enter to pet, drag to carry, double-click for a trick">
                 <span class="slime-halo" aria-hidden="true"></span>
-
-                <!-- spy-mode cloak (sits behind the slime) -->
-                <span class="slime-outfit outfit-spy-cloak" aria-hidden="true">
-                  <svg viewBox="0 0 90 80" shape-rendering="crispEdges">
-                    <path d="M45 3 C 20 6, 8 26, 5 78 L 21 78 C 19 42, 27 18, 45 13 C 63 18, 71 42, 69 78 L 85 78 C 82 26, 70 6, 45 3 Z"
-                          fill="#14101c" stroke="#060409" stroke-width="2" />
-                    <path d="M45 13 C 30 17, 23 34, 22 66" fill="none" stroke="#3a2340" stroke-width="2" />
-                    <path d="M45 13 C 60 17, 67 34, 68 66" fill="none" stroke="#3a2340" stroke-width="2" />
-                  </svg>
-                </span>
-
                 <img src="assets/slime_pet_cutout.png" alt="" draggable="false">
-
-                <!-- midnight-mode nightcap -->
-                <span class="slime-outfit outfit-night" aria-hidden="true">
-                  <svg viewBox="0 0 32 24" shape-rendering="crispEdges">
-                    <rect x="19" y="2" width="6" height="3" fill="#7d5ec4" />
-                    <rect x="14" y="5" width="9" height="3" fill="#7d5ec4" />
-                    <rect x="10" y="8" width="12" height="3" fill="#8a63d6" />
-                    <rect x="7" y="11" width="15" height="3" fill="#8a63d6" />
-                    <rect x="4" y="14" width="18" height="3" fill="#9a6fe0" />
-                    <rect x="12" y="9" width="2" height="2" fill="#ffe98a" />
-                    <rect x="9" y="13" width="2" height="2" fill="#ffe98a" />
-                    <rect x="16" y="6" width="2" height="2" fill="#ffc2e2" />
-                    <rect x="2" y="17" width="22" height="4" fill="#ffb3dd" />
-                    <rect x="5" y="18" width="2" height="2" fill="#fffdfb" />
-                    <rect x="11" y="18" width="2" height="2" fill="#fffdfb" />
-                    <rect x="17" y="18" width="2" height="2" fill="#fffdfb" />
-                    <rect x="25" y="0" width="5" height="5" fill="#ffe98a" />
-                    <rect x="26" y="1" width="2" height="2" fill="#fffdfb" />
-                  </svg>
-                </span>
-
-                <!-- spy-mode matrix shades -->
-                <span class="slime-outfit outfit-spy-shades" aria-hidden="true">
-                  <svg viewBox="0 0 44 12" shape-rendering="crispEdges">
-                    <rect x="0" y="1" width="44" height="2" fill="#14101c" />
-                    <rect x="3" y="3" width="15" height="7" fill="#0d0a14" />
-                    <rect x="26" y="3" width="15" height="7" fill="#0d0a14" />
-                    <rect x="18" y="3" width="8" height="2" fill="#14101c" />
-                    <rect x="5" y="4" width="3" height="2" fill="#5d5470" />
-                    <rect x="28" y="4" width="3" height="2" fill="#5d5470" />
-                  </svg>
-                </span>
               </button>
 
               <!-- ghost-hour mist (incognito only) -->
@@ -933,7 +894,7 @@
               <span><span data-i18n="game.score">score</span> <strong id="game-score">0</strong></span>
               <span class="game-hud-hi">★ <span data-i18n="game.hi">best</span> <strong id="game-hi">0</strong></span>
             </div>
-            <canvas class="game-canvas" id="game-canvas" width="480" height="160" aria-label="Slime runner mini game — press space or tap to jump"></canvas>
+            <canvas class="game-canvas" id="game-canvas" width="480" height="160" tabindex="0" role="img" aria-label="Slime runner mini game — press Space or Enter to jump, tap on touch screens"></canvas>
             <div class="game-hint" data-i18n="game.hint">SPACE / tap to jump · avoid the bugs, catch nothing, just survive</div>
           </div>
         </div>
@@ -998,40 +959,6 @@
         <div class="window-footer">
           <span data-i18n="edu.footer.l">lines: 12</span>
           <span data-i18n="edu.footer.r">UTF-8 ♡</span>
-        </div>
-      </section>
-
-      <!-- 5. ABOUT ME WINDOW -->
-      <section class="window window-closed intro-window intro-profile-window" id="win-profile-intro" aria-labelledby="title-profile-intro" role="dialog">
-        <div class="window-header drag-handle">
-          <div class="window-title-container">
-            <span class="window-icon">⚙️</span>
-            <span class="window-title" id="title-profile-intro">about_me.ini</span>
-          </div>
-          <div class="window-controls">
-            <button class="win-btn win-btn-minimize" aria-label="Minimize window">_</button>
-            <button class="win-btn win-btn-maximize" aria-label="Maximize window">⛶</button>
-            <button class="win-btn win-btn-close" aria-label="Close window">♥</button>
-          </div>
-        </div>
-        <div class="window-body">
-          <div class="intro-note">
-            <h3>[ABOUT_ME]</h3>
-            <p data-i18n="about.p1">
-              Systems/LMS &amp; Full-Stack Lead and AI/Data practitioner — 3+ years across platform
-              engineering, data science, and MLOps. I take models and products all the way to
-              production: cloud-native stacks on AWS/Azure, hardened security, and SRE automation
-              (backups, disaster recovery, auto-heal, observability).
-            </p>
-            <p class="intro-note-line2" data-i18n="about.p2">
-              This site is my proof of craft: hand-written HTML/CSS/JS, no frameworks —
-              a window manager, an 8-bit synth, and one very needy slime. ♡
-            </p>
-          </div>
-        </div>
-        <div class="window-footer">
-          <span data-i18n="about.footer.l">config parsed</span>
-          <span data-i18n="about.footer.r">0 errors</span>
         </div>
       </section>
 
@@ -1112,9 +1039,6 @@
           <button role="menuitem" class="start-menu-item" data-target="win-education">
             <span class="item-icon">📝</span> education_awards.txt
           </button>
-          <button role="menuitem" class="start-menu-item" data-target="win-profile-intro">
-            <span class="item-icon">⚙️</span> about_me.ini
-          </button>
           <button role="menuitem" class="start-menu-item" data-target="win-start-here">
             <span class="item-icon">📌</span> start_here.txt
           </button>
@@ -1123,9 +1047,6 @@
 
       <!-- pinned plugin chips: tiny apps that live next to Start -->
       <div class="taskbar-plugins" id="taskbar-plugins">
-        <button class="plugin-chip" id="chip-ama" type="button" data-window="win-ama" title="ask_me.chat" aria-haspopup="dialog">
-          <span class="pc-ico" aria-hidden="true">💗</span><span class="pc-label">ask_me</span>
-        </button>
         <button class="plugin-chip" id="chip-game" type="button" data-window="win-game" title="slime_run.exe" aria-haspopup="dialog">
           <span class="pc-ico" aria-hidden="true">🎮</span><span class="pc-label">slime_run</span>
         </button>
@@ -1162,7 +1083,7 @@
   <div class="ctx-menu" id="ctx-menu" role="menu" aria-label="YongshanOS context menu" hidden></div>
 
   <!-- lurker-mode stream chat: bottom-left mini danmaku (click to reopen the full chat) -->
-  <div class="mini-danmaku" id="mini-danmaku" aria-hidden="true"></div>
+  <div class="mini-danmaku" id="mini-danmaku" role="complementary" aria-label="Stream chat ticker — activate a message to open the full chat"></div>
 
   <!-- Toast Notification -->
   <div id="email-toast" class="toast-hidden" role="status" aria-live="polite">Email copied to clipboard! ♡</div>

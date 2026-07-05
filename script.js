@@ -202,6 +202,8 @@ document.addEventListener('DOMContentLoaded', () => {
     focusWindow(topWindow);
   }
 
+  const winOpeners = new Map(); // a11y: who opened each window, to restore focus
+
   function openWindow(winId, opts = {}) {
     const win = document.getElementById(winId);
     if (!win) return;
@@ -209,6 +211,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!opts.fromHistory) yosPushNav(winId);
 
     const wasClosed = win.classList.contains('window-closed');
+    if (wasClosed && document.activeElement && document.activeElement !== document.body) {
+      winOpeners.set(winId, document.activeElement);
+    }
     playClickSound();
     win.classList.remove('window-closed');
     win.classList.remove('window-minimized');
@@ -228,6 +233,12 @@ document.addEventListener('DOMContentLoaded', () => {
       win.style.left = `${offsetX}px`;
       win.style.top = `${offsetY}px`;
     }
+
+    // keyboard users land inside the window they just opened
+    if (wasClosed) {
+      win.setAttribute('tabindex', '-1');
+      setTimeout(() => win.focus({ preventScroll: false }), 60);
+    }
   }
 
   function closeWindow(win) {
@@ -235,6 +246,15 @@ document.addEventListener('DOMContentLoaded', () => {
     win.classList.add('window-closed');
     win.classList.remove('window-active');
     focusTopWindow();
+
+    // hand focus back to whatever opened this window
+    const opener = winOpeners.get(win.id);
+    if (opener && document.contains(opener)) {
+      opener.focus();
+    } else {
+      const main = document.getElementById('main-desktop');
+      if (main) main.focus();
+    }
   }
 
   function minimizeWindow(win) {
@@ -474,21 +494,50 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const MILESTONES = [10, 25, 50, 100, 200, 500];
 
-  // --- sprite frames (hand-generated pixel expressions) ---
-  const SLIME_FRAMES = {
-    base: 'assets/slime_pet_cutout.png',
-    sleep: 'assets/slime_sleep.png',
-    eat: 'assets/slime_eat.png'
+  // --- sprite frames: 3 expressions × 3 theme skins, all pixel-baked.
+  //     dark = nightcap sewn onto every frame, incognito = matrix shades.
+  const SLIME_SKINS = {
+    light: {
+      base: 'assets/slime_pet_cutout.png',
+      sleep: 'assets/slime_sleep.png',
+      eat: 'assets/slime_eat.png'
+    },
+    dark: {
+      base: 'assets/slime_night_base.png',
+      sleep: 'assets/slime_night_sleep.png',
+      eat: 'assets/slime_night_eat.png'
+    },
+    incognito: {
+      base: 'assets/slime_spy_base.png',
+      sleep: 'assets/slime_spy_sleep.png',
+      eat: 'assets/slime_spy_eat.png'
+    }
   };
-  Object.values(SLIME_FRAMES).forEach((src) => { const img = new Image(); img.src = src; });
+  Object.values(SLIME_SKINS).forEach((skin) => {
+    Object.values(skin).forEach((src) => { const img = new Image(); img.src = src; });
+  });
 
   const slimeImg = slimeBody ? slimeBody.querySelector('img') : null;
   let currentFrame = 'base';
+  let currentSkinName = 'light';
 
-  function setSlimeFrame(name) {
-    if (!slimeImg || currentFrame === name || !SLIME_FRAMES[name]) return;
+  function activeSkin() {
+    return SLIME_SKINS[currentSkinName] || SLIME_SKINS.light;
+  }
+
+  function setSlimeFrame(name, force) {
+    if (!slimeImg || !activeSkin()[name]) return;
+    if (!force && currentFrame === name) return;
     currentFrame = name;
-    slimeImg.src = SLIME_FRAMES[name];
+    slimeImg.src = activeSkin()[name];
+  }
+
+  // called by the theme manager: swap the whole wardrobe, keep the expression
+  function setSlimeSkin(skinName) {
+    const next = SLIME_SKINS[skinName] ? skinName : 'light';
+    if (next === currentSkinName) return;
+    currentSkinName = next;
+    setSlimeFrame(currentFrame, true);
   }
 
   const idlePhrases = [
@@ -549,6 +598,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (slimeEnergyFill) {
       slimeEnergyFill.style.width = `${pet.energy}%`;
       slimeEnergyFill.classList.toggle('energy-low', pet.energy < 30);
+      const bar = slimeEnergyFill.parentElement;
+      if (bar) {
+        bar.setAttribute('role', 'meter');
+        bar.setAttribute('aria-valuemin', '0');
+        bar.setAttribute('aria-valuemax', '100');
+        bar.setAttribute('aria-valuenow', String(pet.energy));
+        bar.setAttribute('aria-label', `slime energy ${pet.energy}%`);
+      }
     }
 
     slimeBody.classList.toggle('is-angel', pet.affection >= 96);
@@ -1147,7 +1204,6 @@ document.addEventListener('DOMContentLoaded', () => {
     'win-skills': 'my inventory! don\'t touch the Python, it\'s equipped',
     'win-chat': 'chat\'s here!! everyone behave',
     'win-education': 'two degrees!! pat pat',
-    'win-profile-intro': 'that\'s my dev! she built me from scratch',
     'win-start-here': 'read the tips! there\'s a secret in there...',
     'win-ama': 'the bot knows everything about her. EVERYTHING.',
     'win-terminal': 'ooh, hacker mode!! type neofetch, trust me'
@@ -1460,14 +1516,19 @@ document.addEventListener('DOMContentLoaded', () => {
   // question contains Chinese. Longer keyword hits score higher.
   const AMA_TOPICS = [
     {
+      k: ['best at', 'superpower', 'strongest', 'strength', 'why hire', 'why should', 'stand out', 'standout', 'special about', 'highlight', 'top skill', 'killer', '最强', '最厉害', '亮点', '强在哪', '凭什么', '优势'],
+      a: 'Her three superpowers, with receipts:\n1️⃣ SHIPPING TO PRODUCTION — solo-built a WCAG 2.1 AA Moodle LMS on AWS that heals itself (auto-heal, S3 DR backups, nightly snapshots). A non-technical team has run it for months without touching a server. It\'s live — click the "M" icon.\n2️⃣ AI-AGENT ENGINEERING — she built Druid, her own framework where agents scan repos, write test-backed patches and answer reviewers: 47 merged PRs, 45 maintainer-reviewed, on money-path & security code.\n3️⃣ CRAFT × RIGOR — this whole OS (window manager, synth, this bot) is hand-written, framework-free… and she reads WAVE audit reports for fun. Full-stack head, designer\'s hands, SRE\'s paranoia.',
+      zh: '她的三大杀手锏，全部有据可查：\n1️⃣ 真·生产落地——独立在 AWS 上建了通过 WCAG 2.1 AA 的 Moodle LMS，故障自愈、S3 容灾备份、每夜快照。一个完全不懂技术的团队运营了几个月，没碰过一次服务器。网站在线，点桌面"M"图标。\n2️⃣ AI 智能体工程——自研 Druid 框架：智能体扫仓库、写带回归测试的补丁、回复 reviewer：47 个合并 PR、45 个经维护者 review，全在资金路径和安全代码上。\n3️⃣ 手艺 × 严谨——这整个 OS（窗口管理器、合成器、这个机器人）纯手写零框架……而且她以读 WAVE 无障碍审计报告为乐。全栈的脑子、设计师的手、SRE 的谨慎。'
+    },
+    {
       k: ['hello', 'hi ', 'hey', 'yo ', '你好', '哈喽', '嗨'],
       a: 'hi hi!! ♡ I\'m Yongshan\'s slime — her resume lives in my jelly. Ask me about her skills, Druid, the LMS she built, or anything really!',
       zh: '嗨嗨！！♡ 我是永杉的史莱姆，她的简历都存在我的果冻里～ 问我技能、Druid、她建的 LMS，什么都行！'
     },
     {
-      k: ['who are you', 'who is', 'about her', 'about yongshan', 'introduce', 'intro', '介绍', '她是谁', '是谁'],
-      a: 'Yongshan Yu: Systems/LMS & Full-Stack Lead + AI/Data practitioner, 3+ years across platform engineering, data science and MLOps. She takes things all the way to production — cloud stacks, hardened security, SRE automation. Also she drew me. pixel by pixel.',
-      zh: '于永杉：Systems/LMS 全栈负责人 + AI/数据工程师，3 年+ 横跨平台工程、数据科学和 MLOps。她的特长是把东西真正做到生产环境——云架构、安全加固、SRE 自动化。顺便，我是她一个像素一个像素画出来的。'
+      k: ['who are you', 'who is', 'about her', 'about yongshan', 'about me', 'about_me', 'introduce', 'intro', 'summary', 'bio', '介绍', '她是谁', '是谁', '简历'],
+      a: 'Yongshan Yu — Systems/LMS & Full-Stack Lead + AI/Data practitioner, 3+ years across platform engineering, data science and MLOps.\nWhat that means in practice: she takes things ALL the way to production — cloud-native stacks on AWS/Azure, hardened security (TLS/HSTS, UFW/Fail2ban, least-privilege IAM), and SRE automation: backups, disaster recovery, auto-heal, observability.\nThis site is her proof of craft: hand-written HTML/CSS/JS, a window manager, an 8-bit synth, and me. Zero frameworks.',
+      zh: '于永杉——Systems/LMS 全栈负责人 + AI/数据工程师，3 年+ 横跨平台工程、数据科学和 MLOps。\n落到实处就是：她能把东西真正推到生产环境——AWS/Azure 云原生架构、安全加固（TLS/HSTS、UFW/Fail2ban、最小权限 IAM）、SRE 自动化：备份、容灾、故障自愈、可观测性。\n这个网站就是她的手艺证明：纯手写 HTML/CSS/JS、窗口管理器、8-bit 合成器，还有我。零框架。'
     },
     {
       k: ['skill', 'stack', 'tech', 'technology', 'programming', 'code', '技能', '技术栈', '会什么', '编程'],
@@ -1567,10 +1628,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const AMA_FALLBACKS = [
     'hmm, that one\'s not in my jelly yet… try asking about her skills, Druid, the LMS, research, or how to hire her! Or email her directly: yuyongshan573@gmail.com ♡',
-    'my slime brain returned 404 on that 🥺 — try "what is Druid?", "tech stack?", or "is she open to work?"'
+    'my slime brain returned 404 on that 🥺 — try "what is she best at?", "what is Druid?", or "is she open to work?"'
   ];
 
+  const AMA_CHIP_FEATURED = [
+    'What is she best at?',
+    'What is Druid?',
+    'Is she open to work?'
+  ];
   const AMA_CHIP_POOL = [
+    'What is she best at?',
     'What is Druid?',
     'What\'s her tech stack?',
     'Tell me about the LMS',
@@ -1586,15 +1653,47 @@ document.addEventListener('DOMContentLoaded', () => {
     const q = question.toLowerCase();
     let score = 0;
     topic.k.forEach((kw) => {
-      if (q.includes(kw.trim().toLowerCase())) {
-        score += hasCJK(kw) ? kw.length * 4 : kw.length;
+      const k = kw.toLowerCase().trim();
+      if (!k) return;
+      let hit;
+      if (hasCJK(k)) {
+        hit = q.includes(k);
+      } else {
+        // word-boundary match so 'eat' can't fire inside "weather"
+        // and 'yo' can't fire inside "tokyo"
+        const esc = k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        hit = new RegExp(`(^|[^a-z0-9])${esc}([^a-z0-9]|$)`).test(q);
       }
+      if (hit) score += hasCJK(kw) ? kw.length * 4 : Math.max(3, k.length);
     });
     return score;
   }
 
   var amaLastTopic = null;
   var amaRepeatCount = 0;
+
+  function amaAnswerIsKnown(question) {
+    let bestScore = 2;
+    let known = false;
+    AMA_TOPICS.forEach((tp) => {
+      if (amaScore(question, tp) > bestScore) { bestScore = amaScore(question, tp); known = true; }
+    });
+    return known;
+  }
+
+  // unknown question → hand it to yongle_search (one connected pipeline)
+  function amaOfferSearch(question) {
+    if (!amaFeed) return;
+    const wrap = document.createElement('div');
+    wrap.className = 'ama-msg ama-msg-bot ama-msg-action';
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'ama-search-btn';
+    btn.textContent = `🔍 search "${question.length > 26 ? question.slice(0, 26) + '…' : question}" on yongle`;
+    btn.addEventListener('click', () => performSearch(question));
+    wrap.appendChild(btn);
+    amaAppend(wrap);
+  }
 
   function amaAnswerFor(question) {
     let best = null;
@@ -1649,11 +1748,13 @@ document.addEventListener('DOMContentLoaded', () => {
     amaAppend(el);
   }
 
-  function amaRenderChips() {
+  function amaRenderChips(featured) {
     if (!amaChipsWrap) return;
     amaChipsWrap.innerHTML = '';
-    const shuffled = [...AMA_CHIP_POOL].sort(() => Math.random() - 0.5).slice(0, 3);
-    shuffled.forEach((q) => {
+    const picks = featured
+      ? AMA_CHIP_FEATURED
+      : [...AMA_CHIP_POOL].sort(() => Math.random() - 0.5).slice(0, 3);
+    picks.forEach((q) => {
       const chip = document.createElement('button');
       chip.type = 'button';
       chip.className = 'ama-chip';
@@ -1680,7 +1781,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     setTimeout(() => {
       typing.remove();
+      const wasKnown = amaAnswerIsKnown(q);
       amaAddBot(amaAnswerFor(q));
+      if (!wasKnown) amaOfferSearch(q);
       playTone(987.77, 'sine', 0.08, 0, 0.05);
       amaBusy = false;
       amaRenderChips();
@@ -1701,8 +1804,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   if (amaFeed) {
-    amaAddBot('hi!! I\'m slime_bot — Yongshan\'s resume lives in my jelly 🍮 Ask me anything about her: tech, projects, research… even in 中文! (I run 100% in your browser, no servers were bothered.)');
-    amaRenderChips();
+    amaAddBot('hi!! I\'m slime_bot ♡ Yongshan\'s whole resume lives in my jelly — quick brag sheet before you ask:\n🤖 47 merged open-source PRs, shipped by Druid, the AI-agent framework she built herself\n☁️ a live production LMS on AWS (WCAG 2.1 AA) that she runs solo, with auto-heal + disaster recovery\n🎓 MSc in AI (NTU) + top-5% graduate — and this entire OS is hand-written, zero frameworks\nAsk me anything — EN/中文 both fine. Try the chips below ♡');
+    amaRenderChips(true);
   }
 
   // ================= TERMINAL (terminal.exe) =================
@@ -1778,64 +1881,167 @@ document.addEventListener('DOMContentLoaded', () => {
     '   ▀▀█▄▄▄▄▄▄▄▄█▀▀   '
   ];
 
+  // --- virtual file system: `ls` + `cat` make the desktop feel like a real box ---
+  const TERM_BOOT_TIME = Date.now();
+
+  const TERM_FS = {
+    'about_me.ini': [
+      ['[ABOUT_ME]', 't-accent'],
+      ['role     = Systems/LMS & Full-Stack Lead · AI/Data practitioner'],
+      ['years    = 3+ (platform engineering · data science · MLOps)'],
+      ['ships    = production AWS stacks, hardened security, SRE automation'],
+      ['proof    = this OS: hand-written HTML/CSS/JS, zero frameworks'],
+      ['contact  = yuyongshan573@gmail.com', 't-ok']
+    ],
+    'druid.log': [
+      ['DRUID — agentic engineering OS (built by yongshan)', 't-accent'],
+      ['loop: scan → classify risk → patch+tests → PR → track review → learn → stop-loss'],
+      ['  47 merged PRs total', 't-ok'],
+      ['  45 maintainer-reviewed outcomes in RustChain', 't-ok'],
+      ['  36 PRs in active review · ~34 clean PRs/week', 't-ok'],
+      ['focus: money-path, bridge, UTXO, payout & governance surfaces'],
+      ['humans keep the gates on high-risk changes.', 't-dim']
+    ],
+    'skills.tree': [
+      ['~/skills', 't-dim'],
+      ['├── python (pandas·numpy·pytorch·tf·huggingface)', 't-accent'],
+      ['├── c/c++ · sql · r'],
+      ['├── aws (s3·ec2) · azure · nginx · redis · mariadb'],
+      ['├── agentops: coding-agent orchestration, CI-aware debugging'],
+      ['├── ml: yolo · faster r-cnn · arima-garch · genAI'],
+      ['├── sre: cloudwatch · tls/hsts · ufw/fail2ban · cron'],
+      ['└── a11y: WCAG 2.1 AA (WAVE, Accessibility Insights)']
+    ],
+    'README.md': [
+      ['# YongshanOS — how this thing is built', 't-accent'],
+      ['* window manager: vanilla JS, drag/stack/minimize, focus-restoring for a11y'],
+      ['* themes: light / midnight / spy — CSS custom-property palettes + baked sprite skins'],
+      ['* i18n: EN/FR dictionary, auto-detected from the browser'],
+      ['* likes: shared counter on Abacus (every visitor sees the same wall)'],
+      ['* audio: 8-bit synth on the Web Audio API, no samples'],
+      ['* game: canvas runner @60fps, procedural pixel props, boss waves'],
+      ['* frameworks used: 0. libraries used: 0.', 't-ok']
+    ],
+    '.secrets': [
+      ['cat: .secrets: permission denied (even spies have boundaries)', 't-err']
+    ]
+  };
+
+  const TERM_APPS = {
+    'career_quest.exe': 'win-career',
+    'inventory.sav': 'win-skills',
+    'stream_chat.log': 'win-chat',
+    'ask_me.chat': 'win-ama',
+    'slime_run.exe': 'win-game',
+    'education_awards.txt': 'win-education',
+    'start_here.txt': 'win-start-here',
+    'terminal.exe': 'win-terminal'
+  };
+
+  const TERM_OPEN_MAP = {
+    career: 'win-career', quest: 'win-career',
+    skills: 'win-skills', inventory: 'win-skills',
+    chat: 'win-chat', stream: 'win-chat',
+    ama: 'win-ama', ask: 'win-ama', about: 'win-ama',
+    game: 'win-game', run: 'win-game',
+    edu: 'win-education', education: 'win-education',
+    search: 'win-search', start: 'win-start-here', terminal: 'win-terminal'
+  };
+
+  function termCatFile(name) {
+    if (!name) { termLine('cat: which file? try `ls`', 't-err'); return; }
+    const key = Object.keys(TERM_FS).find((f) => f.toLowerCase() === name.toLowerCase());
+    if (key) {
+      TERM_FS[key].forEach(([text, cls]) => termLine(text, cls || ''));
+      return;
+    }
+    const appKey = Object.keys(TERM_APPS).find((f) => f.toLowerCase() === name.toLowerCase());
+    if (appKey) {
+      termLine(`cat: ${appKey}: binary file — opening it in a window instead`, 't-dim');
+      openWindow(TERM_APPS[appKey]);
+      return;
+    }
+    termLine(`cat: ${name}: no such file — try \`ls\``, 't-err');
+  }
+
   const TERM_COMMANDS = {
     help() {
-      termLine('available commands:', 't-dim');
-      termLine('  whoami      — who is yongshan');
-      termLine('  skills      — tech loadout');
-      termLine('  druid       — her AI-agent framework (the good stuff)');
-      termLine('  repos       — live fetch from the GitHub API');
-      termLine('  neofetch    — system info, but cute');
-      termLine('  open <app>  — open a window (career/skills/chat/ama/edu)');
-      termLine('  pet         — pet the slime without leaving the shell');
-      termLine('  contact     — email / phone / links');
-      termLine('  spy         — toggle ghost/incognito mode 🕵️');
-      termLine('  clear       — wipe the screen');
-      termLine('  sudo hire yongshan — you know you want to', 't-accent');
+      termLine('YongshanOS shell — everything on this desktop answers to it:', 't-dim');
+      termLine('FILES     ls · cat <file> · open <app>', 't-accent');
+      termLine('SYSTEM    ps · kill <app> · theme <light|dark|spy> · lang <en|fr> · uptime · neofetch');
+      termLine('PET OPS   pet · pet feed|play|nap · stats');
+      termLine('NETWORK   repos (live GitHub) · like · fans · search <query>');
+      termLine('TALK      ask <question> (pipes into slime_bot) · whoami · contact');
+      termLine('CLASSIC   echo · history · man <cmd> · clear · exit');
+      termLine('sudo hire yongshan — you know you want to', 't-accent');
+    },
+    ls() {
+      const files = Object.keys(TERM_FS).filter((f) => !f.startsWith('.'));
+      termLine(files.join('   '), 't-ok');
+      termLine(Object.keys(TERM_APPS).join('   '), 't-accent');
+      termLine('.secrets', 't-dim');
+    },
+    ps() {
+      termLine('  PID  NAME                 STATUS', 't-dim');
+      let pid = 1;
+      termLine(`  ${String(pid++).padStart(3)}  slime.pet            mood=${pet.mood} energy=${pet.energy}% fans=${pet.followers}`, 't-ok');
+      windows.forEach((win) => {
+        if (win.classList.contains('window-closed')) return;
+        const title = win.querySelector('.window-title').textContent;
+        const st = win.classList.contains('window-minimized') ? 'minimized' : 'running';
+        termLine(`  ${String(pid++).padStart(3)}  ${title.padEnd(20).slice(0, 20)} ${st}`, 't-accent');
+      });
+      termLine(`  ${String(pid++).padStart(3)}  danmaku.daemon       ${document.getElementById('win-chat').classList.contains('window-closed') ? 'whispering' : 'idle'}`);
+      termLine(`  ${String(pid++).padStart(3)}  abacus.sync          ${remoteLikes !== null ? 'connected' : 'offline-fallback'}`);
+    },
+    uptime() {
+      const secs = Math.floor((Date.now() - TERM_BOOT_TIME) / 1000);
+      const m = Math.floor(secs / 60), sRem = secs % 60;
+      termLine(`up ${m}m ${sRem}s · 0 crashes · ${pet.followers} fans gained · vibes nominal`, 't-ok');
+    },
+    date() {
+      termLine(new Date().toString(), 't-dim');
+    },
+    stats() {
+      termLine('slime.pet — live telemetry', 't-accent');
+      termLine(`  mood      ${pet.mood}`);
+      termLine(`  energy    ${'█'.repeat(Math.round(pet.energy / 10)).padEnd(10, '░')} ${pet.energy}%`, pet.energy < 30 ? 't-err' : 't-ok');
+      termLine(`  affection ${'♥'.repeat(Math.round(pet.affection / 100 * 7)).padEnd(7, '♡')}`);
+      termLine(`  fans      ★${pet.followers} · total pets ${pet.totalPets}`);
+    },
+    fans() {
+      termLine(`site likes: ${likeTotal().toLocaleString()} ${remoteLikes !== null ? '(live shared counter)' : '(offline cache)'}`, 't-ok');
+      termLine(`slime fans: ★${pet.followers}`, 't-accent');
+    },
+    like() {
+      if (siteLiked) { termLine('already liked ♥ — it still counts in our hearts', 't-dim'); return; }
+      const btn = document.getElementById('btn-like-site');
+      if (btn) btn.click();
+      termLine('♥ like registered on the shared wall. thank you!!', 't-ok');
     },
     whoami() {
       termLine('yongshan yu — systems/LMS & full-stack lead, AI/data practitioner', 't-accent');
-      termLine('3+ yrs: platform engineering · data science · MLOps');
-      termLine('ships to production: AWS stacks, hardened security, SRE automation');
-      termLine('currently: building autonomous engineering agents (see `druid`)');
-    },
-    skills() {
-      termLine('~/skills', 't-dim');
-      termLine('├── python (pandas·numpy·pytorch·tf·huggingface)', 't-accent');
-      termLine('├── c/c++ · sql · r');
-      termLine('├── aws (s3·ec2) · azure · nginx · redis · mariadb');
-      termLine('├── agentops: coding-agent orchestration, CI-aware debugging');
-      termLine('├── ml: yolo · faster r-cnn · arima-garch · genAI');
-      termLine('├── sre: cloudwatch · tls/hsts · ufw/fail2ban · cron');
-      termLine('└── a11y: WCAG 2.1 AA (WAVE, Accessibility Insights)');
-    },
-    druid() {
-      termLine('DRUID — agentic engineering OS', 't-accent');
-      termLine('loop: scan → classify risk → patch+tests → PR → track review → learn → stop-loss');
-      termLine('  47 merged PRs total', 't-ok');
-      termLine('  45 maintainer-reviewed outcomes in RustChain', 't-ok');
-      termLine('  36 PRs in active review · ~34 clean PRs/week', 't-ok');
-      termLine('focus: money-path, bridge, UTXO, payout & governance surfaces');
-      termLine('humans keep the gates on high-risk changes.', 't-dim');
-    },
-    neofetch() {
-      NEOFETCH_ART.forEach((l) => termLine(l, 't-accent'));
-      termLine('');
-      termLine('yongshan@os', 't-ok');
-      termLine('-----------', 't-dim');
-      termLine('OS:       YongshanOS v2.0 (Y2K pastel edition)');
-      termLine('Host:     hand-written HTML/CSS/JS — 0 frameworks');
-      termLine('Kernel:   window-manager 1.0 + 8-bit synth');
-      termLine('Shell:    slime_sh');
-      termLine('Pet:      1 slime (sprite engine, 3 expressions)');
-      termLine(`Fans:     ${pet.followers} ★`);
-      termLine('Uptime:   coding since 2019, agents since 2025');
+      termLine('deep dive: `cat about_me.ini` · `cat druid.log` · `ask <anything>`', 't-dim');
     },
     contact() {
       termLine('email:    yuyongshan573@gmail.com', 't-accent');
       termLine('phone:    +1 825-963-2725');
       termLink('linkedin: linkedin.com/in/yongshan-yu-b9a713227', 'http://www.linkedin.com/in/yongshan-yu-b9a713227');
       termLink('github:   github.com/yyswhsccc', 'https://github.com/yyswhsccc');
+    },
+    neofetch() {
+      NEOFETCH_ART.forEach((l) => termLine(l, 't-accent'));
+      termLine('');
+      termLine('yongshan@os', 't-ok');
+      termLine('-----------', 't-dim');
+      termLine('OS:       YongshanOS v3 (Y2K pastel edition)');
+      termLine('Host:     hand-written HTML/CSS/JS — 0 frameworks');
+      termLine('Kernel:   window-manager 1.0 + 8-bit synth');
+      termLine('Shell:    slime_sh');
+      termLine(`Theme:    ${resolvedTheme()}`);
+      termLine('Pet:      1 slime (9 sprite frames, 3 outfits)');
+      termLine(`Fans:     ${pet.followers} ★ · site likes ${likeTotal()}`);
+      termLine('Uptime:   coding since 2019, agents since 2025');
     },
     pet() {
       petSlime();
@@ -1844,6 +2050,9 @@ document.addEventListener('DOMContentLoaded', () => {
     clear() {
       if (termOut) termOut.innerHTML = '';
     },
+    history() {
+      termHistory.slice(-12).forEach((h, i) => termLine(`  ${i + 1}  ${h}`, 't-dim'));
+    },
     repos: termCmdRepos,
     spy() {
       const spying = resolvedTheme() === 'incognito';
@@ -1851,20 +2060,18 @@ document.addEventListener('DOMContentLoaded', () => {
       playGlitchSound();
       termLine(spying ? 'spy mode disengaged. welcome back to the pastel zone ♡' : '🕵️ spy mode ON. the slime is now a ghost. trust no one.', 't-accent');
     },
-    ls() {
-      termLine('career_quest.exe   inventory.sav   stream_chat.log', 't-accent');
-      termLine('ask_me.chat        terminal.exe    education_awards.txt');
-      termLine('about_me.ini       slime.pet       hire_me.plz', 't-dim');
-    }
+    skills() { termCatFile('skills.tree'); },
+    druid() { termCatFile('druid.log'); }
   };
 
-  const TERM_OPEN_MAP = {
-    career: 'win-career', quest: 'win-career',
-    skills: 'win-skills', inventory: 'win-skills',
-    chat: 'win-chat', stream: 'win-chat',
-    ama: 'win-ama', ask: 'win-ama',
-    edu: 'win-education', education: 'win-education',
-    about: 'win-profile-intro', terminal: 'win-terminal'
+  const TERM_MAN = {
+    ask: 'ask <question> — pipes your question into slime_bot (the AMA engine) and prints the answer here.',
+    ps: 'ps — lists every running window plus the pet daemon. pair with `kill <name>`.',
+    kill: 'kill <app> — closes a window, e.g. `kill chat`. the slime is unkillable.',
+    theme: 'theme <light|dark|spy> — switches the OS palette (and the slime’s outfit).',
+    like: 'like — registers a ♥ on the shared fan wall (Abacus counter, visible to every visitor).',
+    search: 'search <query> — opens yongle_search with your query.',
+    repos: 'repos — fetches yongshan’s repositories live from the GitHub API.'
   };
 
   function runTermCommand(raw) {
@@ -1873,7 +2080,10 @@ document.addEventListener('DOMContentLoaded', () => {
     termLine(`yongshan@os:~$ ${input}`, 't-cmd');
 
     const lower = input.toLowerCase();
-    const [cmd, ...args] = lower.split(/\s+/);
+    const parts = input.split(/\s+/);
+    const cmd = parts[0].toLowerCase();
+    const rest = input.slice(parts[0].length).trim();
+    const args = lower.split(/\s+/).slice(1);
 
     if (lower === 'sudo hire yongshan' || lower === 'hire' || lower === 'sudo hire') {
       termLine('[sudo] password for recruiter: ********', 't-dim');
@@ -1883,28 +2093,64 @@ document.addEventListener('DOMContentLoaded', () => {
       gainFollowers(3);
       return;
     }
-    if (cmd === 'sudo') {
-      termLine('nice try. this slime respects the principle of least privilege.', 't-err');
+    if (cmd === 'sudo') { termLine('nice try. this slime respects the principle of least privilege.', 't-err'); return; }
+    if (cmd === 'echo') { termLine(rest || ''); return; }
+    if (cmd === 'cat') { termCatFile(rest); return; }
+    if (cmd === 'man') {
+      if (TERM_MAN[args[0]]) termLine(TERM_MAN[args[0]], 't-dim');
+      else termLine(`man: no manual for "${args[0] || ''}" — \`help\` lists everything`, 't-err');
       return;
     }
-    if (cmd === 'echo') {
-      termLine(input.slice(5) || '');
+    if (cmd === 'ask') {
+      if (!rest) { termLine('ask: give me a question, e.g. `ask what is druid`', 't-err'); return; }
+      termLine('piping to slime_bot…', 't-dim');
+      String(amaAnswerFor(rest)).split('\n').forEach((l) => termLine(l, 't-ok'));
+      termLine('(full chat UI: `open ama`)', 't-dim');
+      return;
+    }
+    if (cmd === 'search') {
+      if (!rest) { termLine('search: what are we looking for?', 't-err'); return; }
+      performSearch(rest);
+      termLine(`→ yongle_search: "${rest}"`, 't-ok');
       return;
     }
     if (cmd === 'open') {
-      const target = TERM_OPEN_MAP[args[0]];
-      if (target) {
-        openWindow(target);
-        termLine(`opening ${args[0]}…`, 't-ok');
+      const target = TERM_OPEN_MAP[args[0]] || TERM_APPS[args[0]];
+      if (target) { openWindow(target); termLine(`opening ${args[0]}…`, 't-ok'); }
+      else termLine(`open: unknown app "${args[0] || ''}" — try career/skills/chat/ama/game/edu`, 't-err');
+      return;
+    }
+    if (cmd === 'kill') {
+      if (args[0] === 'slime' || args[0] === 'slime.pet') { termLine('kill: operation not permitted — the slime is pid 1 ♡', 't-err'); return; }
+      const target = TERM_OPEN_MAP[args[0]] || TERM_APPS[args[0]];
+      const win = target && document.getElementById(target);
+      if (win && !win.classList.contains('window-closed')) {
+        closeWindow(win);
+        termLine(`killed ${args[0]} (it’s fine, windows respawn)`, 't-ok');
       } else {
-        termLine(`open: unknown app "${args[0] || ''}" — try career/skills/chat/ama/edu`, 't-err');
+        termLine(`kill: no running process "${args[0] || ''}" — see \`ps\``, 't-err');
       }
       return;
     }
-    if (cmd === 'rm') {
-      termLine('rm: refusing to delete cuteness (protected path)', 't-err');
+    if (cmd === 'theme') {
+      const map = { light: 'light', dark: 'dark', spy: 'incognito', incognito: 'incognito', auto: 'auto' };
+      if (map[args[0]]) { setThemePref(map[args[0]]); termLine(`theme → ${args[0]}`, 't-ok'); }
+      else termLine('theme: usage `theme light|dark|spy|auto`', 't-err');
       return;
     }
+    if (cmd === 'lang') {
+      if (args[0] === 'en' || args[0] === 'fr') { applyLang(args[0], true); termLine(`lang → ${args[0]}`, 't-ok'); }
+      else termLine('lang: usage `lang en|fr`', 't-err');
+      return;
+    }
+    if (cmd === 'pet' && args[0]) {
+      if (args[0] === 'feed') { feedSlime(); termLine('dropping a snack into the habitat…', 't-ok'); }
+      else if (args[0] === 'play') { playWithSlime(); termLine('ZOOMIES initiated.', 't-ok'); }
+      else if (args[0] === 'nap') { sleepSlime(); termLine('tucking the slime in. shhh.', 't-ok'); }
+      else termLine('pet: usage `pet [feed|play|nap]`', 't-err');
+      return;
+    }
+    if (cmd === 'rm') { termLine('rm: refusing to delete cuteness (protected path)', 't-err'); return; }
     if (cmd === 'exit') {
       termLine('bye!! closing window ♡', 't-dim');
       setTimeout(() => closeWindow(termWindow), 400);
@@ -1912,11 +2158,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const handler = TERM_COMMANDS[cmd];
-    if (handler) {
-      handler();
-    } else {
-      termLine(`${cmd}: command not found — try \`help\``, 't-err');
-    }
+    if (handler) handler();
+    else termLine(`${cmd}: command not found — try \`help\``, 't-err');
   }
 
   if (termForm && termInput) {
@@ -1955,7 +2198,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     termLine('YongshanOS terminal — hand-rolled, no libraries.', 't-accent');
-    termLine('type `help` to explore, `neofetch` to vibe.', 't-dim');
+    termLine('this shell drives the whole OS: windows, themes, the pet, even the fan wall.', 't-dim');
+    termLine('type `help` to see everything · `neofetch` to vibe · `ask <question>` to talk.', 't-dim');
     termLine('');
   }
 
@@ -2078,6 +2322,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (th === 'dark') buildNightSky();
     applyThemeChrome();
     gRefreshTheme();
+    setSlimeSkin(th);
     syncGhostMode();
   }
 
@@ -2180,24 +2425,49 @@ document.addEventListener('DOMContentLoaded', () => {
   if (darkMQ.addEventListener) darkMQ.addEventListener('change', onSystemThemeChange);
   else if (darkMQ.addListener) darkMQ.addListener(onSystemThemeChange);
 
-  // Best-effort private-browsing detection (storage quota heuristic).
-  // Note: recent Chrome versions deliberately report incognito quotas that look
-  // normal, so this can't be 100% reliable — spy mode is always one click away
-  // in the right-click menu, the address bar (`spy`) and the terminal.
-  if (navigator.storage && navigator.storage.estimate) {
-    navigator.storage.estimate().then(({ quota }) => {
-      if (quota && quota < 400 * 1024 * 1024) {
-        isIncogDetected = true;
-        if (themePref === 'auto') {
-          applyTheme();
-          setTimeout(() => {
-            showToast(t('toast.incog'));
-            if (!pet.sleeping) showBubble('🕵️ ...who ARE you?', 2600);
-          }, 2600);
-        }
+  // Best-effort private-browsing detection.
+  // Chromium: incognito storage quota is capped low (≈1–2 GB) while normal
+  // profiles get a large share of the disk, so a browser-aware threshold
+  // catches most real incognito sessions. Firefox deliberately reports
+  // identical quotas and recent Chrome keeps shrinking the gap, so this can
+  // never be 100% — spy mode stays one click away in the right-click menu,
+  // the address bar (`spy`) and the terminal.
+  (function detectPrivateBrowsing() {
+    const flagIncognito = () => {
+      isIncogDetected = true;
+      if (themePref === 'auto') {
+        applyTheme();
+        setTimeout(() => {
+          showToast(t('toast.incog'));
+          if (!pet.sleeping) showBubble('🕵️ ...who ARE you?', 2600);
+        }, 2600);
       }
-    }).catch(() => { /* not supported — stay pastel */ });
-  }
+    };
+
+    const ua = navigator.userAgent;
+    const isChromium = !!window.chrome || /Chrom(e|ium)/i.test(ua);
+    const isMobile = /Mobi|Android|iPhone|iPad/i.test(ua);
+
+    if (navigator.storage && navigator.storage.estimate) {
+      navigator.storage.estimate().then(({ quota }) => {
+        if (!quota) return;
+        // desktop Chromium normal profiles report tens-to-hundreds of GB;
+        // incognito caps out around 1–2 GB. Mobile gets a tighter threshold
+        // to avoid false alarms on nearly-full phones.
+        const limit = isChromium
+          ? (isMobile ? 1.2 * 1024 ** 3 : 4 * 1024 ** 3)
+          : 400 * 1024 * 1024;
+        if (quota < limit) flagIncognito();
+      }).catch(() => { /* not supported — stay pastel */ });
+    }
+
+    // legacy Chrome (<76) throws here in incognito — free extra signal
+    if (window.webkitRequestFileSystem) {
+      try {
+        window.webkitRequestFileSystem(window.TEMPORARY, 1, () => {}, flagIncognito);
+      } catch { /* fine */ }
+    }
+  })();
 
   // midnight starfield (stars + pixel moon + occasional shooting star)
   function buildNightSky() {
@@ -2248,7 +2518,6 @@ document.addEventListener('DOMContentLoaded', () => {
     'win-search': 'search',
     'win-game': 'slime_run.exe',
     'win-education': 'education_awards.txt',
-    'win-profile-intro': 'about_me.ini',
     'win-start-here': 'start_here.txt'
   };
   const ADDR_ALIASES = {
@@ -2256,7 +2525,7 @@ document.addEventListener('DOMContentLoaded', () => {
     chat: 'win-chat', stream: 'win-chat', ama: 'win-ama', ask: 'win-ama',
     terminal: 'win-terminal', term: 'win-terminal', search: 'win-search',
     game: 'win-game', run: 'win-game', edu: 'win-education', education: 'win-education',
-    about: 'win-profile-intro', start: 'win-start-here', help: 'win-start-here'
+    about: 'win-ama', start: 'win-start-here', help: 'win-start-here'
   };
   const HOME_URL = 'https://yongshan.dev';
 
@@ -2384,9 +2653,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const SEARCH_PINNED = [
     {
       title: 'Yongshan Yu — AI/LMS Systems & Full-Stack Lead',
-      url: 'yongshan.dev/about_me.ini',
-      desc: 'The person this entire operating system is about. 3+ years of platform engineering, data science and MLOps — shipped to production.',
-      win: 'win-profile-intro'
+      url: 'yongshan.dev/ask_me.chat',
+      desc: 'The person this entire operating system is about. 3+ years of platform engineering, data science and MLOps — ask the slime bot anything about her.',
+      win: 'win-ama'
     },
     {
       title: 'Yongshan Yu | LinkedIn',
@@ -2608,7 +2877,13 @@ document.addEventListener('DOMContentLoaded', () => {
   document.addEventListener('click', (e) => {
     if (ctxMenu && !ctxMenu.hidden && !ctxMenu.contains(e.target)) hideCtxMenu();
   });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') hideCtxMenu(); });
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    hideCtxMenu();
+    const active = [...windows].find((w) => w.classList.contains('window-active') &&
+      !w.classList.contains('window-closed') && !w.classList.contains('window-minimized'));
+    if (active) closeWindow(active);
+  });
   window.addEventListener('resize', hideCtxMenu);
   window.addEventListener('scroll', hideCtxMenu, { passive: true });
 
@@ -2841,6 +3116,9 @@ document.addEventListener('DOMContentLoaded', () => {
     state: 'idle',            // idle | run | over
     y: 0, vy: 0,              // slime height above ground
     obs: [], clouds: [],
+    props: [],                // parallax pixel doodads (boba, cats, rainbows…)
+    boss: null, pickup: null, shots: [], sparks: [],
+    armedUntil: 0, nextBossAt: 300,
     speed: 3.4, score: 0, spawnIn: 60, frame: 0,
     hi: store.get('yos-runner-hi', 0)
   };
@@ -2856,6 +3134,12 @@ document.addEventListener('DOMContentLoaded', () => {
     GAME.spawnIn = 60;
     GAME.y = 0;
     GAME.vy = 0;
+    GAME.boss = null;
+    GAME.pickup = null;
+    GAME.shots = [];
+    GAME.sparks = [];
+    GAME.armedUntil = 0;
+    GAME.nextBossAt = 300;
   }
 
   function gJump() {
@@ -2882,6 +3166,84 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!pet.sleeping && Math.random() < 0.6) {
       showBubble(yosLang === 'fr' ? 'aïe!! le bug m\'a eu' : 'ouch!! the bug got me', 1800);
     }
+  }
+
+  // --- tiny pixel-matrix sprites: the background easter eggs ---
+  const G_MATS = {
+    boba: ['...Y....', '...Y....', 'WWWWWWWW', '.pppppp.', '.pppppp.', '.pKppKp.', '.pKpKKp.', '.ppKpKp.', '..pppp..', '..WWWW..'],
+    cat: ['.u....u.', '.uu..uu.', 'uuuuuuuu', 'uKuuuuKu', 'uuuPPuuu', 'uuuuuuuu', '.uuuuuu.'],
+    sakura: ['..P.P..', '.PPPPP.', 'PPYYYPP', '.PPPPP.', '..P.P..'],
+    gift: ['..Y..Y..', '..YYYY..', 'PPPPPPPP', 'PPPYYPPP', 'PPPYYPPP', 'PPPYYPPP', 'PPPPPPPP'],
+    wand: ['.PP.PP.', 'PPPPPPP', '.PPPPP.', '..PPP..', '...P...', '...Y...', '...Y...', '...Y...'],
+    heart: ['PP.PP', 'PPPPP', '.PPP.', '..P..'],
+    boss: [
+      '..K.......K..',
+      '...K.....K...',
+      '..UUUUUUUUU..',
+      '.UUWWUUUWWUU.',
+      '.UUWKUUUKWUU.',
+      'UUUUUUUUUUUUU',
+      'UpppppppppppU',
+      'UpppppppppppU',
+      '.UUUUUUUUUUU.',
+      '.K..K...K..K.'
+    ]
+  };
+
+  function gPal(ch) {
+    switch (ch) {
+      case 'P': return gTheme.pink;
+      case 'p': return '#ffb3dd';
+      case 'U': return gTheme.purple;
+      case 'u': return '#c9a7f5';
+      case 'Y': return '#ffe98a';
+      case 'W': return '#ffffff';
+      case 'K': return gTheme.ink;
+      default: return null;
+    }
+  }
+
+  function gDrawMat(g2, mat, x, y, cell) {
+    for (let r = 0; r < mat.length; r++) {
+      for (let c = 0; c < mat[r].length; c++) {
+        const col = gPal(mat[r][c]);
+        if (!col) continue;
+        g2.fillStyle = col;
+        g2.fillRect(Math.round(x + c * cell), Math.round(y + r * cell), cell, cell);
+      }
+    }
+  }
+
+  function gDrawRainbow(g2, x, y) {
+    const cols = [gTheme.pink, '#ffe98a', '#8fd4fa'];
+    cols.forEach((col, ci) => {
+      const r = 16 - ci * 4;
+      g2.fillStyle = col;
+      for (let tArc = 0; tArc <= 12; tArc++) {
+        const ang = Math.PI + (tArc * Math.PI) / 12;
+        g2.fillRect(Math.round(x + Math.cos(ang) * r), Math.round(y + Math.sin(ang) * r), 3, 3);
+      }
+    });
+  }
+
+  const G_PROP_TYPES = ['boba', 'cat', 'sakura', 'gift', 'rainbow'];
+
+  function gSpawnProp() {
+    const type = G_PROP_TYPES[Math.floor(Math.random() * G_PROP_TYPES.length)];
+    const grounded = type === 'boba' || type === 'gift';
+    GAME.props.push({
+      type,
+      x: G_W + 24,
+      y: grounded ? G_GROUND + G_SLIME_S - 4 - (type === 'boba' ? 20 : 14) : 18 + Math.random() * 52,
+      cell: 2
+    });
+  }
+
+  function gDrawProp(g2, p) {
+    g2.globalAlpha = 0.85;
+    if (p.type === 'rainbow') gDrawRainbow(g2, p.x, p.y + 14);
+    else gDrawMat(g2, G_MATS[p.type], p.x, p.y, p.cell);
+    g2.globalAlpha = 1;
   }
 
   function gDrawSlime(g2) {
@@ -2950,6 +3312,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     GAME.clouds = GAME.clouds.filter((cl) => cl.x > -20);
 
+    // parallax pixel props — little smiles in the background
+    if (GAME.props.length < 3 && Math.random() < 0.008) gSpawnProp();
+    GAME.props.forEach((p) => { p.x -= (GAME.state === 'run' ? GAME.speed * 0.35 : 0.4); });
+    GAME.props = GAME.props.filter((p) => p.x > -40);
+    GAME.props.forEach((p) => gDrawProp(g2, p));
+
     // dashed pixel ground
     g2.fillStyle = gTheme.purple;
     const dashShift = GAME.state === 'run' ? (GAME.frame * GAME.speed) % 18 : 0;
@@ -2996,8 +3364,107 @@ document.addEventListener('DOMContentLoaded', () => {
       GAME.speed = Math.min(9.5, GAME.speed + 0.0016);
     }
 
+    // ---- BOSS WAVE: a 404 kaiju + a heart-wand power-up ----
+    if (GAME.state === 'run') {
+      if (!GAME.boss && GAME.score >= GAME.nextBossAt) {
+        GAME.boss = { x: G_W + 40, y: 30, hp: 5, t: 0, flash: 0, leaving: false };
+        GAME.pickup = { x: G_W + 120 };
+        playTone(196, 'sawtooth', 0.3, 0, 0.05);
+      }
+
+      if (GAME.pickup) {
+        GAME.pickup.x -= GAME.speed;
+        const px = GAME.pickup.x, pw = 14;
+        const sx = G_SLIME_X, sw = G_SLIME_S;
+        const slimeTop = G_GROUND - G_SLIME_S - GAME.y;
+        if (px < sx + sw && px + pw > sx && slimeTop + G_SLIME_S > G_GROUND - 24) {
+          GAME.armedUntil = GAME.frame + 60 * 14;
+          GAME.pickup = null;
+          playSparkleSound();
+        } else if (px < -20) {
+          GAME.pickup = null;
+        }
+      }
+
+      if (GAME.boss) {
+        const bs = GAME.boss;
+        bs.t++;
+        if (!bs.leaving && bs.x > G_W - 88) bs.x -= 1.3;
+        bs.y = 30 + Math.sin(bs.t * 0.07) * 7;
+        if (bs.flash > 0) bs.flash--;
+        if (!bs.leaving && bs.t > 60 * 13) bs.leaving = true; // got bored, flies away
+        if (bs.leaving) {
+          bs.x += 2.6;
+          if (bs.x > G_W + 60) { GAME.boss = null; GAME.nextBossAt = GAME.score + 380 + Math.random() * 160; }
+        }
+      }
+
+      // armed slime auto-fires pixel hearts
+      if (GAME.frame < GAME.armedUntil && GAME.boss && !GAME.boss.leaving && GAME.frame % 14 === 0) {
+        GAME.shots.push({ x: G_SLIME_X + G_SLIME_S - 4, y: G_GROUND - G_SLIME_S - GAME.y + 8 });
+        playTone(1046, 'triangle', 0.06, 0, 0.04);
+      }
+
+      GAME.shots.forEach((sh) => {
+        sh.x += 6.5;
+        if (GAME.boss) sh.y += ((GAME.boss.y + 15) - sh.y) * 0.09;
+      });
+      GAME.shots = GAME.shots.filter((sh) => {
+        if (!GAME.boss || GAME.boss.leaving) return sh.x < G_W + 10;
+        const bs = GAME.boss;
+        if (sh.x > bs.x && sh.x < bs.x + 39 && sh.y > bs.y && sh.y < bs.y + 30) {
+          bs.hp--;
+          bs.flash = 5;
+          for (let i = 0; i < 4; i++) {
+            GAME.sparks.push({ x: sh.x, y: sh.y, vx: (Math.random() - 0.2) * 3, vy: (Math.random() - 0.5) * 3, life: 18 });
+          }
+          if (bs.hp <= 0) {
+            for (let i = 0; i < 18; i++) {
+              GAME.sparks.push({ x: bs.x + 20, y: bs.y + 15, vx: (Math.random() - 0.5) * 5, vy: (Math.random() - 0.7) * 5, life: 30 });
+            }
+            GAME.score += 200;
+            GAME.boss = null;
+            GAME.nextBossAt = GAME.score + 420 + Math.random() * 200;
+            playFanfare();
+          }
+          return false;
+        }
+        return sh.x < G_W + 10;
+      });
+    }
+
+    // sparks (hit + explosion confetti)
+    GAME.sparks.forEach((sp) => { sp.x += sp.vx; sp.y += sp.vy; sp.vy += 0.15; sp.life--; });
+    GAME.sparks = GAME.sparks.filter((sp) => sp.life > 0);
+    GAME.sparks.forEach((sp) => {
+      g2.fillStyle = sp.life % 6 < 3 ? gTheme.pink : '#ffe98a';
+      g2.fillRect(Math.round(sp.x), Math.round(sp.y), 3, 3);
+    });
+
     GAME.obs.forEach((o) => gDrawObstacle(g2, o));
+
+    if (GAME.pickup) gDrawMat(g2, G_MATS.wand, GAME.pickup.x, G_GROUND + G_SLIME_S - 4 - 18, 2);
+    GAME.shots.forEach((sh) => gDrawMat(g2, G_MATS.heart, sh.x, sh.y, 2));
+    if (GAME.boss) {
+      const bs = GAME.boss;
+      if (bs.flash % 2 === 0) {
+        gDrawMat(g2, G_MATS.boss, bs.x, bs.y, 3);
+        g2.fillStyle = gTheme.ink;
+        g2.font = "10px 'Jersey 25', 'VT323', monospace";
+        g2.fillText('404', bs.x + 13, bs.y + 24);
+        if (bs.t < 80 && !bs.leaving) {
+          g2.fillStyle = gTheme.pink;
+          g2.font = "12px 'Jersey 25', 'VT323', monospace";
+          g2.fillText('!! 404 KAIJU !!  grab the wand ♥', bs.x - 132, bs.y - 6);
+        }
+      }
+    }
+
     gDrawSlime(g2);
+    // wand badge while armed
+    if (GAME.frame < GAME.armedUntil) {
+      gDrawMat(g2, G_MATS.wand, G_SLIME_X + G_SLIME_S - 2, G_GROUND - G_SLIME_S - GAME.y - 8, 1.6);
+    }
 
     // overlay text
     g2.textAlign = 'center';
@@ -3028,7 +3495,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('keydown', (e) => {
       if (!gameWindowVisible()) return;
       if (e.target.closest('input, textarea')) return;
-      if (e.code === 'Space' || e.code === 'ArrowUp') {
+      if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'Enter') {
         e.preventDefault();
         gJump();
       }
@@ -3085,9 +3552,6 @@ document.addEventListener('DOMContentLoaded', () => {
   initFanWall();
   renderSearch('');
   updateAddressBar();
-
-  const phoneText = document.querySelector('.contact-text');
-  if (phoneText) phoneText.classList.add('incog-redact');
 
   if (!navigator.onLine) {
     setOfflineUI(true);

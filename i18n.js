@@ -11,6 +11,7 @@ window.YOS_I18N = {
     'meta.desc': 'Personal portfolio of Yongshan Yu, AI/LMS Systems & Full-Stack Lead. A hand-built Y2K pixel desktop OS with a playable slime pet.',
 
     /* loader */
+    'a11y.skip': 'Skip to desktop content',
     'loader.boot': 'BOOTING YONGSHAN_OS ',
     'loader.sub': 'loading cuteness drivers... ok ♡',
 
@@ -280,6 +281,7 @@ window.YOS_I18N = {
     'meta.title': 'YongshanOS ♡ — Portfolio de Yongshan Yu',
     'meta.desc': 'Portfolio personnel de Yongshan Yu, responsable systèmes IA/LMS et développement full-stack. Un bureau pixel Y2K fait main, avec un slime de compagnie jouable.',
 
+    'a11y.skip': 'Aller au contenu du bureau',
     'loader.boot': 'DÉMARRAGE DE YONGSHAN_OS ',
     'loader.sub': 'chargement des pilotes de mignonnerie... ok ♡',
 
