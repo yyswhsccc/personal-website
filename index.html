@@ -41,7 +41,7 @@
     })();
   </script>
 
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=6">
 </head>
 <body>
 
@@ -316,7 +316,8 @@
             </div>
 
             <!-- Slime Habitat -->
-            <div class="profile-avatar-wrapper" id="slime-habitat">
+            <div class="profile-avatar-wrapper pet-arena" id="slime-habitat">
+              <button class="btn-go-live" id="btn-go-live" type="button" aria-haspopup="dialog" data-i18n-title="live.open" title="Open the slime's live room">🔴 LIVE</button>
               <button class="slime-pet" id="slime-pet" type="button" aria-label="Interact with the pixel slime pet: click or press Enter to pet, drag to carry, double-click for a trick">
                 <span class="slime-halo" aria-hidden="true"></span>
                 <img src="assets/slime_pet_cutout.png" alt="" draggable="false">
@@ -945,6 +946,53 @@
         </div>
       </section>
 
+      <!-- 3h. SLIME LIVE ROOM -->
+      <section class="window window-closed window-live" id="win-live" aria-labelledby="title-live" role="dialog">
+        <div class="window-header drag-handle">
+          <div class="window-title-container">
+            <span class="window-icon">🔴</span>
+            <span class="window-title" id="title-live" data-i18n="file.live">slime_live.exe</span>
+          </div>
+          <div class="window-controls">
+            <button class="win-btn win-btn-minimize" aria-label="Minimize window">_</button>
+            <button class="win-btn win-btn-maximize" aria-label="Maximize window">⛶</button>
+            <button class="win-btn win-btn-close" aria-label="Close window">♥</button>
+          </div>
+        </div>
+        <div class="window-body live-body">
+          <div class="live-shell">
+            <div class="live-stage-wrap">
+              <div class="live-onair" aria-hidden="true">🔴 <span data-i18n="live.onair">ON AIR</span></div>
+              <div class="live-stage pet-arena" id="live-stage" aria-label="Slime live stage — the pet performs here"></div>
+              <div class="live-combo" id="live-combo" aria-hidden="true"></div>
+              <div class="live-quick" role="group" aria-label="Quick interactions">
+                <button class="live-quick-btn" id="live-wave" type="button" data-i18n="live.wave">👋 wave</button>
+                <button class="live-quick-btn" id="live-hype" type="button" data-i18n="live.hype">🎉 hype</button>
+                <button class="live-quick-btn" id="live-lullaby" type="button" data-i18n="live.lullaby">🌙 lullaby</button>
+                <button class="live-quick-btn live-cam-btn" id="live-cam" type="button" aria-pressed="false" data-i18n="live.cam">📷 wave-cam: off</button>
+              </div>
+              <p class="live-cam-note" id="live-cam-note" hidden data-i18n="live.camnote">camera runs 100% locally — wave at it and the slime waves back; cover it for peek-a-boo. nothing is recorded or uploaded, ever.</p>
+              <video id="live-video" playsinline muted hidden aria-hidden="true"></video>
+            </div>
+            <div class="live-side">
+              <div class="live-chat-feed" id="live-chat-feed" aria-live="polite" aria-label="Live chat"></div>
+              <div class="live-gifts" role="group" aria-label="Send a gift to the slime">
+                <button class="live-gift" type="button" data-gift="candy" aria-label="Send candy">🍬</button>
+                <button class="live-gift" type="button" data-gift="rose" aria-label="Send a rose">🌹</button>
+                <button class="live-gift" type="button" data-gift="boba" aria-label="Send boba tea">🧋</button>
+                <button class="live-gift" type="button" data-gift="cake" aria-label="Send cake">🎂</button>
+                <button class="live-gift" type="button" data-gift="heart" aria-label="Send a super heart">💖</button>
+                <button class="live-gift" type="button" data-gift="rocket" aria-label="Send a rocket">🚀</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="window-footer">
+          <span><span data-i18n="live.viewers">viewers: </span><span id="live-viewers">1</span></span>
+          <span data-i18n="live.footer">no subscription needed ♡</span>
+        </div>
+      </section>
+
       <!-- 4. EDUCATION & AWARDS WINDOW -->
       <section class="window window-closed" id="win-education" aria-labelledby="title-education" role="dialog">
         <div class="window-header drag-handle">
@@ -1065,6 +1113,9 @@
           <button role="menuitem" class="start-menu-item" data-target="win-chat">
             <span class="item-icon">💬</span> <span data-i18n="file.chat">stream_chat.log</span>
           </button>
+          <button role="menuitem" class="start-menu-item" data-target="win-live">
+            <span class="item-icon">🔴</span> <span data-i18n="file.live">slime_live.exe</span>
+          </button>
           <button role="menuitem" class="start-menu-item" data-target="win-ama">
             <span class="item-icon">💗</span> <span data-i18n="file.ama">ask_me.chat</span>
           </button>
@@ -1135,7 +1186,7 @@
   <!-- Toast Notification -->
   <div id="email-toast" class="toast-hidden" role="status" aria-live="polite">Email copied to clipboard! ♡</div>
 
-  <script src="i18n.js"></script>
-  <script src="script.js"></script>
+  <script src="i18n.js?v=6"></script>
+  <script src="script.js?v=6"></script>
 </body>
 </html>

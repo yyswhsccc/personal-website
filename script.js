@@ -135,18 +135,25 @@ document.addEventListener('DOMContentLoaded', () => {
   const startBtn = document.getElementById('start-btn');
   const startMenu = document.getElementById('start-menu-popup');
 
+  function syncDanmakuSuppression() {
+    const dm = document.getElementById('mini-danmaku');
+    if (dm) dm.classList.toggle('dm-suppressed', startMenu.classList.contains('show'));
+  }
+
   startBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     playClickSound();
     const isExpanded = startBtn.getAttribute('aria-expanded') === 'true';
     startBtn.setAttribute('aria-expanded', String(!isExpanded));
     startMenu.classList.toggle('show');
+    syncDanmakuSuppression(); // :has() fallback for older Firefox
   });
 
   document.addEventListener('click', (e) => {
     if (!startMenu.contains(e.target) && e.target !== startBtn) {
       startMenu.classList.remove('show');
       startBtn.setAttribute('aria-expanded', 'false');
+      syncDanmakuSuppression();
     }
   });
 
@@ -232,8 +239,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (winId === 'win-game') {
       setTimeout(() => { if (typeof gFitCanvas === 'function') gFitCanvas(); }, 120);
       if (typeof showGameHint === 'function') showGameHint();
+      if (typeof dismissGameInvite === 'function') dismissGameInvite();
     }
     if (winId === 'win-interview' && typeof setupInterviewWindow === 'function') setupInterviewWindow();
+    if (winId === 'win-live' && typeof liveEnter === 'function') {
+      win.classList.add('window-maximized'); // the live room opens big, front and centre
+      setTimeout(liveEnter, 120);
+    }
     if (winId === 'win-leaderboard' && typeof renderLeaderboard === 'function') renderLeaderboard();
 
     // Fresh opens always land inside the CURRENT viewport, sized to fit the
@@ -261,6 +273,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function closeWindow(win) {
+    if (win.id === 'win-live' && typeof liveExit === 'function') liveExit();
     playCloseSound();
     win.classList.add('window-closed');
     win.classList.remove('window-active');
@@ -277,6 +290,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function minimizeWindow(win) {
+    if (win.id === 'win-live' && typeof liveExit === 'function') liveExit();
     playCloseSound();
     win.classList.add('window-minimized');
     win.classList.remove('window-active');
@@ -385,6 +399,9 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Desktop folder + quest triggers
+  const goLiveBtn = document.getElementById('btn-go-live');
+  if (goLiveBtn) goLiveBtn.addEventListener('click', () => openWindow('win-live'));
+
   document.querySelectorAll('.desktop-icon-btn, .quest-btn, .plugin-chip[data-window], .game-lb-btn').forEach((btn) => {
     btn.addEventListener('click', () => {
       const winId = btn.getAttribute('data-window');
@@ -513,46 +530,259 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const MILESTONES = [10, 25, 50, 100, 200, 500];
 
-  // --- sprite frames: 3 expressions × 3 theme skins, all pixel-baked.
-  //     dark = nightcap sewn onto every frame, incognito = matrix shades.
-  const SLIME_SKINS = {
-    light: {
-      base: 'assets/slime_pet_cutout.png',
-      sleep: 'assets/slime_sleep.png',
-      eat: 'assets/slime_eat.png'
-    },
-    dark: {
-      base: 'assets/slime_night_base.png',
-      sleep: 'assets/slime_night_sleep.png',
-      eat: 'assets/slime_night_eat.png'
-    }
+  /* =====================================================
+     v6.0 — THE WARDROBE
+     Outfits are composited pixel-by-pixel onto the sprite
+     frames at runtime (offscreen canvas → data URL), so every
+     hat and scarf is welded to the body and squashes with it.
+     35 light looks + 35 night looks + seasonal specials,
+     rotated randomly. Zero extra image files.
+     ===================================================== */
+  const SLIME_SRC = {
+    base: 'assets/slime_pet_cutout.png',
+    sleep: 'assets/slime_sleep.png',
+    eat: 'assets/slime_eat.png'
   };
-  Object.values(SLIME_SKINS).forEach((skin) => {
-    Object.values(skin).forEach((src) => { const img = new Image(); img.src = src; });
+  const SLIME_IMGS = {};
+  Object.keys(SLIME_SRC).forEach((k) => {
+    const im = new Image();
+    im.src = SLIME_SRC[k];
+    SLIME_IMGS[k] = im;
   });
+
+  const OB = 11; // sprite art cell ≈ 11px on the 535×466 sheet
+  function oR(ctx, cx, cy, w, h, color) {
+    ctx.fillStyle = color;
+    ctx.fillRect(Math.round(cx * OB), Math.round(cy * OB), Math.round(w * OB), Math.round(h * OB));
+  }
+  const INK = '#2a0a20';
+
+  /* ---------- outfit part library (drawn in cell coordinates) ----------
+     head top spans cols ~8-40, rows 0-8 · eyes rows 18-24 (cols 10-17 / 30-35)
+     cheeks cols 5-9 / 38-42 · scarf line rows 32-35 */
+  const PARTS = {
+    beret(ctx, c) { oR(ctx,13,3,20,3,c); oR(ctx,16,1,14,2,c); oR(ctx,22,0,3,2,INK); },
+    cone(ctx, c1, c2) { oR(ctx,20,0,6,2,c1); oR(ctx,18,2,10,2,c1); oR(ctx,16,4,14,2,c1); oR(ctx,14,6,18,2,c2); oR(ctx,21,-1,4,2,c2); },
+    wizard(ctx, c1, c2) { PARTS.cone(ctx,c1,c1); oR(ctx,12,7,22,2,c2); oR(ctx,19,3,2,2,'#ffe98a'); oR(ctx,24,5,2,2,'#ffe98a'); },
+    crown(ctx) { oR(ctx,16,2,14,3,'#ffd94a'); oR(ctx,16,0,3,3,'#ffd94a'); oR(ctx,21,0,3,3,'#ffd94a'); oR(ctx,27,0,3,3,'#ffd94a'); oR(ctx,20,3,2,2,'#ff5fb0'); oR(ctx,25,3,2,2,'#6cc4f5'); },
+    catEars(ctx, c) { oR(ctx,11,0,6,4,c); oR(ctx,12,1,3,3,'#ffb3dd'); oR(ctx,30,0,6,4,c); oR(ctx,31,1,3,3,'#ffb3dd'); },
+    bunnyEars(ctx, c) { oR(ctx,14,-3,4,8,c); oR(ctx,15,-2,2,6,'#ffd7ec'); oR(ctx,28,-3,4,8,c); oR(ctx,29,-2,2,6,'#ffd7ec'); },
+    bearEars(ctx, c) { oR(ctx,11,0,5,5,c); oR(ctx,12,1,3,3,'#a8794e'); oR(ctx,30,0,5,5,c); oR(ctx,31,1,3,3,'#a8794e'); },
+    halo(ctx) { oR(ctx,17,-2,12,1,'#ffe98a'); oR(ctx,16,-1,2,1,'#ffe98a'); oR(ctx,28,-1,2,1,'#ffe98a'); },
+    bow(ctx, c) { oR(ctx,13,1,4,4,c); oR(ctx,19,1,4,4,c); oR(ctx,17,2,2,2,INK); },
+    sideBow(ctx, c) { oR(ctx,30,3,4,3,c); oR(ctx,35,3,4,3,c); oR(ctx,34,4,1,1,INK); },
+    flower(ctx, c) { oR(ctx,31,1,3,3,c); oR(ctx,28,2,3,3,c); oR(ctx,34,2,3,3,c); oR(ctx,31,4,3,3,c); oR(ctx,31.5,2.5,2,2,'#ffe98a'); },
+    sprout(ctx) { oR(ctx,22,-1,2,4,'#4ea564'); oR(ctx,19,-3,4,3,'#7ee0a3'); oR(ctx,24,-3,4,3,'#7ee0a3'); },
+    antenna(ctx, c) { oR(ctx,22,-2,2,5,INK); oR(ctx,20,-5,6,4,c); oR(ctx,21,-4,2,2,'#fff'); },
+    santa(ctx) { oR(ctx,14,4,20,3,'#e34a5f'); oR(ctx,17,1,14,3,'#e34a5f'); oR(ctx,24,-1,6,3,'#e34a5f'); oR(ctx,29,-2,4,4,'#fff'); oR(ctx,13,6,22,2,'#fff'); },
+    pumpkin(ctx) { oR(ctx,15,2,17,5,'#f2913d'); oR(ctx,18,1,11,2,'#f2913d'); oR(ctx,22,-1,3,3,'#4ea564'); oR(ctx,18,4,3,2,INK); oR(ctx,26,4,3,2,INK); },
+    gradCap(ctx) { oR(ctx,12,3,22,2,INK); oR(ctx,17,1,12,3,INK); oR(ctx,33,3,1,4,'#ffd94a'); oR(ctx,32,7,3,2,'#ffd94a'); },
+    headphones(ctx, c) { oR(ctx,10,4,3,6,c); oR(ctx,33,4,3,6,c); oR(ctx,12,0,22,2,c); oR(ctx,10.5,5,2,4,'#fff'); },
+    earmuffs(ctx, c) { oR(ctx,9,8,4,4,c); oR(ctx,33,8,4,4,c); oR(ctx,12,1,22,2,c); },
+    cowboy(ctx, c) { oR(ctx,10,6,26,2,c); oR(ctx,15,2,16,4,c); oR(ctx,15,4,16,1,INK); },
+    mushroom(ctx, c) { oR(ctx,13,2,20,4,c); oR(ctx,16,0,14,3,c); oR(ctx,17,1,3,2,'#fff'); oR(ctx,26,2,3,2,'#fff'); },
+    strawHat(ctx) { oR(ctx,10,6,26,2,'#e8cf7a'); oR(ctx,15,2,16,4,'#e8cf7a'); oR(ctx,15,4,16,1,'#e34a5f'); },
+    propeller(ctx) { oR(ctx,22,-2,2,3,INK); oR(ctx,16,-4,6,2,'#6cc4f5'); oR(ctx,24,-4,6,2,'#ff8fc7'); oR(ctx,21,-4,4,2,'#ffe98a'); },
+    chefHat(ctx) { oR(ctx,15,3,16,4,'#fff'); oR(ctx,13,0,7,4,'#fff'); oR(ctx,20,-1,7,4,'#fff'); oR(ctx,27,0,7,4,'#fff'); oR(ctx,15,6,16,1,'#dcd3e8'); },
+    beanie(ctx, c) { oR(ctx,13,2,20,5,c); oR(ctx,13,5,20,2,'#fff'); oR(ctx,21,-1,4,4,c); },
+    leafClip(ctx) { oR(ctx,30,2,4,3,'#e8853d'); oR(ctx,33,1,3,3,'#e34a5f'); },
+    snowClip(ctx) { oR(ctx,31,1,2,5,'#cfe9ff'); oR(ctx,29.5,2.5,5,2,'#cfe9ff'); oR(ctx,30,1,4,4,'rgba(207,233,255,0.4)'); },
+    moonClip(ctx) { oR(ctx,31,1,4,5,'#ffe98a'); oR(ctx,33,2,3,3,'#ffb3dd'); },
+    starGarland(ctx) { [12,20,28,34].forEach((x,i)=>oR(ctx,x,3+(i%2),2,2,i%2?'#ffe98a':'#8fd4fa')); },
+    sleepMaskUp(ctx, c) { oR(ctx,12,8,22,3,c); oR(ctx,15,9,4,1,'#fff'); oR(ctx,27,9,4,1,'#fff'); },
+    scarf(ctx, c1, c2) { oR(ctx,10,33,26,3,c1); oR(ctx,30,35,4,6,c1); oR(ctx,30,39,4,1,c2); oR(ctx,10,34,26,1,c2); },
+    bowtie(ctx, c) { oR(ctx,18,34,4,4,c); oR(ctx,24,34,4,4,c); oR(ctx,22,35,2,2,INK); },
+    glassesRound(ctx, c) { oR(ctx,9,17,9,6,'rgba(255,255,255,0.35)'); oR(ctx,29,17,9,6,'rgba(255,255,255,0.35)'); [[9,17,9,1],[9,22,9,1],[9,17,1,6],[17,17,1,6],[29,17,9,1],[29,22,9,1],[29,17,1,6],[37,17,1,6],[18,19,11,1]].forEach(([x,y,w,h])=>oR(ctx,x,y,w,h,c)); },
+    glassesStar(ctx, c) { oR(ctx,9,16,9,7,c); oR(ctx,29,16,9,7,c); oR(ctx,18,18,11,1,c); oR(ctx,11,18,5,3,'#fff8'); oR(ctx,31,18,5,3,'#fff8'); },
+    monocle(ctx) { PARTS.glassesRound(ctx,'#ffd94a'); },
+    mustache(ctx) { oR(ctx,16,26,6,2,INK); oR(ctx,25,26,6,2,INK); },
+    necklace(ctx, c) { [14,20,26,32].forEach((x)=>oR(ctx,x,36,2,2,c)); },
+    balloon(ctx, c) { oR(ctx,42,4,4,5,c); oR(ctx,43,5,1,2,'#fff'); oR(ctx,44,9,1,8,INK); },
+    wand(ctx) { oR(ctx,42,14,1,8,'#e8cf7a'); oR(ctx,40,10,5,5,'#ff8fc7'); oR(ctx,41.5,11.5,2,2,'#fff'); },
+    capeKnot(ctx, c) { oR(ctx,8,30,4,4,c); oR(ctx,34,30,4,4,c); oR(ctx,10,32,26,2,c); },
+    freckles(ctx) { [[8,24],[10,25],[36,24],[38,25]].forEach(([x,y])=>oR(ctx,x,y,1,1,'#e8853d')); },
+    lanternPair(ctx) { oR(ctx,4,10,4,5,'#e34a5f'); oR(ctx,5,9,2,1,'#ffd94a'); oR(ctx,5,15,2,2,'#ffd94a'); oR(ctx,38,10,4,5,'#e34a5f'); oR(ctx,39,9,2,1,'#ffd94a'); oR(ctx,39,15,2,2,'#ffd94a'); }
+  };
+
+  // grumpy add-on: slanted brows + a tiny anger mark (used for the woken-up face)
+  function drawGrumpy(ctx) {
+    oR(ctx,10,14,3,1.5,INK); oR(ctx,12.5,15,3,1.5,INK); oR(ctx,15,16,2,1.5,INK);
+    oR(ctx,33,14,3,1.5,INK); oR(ctx,30.5,15,3,1.5,INK); oR(ctx,28.5,16,2,1.5,INK);
+    oR(ctx,40,6,1.5,4,'#e34a5f'); oR(ctx,38.7,7.2,4,1.5,'#e34a5f');
+  }
+
+  /* ---------- 35 light looks ---------- */
+  const P = { pink:'#ff8fc7', deep:'#f0509f', lilac:'#c9a7f5', purple:'#9a6fe0', sky:'#8fd4fa', mint:'#7ee0a3', gold:'#ffd94a', red:'#e34a5f', cream:'#fff5e8', brown:'#c99860' };
+  const LIGHT_OUTFITS = [
+    { n:['classic ♡','classique ♡'], parts:[] },
+    { n:['pink beret','béret rose'], parts:[['beret',P.pink]] },
+    { n:['artist beret','béret d\'artiste'], parts:[['beret',P.sky],['freckles']] },
+    { n:['royal crown','couronne royale'], parts:[['crown']] },
+    { n:['cat mode','mode chat'], parts:[['catEars',P.lilac]] },
+    { n:['bunny mode','mode lapin'], parts:[['bunnyEars','#fff']] },
+    { n:['bear cub','ourson'], parts:[['bearEars',P.brown]] },
+    { n:['tiny halo','petite auréole'], parts:[['halo']] },
+    { n:['double bow','double nœud'], parts:[['bow',P.deep]] },
+    { n:['side ribbon','ruban de côté'], parts:[['sideBow',P.sky]] },
+    { n:['garden flower','fleur du jardin'], parts:[['flower',P.deep]] },
+    { n:['fresh sprout','jeune pousse'], parts:[['sprout']] },
+    { n:['love antenna','antenne à amour'], parts:[['antenna',P.deep]] },
+    { n:['party cone','cône de fête'], parts:[['cone',P.sky,P.gold]] },
+    { n:['wizard of CSS','mage du CSS'], parts:[['wizard',P.purple,P.lilac]] },
+    { n:['grad cap','toque de diplôme'], parts:[['gradCap']] },
+    { n:['lofi headphones','casque lofi'], parts:[['headphones',P.purple]] },
+    { n:['cowboy howdy','cowboy howdy'], parts:[['cowboy',P.brown]] },
+    { n:['mushroom cap','chapeau champignon'], parts:[['mushroom',P.red]] },
+    { n:['beach straw hat','chapeau de paille'], parts:[['strawHat']], season:'summer' },
+    { n:['propeller kid','hélico-casquette'], parts:[['propeller']] },
+    { n:['pastry chef','chef pâtissier'], parts:[['chefHat'],['bowtie',P.deep]] },
+    { n:['cozy beanie','bonnet douillet'], parts:[['beanie',P.mint]], season:'winter' },
+    { n:['round glasses','lunettes rondes'], parts:[['glassesRound',INK]] },
+    { n:['star shades','lunettes étoilées'], parts:[['glassesStar',P.deep]] },
+    { n:['gentle-slime','slime distingué'], parts:[['monocle'],['mustache'],['bowtie',INK]] },
+    { n:['stripe scarf','écharpe rayée'], parts:[['scarf',P.pink,P.sky]], season:'autumn' },
+    { n:['pearl necklace','collier de perles'], parts:[['necklace','#fff']] },
+    { n:['balloon day','jour de ballon'], parts:[['balloon',P.red]] },
+    { n:['fairy wand','baguette de fée'], parts:[['wand'],['halo']] },
+    { n:['hero cape','cape de héros'], parts:[['capeKnot',P.red]] },
+    { n:['maple clip','pince érable'], parts:[['leafClip']], season:'autumn' },
+    { n:['santa slime','slime de Noël'], parts:[['santa'],['scarf',P.red,'#fff']], season:'xmas' },
+    { n:['pumpkin captain','capitaine citrouille'], parts:[['pumpkin']], season:'halloween' },
+    { n:['lunar lanterns','lanternes lunaires'], parts:[['lanternPair'],['bow',P.red]], season:'cny' }
+  ];
+
+  /* ---------- 35 night looks ---------- */
+  const N = { plum:'#7d5ec4', navy:'#4a3f8c', mauve:'#b79ae0', gold:'#ffe98a', ice:'#cfe9ff', rose:'#ff8fc7' };
+  const DARK_OUTFITS = [
+    { n:['classic nightcap','bonnet de nuit classique'], parts:[['cone',N.plum,N.rose],['sleepMaskUp',N.plum]] },
+    { n:['star garland','guirlande d\'étoiles'], parts:[['starGarland']] },
+    { n:['moon clip','pince de lune'], parts:[['moonClip']] },
+    { n:['midnight beret','béret de minuit'], parts:[['beret',N.navy]] },
+    { n:['dream wizard','mage des rêves'], parts:[['wizard',N.navy,N.plum]] },
+    { n:['night cat','chat de nuit'], parts:[['catEars',N.plum]] },
+    { n:['dream bunny','lapin des rêves'], parts:[['bunnyEars',N.mauve]] },
+    { n:['sleepy halo','auréole endormie'], parts:[['halo'],['sleepMaskUp',N.plum]] },
+    { n:['navy bow','nœud marine'], parts:[['bow',N.navy]] },
+    { n:['moonflower','fleur de lune'], parts:[['flower',N.mauve]] },
+    { n:['star antenna','antenne étoilée'], parts:[['antenna',N.gold]] },
+    { n:['pyjama cone','cône pyjama'], parts:[['cone',N.mauve,N.ice]] },
+    { n:['night scholar','érudit nocturne'], parts:[['gradCap'],['glassesRound',N.ice]] },
+    { n:['asmr headphones','casque asmr'], parts:[['headphones',N.navy]] },
+    { n:['night ranger','ranger de nuit'], parts:[['cowboy',N.navy]] },
+    { n:['glow mushroom','champignon luisant'], parts:[['mushroom',N.plum]] },
+    { n:['dream propeller','hélice des rêves'], parts:[['propeller']] },
+    { n:['midnight snack chef','chef du goûter de minuit'], parts:[['chefHat']] },
+    { n:['winter night beanie','bonnet de nuit d\'hiver'], parts:[['beanie',N.navy]], season:'winter' },
+    { n:['moon spectacles','bésicles de lune'], parts:[['glassesRound',N.gold]] },
+    { n:['star shades (night)','lunettes étoilées (nuit)'], parts:[['glassesStar',N.plum]] },
+    { n:['count slime','comte slime'], parts:[['monocle'],['capeKnot',N.navy]] },
+    { n:['comet scarf','écharpe comète'], parts:[['scarf',N.plum,N.gold]] },
+    { n:['star necklace','collier d\'étoiles'], parts:[['necklace',N.gold]] },
+    { n:['moon balloon','ballon de lune'], parts:[['balloon',N.gold]] },
+    { n:['sandman wand','baguette du marchand de sable'], parts:[['wand']] },
+    { n:['dream cape','cape des rêves'], parts:[['capeKnot',N.plum]] },
+    { n:['frost clip','pince de givre'], parts:[['snowClip']], season:'winter' },
+    { n:['midnight santa','père noël de minuit'], parts:[['santa']], season:'xmas' },
+    { n:['spooky pumpkin','citrouille spectrale'], parts:[['pumpkin']], season:'halloween' },
+    { n:['bear of hibernation','ours en hibernation'], parts:[['bearEars',N.navy],['scarf',N.navy,N.ice]] },
+    { n:['sleep mask up','masque relevé'], parts:[['sleepMaskUp',N.rose]] },
+    { n:['night freckles','taches de rousseur nocturnes'], parts:[['freckles'],['moonClip']] },
+    { n:['lantern night','nuit des lanternes'], parts:[['lanternPair']], season:'cny' },
+    { n:['sidebow dreamer','rêveur au ruban'], parts:[['sideBow',N.mauve],['starGarland']] }
+  ];
+
+  function seasonTags() {
+    const d = new Date(), m = d.getMonth() + 1, day = d.getDate();
+    const tags = [];
+    if (m === 12 || m <= 2) tags.push('winter');
+    if (m >= 3 && m <= 5) tags.push('spring');
+    if (m >= 6 && m <= 8) tags.push('summer');
+    if (m >= 9 && m <= 11) tags.push('autumn');
+    if (m === 12 && day >= 15) tags.push('xmas');
+    if (m === 10 && day >= 20) tags.push('halloween');
+    if ((m === 1 && day >= 18) || (m === 2 && day <= 12)) tags.push('cny');
+    if (m === 2 && day >= 10 && day <= 15) tags.push('valentine');
+    return tags;
+  }
+
+  var currentOutfit = null;
+  var OUTFIT_FRAMES = null; // { base, sleep, eat, grumpy } data URLs
+  const outfitCanvas = document.createElement('canvas');
+  outfitCanvas.width = 535; outfitCanvas.height = 466;
+
+  function composeOutfit(outfit) {
+    const ctx = outfitCanvas.getContext('2d');
+    const frames = {};
+    let ok = true;
+    ['base', 'sleep', 'eat'].forEach((k) => {
+      const im = SLIME_IMGS[k];
+      if (!im.complete || !im.naturalWidth) { ok = false; return; }
+      ctx.clearRect(0, 0, 535, 466);
+      ctx.drawImage(im, 0, 0);
+      outfit.parts.forEach(([fn, ...args]) => { try { PARTS[fn](ctx, ...args); } catch (e) { /* a hat refused to fit */ } });
+      frames[k] = outfitCanvas.toDataURL();
+      if (k === 'base') {
+        drawGrumpy(ctx);
+        frames.grumpy = outfitCanvas.toDataURL();
+      }
+    });
+    return ok ? frames : null;
+  }
+
+  function wardrobePool() {
+    return (resolvedTheme() === 'dark') ? DARK_OUTFITS : LIGHT_OUTFITS;
+  }
+
+  function pickOutfit() {
+    const pool = wardrobePool();
+    const tags = seasonTags();
+    const weighted = [];
+    pool.forEach((o) => {
+      if (o.season && !tags.includes(o.season)) return; // seasonal looks wait their turn
+      const w = o.season ? 4 : 1;
+      for (let i = 0; i < w; i++) weighted.push(o);
+    });
+    let o = weighted[Math.floor(Math.random() * weighted.length)] || pool[0];
+    if (currentOutfit && o === currentOutfit && weighted.length > 1) {
+      o = weighted[Math.floor(Math.random() * weighted.length)];
+    }
+    return o;
+  }
+
+  function wearOutfit(outfit, announce) {
+    const frames = composeOutfit(outfit);
+    if (!frames) { setTimeout(() => wearOutfit(outfit, announce), 600); return; }
+    currentOutfit = outfit;
+    OUTFIT_FRAMES = frames;
+    setSlimeFrame(currentFrame, true);
+    if (announce && !pet.sleeping && !pet.busy && typeof ghostHidden === 'function' && !ghostHidden()) {
+      showBubble(trT(`today's fit: ${outfit.n[0]} ♡`, `tenue du jour : ${outfit.n[1]} ♡`), 2400);
+    }
+  }
+
+  function rotateOutfit(announce) { wearOutfit(pickOutfit(), announce); }
+
+  // fresh look every 50–90 seconds, plus on theme change
+  (function outfitLoop() {
+    setTimeout(() => {
+      if (!document.hidden) rotateOutfit(Math.random() < 0.35);
+      outfitLoop();
+    }, 50000 + Math.random() * 40000);
+  })();
 
   const slimeImg = slimeBody ? slimeBody.querySelector('img') : null;
   let currentFrame = 'base';
-  let currentSkinName = 'light';
-
-  function activeSkin() {
-    return SLIME_SKINS[currentSkinName] || SLIME_SKINS.light;
-  }
 
   function setSlimeFrame(name, force) {
-    if (!slimeImg || !activeSkin()[name]) return;
+    if (!slimeImg) return;
     if (!force && currentFrame === name) return;
     currentFrame = name;
-    slimeImg.src = activeSkin()[name];
+    if (OUTFIT_FRAMES && OUTFIT_FRAMES[name]) slimeImg.src = OUTFIT_FRAMES[name];
+    else if (SLIME_SRC[name]) slimeImg.src = SLIME_SRC[name];
   }
 
-  // called by the theme manager: swap the whole wardrobe, keep the expression
-  function setSlimeSkin(skinName) {
-    const next = SLIME_SKINS[skinName] ? skinName : 'light';
-    if (next === currentSkinName) return;
-    currentSkinName = next;
-    setSlimeFrame(currentFrame, true);
-  }
+  // theme change = wardrobe change (the pool swaps day/night racks)
+  function setSlimeSkin() { rotateOutfit(false); }
 
   const idlePhrases = [
     'Thanks for the follow!! ♡',
@@ -598,11 +828,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (slimeMoodText) slimeMoodText.textContent = translateMood(pet.mood);
 
     if (slimeHeartsEl) {
-      const filled = Math.round((pet.affection / 100) * 7);
-      [...slimeHeartsEl.children].forEach((span, i) => {
-        const full = i < filled;
-        span.textContent = full ? '♥' : '♡';
-        span.classList.toggle('heart-empty', !full);
+      // house rule: the love meter never drops. ever.
+      [...slimeHeartsEl.children].forEach((span) => {
+        span.textContent = '♥';
+        span.classList.remove('heart-empty');
       });
     }
 
@@ -653,8 +882,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // confetti burst across the habitat
     for (let i = 0; i < 16; i++) {
       setTimeout(() => {
-        const x = 12 + Math.random() * (slimeHabitat.clientWidth - 24);
-        const y = 20 + Math.random() * (slimeHabitat.clientHeight - 50);
+        const arena = petArena();
+        const x = 12 + Math.random() * (arena.clientWidth - 24);
+        const y = 20 + Math.random() * (arena.clientHeight - 50);
         spawnParticle(x, y, ['🎉', '♥', '✦', '★', '🎀'][i % 5]);
       }, i * 70);
     }
@@ -681,7 +911,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // --- particles ---
   function spawnParticle(x, y, char, cls = '') {
-    if (!slimeHabitat) return;
+    if (!petArena()) return;
     if (REDUCED_MOTION) return;
     const p = document.createElement('span');
     p.className = `pet-particle ${cls}`.trim();
@@ -690,13 +920,13 @@ document.addEventListener('DOMContentLoaded', () => {
     p.style.top = `${y}px`;
     p.style.setProperty('--px', `${Math.round((Math.random() - 0.5) * 36)}px`);
     p.style.setProperty('--pr', `${Math.round((Math.random() - 0.5) * 80)}deg`);
-    slimeHabitat.appendChild(p);
+    petArena().appendChild(p);
     p.addEventListener('animationend', () => p.remove());
   }
 
   function slimeAnchor() {
-    // slime's current center, in habitat coordinates
-    const habitatRect = slimeHabitat.getBoundingClientRect();
+    // slime's current center, in arena coordinates
+    const habitatRect = petArena().getBoundingClientRect();
     const petRect = slimeBody.getBoundingClientRect();
     return {
       x: petRect.left - habitatRect.left + petRect.width / 2,
@@ -718,8 +948,12 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // --- movement engine ---
+  function petArena() {
+    return (slimeBody && slimeBody.closest('.pet-arena')) || slimeHabitat;
+  }
+
   function getSlimeBounds() {
-    const habitat = slimeHabitat.getBoundingClientRect();
+    const habitat = petArena().getBoundingClientRect();
     const petRect = slimeBody.getBoundingClientRect();
     return {
       x: Math.max(18, Math.floor((habitat.width - petRect.width) / 2) - 12),
@@ -885,9 +1119,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const el = document.createElement('span');
     el.className = 'combo-float';
     el.textContent = text;
-    el.style.left = `${clamp(x - 20, 4, slimeHabitat.clientWidth - 60)}px`;
-    el.style.top = `${clamp(y - 40, 4, slimeHabitat.clientHeight - 30)}px`;
-    slimeHabitat.appendChild(el);
+    const arena = petArena();
+    el.style.left = `${clamp(x - 20, 4, arena.clientWidth - 60)}px`;
+    el.style.top = `${clamp(y - 40, 4, arena.clientHeight - 30)}px`;
+    arena.appendChild(el);
     el.addEventListener('animationend', () => el.remove());
   }
 
@@ -989,7 +1224,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let grabPointerId = null;
 
   function habitatPointToSlimeCoords(clientX, clientY) {
-    const habitat = slimeHabitat.getBoundingClientRect();
+    const habitat = petArena().getBoundingClientRect();
     const bounds = getSlimeBounds();
     return {
       x: clamp(Math.round(clientX - habitat.left - habitat.width / 2), -bounds.x, bounds.x),
@@ -1093,9 +1328,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const candy = document.createElement('span');
     candy.className = 'pet-candy';
     candy.textContent = CANDY_CHARS[Math.floor(Math.random() * CANDY_CHARS.length)];
-    candy.style.left = `${slimeHabitat.clientWidth / 2 + targetX - 9}px`;
-    candy.style.top = `${62 + 37 + targetY}px`;
-    slimeHabitat.appendChild(candy);
+    const arena = petArena();
+    candy.style.left = `${arena.clientWidth / 2 + targetX - 9}px`;
+    candy.style.top = `${arena.clientHeight / 2 + targetY}px`;
+    arena.appendChild(candy);
     activeCandy = candy;
 
     // slime notices, then waddles over
@@ -1201,6 +1437,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (grumpy) {
       playTone(220, 'sawtooth', 0.18, 0, 0.06);
       moveSlime({ action: 'alert', mood: 'grumpy', phrase: trT('I was DREAMING about shipping!!', 'je RÊVAIS qu\'on livrait en prod !!'), duration: 1100 });
+      setSlimeFrame('grumpy', true);
+      setTimeout(() => { if (currentFrame === 'grumpy') setSlimeFrame('base', true); }, 2600);
       pet.affection = clamp(pet.affection - 1, 0, 100);
     } else {
       playStartupChime();
@@ -1287,6 +1525,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let donationCooldown = 0;
 
   function appendChatMessage(node) {
+    if (typeof liveMirror === 'function') liveMirror(node);
     if (!chatFeed) return;
     chatFeed.appendChild(node);
     while (chatFeed.children.length > 40) {
@@ -1356,6 +1595,9 @@ document.addEventListener('DOMContentLoaded', () => {
         chatIndex++;
       }
 
+      if (liveOpen && !windowVisible) {
+        liveMirror(isDonation ? makeDonationLine(payload) : makeChatLine(payload));
+      }
       if (windowVisible) {
         appendChatMessage(isDonation ? makeDonationLine(payload) : makeChatLine(payload));
         if (isDonation) {
@@ -2070,6 +2312,7 @@ document.addEventListener('DOMContentLoaded', () => {
     'slime_run.exe': 'win-game',
     'education_awards.txt': 'win-education',
     'start_here.txt': 'win-start-here',
+    'slime_live.exe': 'win-live',
     'hall_of_slime.exe': 'win-leaderboard',
     'interview_scheduler.exe': 'win-interview',
     'terminal.exe': 'win-terminal'
@@ -2182,6 +2425,8 @@ document.addEventListener('DOMContentLoaded', () => {
       termLine(trT('Pet:      1 slime (9 sprite frames, 2 outfits)', 'Familier : 1 slime (9 frames, 2 tenues)'));
       termLine(`Fans:     ${pet.followers} ★ · ${trT('site likes', 'likes du site')} ${likeTotal()}`);
       termLine(trT('Uptime:   coding since 2019, agents since 2025', 'Uptime :  code depuis 2019, agents depuis 2025'));
+      const neoEgg = (DEVICE_EGGS[YOS_DEVICE.browser] || {}).neo || (OS_EGGS[YOS_DEVICE.os] || {}).neo || '';
+      termLine(`Guest:    ${YOS_DEVICE.browser}/${YOS_DEVICE.os}/${YOS_DEVICE.device}${neoEgg ? ' — ' + neoEgg : ''}`, 't-accent');
     },
     pet() {
       petSlime();
@@ -2194,6 +2439,11 @@ document.addEventListener('DOMContentLoaded', () => {
       termHistory.slice(-12).forEach((h, i) => termLine(`  ${i + 1}  ${h}`, 't-dim'));
     },
     repos: termCmdRepos,
+    ad() {
+      gInviteShownThisVisit = false;
+      showGameInvite();
+      termLine(trT('one artisanal popup, coming up', 'une popup artisanale, tout de suite'), 't-accent');
+    },
     sleepwalk() {
       if (resolvedTheme() !== 'dark') { termLine(trT('sleepwalking requires the dark (try `theme dark`)', 'le somnambulisme exige la nuit (essayez `theme dark`)'), 't-err'); return; }
       if (slimeBody) slimeBody.classList.add('is-ghost-hidden');
@@ -2599,6 +2849,10 @@ document.addEventListener('DOMContentLoaded', () => {
       slimeBody.classList.remove('is-ghost-hidden');
       if (grantEffect) {
         const good = gApplySleeperEffect();
+        if (!good) {
+          setSlimeFrame('grumpy', true);
+          setTimeout(() => { if (currentFrame === 'grumpy') setSlimeFrame('base', true); }, 3000);
+        }
         showBubble(good
           ? trT('…fine. take a blessing. now HUSH ♡', '…bon. prends une bénédiction. maintenant CHUT ♡')
           : trT('noise fine issued!! good night 💢💤', 'amende pour tapage !! bonne nuit 💢💤'), 2800);
@@ -2694,7 +2948,7 @@ document.addEventListener('DOMContentLoaded', () => {
     swEl.className = 'sleepwalker';
     swEl.setAttribute('aria-hidden', 'true');
     const img = document.createElement('img');
-    img.src = 'assets/slime_night_sleep.png'; // nightcap + closed eyes
+    img.src = (OUTFIT_FRAMES && OUTFIT_FRAMES.sleep) || 'assets/slime_night_sleep.png'; // current fit, eyes closed
     img.alt = '';
     const bub = document.createElement('div');
     bub.className = 'sw-bubble';
@@ -2878,6 +3132,7 @@ document.addEventListener('DOMContentLoaded', () => {
     'win-terminal': 'terminal.exe',
     'win-search': 'search',
     'win-game': 'slime_run.exe',
+    'win-live': 'slime_live.exe',
     'win-leaderboard': 'hall_of_slime.exe',
     'win-interview': 'interview_scheduler.exe',
     'win-education': 'education_awards.txt',
@@ -2888,6 +3143,7 @@ document.addEventListener('DOMContentLoaded', () => {
     chat: 'win-chat', stream: 'win-chat', ama: 'win-ama', ask: 'win-ama',
     terminal: 'win-terminal', term: 'win-terminal', search: 'win-search',
     game: 'win-game', run: 'win-game', play: 'win-game',
+    live: 'win-live',
     hiscore: 'win-leaderboard', top: 'win-leaderboard', leaderboard: 'win-leaderboard', hall: 'win-leaderboard',
     interview: 'win-interview', hire: 'win-interview',
     edu: 'win-education', education: 'win-education',
@@ -3549,6 +3805,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const pendingWeapon = store.get('yos-pending-weapon', null);
     if (pendingWeapon) { gGiveWeapon(pendingWeapon, false); store.set('yos-pending-weapon', null);
       gToast(["your keepsake answers the call once more ⚔️", "ta relique répond une fois de plus à l'appel ⚔️"], 160); }
+    if (gPendingBoost) {
+      gPendingBoost = false;
+      const b = REWARD_BUFFS[Math.floor(Math.random() * REWARD_BUFFS.length)];
+      b.fx();
+      gToast([`HYPE BONUS: ${b.t[0]}`, `BONUS HYPE : ${b.t[1]}`], 220);
+      playFanfare();
+    }
   }
 
   function gJump() {
@@ -4076,6 +4339,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // the HR fairy only knocks while the player is still glowing
   function gMarkJoy() { GAME.joyAt = gPlaySecs(); }
   var gInterviewOffered = false; // once per visit — scarcity keeps it special
+  var gDeviceGagDone = false;    // one device-aware gag per visit
   function gLive() { return GAME.state === 'run' && !GAME.event; }
   function modVal(k) { const m = GAME.mods[k]; return (m && GAME.frame < m.until) ? m.v : 1; }
   function modActive(k) { const m = GAME.mods[k]; return !!(m && GAME.frame < m.until); }
@@ -4370,6 +4634,13 @@ document.addEventListener('DOMContentLoaded', () => {
       if (modActive('drain') && GAME.frame % 60 === 0 && GAME.coins > 0) {
         GAME.coins--;
         playTone(196, 'sine', 0.08, 0, 0.03);
+      }
+
+      // a one-time device-aware gag early in the first run
+      if (!gDeviceGagDone && GAME.score >= 60 && !GAME.toast) {
+        gDeviceGagDone = true;
+        const egg = deviceEgg('game');
+        if (egg) { GAME.toast = { text: trT(egg[0], egg[1]), ttl: 150 }; playTone(1174, 'triangle', 0.1, 0, 0.04); }
       }
 
       // encounters follow a calm clock: first at ~24-32s, then every 38-60s
@@ -5140,6 +5411,491 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  /* =====================================================
+     v5.4 — DEVICE ORACLE
+     Feature-first, UA-second detection. Priorities:
+     userAgentData (Chromium) > vendor checks > UA regex.
+     iPadOS pretends to be a Mac — unmasked via touch points.
+     ===================================================== */
+  const YOS_DEVICE = (() => {
+    const ua = navigator.userAgent || '';
+    const uad = navigator.userAgentData;
+    const plat = (uad && uad.platform) || navigator.platform || '';
+
+    let browser = 'other';
+    if (/Edg(e|A|iOS)?\//.test(ua)) browser = 'edge';
+    else if (/OPR\/|Opera/.test(ua)) browser = 'opera';
+    else if (/Firefox\/|FxiOS\//.test(ua)) browser = 'firefox';
+    else if (/CriOS\//.test(ua)) browser = 'chrome';
+    else if (uad && uad.brands && uad.brands.some((b) => /Chrom/.test(b.brand))) browser = 'chrome';
+    else if (/Chrome\//.test(ua)) browser = 'chrome';
+    else if (navigator.vendor === 'Apple Computer, Inc.' && /Safari\//.test(ua)) browser = 'safari';
+
+    const iPadOS = plat === 'MacIntel' && (navigator.maxTouchPoints || 0) > 1;
+    let os = 'other';
+    if (/CrOS/.test(ua)) os = 'chromeos';
+    else if (/Android/i.test(ua)) os = 'android';
+    else if (/iPhone|iPod/.test(ua)) os = 'ios';
+    else if (/iPad/.test(ua) || iPadOS) os = 'ipados';
+    else if (/Mac/i.test(plat) || /Macintosh/.test(ua)) os = 'macos';
+    else if (/Win/i.test(plat) || /Windows/.test(ua)) os = 'windows';
+    else if (/Linux/i.test(plat) || /Linux|X11/.test(ua)) os = 'linux';
+
+    let device = 'desktop';
+    if (os === 'ios') device = 'phone';
+    else if (os === 'ipados') device = 'tablet';
+    else if (os === 'android') device = /Mobile/.test(ua) ? 'phone' : 'tablet';
+    return { browser, os, device };
+  })();
+
+  // easter-egg lines per browser / OS — [en, fr] pairs everywhere
+  const DEVICE_EGGS = {
+    safari: {
+      hello: ["a Safari visitor!! I promise I'm not a WebKit bug… today ♡", "un·e visiteur·se Safari !! promis, je ne suis pas un bug WebKit… aujourd'hui ♡"],
+      game: ["level tip: best played in any browser. yes, even this one ♡", "astuce : jouable dans n'importe quel navigateur. oui, même celui-ci ♡"],
+      idle: [["no, YOU'RE asking permission to autoplay", "non, c'est TOI qui demandes la permission d'autoplay"], ["I feel very energy-efficient today", "je me sens très économe en énergie aujourd'hui"]],
+      neo: "rendered lovingly by WebKit"
+    },
+    firefox: {
+      hello: ["a fox friend!! 🦊 the slime salutes an independent engine", "un ami renard !! 🦊 le slime salue un moteur indépendant"],
+      game: ["🦊 fox blessing: your jumps feel 3% more free", "🦊 bénédiction du renard : tes sauts semblent 3 % plus libres"],
+      idle: [["you strike me as someone with a custom userChrome.css", "tu m'as l'air d'avoir un userChrome.css personnalisé"], ["foxes and slimes: natural allies", "renards et slimes : alliés naturels"]],
+      neo: "powered by an actual fox"
+    },
+    chrome: {
+      hello: ["Chrome, huh? I can hear your RAM from here ♡", "Chrome, hein ? j'entends ta RAM d'ici ♡"],
+      game: ["each of your 47 open tabs is cheering for you", "tes 47 onglets ouverts t'encouragent en chœur"],
+      idle: [["every tab is its own little slime, when you think about it", "chaque onglet est un petit slime, quand on y pense"], ["blink and you'll miss me. Blink. get it.", "un clin d'œil et tu me rates. Blink. tu l'as ?"]],
+      neo: "one of your many, many tabs"
+    },
+    edge: {
+      hello: ["you CHOSE Edge. bold. the slime respects it", "tu as CHOISI Edge. audacieux. le slime respecte"],
+      game: ["Edge-run detected: +0 buffs, +100 respect", "run sous Edge détectée : +0 buff, +100 respect"],
+      idle: [["not even Bing could find a cuter slime", "même Bing ne trouverait pas de slime plus mignon"]],
+      neo: "living on the Edge"
+    }
+  };
+  const OS_EGGS = {
+    macos: {
+      hello: ["your keyboard has a ⌘ and my heart has a ♡", "ton clavier a un ⌘ et mon cœur a un ♡"],
+      game: ["⌘ + jump does nothing. but it FEELS premium", "⌘ + saut ne fait rien. mais ça FAIT premium"],
+      idle: [["I'd look great in your dock, just saying", "je serais superbe dans ton dock, je dis ça je dis rien"]],
+      neo: "on a Mac, obviously"
+    },
+    windows: {
+      hello: ["welcome, Windows friend! no blue screens here — only pink ones", "bienvenue, ami·e Windows ! pas d'écran bleu ici — seulement des roses"],
+      game: ["this run has not responded in 0 seconds. flawless.", "cette run ne répond plus depuis 0 seconde. impeccable."],
+      idle: [["have you tried turning me off and on again? please don't", "as-tu essayé de m'éteindre et me rallumer ? s'il te plaît, non"]],
+      neo: "ctrl+alt+delightful"
+    },
+    linux: {
+      hello: ["a Linux user!! you've read more man pages than my whole résumé", "un·e utilisateur·rice Linux !! tu as lu plus de man pages que tout mon CV"],
+      game: ["sudo apt-get install victory", "sudo apt-get install victoire"],
+      idle: [["btw I use slime", "btw j'utilise slime"], ["my dotfiles are just heart emojis", "mes dotfiles ne sont que des cœurs"]],
+      neo: "GNU/cute"
+    },
+    ios: {
+      hello: ["tiny screen, full-size cuteness ♡", "petit écran, mignonnerie grand format ♡"],
+      game: ["swipe up to jump. do NOT close me. rude.", "balaie vers le haut pour sauter. ne me ferme PAS. malpoli."],
+      idle: [["I would make an excellent home-screen widget", "je ferais un excellent widget d'écran d'accueil"]],
+      neo: "there's an app for this feeling"
+    },
+    ipados: {
+      hello: ["an iPad?! I'm basically a Procreate brush now", "un iPad ?! je suis pratiquement un pinceau Procreate"],
+      game: ["finger, pencil, or pure willpower — all valid controllers", "doigt, stylet ou volonté pure — toutes des manettes valables"],
+      idle: [["I too pretend to be a computer sometimes", "moi aussi je me fais passer pour un ordinateur parfois"]],
+      neo: "definitely not a Mac (wink)"
+    },
+    android: {
+      hello: ["a green robot friend for a pink slime friend 🤖♡", "un ami robot vert pour un ami slime rose 🤖♡"],
+      game: ["material you? more like material MEOW", "material you ? plutôt material MIAOU"],
+      idle: [["your back button and I are best friends now", "ton bouton retour et moi sommes meilleurs amis maintenant"]],
+      neo: "it's rolling, it's droid"
+    },
+    chromeos: {
+      hello: ["a Chromebook! we are both, technically, a browser", "un Chromebook ! nous sommes tous deux, techniquement, un navigateur"],
+      game: ["everything is a tab. even glory.", "tout est un onglet. même la gloire."],
+      idle: [["I live in a tab too. cozy, right?", "moi aussi j'habite dans un onglet. douillet, non ?"]],
+      neo: "browser-ception"
+    }
+  };
+
+  function deviceEgg(kind) {
+    const pools = [];
+    if (DEVICE_EGGS[YOS_DEVICE.browser] && DEVICE_EGGS[YOS_DEVICE.browser][kind]) pools.push(DEVICE_EGGS[YOS_DEVICE.browser][kind]);
+    if (OS_EGGS[YOS_DEVICE.os] && OS_EGGS[YOS_DEVICE.os][kind]) pools.push(OS_EGGS[YOS_DEVICE.os][kind]);
+    if (!pools.length) return null;
+    return pools[Math.floor(Math.random() * pools.length)];
+  }
+
+  // extra everyday chatter — variety is a love language
+  const EXTRA_IDLE = [
+    ["I reorganized my pixels today. very slimming", "j'ai réorganisé mes pixels aujourd'hui. très amincissant"],
+    ["do you like my outfit? I have THIRTY-FIVE more", "tu aimes ma tenue ? j'en ai TRENTE-CINQ autres"],
+    ["thinking about boba. as one does", "je pense au bubble tea. comme tout le monde"],
+    ["I know 70 outfits and 0 pockets. tragic", "je connais 70 tenues et 0 poche. tragique"],
+    ["today's mood: deployed and adorable", "humeur du jour : déployé et adorable"],
+    ["I practiced my bounce. it's 2% bouncier", "j'ai travaillé mon rebond. il est 2 % plus rebondissant"],
+    ["her commit messages? poetry.", "ses messages de commit ? de la poésie."],
+    ["I'm not procrastinating, I'm buffering", "je ne procrastine pas, je bufferise"],
+    ["somewhere, a recruiter is smiling. I can feel it", "quelque part, une recruteuse sourit. je le sens"],
+    ["stretch break!! *does not stretch, is a slime*", "pause étirements !! *ne s'étire pas, est un slime*"]
+  ];
+  (function seedExtraIdle() {
+    const dyn = window.YOS_DYN || {};
+    EXTRA_IDLE.forEach(([en, fr]) => {
+      if (dyn.en && dyn.en.idle) dyn.en.idle.push(en);
+      if (dyn.fr && dyn.fr.idle) dyn.fr.idle.push(fr);
+      idlePhrases.push(en);
+    });
+  })();
+
+  // sprinkle device idle lines into the slime's vocabulary (both languages)
+  (function seedDeviceIdleLines() {
+    const packs = [];
+    if (DEVICE_EGGS[YOS_DEVICE.browser]) packs.push(...(DEVICE_EGGS[YOS_DEVICE.browser].idle || []));
+    if (OS_EGGS[YOS_DEVICE.os]) packs.push(...(OS_EGGS[YOS_DEVICE.os].idle || []));
+    const dyn = window.YOS_DYN || {};
+    packs.forEach(([en, fr]) => {
+      if (dyn.en && dyn.en.idle) dyn.en.idle.push(en);
+      if (dyn.fr && dyn.fr.idle) dyn.fr.idle.push(fr);
+      idlePhrases.push(en);
+    });
+  })();
+
+  // one warm, device-aware hello shortly after boot (once per visit)
+  setTimeout(() => {
+    const egg = deviceEgg('hello');
+    if (egg && !pet.sleeping && !pet.busy && (typeof ghostHidden !== 'function' || !ghostHidden())) {
+      showBubble(trT(egg[0], egg[1]), 3200);
+    }
+  }, 9000);
+
+  /* =====================================================
+     v5.3 — totally_not_an_ad.exe
+     A wandering Y2K popup that lures light-mode visitors
+     into slime_run. Both buttons start the game; the
+     over-excited one starts it with a hype bonus.
+     ===================================================== */
+  var gPendingBoost = false;
+  var gInviteShownThisVisit = false;
+  var gInviteEl = null;
+
+  function dismissGameInvite() {
+    if (gInviteEl) { gInviteEl.remove(); gInviteEl = null; }
+  }
+
+  function launchGameFromInvite(hyped) {
+    gPendingBoost = hyped;
+    dismissGameInvite();
+    playClickSound();
+    openWindow('win-game');
+    setTimeout(() => {
+      if (GAME.state !== 'run') gJump(); // straight into the action
+      if (gCanvas) { gCanvas.classList.add('ring-off'); gCanvas.focus({ preventScroll: true }); }
+      if (hyped && !pet.sleeping && typeof showBubble === 'function') {
+        showBubble(trT('THAT is the spirit!!', 'VOILÀ l\'état d\'esprit !!'), 2200);
+      }
+    }, 260);
+  }
+
+  function showGameInvite() {
+    if (gInviteEl || gInviteShownThisVisit) return;
+    gInviteShownThisVisit = true;
+
+    const box = document.createElement('div');
+    box.className = 'game-invite';
+    box.setAttribute('role', 'dialog');
+    box.setAttribute('aria-label', trT('An invitation to play slime_run', 'Une invitation à jouer à slime_run'));
+
+    const head = document.createElement('div');
+    head.className = 'gi-head';
+    const title = document.createElement('span');
+    title.textContent = '🎮 totally_not_an_ad.exe';
+    const close = document.createElement('button');
+    close.className = 'gi-close';
+    close.textContent = '♥';
+    close.setAttribute('aria-label', trT('Close this popup', 'Fermer cette fenêtre'));
+    close.addEventListener('click', () => { playCloseSound(); dismissGameInvite(); });
+    head.appendChild(title);
+    head.appendChild(close);
+
+    const body = document.createElement('p');
+    body.className = 'gi-body';
+    body.textContent = trT(
+      'drowning in bugs all day is no way to live. fancy something fun for a minute?',
+      'se noyer dans les bugs toute la journée, ce n\'est pas une vie. un petit moment fun ?'
+    );
+
+    const row = document.createElement('div');
+    row.className = 'gi-row';
+    const yes = document.createElement('button');
+    yes.className = 'gi-yes';
+    yes.textContent = trT('yes', 'oui');
+    yes.addEventListener('click', () => launchGameFromInvite(false));
+    const hype = document.createElement('button');
+    hype.className = 'gi-hype';
+    const hypeLabel = document.createElement('span');
+    hypeLabel.className = 'gi-hype-label';
+    hypeLabel.textContent = trT('oooooof cooooourse yessssssss!!!!!', 'ooooh çaaaa ouiiiiii évidemmenttttt !!!!!');
+    hype.appendChild(hypeLabel);
+    // a tiny pixel firework garden: twinkling stars + drifting rainbows
+    [['★', 'gi-star s1'], ['★', 'gi-star s2'], ['★', 'gi-star s3'], ['✦', 'gi-star s4'], ['★', 'gi-star s5']].forEach(([ch, cls]) => {
+      const st = document.createElement('span');
+      st.className = cls;
+      st.textContent = ch;
+      st.setAttribute('aria-hidden', 'true');
+      hype.appendChild(st);
+    });
+    ['gi-rainbow r1', 'gi-rainbow r2'].forEach((cls) => {
+      const rb = document.createElement('span');
+      rb.className = cls;
+      rb.setAttribute('aria-hidden', 'true');
+      hype.appendChild(rb);
+    });
+    hype.addEventListener('click', () => launchGameFromInvite(true));
+    row.appendChild(yes);
+    row.appendChild(hype);
+
+    box.appendChild(head);
+    box.appendChild(body);
+    box.appendChild(row);
+    document.body.appendChild(box);
+    gInviteEl = box;
+
+    playSparkleSound();
+    if (!pet.sleeping && typeof showBubble === 'function' && typeof ghostHidden === 'function' && !ghostHidden()) {
+      showBubble(trT('say yes say yes say yes', 'dis oui dis oui dis oui'), 2600);
+    }
+  }
+
+  function scheduleGameInvite() {
+    // seasoned players already know the arcade — don't nag them
+    if (store.get('yos-runner-hi', 0) > 0) return;
+    setTimeout(function tryShow() {
+      if (gInviteShownThisVisit) return;
+      const gameOpen = !document.getElementById('win-game').classList.contains('window-closed');
+      if (document.hidden || resolvedTheme() !== 'light' || gameOpen) {
+        setTimeout(tryShow, 20000); // wrong moment — lurk and retry
+        return;
+      }
+      showGameInvite();
+    }, 30000 + Math.random() * 5000);
+  }
+  scheduleGameInvite();
+
+  /* =====================================================
+     v6.0 — SLIME LIVE ROOM 🔴
+     The real pet node relocates onto a big stage; gifts fly,
+     a local-only wave-cam reads gestures, and every chat
+     message mirrors into the room. i18n + a11y throughout.
+     ===================================================== */
+  const liveStage = document.getElementById('live-stage');
+  const liveFeed = document.getElementById('live-chat-feed');
+  const liveComboEl = document.getElementById('live-combo');
+  var liveOpen = false;
+
+  function liveEnter() {
+    if (liveOpen || !liveStage || !slimeBody) return;
+    liveOpen = true;
+    if (typeof ghostHidden === 'function' && ghostHidden()) ghostAppear(0, false);
+    liveStage.appendChild(slimeBody);
+    liveStage.appendChild(speechBubble);
+    slimeHabitat.classList.add('on-air');
+    slimePosition.x = 0; slimePosition.y = 0;
+    applySlimeTransform(1, 0, 400);
+    showBubble(trT("WE'RE LIVE!! hi chat ♡", 'ON EST EN DIRECT !! coucou le chat ♡'), 2600);
+    if (typeof moveSlime === 'function') moveSlime({ action: 'happy', mood: trT('streaming', 'en direct'), duration: 800 });
+    liveViewerTick();
+  }
+
+  function liveExit() {
+    if (!liveOpen) return;
+    liveOpen = false;
+    camStop();
+    slimeHabitat.appendChild(slimeBody);
+    slimeHabitat.appendChild(speechBubble);
+    slimeHabitat.classList.remove('on-air');
+    slimePosition.x = 0; slimePosition.y = 0;
+    applySlimeTransform(1, 0, 400);
+  }
+
+  function liveViewerTick() {
+    const el = document.getElementById('live-viewers');
+    if (el) el.textContent = String(38 + Math.floor(Math.random() * 30) + pet.followers);
+    if (liveOpen) setTimeout(liveViewerTick, 4000);
+  }
+
+  // every chat line mirrors into the room
+  function liveMirror(node) {
+    if (!liveFeed || !liveOpen) return;
+    liveFeed.appendChild(node.cloneNode(true));
+    while (liveFeed.children.length > 40) liveFeed.removeChild(liveFeed.firstChild);
+    liveFeed.scrollTop = liveFeed.scrollHeight;
+  }
+
+  /* ---------- gifts ---------- */
+  const GIFTS = {
+    candy:  { icon: '🍬', fans: 1, react: [["a candy!! crunch crunch ♡", "un bonbon !! cronch cronch ♡"], ["sugar rush initiated", "rush de sucre enclenché"]] },
+    rose:   { icon: '🌹', fans: 2, react: [["a rose?? for ME?? *blushes in pixels*", "une rose ?? pour MOI ?? *rougit en pixels*"], ["I will water it with love", "je l'arroserai avec de l'amour"]] },
+    boba:   { icon: '🧋', fans: 3, react: [["BOBA. you know me so well", "du BOBA. tu me connais si bien"], ["extra pearls?? marry me", "double perles ?? épouse-moi"]] },
+    cake:   { icon: '🎂', fans: 5, react: [["cake!! is it my birthday? it is now", "un gâteau !! c'est mon anniversaire ? maintenant oui"], ["one slice for me, one slice for me", "une part pour moi, une part pour moi"]] },
+    heart:  { icon: '💖', fans: 8, react: [["a SUPER heart!! I'm going to cry pixels", "un SUPER cœur !! je vais pleurer des pixels"], ["my affection meter just broke (it was already full)", "ma jauge d'affection vient de casser (elle était déjà pleine)"]] },
+    rocket: { icon: '🚀', fans: 15, react: [["A ROCKET?!! TO THE MOON!! (I live there)", "UNE FUSÉE ?!! TO THE MOON !! (j'y habite)"], ["biggest gift of the stream!! I'm SCREAMING", "le plus gros cadeau du stream !! je HURLE"]] }
+  };
+  var giftComboId = null, giftComboN = 0, giftComboTimer = null;
+
+  function sendGift(id, btn) {
+    const g = GIFTS[id];
+    if (!g || !liveOpen) return;
+    // combo bookkeeping
+    if (giftComboId === id) giftComboN++;
+    else { giftComboId = id; giftComboN = 1; }
+    if (giftComboTimer) clearTimeout(giftComboTimer);
+    giftComboTimer = setTimeout(() => { giftComboId = null; giftComboN = 0; if (liveComboEl) liveComboEl.textContent = ''; }, 2600);
+    if (liveComboEl && giftComboN > 1) liveComboEl.textContent = `${g.icon} ×${giftComboN}!!`;
+
+    // the gift flies from the button to the stage
+    const fly = document.createElement('span');
+    fly.className = 'gift-fly';
+    fly.textContent = g.icon;
+    const br = btn.getBoundingClientRect();
+    const sr = liveStage.getBoundingClientRect();
+    fly.style.left = br.left + br.width / 2 + 'px';
+    fly.style.top = br.top + 'px';
+    document.body.appendChild(fly);
+    requestAnimationFrame(() => {
+      fly.style.transform = `translate(${sr.left + sr.width / 2 - br.left}px, ${sr.top + sr.height / 2 - br.top}px) scale(1.6)`;
+      fly.style.opacity = '0';
+    });
+    setTimeout(() => fly.remove(), 900);
+
+    gainFollowers(g.fans);
+    playTone(880 + g.fans * 40, 'triangle', 0.12, 0, 0.05);
+    const line = makeChatLine({ u: trT('you', 'toi'), c: '#f0509f', t: `${g.icon} ${trT('sent a gift', 'a envoyé un cadeau')}${giftComboN > 1 ? ' ×' + giftComboN : ''}!!` });
+    appendChatMessage(line);
+    setTimeout(() => {
+      const r = g.react[Math.floor(Math.random() * g.react.length)];
+      showBubble(trT(r[0], r[1]), 2600);
+      if (typeof moveSlime === 'function') moveSlime({ action: 'happy', mood: trT('spoiled', 'gâté'), duration: 760, distance: 0.4 });
+      burstAtSlime(['♥', '✦', g.icon], id === 'rocket' ? 12 : 5);
+      if (id === 'rocket') { playFanfare(); GAME.flash = 8; }
+    }, 650);
+  }
+
+  document.querySelectorAll('.live-gift').forEach((btn) => {
+    btn.addEventListener('click', () => sendGift(btn.dataset.gift, btn));
+  });
+
+  /* ---------- quick interactions ---------- */
+  const lw = document.getElementById('live-wave');
+  if (lw) lw.addEventListener('click', () => {
+    showBubble(trT('hiii chat!!! ♡', 'salut le chaaat !!! ♡'), 2200);
+    if (typeof moveSlime === 'function') moveSlime({ action: 'alert', mood: trT('waving', 'coucou'), duration: 900 });
+    burstAtSlime(['👋', '♡'], 4);
+  });
+  const lh = document.getElementById('live-hype');
+  if (lh) lh.addEventListener('click', () => playWithSlime());
+  const ll = document.getElementById('live-lullaby');
+  if (ll) ll.addEventListener('click', () => sleepSlime());
+
+  /* ---------- wave-cam: motion-based gestures, 100% local ---------- */
+  var camStream = null, camTimer = null, camPrev = null, camCentroids = [], camDarkFrames = 0, camLastTrigger = 0;
+  const camVideo = document.getElementById('live-video');
+  const camCanvas = document.createElement('canvas');
+  camCanvas.width = 32; camCanvas.height = 24;
+
+  function camStop() {
+    if (camTimer) { clearInterval(camTimer); camTimer = null; }
+    if (camStream) { camStream.getTracks().forEach((t) => t.stop()); camStream = null; }
+    camPrev = null;
+    const btn = document.getElementById('live-cam');
+    if (btn) { btn.setAttribute('aria-pressed', 'false'); btn.textContent = t('live.cam'); btn.classList.remove('cam-on'); }
+    const note = document.getElementById('live-cam-note');
+    if (note) note.hidden = true;
+  }
+
+  function camAnalyse() {
+    if (!camStream || !camVideo.videoWidth) return;
+    const c2 = camCanvas.getContext('2d', { willReadFrequently: true });
+    c2.drawImage(camVideo, 0, 0, 32, 24);
+    const data = c2.getImageData(0, 0, 32, 24).data;
+    let lum = 0, motion = 0, mx = 0, mcount = 0;
+    for (let i = 0; i < data.length; i += 4) {
+      const l = (data[i] + data[i + 1] + data[i + 2]) / 3;
+      lum += l;
+      if (camPrev) {
+        const d = Math.abs(l - camPrev[i / 4]);
+        if (d > 26) { motion++; mx += (i / 4) % 32; mcount++; }
+      }
+      if (!camPrev) continue;
+    }
+    const cur = new Float32Array(data.length / 4);
+    for (let i = 0; i < data.length; i += 4) cur[i / 4] = (data[i] + data[i + 1] + data[i + 2]) / 3;
+    camPrev = cur;
+    lum /= (data.length / 4);
+    const now = Date.now();
+
+    // peek-a-boo: lens covered then revealed
+    if (lum < 26) camDarkFrames++;
+    else {
+      if (camDarkFrames >= 3 && now - camLastTrigger > 4000) {
+        camLastTrigger = now;
+        showBubble(trT('PEEKABOO!! I SAW that ♡', 'COUCOU-CACHÉ !! je t\'ai VU ♡'), 2600);
+        if (typeof moveSlime === 'function') moveSlime({ action: 'alert', mood: trT('surprised', 'surpris'), duration: 900 });
+        burstAtSlime(['✦', '♡'], 6);
+        playSparkleSound();
+      }
+      camDarkFrames = 0;
+    }
+
+    // wave: the motion centroid swings left-right-left
+    if (mcount > 6) {
+      camCentroids.push({ x: mx / mcount, t: now });
+      camCentroids = camCentroids.filter((p) => now - p.t < 1400);
+      let flips = 0;
+      for (let i = 2; i < camCentroids.length; i++) {
+        const a = camCentroids[i - 1].x - camCentroids[i - 2].x;
+        const b = camCentroids[i].x - camCentroids[i - 1].x;
+        if (a * b < 0 && Math.abs(a) > 1.4 && Math.abs(b) > 1.4) flips++;
+      }
+      if (flips >= 3 && now - camLastTrigger > 4000) {
+        camLastTrigger = now;
+        camCentroids = [];
+        showBubble(trT('!!! you WAVED!! hi hi hi ♡', '!!! tu as fait COUCOU !! salut salut ♡'), 2800);
+        if (typeof moveSlime === 'function') moveSlime({ action: 'happy', mood: trT('waving back', 're-coucou'), duration: 900, distance: 0.3 });
+        burstAtSlime(['👋', '♥', '✦'], 8);
+        playSparkleSound();
+        gainFollowers(2);
+      }
+    }
+  }
+
+  const camBtn = document.getElementById('live-cam');
+  if (camBtn) {
+    camBtn.addEventListener('click', () => {
+      if (camStream) { camStop(); return; }
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        showToast(trT('camera not available in this browser', 'caméra indisponible dans ce navigateur'));
+        return;
+      }
+      navigator.mediaDevices.getUserMedia({ video: { width: 160, height: 120 }, audio: false }).then((stream) => {
+        camStream = stream;
+        camVideo.srcObject = stream;
+        camVideo.play().catch(() => {});
+        camTimer = setInterval(camAnalyse, 140);
+        camBtn.setAttribute('aria-pressed', 'true');
+        camBtn.textContent = t('live.cam.on');
+        camBtn.classList.add('cam-on');
+        const note = document.getElementById('live-cam-note');
+        if (note) note.hidden = false;
+        showBubble(trT('I can see you!! wave at me ♡', 'je te vois !! fais-moi coucou ♡'), 2600);
+      }).catch(() => {
+        showToast(trT('camera permission declined — no worries ♡', 'permission caméra refusée — pas de souci ♡'));
+      });
+    });
+  }
+
   function gameWindowVisible() {
     return gWin && !gWin.classList.contains('window-closed') && !gWin.classList.contains('window-minimized');
   }
@@ -5240,6 +5996,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const storedLang = store.get('yos-lang', null);
   applyLang(storedLang === 'fr' || storedLang === 'en' ? storedLang : detectBrowserLang(), false);
   applyTheme();
+  rotateOutfit(false); // first fit of the day
   initFanWall();
   amaBootGreeting();
   termBootBanner();
