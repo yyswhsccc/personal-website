@@ -1,0 +1,9 @@
+.DS_Store
+.claude/
+
+# Local visual QA screenshots and temporary check captures.
+*-check*.png
+icon-hover-*.png
+moodle-m-hover-check.png
+skills-panel-border-check.png
+start-menu-clean-check.png

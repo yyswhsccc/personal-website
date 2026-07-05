@@ -1,0 +1,1173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>YongshanOS ♡ — Yongshan Yu Portfolio</title>
+  <meta name="description" content="Personal portfolio of Yongshan Yu, AI/LMS Systems & Full-Stack Lead. A hand-built Y2K pixel desktop OS with a playable slime pet.">
+  <meta name="theme-color" content="#ff8fc7">
+
+  <!-- Social sharing cards -->
+  <meta property="og:title" content="YongshanOS ♡ — Yongshan Yu Portfolio">
+  <meta property="og:description" content="A hand-built Y2K pixel desktop OS with a playable slime pet, a window manager, an offline runner game and zero frameworks.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="apple-touch-icon.png">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="YongshanOS ♡ — Yongshan Yu Portfolio">
+  <meta name="twitter:description" content="Y2K pixel desktop portfolio — pet the slime, search the yongshan-web, play the offline runner.">
+
+  <!-- Pixel slime favicon set -->
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Jersey+25&family=Nunito:ital,wght@0,300..800;1,300..800&family=Pixelify+Sans:wght@400..700&family=VT323&display=swap" rel="stylesheet">
+
+  <!-- Apply saved/system theme before first paint (no flash) -->
+  <script>
+    (function () {
+      document.documentElement.classList.add('is-booting');
+      try {
+        var pref = localStorage.getItem('yos-theme');
+        pref = pref ? JSON.parse(pref) : 'auto';
+        var dark = pref === 'dark' || (pref === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        if (pref === 'incognito') document.documentElement.setAttribute('data-theme', 'incognito');
+        else if (dark) document.documentElement.setAttribute('data-theme', 'dark');
+      } catch (e) { /* first visit */ }
+    })();
+  </script>
+
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ================= LOADING SCREEN ================= -->
+  <div class="loading-screen" id="loader">
+    <div class="loader-content">
+      <div class="loader-heart" aria-hidden="true">
+        <span class="loader-heart-px">♥</span>
+      </div>
+      <div class="planet-logo-wrapper">
+        <img src="assets/loading_e_icon.jpg" alt="Y2K Internet Explorer icon with pink bow" class="planet-logo-img">
+      </div>
+      <div class="loader-text"><span data-i18n="loader.boot">BOOTING YONGSHAN_OS </span><span class="loader-caret">▌</span></div>
+      <div class="loader-subtext" data-i18n="loader.sub">loading cuteness drivers... ok ♡</div>
+      <div class="progress-bar-container" aria-hidden="true">
+        <div class="progress-bar-fill"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CRT scanline overlay -->
+  <div class="crt-overlay" aria-hidden="true"></div>
+
+  <!-- Incognito static-noise overlay (visible only in spy mode) -->
+  <div class="incog-noise" aria-hidden="true"></div>
+
+  <!-- Midnight-mode starfield (visible only in dark mode) -->
+  <div class="night-sky" id="night-sky" aria-hidden="true"></div>
+
+  <!-- Shared SVG Definitions for Y2K Icons -->
+  <svg style="display: none;" aria-hidden="true">
+    <defs>
+      <linearGradient id="pink-folder-grad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#ffc2e2" />
+        <stop offset="100%" stop-color="#ff8fc7" />
+      </linearGradient>
+      <linearGradient id="purple-folder-grad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#c9a7f5" />
+        <stop offset="100%" stop-color="#9a6fe0" />
+      </linearGradient>
+      <linearGradient id="blue-chat-grad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#c1e9ff" />
+        <stop offset="100%" stop-color="#8fd4fa" />
+      </linearGradient>
+
+      <!-- Folder -->
+      <g id="y2k-pink-folder">
+        <path d="M 2 8 L 2 4 L 10 4 L 13 8 L 28 8 L 28 28 L 2 28 Z" fill="#ff8fc7" stroke="#5a3d6e" stroke-width="2" />
+        <path d="M 4 8 L 26 8 L 26 12 L 4 12 Z" fill="#ffffff" opacity="0.8" />
+        <path d="M 2 10 L 28 10 L 28 28 L 2 28 Z" fill="url(#pink-folder-grad)" stroke="#5a3d6e" stroke-width="2" />
+        <path d="M 22 15 C 20 13, 17 15, 19 18 L 22 21 L 25 18 C 27 15, 24 13, 22 15 Z" fill="#fffdfb" opacity="0.85" />
+      </g>
+
+      <!-- Tools -->
+      <g id="y2k-tools-icon">
+        <rect x="2" y="2" width="28" height="28" fill="url(#purple-folder-grad)" stroke="#5a3d6e" stroke-width="2" />
+        <path d="M 6 26 L 15 17" stroke="#fffdfb" stroke-width="3" stroke-linecap="round" />
+        <path d="M 15 17 L 22 10" stroke="#5a3d6e" stroke-width="2.5" stroke-linecap="round" />
+        <path d="M 26 6 L 24 8 L 22 6 L 24 4 Z" fill="#ffc2e2" stroke="#5a3d6e" stroke-width="1.5" />
+        <path d="M 26 26 L 17 17" stroke="#fffdfb" stroke-width="3" stroke-linecap="round" />
+        <path d="M 17 17 Q 15 15, 12 16 L 8 12 Q 10 7, 14 8 L 18 12 Z" fill="#ffc2e2" stroke="#5a3d6e" stroke-width="1.5" />
+      </g>
+
+      <!-- Notepad -->
+      <g id="y2k-txt-icon">
+        <path d="M 4 2 L 22 2 L 28 8 L 28 30 L 4 30 Z" fill="#fffdfb" stroke="#5a3d6e" stroke-width="2" />
+        <path d="M 22 2 L 22 8 L 28 8 Z" fill="#ffc2e2" stroke="#5a3d6e" stroke-width="2" />
+        <line x1="8" y1="12" x2="20" y2="12" stroke="#8a75aa" stroke-width="2" stroke-linecap="round" />
+        <line x1="8" y1="17" x2="24" y2="17" stroke="#8a75aa" stroke-width="2" stroke-linecap="round" />
+        <line x1="8" y1="22" x2="22" y2="22" stroke="#8a75aa" stroke-width="2" stroke-linecap="round" />
+        <line x1="8" y1="26" x2="16" y2="26" stroke="#9a6fe0" stroke-width="2" stroke-linecap="round" />
+      </g>
+
+      <!-- Chat bubble with heart -->
+      <g id="y2k-chat-icon">
+        <path d="M 3 4 L 29 4 L 29 22 L 14 22 L 8 28 L 8 22 L 3 22 Z" fill="url(#blue-chat-grad)" stroke="#5a3d6e" stroke-width="2" />
+        <path d="M 16 18 C 10 13, 13 8, 16 11 C 19 8, 22 13, 16 18 Z" fill="#ff8fc7" stroke="#5a3d6e" stroke-width="1.5" />
+        <circle cx="8" cy="9" r="1.4" fill="#ffffff" opacity="0.9" />
+        <circle cx="25" cy="8" r="1.1" fill="#ffffff" opacity="0.8" />
+      </g>
+
+      <!-- AMA heart bubble -->
+      <g id="y2k-ama-icon">
+        <path d="M 16 28 C 2 18, 2 6, 9 6 C 13 6, 15 9, 16 11 C 17 9, 19 6, 23 6 C 30 6, 30 18, 16 28 Z" fill="url(#pink-folder-grad)" stroke="#5a3d6e" stroke-width="2" />
+        <text x="16" y="19" text-anchor="middle" font-family="monospace" font-size="12" font-weight="bold" fill="#ffffff">?</text>
+        <circle cx="10" cy="10" r="1.4" fill="#ffffff" opacity="0.9" />
+      </g>
+
+      <!-- Retro terminal -->
+      <g id="y2k-term-icon">
+        <rect x="2" y="4" width="28" height="24" fill="#2a1440" stroke="#5a3d6e" stroke-width="2" />
+        <rect x="2" y="4" width="28" height="5" fill="url(#pink-folder-grad)" stroke="#5a3d6e" stroke-width="2" />
+        <path d="M 6 14 L 11 18 L 6 22" fill="none" stroke="#ff8fc7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+        <line x1="14" y1="22" x2="22" y2="22" stroke="#c9a7f5" stroke-width="2.5" stroke-linecap="round" />
+      </g>
+
+      <!-- Heart-stamped save file -->
+      <g id="y2k-sav-icon">
+        <path d="M 3 3 L 26 3 L 29 6 L 29 29 L 3 29 Z" fill="url(#pink-folder-grad)" stroke="#5a3d6e" stroke-width="2" />
+        <rect x="8" y="3" width="14" height="9" fill="#fffdfb" stroke="#5a3d6e" stroke-width="1.6" />
+        <rect x="16" y="5" width="4" height="5" fill="#9a6fe0" />
+        <rect x="7" y="16" width="18" height="10" fill="#fffdfb" stroke="#5a3d6e" stroke-width="1.6" />
+        <path d="M 16 24 C 12 21, 14 17.6, 16 19.6 C 18 17.6, 20 21, 16 24 Z" fill="#ff5fb0" />
+      </g>
+
+      <!-- Pixel handheld console (slime_run.exe) -->
+      <g id="y2k-game-icon">
+        <rect x="4" y="2" width="24" height="28" rx="3" fill="url(#purple-folder-grad)" stroke="#5a3d6e" stroke-width="2" />
+        <rect x="8" y="5" width="16" height="11" fill="#d8f7e4" stroke="#5a3d6e" stroke-width="1.6" />
+        <path d="M 12 13 Q 12 9.6, 16 9.6 Q 20 9.6, 20 13 Z" fill="#7ee0a3" stroke="#5a3d6e" stroke-width="1" />
+        <rect x="8" y="19" width="3" height="7" fill="#fffdfb" stroke="#5a3d6e" stroke-width="1.2" />
+        <rect x="6" y="21" width="7" height="3" fill="#fffdfb" stroke="#5a3d6e" stroke-width="1.2" />
+        <circle cx="21" cy="21" r="2" fill="#ff8fc7" stroke="#5a3d6e" stroke-width="1.2" />
+        <circle cx="25" cy="24" r="2" fill="#ffc2e2" stroke="#5a3d6e" stroke-width="1.2" />
+      </g>
+    </defs>
+  </svg>
+
+  <!-- Floating Y2K background decorations -->
+  <div class="decorations-bg" aria-hidden="true">
+    <div class="star-decor star-1">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0l3 9 9 3-9 3-3 9-3-9-9-3 9-3z"/></svg>
+    </div>
+    <div class="star-decor star-2">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0l3 9 9 3-9 3-3 9-3-9-9-3 9-3z"/></svg>
+    </div>
+    <div class="star-decor star-3">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0l3 9 9 3-9 3-3 9-3-9-9-3 9-3z"/></svg>
+    </div>
+
+    <div class="cloud-decor cloud-bottom-right">
+      <svg width="120" height="70" viewBox="0 0 120 70">
+        <path d="M 20 50 A 20 20 0 0 1 35 25 A 25 25 0 0 1 75 15 A 22 22 0 0 1 105 32 A 18 18 0 0 1 110 50 Z" fill="#ffffff" stroke="#c9a7f5" stroke-width="3" />
+        <line x1="16" y1="50" x2="114" y2="50" stroke="#c9a7f5" stroke-width="3" />
+        <path d="M 25 50 A 15 15 0 0 1 37 32" fill="none" stroke="#ffc2e2" stroke-width="2.5" />
+        <path d="M 72 20 A 20 20 0 0 1 98 35" fill="none" stroke="#ffc2e2" stroke-width="2.5" />
+      </svg>
+    </div>
+
+    <div class="cloud-decor cloud-top-left">
+      <svg width="90" height="50" viewBox="0 0 100 60">
+        <path d="M 15 45 A 15 15 0 0 1 25 22 A 20 20 0 0 1 60 15 A 18 18 0 0 1 85 30 A 15 15 0 0 1 90 45 Z" fill="#ffffff" stroke="#c9a7f5" stroke-width="2.5" />
+        <line x1="12" y1="45" x2="92" y2="45" stroke="#c9a7f5" stroke-width="2.5" />
+      </svg>
+    </div>
+
+    <div class="heart-decor heart-1">♥</div>
+    <div class="heart-decor heart-2">♡</div>
+    <div class="heart-decor heart-3">♥</div>
+    <div class="bow-decor bow-1">🎀</div>
+
+    <!-- pixel ghosts, only haunt in incognito -->
+    <div class="ghost-decor ghost-1">
+      <svg viewBox="0 0 16 18" shape-rendering="crispEdges" fill="currentColor">
+        <path d="M3 18 L3 6 Q3 1 8 1 Q13 1 13 6 L13 18 L11 16 L9 18 L8 16 L7 18 L5 16 Z" />
+        <rect x="5" y="6" width="2" height="3" fill="#16121c" />
+        <rect x="9" y="6" width="2" height="3" fill="#16121c" />
+      </svg>
+    </div>
+    <div class="ghost-decor ghost-2">
+      <svg viewBox="0 0 16 18" shape-rendering="crispEdges" fill="currentColor">
+        <path d="M3 18 L3 6 Q3 1 8 1 Q13 1 13 6 L13 18 L11 16 L9 18 L8 16 L7 18 L5 16 Z" />
+        <rect x="5" y="6" width="2" height="3" fill="#16121c" />
+        <rect x="9" y="6" width="2" height="3" fill="#16121c" />
+      </svg>
+    </div>
+  </div>
+
+  <!-- Main Retro Browser Wrapper -->
+  <div class="browser-frame" id="top">
+    <!-- Browser Top Bar -->
+    <header class="browser-header">
+      <div class="browser-dots">
+        <span class="dot red" aria-label="Close window"></span>
+        <span class="dot yellow" aria-label="Minimize window"></span>
+        <span class="dot green" aria-label="Maximize window"></span>
+      </div>
+
+      <div class="browser-tabs">
+        <div class="tab active" role="tab" aria-selected="true">
+          <span class="tab-icon" id="tab-icon">🌐</span>
+          <span class="tab-title" id="tab-title">YongshanOS&nbsp;♡&nbsp;v2.0</span>
+        </div>
+      </div>
+
+      <button class="btn-save" id="btn-save-page" aria-label="Save website to favorites">
+        <span class="star-icon">☆</span><span data-i18n="chrome.save"> save</span>
+      </button>
+    </header>
+
+    <!-- Browser Address Bar -->
+    <div class="browser-address-bar">
+      <div class="nav-arrows">
+        <button class="nav-arrow" id="nav-back" aria-label="Go back" data-i18n-title="chrome.back" title="go back">◀</button>
+        <button class="nav-arrow" id="nav-forward" aria-label="Go forward" data-i18n-title="chrome.forward" title="go forward">▶</button>
+        <button class="nav-arrow" id="nav-reload" aria-label="Reload" data-i18n-title="chrome.reload" title="reload">↻</button>
+      </div>
+      <form class="address-input-wrapper" id="address-form">
+        <span class="secure-icon" id="secure-icon">🔒</span>
+        <input type="text" class="address-input" id="address-input" value="https://yongshan.dev"
+               autocomplete="off" autocapitalize="off" spellcheck="false"
+               data-i18n-aria="chrome.addr.aria" aria-label="Address bar — type to search or open apps">
+      </form>
+      <div class="addr-hearts" aria-hidden="true">♡ ♥ ♡</div>
+    </div>
+
+    <!-- Main Desktop Area -->
+    <main class="desktop-area">
+      <div class="desktop-layout">
+
+        <!-- Left Area: Folder grid -->
+        <div class="desktop-icons-container" role="region" aria-label="Desktop folders">
+
+          <!-- Live Moodle Website -->
+          <a class="desktop-icon-btn moodle-browser-shortcut" href="https://arc.attherootproject.ca/login/index.php?loginredirect=1" target="_blank" rel="noopener noreferrer" aria-label="Open ARC Moodle LMS website">
+            <span class="pixel-browser-icon" aria-hidden="true">
+              <span class="pixel-browser-bar">
+                <span></span>
+                <span></span>
+                <span></span>
+              </span>
+              <span class="pixel-browser-g">M</span>
+            </span>
+            <div class="icon-label">live: ARC Moodle LMS</div>
+          </a>
+
+          <!-- Career quest -->
+          <button class="desktop-icon-btn" data-window="win-career" aria-haspopup="dialog">
+            <svg class="icon-visual" viewBox="0 0 32 32" width="46" height="46"><use href="#y2k-pink-folder" /></svg>
+            <div class="icon-label">career_quest.exe</div>
+          </button>
+
+          <!-- Inventory / skills -->
+          <button class="desktop-icon-btn" data-window="win-skills" aria-haspopup="dialog">
+            <svg class="icon-visual" viewBox="0 0 32 32" width="46" height="46"><use href="#y2k-sav-icon" /></svg>
+            <div class="icon-label">inventory.sav</div>
+          </button>
+
+          <!-- Terminal -->
+          <button class="desktop-icon-btn" data-window="win-terminal" aria-haspopup="dialog">
+            <svg class="icon-visual" viewBox="0 0 32 32" width="46" height="46"><use href="#y2k-term-icon" /></svg>
+            <div class="icon-label">terminal.exe</div>
+          </button>
+
+          <!-- Education -->
+          <button class="desktop-icon-btn" data-window="win-education" aria-haspopup="dialog">
+            <svg class="icon-visual" viewBox="0 0 32 32" width="46" height="46"><use href="#y2k-txt-icon" /></svg>
+            <div class="icon-label">education_awards.txt</div>
+          </button>
+
+          <!-- About -->
+          <button class="desktop-icon-btn" data-window="win-profile-intro" aria-haspopup="dialog">
+            <svg class="icon-visual" viewBox="0 0 32 32" width="46" height="46"><use href="#y2k-tools-icon" /></svg>
+            <div class="icon-label">about_me.ini</div>
+          </button>
+
+        </div>
+
+        <!-- Middle Area: Fan wall widget (avatar wall of likes) -->
+        <aside class="fan-wall-widget is-collapsed" id="fan-wall" aria-label="Fan wall — people who liked this site">
+          <div class="fan-wall-header">
+            <span class="fan-wall-heart" aria-hidden="true">♥</span>
+            <span class="fan-wall-title" data-i18n="wall.title">fan_wall.exe</span>
+            <button class="fan-wall-toggle" id="fan-wall-toggle" type="button" aria-expanded="false" aria-label="Collapse the fan wall to the taskbar">▾</button>
+          </div>
+          <div class="fan-wall-body" id="fan-wall-body">
+            <div class="fan-wall-sub" data-i18n="wall.sub">people who ♥ this site</div>
+            <div class="fan-wall-count">
+              <span class="fan-wall-count-num" id="like-count">0</span>
+              <span data-i18n="wall.likes">likes</span>
+            </div>
+            <div class="fan-wall-grid" id="fan-wall-grid"></div>
+            <div class="fan-wall-actions">
+              <button class="fan-like-btn" id="btn-like-site" type="button" data-i18n="wall.like">♡ like this site</button>
+              <button class="fan-share-btn" id="btn-share-site" type="button" data-i18n="wall.share">✉ share</button>
+            </div>
+          </div>
+        </aside>
+
+        <!-- Right Area: Persistent Bio Sidebar -->
+        <aside class="desktop-sidebar">
+          <div class="profile-card">
+            <div class="profile-identity">
+              <h2 class="profile-name" id="profile-name">Yongshan Yu</h2>
+              <p class="profile-tagline" data-i18n="side.tagline">AI/LMS Systems & Full-Stack Lead</p>
+            </div>
+
+            <!-- Slime Habitat -->
+            <div class="profile-avatar-wrapper" id="slime-habitat">
+              <button class="slime-pet" id="slime-pet" type="button" aria-label="Interact with the pixel slime pet: click to pet, drag to carry, double-click for a trick">
+                <span class="slime-halo" aria-hidden="true"></span>
+
+                <!-- spy-mode cloak (sits behind the slime) -->
+                <span class="slime-outfit outfit-spy-cloak" aria-hidden="true">
+                  <svg viewBox="0 0 90 80" shape-rendering="crispEdges">
+                    <path d="M45 3 C 20 6, 8 26, 5 78 L 21 78 C 19 42, 27 18, 45 13 C 63 18, 71 42, 69 78 L 85 78 C 82 26, 70 6, 45 3 Z"
+                          fill="#14101c" stroke="#060409" stroke-width="2" />
+                    <path d="M45 13 C 30 17, 23 34, 22 66" fill="none" stroke="#3a2340" stroke-width="2" />
+                    <path d="M45 13 C 60 17, 67 34, 68 66" fill="none" stroke="#3a2340" stroke-width="2" />
+                  </svg>
+                </span>
+
+                <img src="assets/slime_pet_cutout.png" alt="" draggable="false">
+
+                <!-- midnight-mode nightcap -->
+                <span class="slime-outfit outfit-night" aria-hidden="true">
+                  <svg viewBox="0 0 32 24" shape-rendering="crispEdges">
+                    <rect x="19" y="2" width="6" height="3" fill="#7d5ec4" />
+                    <rect x="14" y="5" width="9" height="3" fill="#7d5ec4" />
+                    <rect x="10" y="8" width="12" height="3" fill="#8a63d6" />
+                    <rect x="7" y="11" width="15" height="3" fill="#8a63d6" />
+                    <rect x="4" y="14" width="18" height="3" fill="#9a6fe0" />
+                    <rect x="12" y="9" width="2" height="2" fill="#ffe98a" />
+                    <rect x="9" y="13" width="2" height="2" fill="#ffe98a" />
+                    <rect x="16" y="6" width="2" height="2" fill="#ffc2e2" />
+                    <rect x="2" y="17" width="22" height="4" fill="#ffb3dd" />
+                    <rect x="5" y="18" width="2" height="2" fill="#fffdfb" />
+                    <rect x="11" y="18" width="2" height="2" fill="#fffdfb" />
+                    <rect x="17" y="18" width="2" height="2" fill="#fffdfb" />
+                    <rect x="25" y="0" width="5" height="5" fill="#ffe98a" />
+                    <rect x="26" y="1" width="2" height="2" fill="#fffdfb" />
+                  </svg>
+                </span>
+
+                <!-- spy-mode matrix shades -->
+                <span class="slime-outfit outfit-spy-shades" aria-hidden="true">
+                  <svg viewBox="0 0 44 12" shape-rendering="crispEdges">
+                    <rect x="0" y="1" width="44" height="2" fill="#14101c" />
+                    <rect x="3" y="3" width="15" height="7" fill="#0d0a14" />
+                    <rect x="26" y="3" width="15" height="7" fill="#0d0a14" />
+                    <rect x="18" y="3" width="8" height="2" fill="#14101c" />
+                    <rect x="5" y="4" width="3" height="2" fill="#5d5470" />
+                    <rect x="28" y="4" width="3" height="2" fill="#5d5470" />
+                  </svg>
+                </span>
+              </button>
+
+              <!-- ghost-hour mist (incognito only) -->
+              <div class="habitat-fog" aria-hidden="true"></div>
+
+              <!-- Floating Tamagotchi Reaction Speech Bubble -->
+              <div class="tamagotchi-bubble" id="slime-speech-bubble">Hi there! ♡</div>
+            </div>
+
+            <!-- Tamagotchi HUD -->
+            <div class="slime-hud" aria-label="Slime pet status">
+              <div class="slime-hud-toprow">
+                <div class="slime-hearts" id="slime-hearts" aria-label="Slime affection meter">
+                  <span>♥</span><span>♥</span><span>♥</span><span>♥</span><span>♥</span><span>♡</span><span>♡</span>
+                </div>
+                <div class="slime-followers" title="Followers grow when you play with the slime">
+                  <span class="follower-star" aria-hidden="true">★</span>
+                  <span id="slime-follower-count">0</span> <span data-i18n="side.fans">fans</span>
+                </div>
+              </div>
+              <div class="slime-energy-row">
+                <span class="energy-label" data-i18n="side.energy">energy</span>
+                <div class="energy-bar"><div class="energy-fill" id="slime-energy-fill"></div></div>
+              </div>
+              <div class="slime-mood-row">
+                <span data-i18n="side.mood">mood</span>
+                <strong id="slime-mood-text">curious</strong>
+              </div>
+              <div class="slime-actions" role="group" aria-label="Slime pet actions">
+                <button class="pet-action-btn" id="btn-feed" type="button" data-i18n="side.feed">🍬 feed</button>
+                <button class="pet-action-btn" id="btn-play" type="button" data-i18n="side.play">⭐ play</button>
+                <button class="pet-action-btn" id="btn-sleep" type="button" data-i18n="side.nap">🌙 nap</button>
+              </div>
+            </div>
+
+            <div class="online-status-container">
+              <span class="pixel-green-dot" aria-hidden="true"></span>
+              <span class="online-text" data-i18n="side.online">LIVE&nbsp;— streaming code & cuteness</span>
+            </div>
+
+            <div class="profile-info">
+              <div class="pixel-quest-board" aria-label="Pixel game inspired portfolio shortcuts">
+                <h3>PLAYER_PROFILE.SAV</h3>
+                <p data-i18n="side.board.text">
+                  I build small, explorable interfaces on top of serious infrastructure —
+                  clear states, playful feedback, zero hidden engineering.
+                </p>
+                <div class="quest-list">
+                  <button class="quest-btn" data-window="win-career" type="button" data-i18n="side.q.career">▶ Quest log: career history</button>
+                  <button class="quest-btn" data-window="win-skills" type="button" data-i18n="side.q.skills">▶ Inventory: skills & stats</button>
+                  <button class="quest-btn quest-btn-ama" data-window="win-ama" type="button" data-i18n="side.q.ama">♡ AMA: ask me anything</button>
+                </div>
+              </div>
+
+              <div class="profile-contacts">
+                <div class="contact-item">
+                  <span class="contact-icon">📧</span>
+                  <button class="btn-contact-copy" id="btn-copy-email" aria-label="Copy Email address">yuyongshan573@gmail.com</button>
+                </div>
+                <div class="contact-item">
+                  <span class="contact-icon">📞</span>
+                  <span class="contact-text">+1 825-963-2725</span>
+                </div>
+                <div class="contact-socials">
+                  <a href="http://www.linkedin.com/in/yongshan-yu-b9a713227" class="btn-social-icon" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn Profile">🔗 LinkedIn</a>
+                  <a href="https://github.com/yyswhsccc" class="btn-social-icon" target="_blank" rel="noopener noreferrer" aria-label="GitHub Profile">🐙 GitHub</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </aside>
+
+      </div>
+
+      <!-- ================= POPUP WINDOWS ================= -->
+
+      <!-- 1. CAREER QUEST WINDOW -->
+      <section class="window window-closed window-wide" id="win-career" aria-labelledby="title-career" role="dialog">
+        <div class="window-header drag-handle">
+          <div class="window-title-container">
+            <span class="window-icon">📁</span>
+            <span class="window-title" id="title-career">career_quest.exe</span>
+          </div>
+          <div class="window-controls">
+            <button class="win-btn win-btn-minimize" aria-label="Minimize window">_</button>
+            <button class="win-btn win-btn-maximize" aria-label="Maximize window">⛶</button>
+            <button class="win-btn win-btn-close" aria-label="Close window">♥</button>
+          </div>
+        </div>
+        <div class="window-body">
+          <div class="quest-intro-banner">
+            <span class="quest-intro-star" aria-hidden="true">★</span>
+            <p data-i18n-html="career.banner">Every job is a quest. Badges show the loot. Open a <strong>full quest log</strong> for the raw resume bullets.</p>
+          </div>
+
+          <div class="quest-timeline">
+
+            <!-- RustChain -->
+            <div class="quest-entry">
+              <div class="quest-node node-main" aria-hidden="true">★</div>
+              <div class="quest-card">
+                <div class="quest-topline">
+                  <span class="quest-rank rank-main" data-i18n="career.rank.main">MAIN QUEST</span>
+                  <span class="quest-when" data-i18n="career.r1.when">MAY 2026 – NOW</span>
+                </div>
+                <h3 class="quest-role" data-i18n="career.r1.role">Open-Source AI Agent Engineering Lead</h3>
+                <div class="quest-org" data-i18n="career.r1.org">RustChain Ecosystem · Independent Contributor</div>
+                <p class="quest-blurb" data-i18n="career.r1.blurb">Runs a self-improving fleet of coding agents that discover issues, ship PRs, answer reviewers, and learn from every merge — with a human hand on all the money-path and safety levers.</p>
+                <div class="loot-row">
+                  <span class="loot-chip" data-i18n="career.r1.c1">🏆 merged security &amp; wallet PRs</span>
+                  <span class="loot-chip" data-i18n="career.r1.c2">🔁 self-improving AgentOps loop</span>
+                  <span class="loot-chip" data-i18n="career.r1.c3">🛡️ rate limiting + payout safety</span>
+                </div>
+                <details class="quest-log">
+                  <summary data-i18n="career.log">▸ full quest log</summary>
+                  <ul class="resume-bullet-list">
+                    <li data-i18n="career.r1.b1">Designed and operated an autonomous AI-agent engineering workflow for RustChain open-source development, coordinating specialized agents for issue discovery, PR implementation, review monitoring, maintenance updates, regression testing, and PR communication.</li>
+                    <li data-i18n="career.r1.b2">Built a self-improving AgentOps loop that automatically monitored reviewer comments, CI failures, maintainer feedback, bot labels, and PR state changes; summarized recurring review patterns; updated internal task-selection and implementation rules; and reused those lessons to improve future PR scoping, validation, and review responses.</li>
+                    <li data-i18n="career.r1.b3">Implemented an automated maintenance-response pipeline: when reviewers requested changes, the Druid agent detected the requested action, analyzed the relevant code path, generated targeted code/test updates, ran validation checks, and posted follow-up maintenance comments summarizing the fix and test evidence.</li>
+                    <li data-i18n="career.r1.b4">Developed a repeatable PoC-to-fix delivery system covering issue selection, root-cause analysis, failing-test generation, minimal patch design, local validation, CI-aware debugging, PR body drafting, and reviewer-response preparation.</li>
+                    <li><span data-i18n="career.r1.b5">Delivered merged RustChain contributions across security, wallet/reward integrity, infrastructure reliability, and API usability, including:</span>
+                      <ul>
+                        <li data-i18n="career.r1.b5a">Rate limiting for the core RPC/API handler with per-IP isolation, trusted API-key handling, CORS preflight support, and regression coverage.</li>
+                        <li data-i18n="career.r1.b5b">Event faucet claim-code flows with admin-gated code creation, one-time redemption, transfer status tracking, idempotency handling, and retry-safe failure behavior.</li>
+                        <li data-i18n="career.r1.b5c">Beacon Atlas public profile routing that preserved admin-only fields while exposing redacted public agent profiles and preventing alias shadowing.</li>
+                        <li data-i18n="career.r1.b5d">Validator and explorer metrics improvements, including attestation effectiveness reporting, block filtering, and reorg-resistance metrics.</li>
+                        <li data-i18n="career.r1.b5e">Documentation and installation-flow fixes that improved contributor onboarding and reduced broken-link or stale-path friction.</li>
+                      </ul>
+                    </li>
+                    <li data-i18n="career.r1.b6">Focused heavily on money-path and security-sensitive surfaces, including wallet balances, pending confirmations, settlement correctness, bridge/wRTC flows, faucet payout safety, reward accounting, idempotency, concurrency, and admin-boundary protection.</li>
+                    <li data-i18n="career.r1.b7">Designed Druid/Chair operating rules for high-signal RustChain work: prioritize financial/security/reward impact, avoid speculative rewrites, prevent duplicate PR coverage, preserve payout and production-wallet safety, and keep each PR small enough for efficient maintainer review.</li>
+                    <li data-i18n="career.r1.b8">Built automated learning summaries from merged PRs, reviewer feedback, failed attempts, and maintainer preferences, allowing the agent workflow to continuously refine issue targeting, claim strategy, implementation boundaries, testing standards, and PR communication quality.</li>
+                    <li data-i18n="career.r1.b9">Used AI agents as autonomous engineering accelerators while maintaining human governance over safety boundaries, production-impact decisions, reward/payout logic, and final PR strategy.</li>
+                  </ul>
+                </details>
+              </div>
+            </div>
+
+            <!-- ARC Moodle -->
+            <div class="quest-entry">
+              <div class="quest-node node-main" aria-hidden="true">★</div>
+              <div class="quest-card">
+                <div class="quest-topline">
+                  <span class="quest-rank rank-main" data-i18n="career.rank.main">MAIN QUEST</span>
+                  <span class="quest-when" data-i18n="career.r2.when">JUN 2025 – MAR 2026</span>
+                </div>
+                <h3 class="quest-role" data-i18n="career.r2.role">Systems/LMS/Full-Stack Programming Lead</h3>
+                <div class="quest-org" data-i18n="career.r2.org">ARC in Action · Courage to Act Foundation &amp; Sea Slug Digital · Canada</div>
+                <p class="quest-blurb" data-i18n="career.r2.blurb">Solo-built a production Moodle LMS on AWS that runs itself: auto-heal, backups, disaster recovery — designed so a fully non-technical team never has to touch a server.</p>
+                <div class="loot-row">
+                  <span class="loot-chip" data-i18n="career.r2.c1">☁️ AWS EC2 + S3 + Nginx + Redis</span>
+                  <span class="loot-chip" data-i18n="career.r2.c2">♿ WCAG 2.1 AA verified</span>
+                  <span class="loot-chip" data-i18n="career.r2.c3">🩹 auto-heal + nightly DR</span>
+                </div>
+                <a class="project-live-link" href="https://arc.attherootproject.ca/login/index.php?loginredirect=1" target="_blank" rel="noopener noreferrer" data-i18n="career.live">↗ visit the live production site</a>
+                <details class="quest-log">
+                  <summary data-i18n="career.log">▸ full quest log</summary>
+                  <ul class="resume-bullet-list">
+                    <li data-i18n="career.r2.b1">Built and launched a production Moodle on AWS EC2 with Nginx/PHP-FPM/MariaDB/Redis, Let’s Encrypt + HSTS, and environment hardening; configured CloudWatch logs/alarms and OS-level health checks for reliable ops.</li>
+                    <li data-i18n="career.r2.b2">Implemented multi-layer security: firewall hardening (UFW/Fail2ban/SSH lockdown), least-privilege IAM, and a locked-down plugin installation workflow with integrity checks and role-scoped access to reduce attack surface.</li>
+                    <li data-i18n="career.r2.b3">Designed a hands-off maintenance pipeline for a non-technical team: cron-scheduled automatic disk housekeeping; daily web-performance health checks with auto-remediation; Moodle cron health monitoring; database &amp; course content backups to AWS S3 (versioning/lifecycle + DR replication); nightly instance snapshots/auto-clone; auto-heal on service failure; and email alerts when manual intervention is required.</li>
+                    <li data-i18n="career.r2.b4">Set up SMTP and end-to-end login/upload flows; added OPcache and Redis caching to stabilize performance under load.</li>
+                    <li data-i18n="career.r2.b5">Led UI/UX &amp; accessibility hardening to align with WCAG 2.1 AA: visible "Skip to main content", correct landmarks/heading structure, ARIA-compliant menubar (Tab to enter/exit; Left/Right to traverse), standardized :focus-visible styling, and AA-safe palette.</li>
+                    <li data-i18n="career.r2.b6">Verified accessibility with WAVE and Accessibility Insights for Web (FastPass/Tab Stops) across Home, Dashboard, Course main, and Page views; resolved color-contrast and keyboard-navigation blockers.</li>
+                    <li data-i18n="career.r2.b7">Documented an authoring guide (images alt text, accessible names for icon-only controls, and the MP4 + .vtt workflow) and created copy-paste snippets to reduce content-level defects.</li>
+                  </ul>
+                </details>
+              </div>
+            </div>
+
+            <!-- HyperGAI -->
+            <div class="quest-entry">
+              <div class="quest-node node-side" aria-hidden="true">◆</div>
+              <div class="quest-card">
+                <div class="quest-topline">
+                  <span class="quest-rank rank-side" data-i18n="career.rank.side">CO-OP QUEST</span>
+                  <span class="quest-when" data-i18n="career.r3.when">FEB – MAY 2024</span>
+                </div>
+                <h3 class="quest-role" data-i18n="career.r3.role">Data Engineer</h3>
+                <div class="quest-org" data-i18n="career.r3.org">HyperGAI · Singapore · Internship</div>
+                <p class="quest-blurb" data-i18n="career.r3.blurb">Ran the data side of a multimodal GenAI lab: 200+ annotators across three languages, an S3 data warehouse, and video pipelines that measurably raised dataset quality.</p>
+                <div class="loot-row">
+                  <span class="loot-chip" data-i18n="career.r3.c1">👥 200+ annotators, EN/中文/粤語</span>
+                  <span class="loot-chip" data-i18n="career.r3.c2">📈 +26% resolution · +17% length</span>
+                  <span class="loot-chip" data-i18n="career.r3.c3">🗄️ S3 data warehouse</span>
+                </div>
+                <details class="quest-log">
+                  <summary data-i18n="career.log">▸ full quest log</summary>
+                  <ul class="resume-bullet-list">
+                    <li data-i18n="career.r3.b1">Directed cross-regional coordination with third-party annotation teams (200+ annotators based in Hong Kong) for high-volume video labeling projects; maintained multilingual communication in English, Mandarin, and Cantonese to ensure real-time clarity.</li>
+                    <li data-i18n="career.r3.b2">Orchestrated large-scale annotation schedules under tight timelines, managing project milestones and deliverables across multiple stakeholders.</li>
+                    <li data-i18n="career.r3.b3">Implemented Google Sheets API integrations to establish a real-time collaborative environment, enabling instant multi-user data updates and improving team agility.</li>
+                    <li data-i18n="career.r3.b4">Led productionization of data pipelines supporting AIGC model development; optimized video filtering workflows, boosting average output resolution by 26% and length by 17%.</li>
+                    <li data-i18n="career.r3.b5">Built and maintained AWS S3-based data warehouse, developing efficient ingestion, storage, and retrieval processes for large-scale multimodal datasets.</li>
+                    <li data-i18n="career.r3.b6">Designed Nginx-based microservices to address annotation platform performance bottlenecks, improving system loading speed and streaming smoothness.</li>
+                    <li data-i18n="career.r3.b7">Supported real estate chatbot development by testing and deploying deep learning models into production, collaborating cross-functionally to improve system dialogues based on customer feedback.</li>
+                    <li data-i18n="career.r3.b8">Developed quality assurance pipelines for AIGC datasets, applying Optical Character Recognition (OCR) and optical flow analysis to enhance input quality for downstream ML systems.</li>
+                  </ul>
+                </details>
+              </div>
+            </div>
+
+            <!-- Time series -->
+            <div class="quest-entry">
+              <div class="quest-node node-research" aria-hidden="true">✦</div>
+              <div class="quest-card">
+                <div class="quest-topline">
+                  <span class="quest-rank rank-research" data-i18n="career.rank.research">RESEARCH DUNGEON</span>
+                  <span class="quest-when" data-i18n="career.r4.when">JAN – APR 2024</span>
+                </div>
+                <h3 class="quest-role" data-i18n="career.r4.role">Financial Time Series Analyst (R)</h3>
+                <div class="quest-org" data-i18n="career.r4.org">Nanyang Technological University</div>
+                <p class="quest-blurb" data-i18n="career.r4.blurb">Hybrid ARIMA-GARCH/SARIMA forecasting stack with walk-forward validation — grid search did the grinding so humans didn't have to.</p>
+                <div class="loot-row">
+                  <span class="loot-chip" data-i18n="career.r4.c1">🎯 12-step RMSE &lt; 2.8</span>
+                  <span class="loot-chip" data-i18n="career.r4.c2">⏱️ −70% tuning time</span>
+                  <span class="loot-chip" data-i18n="career.r4.c3">📊 +18% vs baseline</span>
+                </div>
+                <details class="quest-log">
+                  <summary data-i18n="career.log">▸ full quest log</summary>
+                  <ul class="resume-bullet-list">
+                    <li data-i18n="career.r4.b1">Designed and automated a hybrid ARIMA-GARCH-SARIMA forecasting pipeline with full grid-search hyperparameter tuning, streamlining model deployment processes and reducing manual optimization time by 70%.</li>
+                    <li data-i18n="career.r4.b2">Developed modularized ETL pipelines using R’s forecast, rugarch, caret, and zoo libraries to process large-scale financial time series datasets in both structured SQL and semi-structured NoSQL storage formats.</li>
+                    <li data-i18n="career.r4.b3">Applied walk-forward validation techniques to productionize time-series models with real-world deployability, achieving 12-step prediction RMSE &lt; 2.8.</li>
+                    <li data-i18n="career.r4.b4">Engineered temporal feature extraction workflows, integrating database timestamp metadata into training pipelines, thus enhancing predictive model accuracy by 18% over baseline models.</li>
+                  </ul>
+                </details>
+              </div>
+            </div>
+
+            <!-- YOLO -->
+            <div class="quest-entry">
+              <div class="quest-node node-research" aria-hidden="true">✦</div>
+              <div class="quest-card">
+                <div class="quest-topline">
+                  <span class="quest-rank rank-research" data-i18n="career.rank.research">RESEARCH DUNGEON</span>
+                  <span class="quest-when" data-i18n="career.r5.when">AUG 2023 – APR 2024</span>
+                </div>
+                <h3 class="quest-role" data-i18n="career.r5.role">Graduate Research Assistant — Real-time Defect Detection</h3>
+                <div class="quest-org" data-i18n="career.r5.org">NTU Real-time Industrial Part Monitoring Project</div>
+                <p class="quest-blurb" data-i18n="career.r5.blurb">Real-time YOLOv8 defect detection for manufacturing QA — benchmarked against YOLOv5 and Faster R-CNN, wired into the actual factory monitoring loop.</p>
+                <div class="loot-row">
+                  <span class="loot-chip" data-i18n="career.r5.c1">👁️ &gt;82% mAP50-95</span>
+                  <span class="loot-chip" data-i18n="career.r5.c2">🏭 +18% throughput</span>
+                  <span class="loot-chip" data-i18n="career.r5.c3">☁️ S3 defect analytics</span>
+                </div>
+                <details class="quest-log">
+                  <summary data-i18n="career.log">▸ full quest log</summary>
+                  <ul class="resume-bullet-list">
+                    <li data-i18n="career.r5.b1">Designed and productionized a real-time defect detection system using YOLOv8n, achieving &gt;82% mAP50-95 across multiple industrial classes, ensuring high scalability and low latency for manufacturing QA applications.</li>
+                    <li data-i18n="career.r5.b2">Fine-tuned and benchmarked object detection models (YOLOv5, YOLOv8, Faster R-CNN), iteratively optimizing for precision and inference speed, simulating ETL-like model retraining pipelines for continuous data ingestion and model updates.</li>
+                    <li data-i18n="career.r5.b3">Collaborated with cross-functional engineering teams under Agile methodology to integrate the defect detection models into the automated industrial monitoring systems, improving operational throughput by 18%.</li>
+                    <li data-i18n="career.r5.b4">Implemented cloud storage integration for model outputs, supporting traceable defect analytics and scalable cloud-based reporting solutions via AWS S3 buckets.</li>
+                  </ul>
+                </details>
+              </div>
+            </div>
+
+            <!-- Coyote -->
+            <div class="quest-entry">
+              <div class="quest-node node-research" aria-hidden="true">✦</div>
+              <div class="quest-card">
+                <div class="quest-topline">
+                  <span class="quest-rank rank-research" data-i18n="career.rank.research">RESEARCH DUNGEON</span>
+                  <span class="quest-when" data-i18n="career.r6.when">JAN – APR 2023</span>
+                </div>
+                <h3 class="quest-role" data-i18n="career.r6.role">Undergraduate Research Assistant — Coyote Mange Detection</h3>
+                <div class="quest-org" data-i18n="career.r6.org">University of Alberta</div>
+                <p class="quest-blurb" data-i18n="career.r6.blurb">Almost no labels? Semi-supervised ResNet-18 more than doubled recall on wildlife camera images.</p>
+                <div class="loot-row">
+                  <span class="loot-chip" data-i18n="career.r6.c1">🐺 recall 25% → 52%</span>
+                  <span class="loot-chip" data-i18n="career.r6.c2">🧪 semi-supervised pipeline</span>
+                </div>
+                <details class="quest-log">
+                  <summary data-i18n="career.log">▸ full quest log</summary>
+                  <ul class="resume-bullet-list">
+                    <li data-i18n="career.r6.b1">Pioneered semi-supervised learning pipelines leveraging ResNet-18, enhancing scarce data utilization and improving model recall from 25% to 52%, reflecting production-level deployment considerations under limited labeling scenarios.</li>
+                    <li data-i18n="career.r6.b2">Automated the preprocessing and augmentation pipelines by building custom Python modules, including background removal, object detection re-centering, and contrast normalization.</li>
+                    <li data-i18n="career.r6.b3">Implemented model evaluation APIs to streamline iterative experiments and standardize hyperparameter tuning across training runs, aligning with Agile DevOps practices.</li>
+                    <li data-i18n="career.r6.b4">Designed initial database schemas (Postgres) to organize annotated datasets, optimizing storage retrieval speed for high-resolution images.</li>
+                  </ul>
+                </details>
+              </div>
+            </div>
+
+            <!-- EEG -->
+            <div class="quest-entry">
+              <div class="quest-node node-research" aria-hidden="true">✦</div>
+              <div class="quest-card">
+                <div class="quest-topline">
+                  <span class="quest-rank rank-research" data-i18n="career.rank.research">RESEARCH DUNGEON</span>
+                  <span class="quest-when" data-i18n="career.r7.when">SEP 2022 – MAY 2023</span>
+                </div>
+                <h3 class="quest-role" data-i18n="career.r7.role">Undergraduate Research Assistant — EEG-to-Image Modeling</h3>
+                <div class="quest-org" data-i18n="career.r7.org">UofA Human-Robot Visual-Inertial Monitoring Project</div>
+                <p class="quest-blurb" data-i18n="career.r7.blurb">Turned raw EEG brainwaves into images a CNN could read — then served the models two different ways just to prove the pipeline was framework-agnostic.</p>
+                <div class="loot-row">
+                  <span class="loot-chip" data-i18n="career.r7.c1">🧠 &gt;70% trend prediction</span>
+                  <span class="loot-chip" data-i18n="career.r7.c2">⚡ TF Serving + PyTorch APIs</span>
+                </div>
+                <details class="quest-log">
+                  <summary data-i18n="career.log">▸ full quest log</summary>
+                  <ul class="resume-bullet-list">
+                    <li data-i18n="career.r7.b1">Developed an end-to-end pipeline converting EEG signal streams into images for deep learning analysis, using TensorFlow convolutional autoencoders to achieve &gt;70% neurological trend prediction accuracy.</li>
+                    <li data-i18n="career.r7.b2">Built microservice-style model deployment architectures utilizing both TensorFlow Serving and lightweight PyTorch APIs, demonstrating adaptability to multiple ML deployment frameworks.</li>
+                    <li data-i18n="career.r7.b3">Integrated time-synchronized visual-inertial data streams using custom Python APIs, emulating real-time data ingestion and transformation tasks similar to production data pipelines.</li>
+                    <li data-i18n="career.r7.b4">Authored a technical handbook standardizing data preprocessing and signal transformation, contributing to infrastructure documentation practices akin to DevOps-quality standards.</li>
+                  </ul>
+                </details>
+              </div>
+            </div>
+
+          </div>
+        </div>
+        <div class="window-footer">
+          <span data-i18n="career.footer.l">7 quests · 2 main story arcs</span>
+          <span data-i18n="career.footer.r">♡ save often</span>
+        </div>
+      </section>
+
+      <!-- 2. INVENTORY / SKILLS WINDOW -->
+      <section class="window window-closed" id="win-skills" aria-labelledby="title-skills" role="dialog">
+        <div class="window-header drag-handle">
+          <div class="window-title-container">
+            <span class="window-icon">💾</span>
+            <span class="window-title" id="title-skills">inventory.sav</span>
+          </div>
+          <div class="window-controls">
+            <button class="win-btn win-btn-minimize" aria-label="Minimize window">_</button>
+            <button class="win-btn win-btn-maximize" aria-label="Maximize window">⛶</button>
+            <button class="win-btn win-btn-close" aria-label="Close window">♥</button>
+          </div>
+        </div>
+        <div class="window-body">
+
+          <div class="status-panel">
+            <h3 class="panel-heading" data-i18n="skills.status">CHARACTER STATUS</h3>
+            <div class="stat-row"><span class="stat-name">CODE</span><div class="stat-bar"><div class="stat-fill" style="--v: 92%"></div></div><span class="stat-num">92</span></div>
+            <div class="stat-row"><span class="stat-name">AI / ML</span><div class="stat-bar"><div class="stat-fill" style="--v: 90%"></div></div><span class="stat-num">90</span></div>
+            <div class="stat-row"><span class="stat-name">CLOUD / SRE</span><div class="stat-bar"><div class="stat-fill" style="--v: 88%"></div></div><span class="stat-num">88</span></div>
+            <div class="stat-row"><span class="stat-name">DATA ENG</span><div class="stat-bar"><div class="stat-fill" style="--v: 86%"></div></div><span class="stat-num">86</span></div>
+            <div class="stat-row"><span class="stat-name">UI/UX + A11Y</span><div class="stat-bar"><div class="stat-fill" style="--v: 85%"></div></div><span class="stat-num">85</span></div>
+            <div class="stat-row"><span class="stat-name">COMMS ×3 LANG</span><div class="stat-bar"><div class="stat-fill" style="--v: 95%"></div></div><span class="stat-num">95</span></div>
+          </div>
+
+          <div class="equip-panel">
+            <h3 class="panel-heading" data-i18n="skills.equip">EQUIPPED ITEMS</h3>
+            <div class="equip-grid">
+              <div class="equip-item"><span class="equip-icon">🐍</span><span class="equip-name">Python</span><span class="equip-lv" aria-label="level 5 of 5">●●●●●</span></div>
+              <div class="equip-item"><span class="equip-icon">☁️</span><span class="equip-name">AWS S3/EC2</span><span class="equip-lv" aria-label="level 5 of 5">●●●●●</span></div>
+              <div class="equip-item"><span class="equip-icon">🤖</span><span class="equip-name">Agent Ops</span><span class="equip-lv" aria-label="level 5 of 5">●●●●●</span></div>
+              <div class="equip-item"><span class="equip-icon">🔥</span><span class="equip-name">PyTorch / TF</span><span class="equip-lv" aria-label="level 4 of 5">●●●●○</span></div>
+              <div class="equip-item"><span class="equip-icon">🕸️</span><span class="equip-name">Nginx</span><span class="equip-lv" aria-label="level 4 of 5">●●●●○</span></div>
+              <div class="equip-item"><span class="equip-icon">🗄️</span><span class="equip-name">SQL / NoSQL</span><span class="equip-lv" aria-label="level 4 of 5">●●●●○</span></div>
+              <div class="equip-item"><span class="equip-icon">🛡️</span><span class="equip-name">Security</span><span class="equip-lv" aria-label="level 4 of 5">●●●●○</span></div>
+              <div class="equip-item"><span class="equip-icon">♿</span><span class="equip-name">WCAG A11y</span><span class="equip-lv" aria-label="level 4 of 5">●●●●○</span></div>
+            </div>
+          </div>
+
+          <div class="itembox-panel">
+            <h3 class="panel-heading" data-i18n="skills.itembox">ITEM BOX</h3>
+            <div class="skill-chip-grid">
+              <span class="skill-chip">Pandas</span>
+              <span class="skill-chip">NumPy</span>
+              <span class="skill-chip">HuggingFace</span>
+              <span class="skill-chip">C / C++</span>
+              <span class="skill-chip">R</span>
+              <span class="skill-chip">Azure</span>
+              <span class="skill-chip">MySQL</span>
+              <span class="skill-chip">MongoDB</span>
+              <span class="skill-chip">Redis</span>
+              <span class="skill-chip">Elasticsearch</span>
+              <span class="skill-chip">Snowflake</span>
+              <span class="skill-chip">YOLO</span>
+              <span class="skill-chip">Faster R-CNN</span>
+              <span class="skill-chip">ARIMA-GARCH</span>
+              <span class="skill-chip">Jenkins</span>
+              <span class="skill-chip">GitHub Actions</span>
+              <span class="skill-chip">CloudWatch</span>
+              <span class="skill-chip">PHP-FPM</span>
+              <span class="skill-chip">MariaDB</span>
+              <span class="skill-chip">OPcache</span>
+              <span class="skill-chip">TLS / HSTS</span>
+              <span class="skill-chip">UFW / Fail2ban</span>
+              <span class="skill-chip">Bash / cron</span>
+              <span class="skill-chip">WAVE</span>
+              <span class="skill-chip">A11y Insights</span>
+              <span class="skill-chip">LaTeX</span>
+              <span class="skill-chip">REST APIs</span>
+              <span class="skill-chip">Agile</span>
+            </div>
+          </div>
+
+          <div class="voice-panel">
+            <h3 class="panel-heading" data-i18n="skills.voice">VOICE LINES</h3>
+            <div class="skill-chip-grid voice-grid">
+              <span class="skill-chip" data-i18n="skills.lang.en">🇬🇧 English · fluent</span>
+              <span class="skill-chip" data-i18n="skills.lang.zh">🀄 Mandarin · native</span>
+              <span class="skill-chip" data-i18n="skills.lang.yue">🥟 Cantonese · native</span>
+              <span class="skill-chip" data-i18n="skills.lang.fr">🥐 French · studying</span>
+            </div>
+          </div>
+
+        </div>
+        <div class="window-footer">
+          <span data-i18n="skills.footer.l">save data intact</span>
+          <span data-i18n="skills.footer.r">100% loaded ♡</span>
+        </div>
+      </section>
+
+      <!-- 3. STREAM CHAT WINDOW -->
+      <section class="window window-closed window-chat" id="win-chat" aria-labelledby="title-chat" role="dialog">
+        <div class="window-header drag-handle">
+          <div class="window-title-container">
+            <span class="window-icon">💬</span>
+            <span class="window-title" id="title-chat">stream_chat.log</span>
+          </div>
+          <div class="window-controls">
+            <button class="win-btn win-btn-minimize" aria-label="Minimize window">_</button>
+            <button class="win-btn win-btn-maximize" aria-label="Maximize window">⛶</button>
+            <button class="win-btn win-btn-close" aria-label="Close window">♥</button>
+          </div>
+        </div>
+        <div class="window-body chat-body">
+          <div class="chat-shell">
+            <div class="chat-pinned">
+              <span aria-hidden="true">📌</span>
+              <span data-i18n-html="chat.pinned">You're watching <strong>yongshan_dev</strong> — cute UIs on serious infra. Type <strong>!hire</strong> to copy her email ♡</span>
+            </div>
+            <div class="chat-feed" id="chat-feed" aria-live="polite" aria-label="Simulated stream chat about Yongshan's work"></div>
+            <div class="chat-inputbar">
+              <button class="chat-cmd" id="chat-hire-btn" type="button">!hire</button>
+              <button class="chat-cmd chat-cmd-love" id="chat-love-btn" type="button" data-i18n="chat.love">♡ send love</button>
+            </div>
+          </div>
+        </div>
+        <div class="window-footer">
+          <span><span data-i18n="chat.footer.viewers">viewers: </span><span id="chat-viewer-count">128</span></span>
+          <span data-i18n="chat.footer.slow">slow mode: off</span>
+        </div>
+      </section>
+
+      <!-- 3b. AMA BOT WINDOW -->
+      <section class="window window-closed window-ama" id="win-ama" aria-labelledby="title-ama" role="dialog">
+        <div class="window-header drag-handle">
+          <div class="window-title-container">
+            <span class="window-icon">💗</span>
+            <span class="window-title" id="title-ama">ask_me.chat</span>
+          </div>
+          <div class="window-controls">
+            <button class="win-btn win-btn-minimize" aria-label="Minimize window">_</button>
+            <button class="win-btn win-btn-maximize" aria-label="Maximize window">⛶</button>
+            <button class="win-btn win-btn-close" aria-label="Close window">♥</button>
+          </div>
+        </div>
+        <div class="window-body ama-body">
+          <div class="ama-shell">
+            <div class="ama-feed" id="ama-feed" aria-live="polite" aria-label="Q&A chat with the slime assistant"></div>
+            <div class="ama-chips" id="ama-chips" aria-label="Suggested questions"></div>
+            <form class="ama-inputbar" id="ama-form">
+              <input type="text" class="ama-input" id="ama-input" maxlength="200"
+                     placeholder="ask about skills, Druid, the LMS… EN/中文 ok!" data-i18n-ph="ama.ph"
+                     aria-label="Type your question" autocomplete="off">
+              <button type="submit" class="ama-send" data-i18n="ama.send">send ♡</button>
+            </form>
+          </div>
+        </div>
+        <div class="window-footer">
+          <span data-i18n="ama.footer.l">slime_brain.js — 100% client-side, zero API</span>
+          <span data-i18n="ama.footer.r">knows 20+ topics</span>
+        </div>
+      </section>
+
+      <!-- 3c. TERMINAL WINDOW -->
+      <section class="window window-closed window-terminal" id="win-terminal" aria-labelledby="title-terminal" role="dialog">
+        <div class="window-header drag-handle">
+          <div class="window-title-container">
+            <span class="window-icon">🖥️</span>
+            <span class="window-title" id="title-terminal">terminal.exe</span>
+          </div>
+          <div class="window-controls">
+            <button class="win-btn win-btn-minimize" aria-label="Minimize window">_</button>
+            <button class="win-btn win-btn-maximize" aria-label="Maximize window">⛶</button>
+            <button class="win-btn win-btn-close" aria-label="Close window">♥</button>
+          </div>
+        </div>
+        <div class="window-body term-body">
+          <div class="term-shell" id="term-shell">
+            <div class="term-out" id="term-out" aria-live="polite"></div>
+            <form class="term-inputline" id="term-form">
+              <label class="term-prompt" for="term-input">yongshan@os:~$</label>
+              <input type="text" class="term-input" id="term-input" autocomplete="off"
+                     autocapitalize="off" spellcheck="false" aria-label="Terminal command input">
+            </form>
+          </div>
+        </div>
+        <div class="window-footer">
+          <span data-i18n="term.footer.l">bash-like, hand-rolled</span>
+          <span data-i18n="term.footer.r">try `help`</span>
+        </div>
+      </section>
+
+      <!-- 3d. YONGLE SEARCH WINDOW -->
+      <section class="window window-closed window-search" id="win-search" aria-labelledby="title-search" role="dialog">
+        <div class="window-header drag-handle">
+          <div class="window-title-container">
+            <span class="window-icon">🔍</span>
+            <span class="window-title" id="title-search">yongle_search.exe</span>
+          </div>
+          <div class="window-controls">
+            <button class="win-btn win-btn-minimize" aria-label="Minimize window">_</button>
+            <button class="win-btn win-btn-maximize" aria-label="Maximize window">⛶</button>
+            <button class="win-btn win-btn-close" aria-label="Close window">♥</button>
+          </div>
+        </div>
+        <div class="window-body search-body">
+          <div class="search-shell">
+            <div class="search-brand" aria-hidden="true">
+              <span class="sb-y">y</span><span class="sb-o">o</span><span class="sb-n">n</span><span class="sb-g">g</span><span class="sb-l">l</span><span class="sb-e">e</span><span class="sb-heart">♡</span>
+            </div>
+            <form class="search-bar" id="search-form">
+              <input type="text" class="search-input" id="search-input" autocomplete="off"
+                     placeholder="search the yongshan-web…" data-i18n-ph="search.ph"
+                     aria-label="Search query">
+              <button type="submit" class="search-go" data-i18n="search.go">search ♡</button>
+            </form>
+            <div class="search-meta" id="search-meta"></div>
+            <div class="search-results" id="search-results" aria-live="polite"></div>
+          </div>
+        </div>
+        <div class="window-footer">
+          <span data-i18n="search.footer.l">yongle_search v1.0 — 0 trackers, 100% bias</span>
+          <span data-i18n="search.footer.r">ranking: cuteness DESC</span>
+        </div>
+      </section>
+
+      <!-- 3e. SLIME RUNNER GAME WINDOW -->
+      <section class="window window-closed window-game" id="win-game" aria-labelledby="title-game" role="dialog">
+        <div class="window-header drag-handle">
+          <div class="window-title-container">
+            <span class="window-icon">🎮</span>
+            <span class="window-title" id="title-game">slime_run.exe</span>
+          </div>
+          <div class="window-controls">
+            <button class="win-btn win-btn-minimize" aria-label="Minimize window">_</button>
+            <button class="win-btn win-btn-maximize" aria-label="Maximize window">⛶</button>
+            <button class="win-btn win-btn-close" aria-label="Close window">♥</button>
+          </div>
+        </div>
+        <div class="window-body game-body">
+          <div class="game-shell">
+            <div class="game-offline-banner" id="game-offline-banner" hidden data-i18n="game.offline.banner">⚠ no internet detected — but the slime never stops running ♡</div>
+            <div class="game-hud">
+              <span><span data-i18n="game.score">score</span> <strong id="game-score">0</strong></span>
+              <span class="game-hud-hi">★ <span data-i18n="game.hi">best</span> <strong id="game-hi">0</strong></span>
+            </div>
+            <canvas class="game-canvas" id="game-canvas" width="480" height="160" aria-label="Slime runner mini game — press space or tap to jump"></canvas>
+            <div class="game-hint" data-i18n="game.hint">SPACE / tap to jump · avoid the bugs, catch nothing, just survive</div>
+          </div>
+        </div>
+        <div class="window-footer">
+          <span data-i18n="game.footer.l">slime_run.exe — canvas, 60fps, no engine</span>
+          <span data-i18n="game.footer.r">works offline ♡</span>
+        </div>
+      </section>
+
+      <!-- 4. EDUCATION & AWARDS WINDOW -->
+      <section class="window window-closed" id="win-education" aria-labelledby="title-education" role="dialog">
+        <div class="window-header drag-handle">
+          <div class="window-title-container">
+            <span class="window-icon">📝</span>
+            <span class="window-title" id="title-education">education_awards.txt</span>
+          </div>
+          <div class="window-controls">
+            <button class="win-btn win-btn-minimize" aria-label="Minimize window">_</button>
+            <button class="win-btn win-btn-maximize" aria-label="Maximize window">⛶</button>
+            <button class="win-btn win-btn-close" aria-label="Close window">♥</button>
+          </div>
+        </div>
+        <div class="window-body">
+          <div class="notepad-container">
+
+            <h3 class="notepad-section-title" data-i18n="edu.title">🎓 EDUCATION</h3>
+
+            <div class="education-item">
+              <div class="edu-header">
+                <span class="edu-degree" data-i18n="edu.d1">MSc in Artificial Intelligence</span>
+                <span class="edu-date" data-i18n="edu.d1.when">Aug 2023 – Apr 2024</span>
+              </div>
+              <div class="edu-meta" data-i18n="edu.d1.org">Nanyang Technological University, Singapore</div>
+              <div class="gpa-row">
+                <span class="gpa-label">GPA 4.21 / 5.0</span>
+                <div class="gpa-bar"><div class="gpa-fill" style="--v: 84%"></div></div>
+              </div>
+            </div>
+
+            <div class="education-item">
+              <div class="edu-header">
+                <span class="edu-degree" data-i18n-html="edu.d2.html">BSc in Computer Science <small>(Minor: Science Psychology)</small></span>
+                <span class="edu-date" data-i18n="edu.d2.when">Sep 2019 – Apr 2023</span>
+              </div>
+              <div class="edu-meta" data-i18n="edu.d2.org">University of Alberta, Canada</div>
+              <div class="gpa-row">
+                <span class="gpa-label">GPA 3.30 / 4.0</span>
+                <div class="gpa-bar"><div class="gpa-fill" style="--v: 82%"></div></div>
+              </div>
+            </div>
+
+            <hr class="notepad-divider" aria-hidden="true">
+
+            <h3 class="notepad-section-title" data-i18n="edu.awards">🏆 ACHIEVEMENTS UNLOCKED</h3>
+            <ul class="notepad-list">
+              <li><span class="bullet-arrow">★</span> <span data-i18n="edu.a1">International Student Scholarship — $2,000/year, 2019–2023, University of Alberta</span></li>
+              <li><span class="bullet-arrow">★</span> <span data-i18n="edu.a2">Graduate with Distinction — Top 5% of graduating class, University of Alberta (2023)</span></li>
+            </ul>
+
+          </div>
+        </div>
+        <div class="window-footer">
+          <span data-i18n="edu.footer.l">lines: 12</span>
+          <span data-i18n="edu.footer.r">UTF-8 ♡</span>
+        </div>
+      </section>
+
+      <!-- 5. ABOUT ME WINDOW -->
+      <section class="window window-closed intro-window intro-profile-window" id="win-profile-intro" aria-labelledby="title-profile-intro" role="dialog">
+        <div class="window-header drag-handle">
+          <div class="window-title-container">
+            <span class="window-icon">⚙️</span>
+            <span class="window-title" id="title-profile-intro">about_me.ini</span>
+          </div>
+          <div class="window-controls">
+            <button class="win-btn win-btn-minimize" aria-label="Minimize window">_</button>
+            <button class="win-btn win-btn-maximize" aria-label="Maximize window">⛶</button>
+            <button class="win-btn win-btn-close" aria-label="Close window">♥</button>
+          </div>
+        </div>
+        <div class="window-body">
+          <div class="intro-note">
+            <h3>[ABOUT_ME]</h3>
+            <p data-i18n="about.p1">
+              Systems/LMS &amp; Full-Stack Lead and AI/Data practitioner — 3+ years across platform
+              engineering, data science, and MLOps. I take models and products all the way to
+              production: cloud-native stacks on AWS/Azure, hardened security, and SRE automation
+              (backups, disaster recovery, auto-heal, observability).
+            </p>
+            <p class="intro-note-line2" data-i18n="about.p2">
+              This site is my proof of craft: hand-written HTML/CSS/JS, no frameworks —
+              a window manager, an 8-bit synth, and one very needy slime. ♡
+            </p>
+          </div>
+        </div>
+        <div class="window-footer">
+          <span data-i18n="about.footer.l">config parsed</span>
+          <span data-i18n="about.footer.r">0 errors</span>
+        </div>
+      </section>
+
+      <!-- 6. START HERE WINDOW -->
+      <section class="window window-closed intro-window intro-guide-window" id="win-start-here" aria-labelledby="title-start-here" role="dialog">
+        <div class="window-header drag-handle">
+          <div class="window-title-container">
+            <span class="window-icon">📌</span>
+            <span class="window-title" id="title-start-here">start_here.txt</span>
+          </div>
+          <div class="window-controls">
+            <button class="win-btn win-btn-minimize" aria-label="Minimize window">_</button>
+            <button class="win-btn win-btn-maximize" aria-label="Maximize window">⛶</button>
+            <button class="win-btn win-btn-close" aria-label="Close window">♥</button>
+          </div>
+        </div>
+        <div class="window-body">
+          <div class="intro-note intro-note-pinned">
+            <span class="sticker-pin" aria-hidden="true">📌</span>
+            <div>
+              <p data-i18n="start.welcome">Welcome to the desktop! Things to try:</p>
+              <ul class="start-tips">
+                <li data-i18n="start.t1">♡ pet the slime — click combos raise your fan count</li>
+                <li data-i18n="start.t2">🍬 feed it, ⭐ play with it, 🌙 let it nap</li>
+                <li data-i18n="start.t3">🖐️ drag the slime around · double-click for a trick</li>
+                <li data-i18n="start.t4">💗 ask_me.chat — an offline bot that answers questions about me</li>
+                <li data-i18n-html="start.t5">🖥️ terminal.exe — type <code>help</code>… or <code>neofetch</code></li>
+                <li data-i18n="start.t6">🔍 type anything in the address bar — this browser searches!</li>
+                <li data-i18n="start.t8">🕵️ type 'spy' in the address bar — ghost mode awaits</li>
+                <li data-i18n="start.t7">⚠️ petting it 30+ times may cause a love overflow…</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <div class="window-footer">
+          <span data-i18n="start.footer.l">quest tip</span>
+          <span data-i18n="start.footer.r">ready ♡</span>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Desktop Taskbar -->
+    <nav class="desktop-taskbar" aria-label="Desktop taskbar">
+      <div class="start-menu-wrapper">
+        <button class="btn-start-menu" id="start-btn" aria-haspopup="true" aria-expanded="false">
+          <span class="start-icon">♥</span> Start
+        </button>
+        <div class="start-menu" id="start-menu-popup" role="menu">
+          <div class="start-menu-header">
+            <h3>Yongshan Yu</h3>
+            <p data-i18n="menu.sub">YongshanOS ♡ v2.0 — handcrafted, no frameworks</p>
+          </div>
+          <a role="menuitem" class="start-menu-item" href="https://arc.attherootproject.ca/login/index.php?loginredirect=1" target="_blank" rel="noopener noreferrer">
+            <span class="item-icon">🌐</span> live: ARC Moodle LMS
+          </a>
+          <button role="menuitem" class="start-menu-item" data-target="win-career">
+            <span class="item-icon">📁</span> career_quest.exe
+          </button>
+          <button role="menuitem" class="start-menu-item" data-target="win-skills">
+            <span class="item-icon">💾</span> inventory.sav
+          </button>
+          <button role="menuitem" class="start-menu-item" data-target="win-chat">
+            <span class="item-icon">💬</span> stream_chat.log
+          </button>
+          <button role="menuitem" class="start-menu-item" data-target="win-ama">
+            <span class="item-icon">💗</span> ask_me.chat
+          </button>
+          <button role="menuitem" class="start-menu-item" data-target="win-terminal">
+            <span class="item-icon">🖥️</span> terminal.exe
+          </button>
+          <button role="menuitem" class="start-menu-item" data-target="win-search">
+            <span class="item-icon">🔍</span> yongle_search.exe
+          </button>
+          <button role="menuitem" class="start-menu-item" data-target="win-game">
+            <span class="item-icon">🎮</span> slime_run.exe
+          </button>
+          <button role="menuitem" class="start-menu-item" data-target="win-education">
+            <span class="item-icon">📝</span> education_awards.txt
+          </button>
+          <button role="menuitem" class="start-menu-item" data-target="win-profile-intro">
+            <span class="item-icon">⚙️</span> about_me.ini
+          </button>
+          <button role="menuitem" class="start-menu-item" data-target="win-start-here">
+            <span class="item-icon">📌</span> start_here.txt
+          </button>
+        </div>
+      </div>
+
+      <!-- pinned plugin chips: tiny apps that live next to Start -->
+      <div class="taskbar-plugins" id="taskbar-plugins">
+        <button class="plugin-chip" id="chip-ama" type="button" data-window="win-ama" title="ask_me.chat" aria-haspopup="dialog">
+          <span class="pc-ico" aria-hidden="true">💗</span><span class="pc-label">ask_me</span>
+        </button>
+        <button class="plugin-chip" id="chip-game" type="button" data-window="win-game" title="slime_run.exe" aria-haspopup="dialog">
+          <span class="pc-ico" aria-hidden="true">🎮</span><span class="pc-label">slime_run</span>
+        </button>
+        <button class="plugin-chip plugin-chip-fan" id="chip-fanwall" type="button" title="fan_wall.exe" aria-expanded="false">
+          <span class="pc-ico" aria-hidden="true">♥</span><span class="pc-count" id="chip-like-count">…</span>
+        </button>
+      </div>
+
+      <div class="taskbar-apps">
+        <!-- Apps dynamically highlight here -->
+      </div>
+
+      <div class="taskbar-tray">
+        <button class="tray-btn tray-btn-lang" id="btn-lang-toggle" aria-label="Switch language English / French" title="EN ⇄ FR">EN</button>
+        <button class="tray-btn tray-btn-theme" id="btn-theme-toggle" aria-label="Toggle light / dark mode" title="light ⇄ dark">🌙</button>
+        <button class="tray-btn tray-btn-sound" id="btn-sound-toggle" aria-label="Mute or unmute audio">🔊</button>
+        <span class="tray-icon" title="Secure connection">🔒</span>
+        <span class="tray-fans" id="tray-fans" title="Slime fan count">★0</span>
+        <span class="tray-time" id="tray-clock">12:00 PM</span>
+      </div>
+    </nav>
+
+    <!-- Page Footer -->
+    <footer class="desktop-footer">
+      <div class="footer-container">
+        <span class="footer-heart-star">♡ ☆</span>
+        <span class="footer-copyright" data-i18n="footer.copy">&copy; 2026 Yongshan Yu &bull; built with soft pixels and serious systems &bull; no frameworks were harmed</span>
+        <span class="footer-heart-star">☆ ♡</span>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Custom Y2K right-click context menu (items rendered by JS) -->
+  <div class="ctx-menu" id="ctx-menu" role="menu" aria-label="YongshanOS context menu" hidden></div>
+
+  <!-- lurker-mode stream chat: bottom-left mini danmaku (click to reopen the full chat) -->
+  <div class="mini-danmaku" id="mini-danmaku" aria-hidden="true"></div>
+
+  <!-- Toast Notification -->
+  <div id="email-toast" class="toast-hidden" role="status" aria-live="polite">Email copied to clipboard! ♡</div>
+
+  <script src="i18n.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
