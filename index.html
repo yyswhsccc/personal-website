@@ -34,9 +34,9 @@
       try {
         var pref = localStorage.getItem('yos-theme');
         pref = pref ? JSON.parse(pref) : 'auto';
+        if (pref === 'incognito') pref = 'dark'; // spy mode retired
         var dark = pref === 'dark' || (pref === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-        if (pref === 'incognito') document.documentElement.setAttribute('data-theme', 'incognito');
-        else if (dark) document.documentElement.setAttribute('data-theme', 'dark');
+        if (dark) document.documentElement.setAttribute('data-theme', 'dark');
       } catch (e) { /* first visit */ }
     })();
   </script>
@@ -67,9 +67,6 @@
 
   <!-- CRT scanline overlay -->
   <div class="crt-overlay" aria-hidden="true"></div>
-
-  <!-- Incognito static-noise overlay (visible only in spy mode) -->
-  <div class="incog-noise" aria-hidden="true"></div>
 
   <!-- Midnight-mode starfield (visible only in dark mode) -->
   <div class="night-sky" id="night-sky" aria-hidden="true"></div>
@@ -197,21 +194,6 @@
     <div class="heart-decor heart-3">♥</div>
     <div class="bow-decor bow-1">🎀</div>
 
-    <!-- pixel ghosts, only haunt in incognito -->
-    <div class="ghost-decor ghost-1">
-      <svg viewBox="0 0 16 18" shape-rendering="crispEdges" fill="currentColor">
-        <path d="M3 18 L3 6 Q3 1 8 1 Q13 1 13 6 L13 18 L11 16 L9 18 L8 16 L7 18 L5 16 Z" />
-        <rect x="5" y="6" width="2" height="3" fill="#16121c" />
-        <rect x="9" y="6" width="2" height="3" fill="#16121c" />
-      </svg>
-    </div>
-    <div class="ghost-decor ghost-2">
-      <svg viewBox="0 0 16 18" shape-rendering="crispEdges" fill="currentColor">
-        <path d="M3 18 L3 6 Q3 1 8 1 Q13 1 13 6 L13 18 L11 16 L9 18 L8 16 L7 18 L5 16 Z" />
-        <rect x="5" y="6" width="2" height="3" fill="#16121c" />
-        <rect x="9" y="6" width="2" height="3" fill="#16121c" />
-      </svg>
-    </div>
   </div>
 
   <!-- Main Retro Browser Wrapper -->
@@ -269,37 +251,37 @@
               </span>
               <span class="pixel-browser-g">M</span>
             </span>
-            <div class="icon-label">live: ARC Moodle LMS</div>
+            <div class="icon-label" data-i18n="file.moodle">live: ARC Moodle LMS</div>
           </a>
 
           <!-- Career quest -->
           <button class="desktop-icon-btn" data-window="win-career" aria-haspopup="dialog">
             <svg class="icon-visual" viewBox="0 0 32 32" width="46" height="46"><use href="#y2k-pink-folder" /></svg>
-            <div class="icon-label">career_quest.exe</div>
+            <div class="icon-label" data-i18n="file.career">career_quest.exe</div>
           </button>
 
           <!-- Inventory / skills -->
           <button class="desktop-icon-btn" data-window="win-skills" aria-haspopup="dialog">
             <svg class="icon-visual" viewBox="0 0 32 32" width="46" height="46"><use href="#y2k-sav-icon" /></svg>
-            <div class="icon-label">inventory.sav</div>
+            <div class="icon-label" data-i18n="file.inventory">inventory.sav</div>
           </button>
 
           <!-- AMA bot (about_me lives in here now) -->
           <button class="desktop-icon-btn" data-window="win-ama" aria-haspopup="dialog">
             <svg class="icon-visual" viewBox="0 0 32 32" width="46" height="46"><use href="#y2k-ama-icon" /></svg>
-            <div class="icon-label">ask_me.chat</div>
+            <div class="icon-label" data-i18n="file.ama">ask_me.chat</div>
           </button>
 
           <!-- Terminal -->
           <button class="desktop-icon-btn" data-window="win-terminal" aria-haspopup="dialog">
             <svg class="icon-visual" viewBox="0 0 32 32" width="46" height="46"><use href="#y2k-term-icon" /></svg>
-            <div class="icon-label">terminal.exe</div>
+            <div class="icon-label" data-i18n="file.terminal">terminal.exe</div>
           </button>
 
           <!-- Education -->
           <button class="desktop-icon-btn" data-window="win-education" aria-haspopup="dialog">
             <svg class="icon-visual" viewBox="0 0 32 32" width="46" height="46"><use href="#y2k-txt-icon" /></svg>
-            <div class="icon-label">education_awards.txt</div>
+            <div class="icon-label" data-i18n="file.edu">education_awards.txt</div>
           </button>
 
         </div>
@@ -339,9 +321,6 @@
                 <span class="slime-halo" aria-hidden="true"></span>
                 <img src="assets/slime_pet_cutout.png" alt="" draggable="false">
               </button>
-
-              <!-- ghost-hour mist (incognito only) -->
-              <div class="habitat-fog" aria-hidden="true"></div>
 
               <!-- Floating Tamagotchi Reaction Speech Bubble -->
               <div class="tamagotchi-bubble" id="slime-speech-bubble">Hi there! ♡</div>
@@ -419,7 +398,7 @@
         <div class="window-header drag-handle">
           <div class="window-title-container">
             <span class="window-icon">📁</span>
-            <span class="window-title" id="title-career">career_quest.exe</span>
+            <span class="window-title" id="title-career" data-i18n="file.career">career_quest.exe</span>
           </div>
           <div class="window-controls">
             <button class="win-btn win-btn-minimize" aria-label="Minimize window">_</button>
@@ -663,7 +642,7 @@
         <div class="window-header drag-handle">
           <div class="window-title-container">
             <span class="window-icon">💾</span>
-            <span class="window-title" id="title-skills">inventory.sav</span>
+            <span class="window-title" id="title-skills" data-i18n="file.inventory">inventory.sav</span>
           </div>
           <div class="window-controls">
             <button class="win-btn win-btn-minimize" aria-label="Minimize window">_</button>
@@ -753,7 +732,7 @@
         <div class="window-header drag-handle">
           <div class="window-title-container">
             <span class="window-icon">💬</span>
-            <span class="window-title" id="title-chat">stream_chat.log</span>
+            <span class="window-title" id="title-chat" data-i18n="file.chat">stream_chat.log</span>
           </div>
           <div class="window-controls">
             <button class="win-btn win-btn-minimize" aria-label="Minimize window">_</button>
@@ -785,7 +764,7 @@
         <div class="window-header drag-handle">
           <div class="window-title-container">
             <span class="window-icon">💗</span>
-            <span class="window-title" id="title-ama">ask_me.chat</span>
+            <span class="window-title" id="title-ama" data-i18n="file.ama">ask_me.chat</span>
           </div>
           <div class="window-controls">
             <button class="win-btn win-btn-minimize" aria-label="Minimize window">_</button>
@@ -816,7 +795,7 @@
         <div class="window-header drag-handle">
           <div class="window-title-container">
             <span class="window-icon">🖥️</span>
-            <span class="window-title" id="title-terminal">terminal.exe</span>
+            <span class="window-title" id="title-terminal" data-i18n="file.terminal">terminal.exe</span>
           </div>
           <div class="window-controls">
             <button class="win-btn win-btn-minimize" aria-label="Minimize window">_</button>
@@ -845,7 +824,7 @@
         <div class="window-header drag-handle">
           <div class="window-title-container">
             <span class="window-icon">🔍</span>
-            <span class="window-title" id="title-search">yongle_search.exe</span>
+            <span class="window-title" id="title-search" data-i18n="file.search">yongle_search.exe</span>
           </div>
           <div class="window-controls">
             <button class="win-btn win-btn-minimize" aria-label="Minimize window">_</button>
@@ -879,7 +858,7 @@
         <div class="window-header drag-handle">
           <div class="window-title-container">
             <span class="window-icon">🎮</span>
-            <span class="window-title" id="title-game">slime_run.exe</span>
+            <span class="window-title" id="title-game" data-i18n="file.game">slime_run.exe</span>
           </div>
           <div class="window-controls">
             <button class="win-btn win-btn-minimize" aria-label="Minimize window">_</button>
@@ -892,6 +871,7 @@
             <div class="game-offline-banner" id="game-offline-banner" hidden data-i18n="game.offline.banner">⚠ no internet detected — but the slime never stops running ♡</div>
             <div class="game-hud">
               <span><span data-i18n="game.score">score</span> <strong id="game-score">0</strong></span>
+              <button class="game-lb-btn" type="button" data-window="win-leaderboard" data-i18n="game.lb">🏆 hall of slime</button>
               <span class="game-hud-hi">★ <span data-i18n="game.hi">best</span> <strong id="game-hi">0</strong></span>
             </div>
             <canvas class="game-canvas" id="game-canvas" width="480" height="160" tabindex="0" role="img" aria-label="Slime runner mini game — press Space or Enter to jump, tap on touch screens"></canvas>
@@ -904,12 +884,73 @@
         </div>
       </section>
 
+      <!-- 3f. HALL OF SLIME (leaderboard) -->
+      <section class="window window-closed window-leaderboard" id="win-leaderboard" aria-labelledby="title-leaderboard" role="dialog">
+        <div class="window-header drag-handle">
+          <div class="window-title-container">
+            <span class="window-icon">🏆</span>
+            <span class="window-title" id="title-leaderboard" data-i18n="file.leaderboard">hall_of_slime.exe</span>
+          </div>
+          <div class="window-controls">
+            <button class="win-btn win-btn-minimize" aria-label="Minimize window">_</button>
+            <button class="win-btn win-btn-maximize" aria-label="Maximize window">⛶</button>
+            <button class="win-btn win-btn-close" aria-label="Close window">♥</button>
+          </div>
+        </div>
+        <div class="window-body">
+          <div class="lb-shell">
+            <div class="lb-global" id="lb-global-line" aria-live="polite">…</div>
+            <div class="lb-sign-row" id="lb-sign-row" hidden>
+              <span><span data-i18n="lb.sign.a">🏆 top-10 run (</span><strong id="lb-pending-score">0</strong><span data-i18n="lb.sign.b">)! sign it:</span></span>
+              <input type="text" id="lb-initials" class="lb-initials" maxlength="3" placeholder="AAA" aria-label="Enter your 3-letter arcade initials">
+              <button type="button" class="lb-sign-btn" id="lb-sign-btn" data-i18n="lb.signbtn">sign ♡</button>
+            </div>
+            <h3 class="panel-heading" data-i18n="lb.local">LOCAL TOP 10</h3>
+            <ol class="lb-list" id="lb-local-list"></ol>
+            <div class="lb-keepsake" id="lb-keepsake" hidden></div>
+          </div>
+        </div>
+        <div class="window-footer">
+          <span data-i18n="lb.footer.l">arcade rules: 3 letters, no shame</span>
+          <span data-i18n="lb.footer.r">global census via shared counters</span>
+        </div>
+      </section>
+
+      <!-- 3g. INTERVIEW SCHEDULER -->
+      <section class="window window-closed window-interview" id="win-interview" aria-labelledby="title-interview" role="dialog">
+        <div class="window-header drag-handle">
+          <div class="window-title-container">
+            <span class="window-icon">📅</span>
+            <span class="window-title" id="title-interview" data-i18n="file.interview">interview_scheduler.exe</span>
+          </div>
+          <div class="window-controls">
+            <button class="win-btn win-btn-minimize" aria-label="Minimize window">_</button>
+            <button class="win-btn win-btn-maximize" aria-label="Maximize window">⛶</button>
+            <button class="win-btn win-btn-close" aria-label="Close window">♥</button>
+          </div>
+        </div>
+        <div class="window-body">
+          <div class="interview-shell">
+            <p class="interview-intro" data-i18n="iv.intro">The HR fairy sent you! Pick a slot in Yongshan's real availability below — once you confirm, both of you automatically receive a confirmation email. ♡</p>
+            <div class="interview-embed" id="interview-embed"></div>
+            <div class="interview-actions">
+              <a class="interview-mail-btn" id="interview-mail" href="mailto:yuyongshan573@gmail.com" data-i18n="iv.mail">✉ email Yongshan now (prefilled)</a>
+              <a class="interview-li-btn" href="http://www.linkedin.com/in/yongshan-yu-b9a713227" target="_blank" rel="noopener noreferrer">🔗 LinkedIn</a>
+            </div>
+          </div>
+        </div>
+        <div class="window-footer">
+          <span data-i18n="iv.footer.l">powered by Google Calendar appointments</span>
+          <span data-i18n="iv.footer.r">response time: fast ♡</span>
+        </div>
+      </section>
+
       <!-- 4. EDUCATION & AWARDS WINDOW -->
       <section class="window window-closed" id="win-education" aria-labelledby="title-education" role="dialog">
         <div class="window-header drag-handle">
           <div class="window-title-container">
             <span class="window-icon">📝</span>
-            <span class="window-title" id="title-education">education_awards.txt</span>
+            <span class="window-title" id="title-education" data-i18n="file.edu">education_awards.txt</span>
           </div>
           <div class="window-controls">
             <button class="win-btn win-btn-minimize" aria-label="Minimize window">_</button>
@@ -967,7 +1008,7 @@
         <div class="window-header drag-handle">
           <div class="window-title-container">
             <span class="window-icon">📌</span>
-            <span class="window-title" id="title-start-here">start_here.txt</span>
+            <span class="window-title" id="title-start-here" data-i18n="file.start">start_here.txt</span>
           </div>
           <div class="window-controls">
             <button class="win-btn win-btn-minimize" aria-label="Minimize window">_</button>
@@ -987,7 +1028,7 @@
                 <li data-i18n="start.t4">💗 ask_me.chat — an offline bot that answers questions about me</li>
                 <li data-i18n-html="start.t5">🖥️ terminal.exe — type <code>help</code>… or <code>neofetch</code></li>
                 <li data-i18n="start.t6">🔍 type anything in the address bar — this browser searches!</li>
-                <li data-i18n="start.t8">🕵️ type 'spy' in the address bar — ghost mode awaits</li>
+                <li data-i18n="start.t8">🌙 in dark mode the slime sometimes goes to bed — knock to wake it</li>
                 <li data-i18n="start.t7">⚠️ petting it 30+ times may cause a love overflow…</li>
               </ul>
             </div>
@@ -1013,34 +1054,40 @@
             <p data-i18n="menu.sub">YongshanOS ♡ v2.0 — handcrafted, no frameworks</p>
           </div>
           <a role="menuitem" class="start-menu-item" href="https://arc.attherootproject.ca/login/index.php?loginredirect=1" target="_blank" rel="noopener noreferrer">
-            <span class="item-icon">🌐</span> live: ARC Moodle LMS
+            <span class="item-icon">🌐</span> <span data-i18n="file.moodle">live: ARC Moodle LMS</span>
           </a>
           <button role="menuitem" class="start-menu-item" data-target="win-career">
-            <span class="item-icon">📁</span> career_quest.exe
+            <span class="item-icon">📁</span> <span data-i18n="file.career">career_quest.exe</span>
           </button>
           <button role="menuitem" class="start-menu-item" data-target="win-skills">
-            <span class="item-icon">💾</span> inventory.sav
+            <span class="item-icon">💾</span> <span data-i18n="file.inventory">inventory.sav</span>
           </button>
           <button role="menuitem" class="start-menu-item" data-target="win-chat">
-            <span class="item-icon">💬</span> stream_chat.log
+            <span class="item-icon">💬</span> <span data-i18n="file.chat">stream_chat.log</span>
           </button>
           <button role="menuitem" class="start-menu-item" data-target="win-ama">
-            <span class="item-icon">💗</span> ask_me.chat
+            <span class="item-icon">💗</span> <span data-i18n="file.ama">ask_me.chat</span>
           </button>
           <button role="menuitem" class="start-menu-item" data-target="win-terminal">
-            <span class="item-icon">🖥️</span> terminal.exe
+            <span class="item-icon">🖥️</span> <span data-i18n="file.terminal">terminal.exe</span>
           </button>
           <button role="menuitem" class="start-menu-item" data-target="win-search">
-            <span class="item-icon">🔍</span> yongle_search.exe
+            <span class="item-icon">🔍</span> <span data-i18n="file.search">yongle_search.exe</span>
           </button>
           <button role="menuitem" class="start-menu-item" data-target="win-game">
-            <span class="item-icon">🎮</span> slime_run.exe
+            <span class="item-icon">🎮</span> <span data-i18n="file.game">slime_run.exe</span>
+          </button>
+          <button role="menuitem" class="start-menu-item" data-target="win-leaderboard">
+            <span class="item-icon">🏆</span> <span data-i18n="file.leaderboard">hall_of_slime.exe</span>
+          </button>
+          <button role="menuitem" class="start-menu-item" data-target="win-interview">
+            <span class="item-icon">📅</span> <span data-i18n="file.interview">interview_scheduler.exe</span>
           </button>
           <button role="menuitem" class="start-menu-item" data-target="win-education">
-            <span class="item-icon">📝</span> education_awards.txt
+            <span class="item-icon">📝</span> <span data-i18n="file.edu">education_awards.txt</span>
           </button>
           <button role="menuitem" class="start-menu-item" data-target="win-start-here">
-            <span class="item-icon">📌</span> start_here.txt
+            <span class="item-icon">📌</span> <span data-i18n="file.start">start_here.txt</span>
           </button>
         </div>
       </div>

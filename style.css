@@ -51,6 +51,9 @@
 html {
   scroll-behavior: smooth;
   font-size: 16px;
+  /* focus-scrolling keeps elements clear of the sticky taskbar + chrome */
+  scroll-padding-top: 96px;
+  scroll-padding-bottom: calc(var(--taskbar-avoid-bottom, 68px) + 16px);
 }
 
 body {
@@ -553,10 +556,7 @@ input {
   user-select: none;
 }
 
-.slime-pet:focus-visible {
-  outline: 2px dashed var(--pink-deep);
-  outline-offset: 3px;
-}
+
 
 /* Angel halo — appears at max affection */
 .slime-halo {
@@ -1719,15 +1719,19 @@ input {
 
 .equip-item {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
   align-items: center;
-  gap: 7px;
+  column-gap: 7px;
+  row-gap: 2px;
   padding: 6px 9px;
   background: var(--panel);
   border: 2px solid var(--purple-dark);
   box-shadow: 2px 2px 0 var(--blue-dark);
   transition: transform 0.1s, background 0.1s;
 }
+.equip-item .equip-icon { grid-row: 1 / span 2; }
+.equip-item .equip-lv { grid-column: 2; justify-self: start; }
 
 .equip-item:hover {
   background: var(--yellow);
@@ -1740,9 +1744,9 @@ input {
   font-family: var(--font-pixel);
   font-size: 0.95rem;
   color: var(--text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  overflow: visible;
+  line-height: 1.15;
 }
 
 .equip-lv {
@@ -2343,9 +2347,9 @@ input {
   gap: 6px;
   flex-grow: 1;
   min-width: 0;
-  margin: 0 12px;
+  margin: -6px 12px;
   overflow-x: auto;
-  padding-bottom: 2px;
+  padding: 8px 10px;
 }
 
 .taskbar-app-btn {
@@ -2746,7 +2750,7 @@ input {
 
 /* =====================================================
    v3.0 ADDITIONS — browser features, fan wall, i18n,
-   themes (midnight / incognito), slime runner game
+   themes (light / midnight), slime runner game
    ===================================================== */
 
 /* ---------- taskbar tray buttons (lang / theme / sound) ---------- */
@@ -3347,82 +3351,8 @@ html[data-theme="dark"] .night-sky { display: block; }
   100% { opacity: 0; transform: rotate(-24deg) translateX(-46vw); }
 }
 
-/* =====================================================
-   INCOGNITO — "SPY MODE" 🕵️
-   grayscale-noir + one hot magenta accent + film grain
-   ===================================================== */
-html[data-theme="incognito"] {
-  --pink: #4a3d52;
-  --pink-hot: #ff4fa8;
-  --pink-deep: #ff2f9a;
-  --purple: #59506b;
-  --purple-dark: #b0a6c4;
-  --blue: #4b5261;
-  --blue-dark: #97a4bd;
-  --mint: #5d7268;
-  --yellow: #b8ad7e;
-  --bg: #16121c;
-  --cream: #1c1724;
-  --text: #e9e4f0;
-  --text-soft: #9c93ab;
-  --border: #5d5470;
-  --ink: #e9e4f0;
-  --panel: #241d30;
-  --panel-pink: #2b2237;
-  --panel-purple: #282137;
-  --panel-blue: #232130;
-  --shadow: rgba(0, 0, 0, 0.7);
-  --dither-pink: conic-gradient(rgba(255, 79, 168, 0.10) 25%, transparent 0 50%, rgba(255, 79, 168, 0.10) 0 75%, transparent 0);
-  --dither-purple: conic-gradient(rgba(93, 84, 112, 0.24) 25%, transparent 0 50%, rgba(93, 84, 112, 0.24) 0 75%, transparent 0);
-}
-
-html[data-theme="incognito"] body {
-  background-image:
-    linear-gradient(rgba(93, 84, 112, 0.16) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(93, 84, 112, 0.12) 1px, transparent 1px),
-    linear-gradient(135deg, #141019 0%, #191420 50%, #15121d 100%);
-  background-size: 24px 24px, 24px 24px, auto;
-}
-html[data-theme="incognito"] .desktop-area {
-  background: var(--bg);
-}
-html[data-theme="incognito"] .browser-header {
-  background: linear-gradient(90deg, #3a3145, #2b2437, #3a3145);
-  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.08);
-}
-
-/* soft noir vignette — replaces the old flickering film grain
-   (the spy-mode signature is now the ghost slime, not noise) */
-.incog-noise {
-  display: none;
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 99991;
-  background: radial-gradient(ellipse at 50% 42%, transparent 55%, rgba(6, 4, 12, 0.5) 100%);
-}
-html[data-theme="incognito"] .incog-noise { display: block; }
-
-/* the slime keeps its true colours in spy mode — it just turns into a ghost
-   (visibility handled by the ghost engine in script.js) */
-html[data-theme="incognito"] .decorations-bg { opacity: 0.35; }
-html[data-theme="incognito"] .decorations-bg .heart-decor,
-html[data-theme="incognito"] .decorations-bg .star-decor { color: #6a6180; }
-html[data-theme="incognito"] .cloud-decor { filter: grayscale(1) brightness(0.4); }
-html[data-theme="incognito"] .profile-name {
-  color: var(--purple-dark);
-  text-shadow: 2px 2px 0 #3a3145;
-}
-html[data-theme="incognito"] ::selection {
-  background: #5d5470;
-}
-
-
-/* dark/incognito: keep white-ink details readable */
+/* dark: keep white-ink details readable */
 html[data-theme="dark"] .profile-card { box-shadow: 0 0 0 2px #170d29, 0 0 18px rgba(255,110,192,.3), 6px 6px 0 var(--shadow); }
-html[data-theme="incognito"] .profile-card { box-shadow: 0 0 0 2px #141019, 6px 6px 0 var(--shadow); }
-html[data-theme="incognito"] .window { box-shadow: 0 0 0 2px #141019, 8px 8px 0 var(--shadow); }
-
 /* =====================================================
    v3.1 — cleanup pass: outfits, ghost mode, fan-wall chip,
    taskbar plugins, mini danmaku, dark/incog readability
@@ -3441,7 +3371,7 @@ html.is-booting body {
 }
 .slime-halo { z-index: 4; }
 
-/* ---------- ghost engine (incognito) ---------- */
+/* ---------- away engine: at night the slime sometimes goes to bed ---------- */
 .slime-pet {
   transition:
     transform var(--slime-step, 900ms) steps(6, end),
@@ -3451,59 +3381,9 @@ html.is-booting body {
   opacity: 0;
   pointer-events: none;
 }
-html[data-theme="incognito"] .slime-pet:not(.is-ghost-hidden) {
-  opacity: 0.88;
-}
-html[data-theme="incognito"] .slime-pet:not(.is-ghost-hidden) img {
-  filter: drop-shadow(0 0 10px rgba(207, 195, 230, 0.75));
-  animation: ghost-hover 2.2s ease-in-out infinite;
-}
-@keyframes ghost-hover {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-4px); }
-}
 
-/* dim, misty habitat while the ghost realm is active —
-   the overlay only darkens the BACKDROP (z-index 1); the slime
-   (z-index 3) floats above it in full colour, like a proper apparition */
-html[data-theme="incognito"] .profile-avatar-wrapper::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  pointer-events: none;
-  background: rgba(20, 14, 26, 0.52);
-}
-.habitat-fog {
-  display: none;
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 4;
-  background:
-    radial-gradient(ellipse 70% 38% at 20% 78%, rgba(207, 195, 230, 0.28), transparent 70%),
-    radial-gradient(ellipse 60% 30% at 75% 84%, rgba(176, 166, 196, 0.24), transparent 70%);
-  animation: fog-drift 9s ease-in-out infinite alternate;
-}
-html[data-theme="incognito"] .habitat-fog { display: block; }
-@keyframes fog-drift {
-  from { transform: translateX(-7px); opacity: 0.8; }
-  to { transform: translateX(9px); opacity: 1; }
-}
 
-/* floating pixel ghosts in the background (incognito only) */
-.ghost-decor {
-  display: none;
-  position: absolute;
-  color: #cfc3e8;
-  font-family: var(--font-pixel);
-  opacity: 0.5;
-  animation: float 6s infinite ease-in-out;
-}
-html[data-theme="incognito"] .ghost-decor { display: block; }
-.ghost-1 { top: 30%; left: 12%; }
-.ghost-2 { top: 62%; right: 14%; animation-delay: 2.2s; }
-.ghost-decor svg { width: 30px; height: 34px; }
+
 
 /* ---------- taskbar plugin chips (next to Start) ---------- */
 .taskbar-plugins {
@@ -3512,7 +3392,10 @@ html[data-theme="incognito"] .ghost-decor { display: block; }
   gap: 5px;
   margin-left: 8px;
   min-width: 0;
-  overflow: hidden;
+  overflow: visible; /* never clip the focus ring */
+  padding: 4px 6px;
+  margin-top: -4px;
+  margin-bottom: -4px;
 }
 .plugin-chip {
   display: inline-flex;
@@ -3670,21 +3553,18 @@ html[data-theme="incognito"] .ghost-decor { display: block; }
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 0.9; transform: translateY(0); }
 }
-html[data-theme="dark"] .dm-line,
-html[data-theme="incognito"] .dm-line {
+html[data-theme="dark"] .dm-line{
   background: rgba(34, 20, 58, 0.88);
   border-color: var(--pink-hot);
 }
-html[data-theme="dark"] .dm-line:hover,
-html[data-theme="incognito"] .dm-line:hover {
+html[data-theme="dark"] .dm-line:hover{
   background: rgba(49, 32, 78, 0.96);
 }
 
 /* ---------- dark / incognito readability pass ---------- */
 
 /* neon-plum HUD instead of the washed grey box */
-html[data-theme="dark"] .slime-hud,
-html[data-theme="incognito"] .slime-hud {
+html[data-theme="dark"] .slime-hud{
   background:
     linear-gradient(rgba(26, 15, 46, 0.82), rgba(26, 15, 46, 0.82)),
     var(--dither-pink);
@@ -3695,82 +3575,57 @@ html[data-theme="incognito"] .slime-hud {
     0 0 14px rgba(255, 110, 192, 0.26),
     inset 0 0 0 1.5px rgba(255, 255, 255, 0.05);
 }
-html[data-theme="dark"] .slime-hearts,
-html[data-theme="incognito"] .slime-hearts {
+html[data-theme="dark"] .slime-hearts{
   text-shadow: 0 0 7px rgba(255, 110, 192, 0.75);
 }
-html[data-theme="dark"] .energy-bar,
-html[data-theme="incognito"] .energy-bar {
+html[data-theme="dark"] .energy-bar{
   border-color: var(--pink-hot);
   background: repeating-linear-gradient(90deg, #1a0f2e 0 4px, #31204e 4px 8px);
 }
 html[data-theme="dark"] .energy-label,
-html[data-theme="incognito"] .energy-label,
-html[data-theme="dark"] .slime-mood-row span,
-html[data-theme="incognito"] .slime-mood-row span {
+html[data-theme="dark"] .slime-mood-row span{
   color: #d9c8f2;
 }
-html[data-theme="dark"] .slime-mood-row strong,
-html[data-theme="incognito"] .slime-mood-row strong {
+html[data-theme="dark"] .slime-mood-row strong{
   color: #ffb7e2;
 }
-html[data-theme="dark"] .pet-action-btn,
-html[data-theme="incognito"] .pet-action-btn {
+html[data-theme="dark"] .pet-action-btn{
   background: linear-gradient(#3a2258, #6d2c5c);
   color: #ffe6f4;
   border-color: var(--pink-hot);
   box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.6);
   text-shadow: 1px 1px 0 rgba(20, 6, 30, 0.6);
 }
-html[data-theme="dark"] .pet-action-btn:hover,
-html[data-theme="incognito"] .pet-action-btn:hover {
+html[data-theme="dark"] .pet-action-btn:hover{
   background: linear-gradient(#4b2a6b, #8a3a72);
 }
 
 /* PLAYER_PROFILE.SAV board: drop the mustard gradient in the dark */
-html[data-theme="dark"] .pixel-quest-board,
-html[data-theme="incognito"] .pixel-quest-board {
+html[data-theme="dark"] .pixel-quest-board{
   background:
     linear-gradient(135deg, rgba(255, 110, 192, 0.16), transparent 55%),
     var(--panel-pink);
 }
-html[data-theme="dark"] .quest-intro-banner,
-html[data-theme="incognito"] .quest-intro-banner {
+html[data-theme="dark"] .quest-intro-banner{
   background:
     linear-gradient(90deg, rgba(255, 110, 192, 0.18), transparent 70%),
     var(--panel-pink);
   border-color: var(--pink-hot);
 }
-html[data-theme="dark"] .chat-pinned,
-html[data-theme="incognito"] .chat-pinned {
+html[data-theme="dark"] .chat-pinned{
   background: linear-gradient(90deg, rgba(255, 110, 192, 0.28), rgba(138, 99, 214, 0.28));
   border-color: var(--pink-hot);
 }
 
 /* white pixel text-shadows become ink shadows in the dark */
-html[data-theme="dark"] .icon-label,
-html[data-theme="incognito"] .icon-label {
+html[data-theme="dark"] .icon-label{
   text-shadow: 1.5px 1.5px 0 rgba(0, 0, 0, 0.55);
 }
-html[data-theme="dark"] .combo-float,
-html[data-theme="incognito"] .combo-float {
+html[data-theme="dark"] .combo-float{
   text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.6), 3px 3px 0 var(--purple);
 }
-html[data-theme="dark"] .fan-wall-count-num,
-html[data-theme="incognito"] .fan-wall-count-num {
+html[data-theme="dark"] .fan-wall-count-num{
   text-shadow: 0 0 8px rgba(255, 110, 192, 0.7);
-}
-
-/* incognito: brighter ink so nothing sinks into the ash */
-html[data-theme="incognito"] {
-  --text: #f2eef7;
-  --text-soft: #b3a8c6;
-  --purple-dark: #cfc5e6;
-  --border: #6e6386;
-}
-html[data-theme="incognito"] .window-title,
-html[data-theme="incognito"] .panel-heading {
-  color: #cfc5e6;
 }
 
 /* =====================================================
@@ -3778,8 +3633,7 @@ html[data-theme="incognito"] .panel-heading {
    ===================================================== */
 
 /* dark themes: drop the ruled-paper lines that fought the text */
-html[data-theme="dark"] .notepad-container,
-html[data-theme="incognito"] .notepad-container {
+html[data-theme="dark"] .notepad-container{
   background-image: none;
 }
 
@@ -3806,7 +3660,6 @@ html[data-theme="incognito"] .notepad-container {
 /* one loud, consistent keyboard focus ring everywhere */
 button:focus-visible,
 a:focus-visible,
-input:focus-visible,
 summary:focus-visible,
 canvas:focus-visible,
 [tabindex]:focus-visible {
@@ -3869,7 +3722,6 @@ canvas:focus-visible,
     border: 2px solid CanvasText;
   }
   .crt-overlay,
-  .incog-noise,
   .decorations-bg,
   .trail-sparkle {
     display: none;
@@ -3895,4 +3747,384 @@ canvas:focus-visible,
 .ama-search-btn:hover {
   transform: translateY(-1px);
   filter: brightness(1.05);
+}
+
+/* =====================================================
+   v3.3 — visibility & delight pass
+   ===================================================== */
+
+/* ---------- THE focus ring: yellow + ink double ring, unmissable ---------- */
+button:focus-visible,
+a:focus-visible,
+summary:focus-visible,
+canvas:focus-visible,
+[tabindex]:focus-visible {
+  /* triple ring: white gap → near-black → yellow. reads on pastel AND dark */
+  outline: 3px solid transparent !important; /* painted by forced-colors mode */
+  outline-offset: 8px !important;
+  box-shadow:
+    0 0 0 2px #ffffff,
+    0 0 0 6px #14020e,
+    0 0 0 9px #ffd400 !important;
+  border-radius: 1px;
+}
+.window:focus-visible {
+  outline: 3px solid transparent !important;
+  outline-offset: -3px !important;
+  box-shadow:
+    inset 0 0 0 3px #ffd400,
+    inset 0 0 0 6px #14020e,
+    0 0 0 2px #ffffff !important;
+}
+#main-desktop:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* the slime is special: it glows instead of getting boxed in */
+.slime-pet:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+.slime-pet:focus-visible img {
+  filter:
+    drop-shadow(0 0 4px #ffd400)
+    drop-shadow(0 0 10px var(--pink-hot))
+    drop-shadow(0 0 18px var(--pink-hot));
+}
+
+/* ---------- dark mode: no more unreadable yellow hovers ---------- */
+html[data-theme="dark"] .quest-btn:hover,
+html[data-theme="dark"] .quest-btn:focus-visible,
+html[data-theme="dark"] .skill-chip:hover,
+html[data-theme="dark"] .loot-chip:hover,
+html[data-theme="dark"] .equip-item:hover,
+html[data-theme="dark"] .project-live-link:hover,
+html[data-theme="dark"] .project-live-link:focus-visible,
+html[data-theme="dark"] .ama-chip:hover {
+  background: linear-gradient(#6d2c5c, #8a3a72);
+  color: #ffe6f4;
+  border-color: var(--pink-hot);
+}
+html[data-theme="dark"] .equip-item:hover .equip-name,
+html[data-theme="dark"] .equip-item:hover .equip-lv {
+  color: #ffe6f4;
+}
+html[data-theme="dark"] .btn-save:hover,
+html[data-theme="dark"] .desktop-file-link:hover {
+  background: #6d2c5c;
+  color: #ffe6f4;
+}
+
+/* ---------- equipped items: marquee names instead of "AWS S3/…" ---------- */
+.equip-name {
+  overflow: hidden;
+  text-overflow: clip;
+}
+.equip-name .marquee-inner {
+  display: inline-block;
+  white-space: nowrap;
+  animation: equip-marquee 5s linear infinite alternate;
+  animation-delay: 1.2s;
+}
+@keyframes equip-marquee {
+  0%, 22% { transform: translateX(0); }
+  78%, 100% { transform: translateX(var(--marquee-shift, -40px)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .equip-name .marquee-inner { animation: none; }
+}
+
+/* ---------- ask_me input: soft, pixel, alive ---------- */
+.ama-input {
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.92)),
+    var(--dither-pink);
+  background-size: auto, 8px 8px;
+  border: 2px solid var(--pink-hot);
+  box-shadow: inset 2px 2px 0 rgba(240, 80, 159, 0.10);
+  font-family: var(--font-pixel);
+  font-size: 16px;
+  color: var(--text);
+  caret-color: var(--pink-deep);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.ama-input::placeholder {
+  font-family: var(--font-pixel);
+  color: var(--pink-deep);
+  opacity: 0.55;
+}
+.ama-input:focus {
+  border-color: var(--pink-deep);
+  box-shadow:
+    inset 2px 2px 0 rgba(240, 80, 159, 0.12),
+    0 0 10px rgba(240, 80, 159, 0.25);
+}
+html[data-theme="dark"] .ama-input {
+  background:
+    linear-gradient(rgba(34, 20, 58, 0.92), rgba(34, 20, 58, 0.92)),
+    var(--dither-pink);
+  background-size: auto, 8px 8px;
+  color: #ffe6f4;
+}
+html[data-theme="dark"] .ama-input::placeholder {
+  color: #ff9ed4;
+}
+
+/* danmaku hides while the start menu is open (no more overlap) */
+.mini-danmaku.dm-suppressed {
+  display: none;
+}
+
+/* start menu open → the danmaku steps aside (no overlap) */
+body:has(.start-menu.show) .mini-danmaku {
+  display: none;
+}
+
+/* canvas focus policy, deterministic: NO ring during gameplay ever.
+   Only a genuine Tab-landing (JS adds .ring-on) lights it up. */
+.game-canvas:focus-visible {
+  outline: none !important;
+  box-shadow: inset 0 -4px 0 rgba(154, 111, 224, 0.25) !important;
+}
+.game-canvas.ring-on:focus-visible {
+  outline: 3px solid transparent !important;
+  box-shadow:
+    0 0 0 2px #ffffff,
+    0 0 0 6px #14020e,
+    0 0 0 9px #ffd400 !important;
+}
+
+/* =====================================================
+   v5 — hall of slime, interview scheduler, game hint
+   ===================================================== */
+.game-lb-btn {
+  font-family: var(--font-pixel);
+  font-size: 0.9rem;
+  padding: 2px 9px;
+  background: linear-gradient(var(--panel-pink), var(--pink));
+  border: 2px solid var(--ink);
+  box-shadow: 1.5px 1.5px 0 var(--ink);
+  color: var(--text);
+}
+.game-lb-btn:hover { background: var(--pink-hot); color: #fff; }
+
+.game-shell { position: relative; }
+.game-hint-pop {
+  position: absolute;
+  top: 42px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 6;
+  background: linear-gradient(var(--panel-pink), var(--pink));
+  border: 3px solid var(--ink);
+  box-shadow: 4px 4px 0 var(--ink);
+  padding: 10px 16px;
+  font-family: var(--font-pixel);
+  font-size: 1.05rem;
+  color: var(--text);
+  white-space: nowrap;
+  animation: window-pop-in 0.22s ease-out;
+}
+
+.window-leaderboard { max-width: 520px; min-height: 420px; }
+.lb-shell { display: flex; flex-direction: column; gap: 12px; }
+.lb-global {
+  font-family: var(--font-pixel);
+  font-size: 1rem;
+  padding: 8px 10px;
+  background:
+    linear-gradient(90deg, rgba(255, 233, 138, 0.5), rgba(255, 179, 221, 0.4));
+  border: 2px dashed var(--pink-deep);
+  color: var(--text);
+}
+.lb-sign-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-family: var(--font-pixel);
+  font-size: 1rem;
+  background: var(--panel-pink);
+  border: 2px solid var(--pink-hot);
+  padding: 8px 10px;
+}
+.lb-initials {
+  width: 64px;
+  text-align: center;
+  font-family: var(--font-pixel);
+  font-size: 1.2rem;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  border: 2px solid var(--ink);
+  background: #fff;
+  color: var(--pink-deep);
+  padding: 3px;
+}
+.lb-sign-btn {
+  font-family: var(--font-pixel);
+  font-size: 1rem;
+  padding: 4px 12px;
+  background: linear-gradient(var(--pink), var(--pink-hot));
+  border: 2px solid var(--ink);
+  box-shadow: 2px 2px 0 var(--ink);
+  color: #fff;
+  text-shadow: 1px 1px 0 rgba(90, 61, 110, 0.4);
+}
+.lb-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-family: var(--font-pixel);
+  font-size: 1.05rem;
+  background: var(--cream);
+  border: 2px solid var(--border);
+  padding: 10px 14px;
+}
+.lb-list .lb-rank { color: var(--text-soft); display: inline-block; width: 26px; }
+.lb-list .lb-score { float: right; color: var(--pink-deep); }
+.lb-list li:first-child strong { color: var(--pink-deep); text-shadow: 1px 1px 0 var(--yellow); }
+.lb-keepsake {
+  border: 2px dashed var(--purple-dark);
+  background: var(--panel-purple);
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  font-family: var(--font-pixel);
+  font-size: 0.98rem;
+}
+.lb-keep-title { color: var(--purple-dark); }
+.lb-keep-btn {
+  align-self: flex-start;
+  font-family: var(--font-pixel);
+  font-size: 0.95rem;
+  padding: 4px 10px;
+  background: var(--cream);
+  border: 2px solid var(--purple-dark);
+  box-shadow: 2px 2px 0 var(--blue-dark);
+  color: var(--text);
+}
+.lb-keep-btn:hover { background: var(--yellow); }
+
+.window-interview { max-width: 560px; min-height: 430px; }
+.interview-shell { display: flex; flex-direction: column; gap: 12px; }
+.interview-intro {
+  font-size: 0.9rem;
+  line-height: 1.5;
+  background: var(--panel-pink);
+  border: 2px dashed var(--pink-hot);
+  padding: 10px 12px;
+}
+.interview-embed { min-height: 60px; }
+.interview-frame {
+  width: 100%;
+  height: 380px;
+  border: 3px solid var(--border);
+  background: #fff;
+}
+.interview-note {
+  font-family: var(--font-pixel);
+  font-size: 1rem;
+  color: var(--text-soft);
+  border: 2px dashed var(--border);
+  padding: 12px;
+  text-align: center;
+}
+.interview-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.interview-mail-btn,
+.interview-li-btn {
+  font-family: var(--font-pixel);
+  font-size: 1.02rem;
+  padding: 8px 14px;
+  border: 2px solid var(--ink);
+  box-shadow: 2px 2px 0 var(--ink);
+  text-decoration: none;
+  color: #fff;
+  text-shadow: 1px 1px 0 rgba(90, 61, 110, 0.4);
+  background: linear-gradient(var(--pink), var(--pink-hot));
+}
+.interview-li-btn { background: linear-gradient(var(--panel-blue), var(--blue)); color: var(--text); text-shadow: none; }
+.interview-mail-btn:hover, .interview-li-btn:hover { transform: translateY(-1px); }
+
+html[data-theme="dark"] .lb-global {
+  background: linear-gradient(90deg, rgba(255, 110, 192, 0.28), rgba(138, 99, 214, 0.28));
+  border-color: var(--pink-hot);
+}
+
+/* =====================================================
+   v5.1 — the sleepwalker
+   ===================================================== */
+.sleepwalker {
+  position: fixed;
+  z-index: 2600; /* above windows, below the taskbar */
+  width: 72px;
+  height: 64px;
+  pointer-events: none;
+  transition: opacity 0.6s;
+}
+.sleepwalker img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  image-rendering: pixelated;
+  animation: slime-forage-waddle 1.05s steps(4, end) infinite;
+  filter: drop-shadow(0 0 8px rgba(201, 167, 245, 0.55));
+}
+.sleepwalker .sw-bubble {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 240px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  background: var(--panel);
+  border: 2px solid var(--ink);
+  box-shadow: 2px 2px 0 var(--pink-hot);
+  padding: 4px 10px;
+  font-family: var(--font-pixel);
+  font-size: 0.92rem;
+  color: var(--text);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.sleepwalker.sw-talking .sw-bubble { opacity: 1; }
+.sleepwalker.sw-fading { opacity: 0; }
+html[data-theme="dark"] .sleepwalker .sw-bubble {
+  background: #2a1a47;
+  color: #ffe6f4;
+  border-color: var(--pink-hot);
+}
+
+/* coach slime hero-leaps from the habitat into the arcade */
+.slime-coach {
+  position: fixed;
+  z-index: 2700;
+  width: 64px;
+  height: 56px;
+  pointer-events: none;
+}
+.slime-coach img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  image-rendering: pixelated;
+  filter:
+    drop-shadow(0 0 8px #ffd400)
+    drop-shadow(0 0 16px var(--pink-hot));
+}
+
+
+/* text inputs: click-to-focus is routine editing — a calm pink ring,
+   still unmistakable for keyboard users, no traffic-light explosion */
+input:focus-visible,
+textarea:focus-visible {
+  outline: none !important;
+  box-shadow:
+    0 0 0 2px #ffffff,
+    0 0 0 4px var(--pink-deep) !important;
+  border-color: var(--pink-deep) !important;
 }
