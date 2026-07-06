@@ -2075,13 +2075,13 @@ document.addEventListener('DOMContentLoaded', () => {
     {
       k: ['hello', 'hi ', 'hey', 'yo ', '你好', '哈喽', '嗨', 'salut', 'bonjour', 'coucou'],
       a: 'hi hi!! ♡ I\'m Yongshan\'s slime — her resume lives in my jelly. Ask me about her skills, Druid, the LMS she built, or anything really!',
-      zh: '嗨嗨！！♡ 我是永杉的史莱姆，她的简历都存在我的果冻里～ 问我技能、Druid、她建的 LMS，什么都行！',
+      zh: '嗨嗨！！♡ 我是 yongshan 的史莱姆，她的简历都存在我的果冻里～ 问我技能、Druid、她建的 LMS，什么都行！',
       fr: 'coucou !! ♡ je suis le slime de Yongshan — son CV vit dans ma gelée. Demandez-moi ses compétences, Druid, le LMS qu\'elle a construit… tout ce que vous voulez !'
     },
     {
       k: ['who are you', 'who is', 'about her', 'about yongshan', 'about me', 'about_me', 'introduce', 'intro', 'summary', 'bio', '介绍', '她是谁', '是谁', '简历', 'qui est-elle', 'qui es-tu', 'c\'est qui'],
       a: 'Yongshan Yu — Systems/LMS & Full-Stack Lead + AI/Data practitioner, 3+ years across platform engineering, data science and MLOps.\nWhat that means in practice: she takes things ALL the way to production — cloud-native stacks on AWS/Azure, hardened security (TLS/HSTS, UFW/Fail2ban, least-privilege IAM), and SRE automation: backups, disaster recovery, auto-heal, observability.\nThis site is her proof of craft: hand-written HTML/CSS/JS, a window manager, an 8-bit synth, and me. Zero frameworks.',
-      zh: '于永杉——Systems/LMS 全栈负责人 + AI/数据工程师，3 年+ 横跨平台工程、数据科学和 MLOps。\n落到实处就是：她能把东西真正推到生产环境——AWS/Azure 云原生架构、安全加固（TLS/HSTS、UFW/Fail2ban、最小权限 IAM）、SRE 自动化：备份、容灾、故障自愈、可观测性。\n这个网站就是她的手艺证明：纯手写 HTML/CSS/JS、窗口管理器、8-bit 合成器，还有我。零框架。',
+      zh: 'yongshan——Systems/LMS 全栈负责人 + AI/数据工程师，3 年+ 横跨平台工程、数据科学和 MLOps。\n落到实处就是：她能把东西真正推到生产环境——AWS/Azure 云原生架构、安全加固（TLS/HSTS、UFW/Fail2ban、最小权限 IAM）、SRE 自动化：备份、容灾、故障自愈、可观测性。\n这个网站就是她的手艺证明：纯手写 HTML/CSS/JS、窗口管理器、8-bit 合成器，还有我。零框架。',
       fr: 'Yongshan Yu — Lead Systèmes/LMS & Full-Stack + praticienne IA/Data, 3 ans et plus en ingénierie de plateforme, data science et MLOps.\nConcrètement : elle amène les projets JUSQU\'EN production — stacks cloud natives AWS/Azure, sécurité durcie (TLS/HSTS, UFW/Fail2ban, IAM au moindre privilège) et automatisation SRE : sauvegardes, reprise après sinistre, auto-réparation, observabilité.\nCe site est sa preuve de savoir-faire : HTML/CSS/JS écrits à la main, un gestionnaire de fenêtres, un synthé 8-bit, et moi. Zéro framework.'
     },
     {
@@ -8845,41 +8845,213 @@ document.addEventListener('DOMContentLoaded', () => {
   ];
   const pikSpriteCache = {};
 
-  function pikSprite(color, stage) {
-    const key = color.body + '/' + stage;
+  /* ==================================================================
+     PIXEL BODY SHOP — every pikmin is drawn from a tiny text template.
+     legend: B body · D dark · W soft-white · w pure white · e eye ·
+             u blush · S stem · L leaf · Y yellow · P pink accent
+     normal pikmin roll a BODY (8) and a HEAD PLANT (10) from their hue
+     — deterministic, so the same friend always looks the same, even
+     restored from the cloud. hidden species get bespoke bodies below.
+     ================================================================== */
+  const PIK_BODY_TPLS = [
+    [ // 0 classic squat jelly
+      '...BBBBB...', '..BWBBBBB..', '..BBeBBeB..', '..BuBBBBu..',
+      '..BBBBBBB..', '...BBBBB...', '...DD..DD..', '...DD..DD..', '...........'],
+    [ // 1 round ball
+      '....BBB....', '..BBBBBBB..', '.BWBeBBeBB.', '.BBuBBBBuB.',
+      '.BBBBBBBBB.', '..BBBBBBB..', '....D.D....', '...........', '...........'],
+    [ // 2 tall bean
+      '....BBB....', '...BBBBB...', '...BeBeB...', '...uBBBu...',
+      '...BBBBB...', '...BBBBB...', '...BBBBB...', '....D.D....', '...........'],
+    [ // 3 egg (wide hips)
+      '....BBB....', '...BBBBB...', '..BBeBeBB..', '..BuBBBuB..',
+      '.BBBBBBBBB.', '.BBBBBBBBB.', '..BBBBBBB..', '...D...D...', '...........'],
+    [ // 4 pudding (little top, big skirt)
+      '.....B.....', '....BBB....', '...BeBeB...', '..BBuBuBB..',
+      '.BBBBBBBBB.', '.BBBBBBBBB.', '.BBBBBBBBB.', '..D.....D..', '...........'],
+    [ // 5 cube
+      '..BBBBBBB..', '..BWBBBBB..', '..BeBBBeB..', '..BuBBBuB..',
+      '..BBBBBBB..', '..BBBBBBB..', '..DD...DD..', '...........', '...........'],
+    [ // 6 marshmallow puff (three nub feet)
+      '...........', '..BBBBBBB..', '.BBeBBBeBB.', '.BuBBBBBuB.',
+      '.BBBBBBBBB.', '.BBBBBBBBB.', '..D..D..D..', '...........', '...........'],
+    [ // 7 teardrop
+      '.....B.....', '....BBB....', '...BBBBB...', '..BeBBBeB..',
+      '..BuBBBuB..', '..BBBBBBB..', '...BBBBB...', '....D.D....', '...........']
+  ];
+  const PIK_PLANT_TPLS = [
+    [ // 0 classic: flopped leaf → bud → white daisy
+      ['...........', '..LL.......', '...LL......', '.....S.....', '.....S.....'],
+      ['....DDD....', '....DDD....', '.....S.....', '.....S.....', '.....S.....'],
+      ['....w.w....', '....wYw....', '....w.w....', '.....S.....', '.....S.....']],
+    [ // 1 twin leaves → double bud → twin blooms
+      ['...........', '...L...L...', '....L.L....', '.....S.....', '.....S.....'],
+      ['...D...D...', '...DD.DD...', '....S.S....', '.....S.....', '.....S.....'],
+      ['...w...w...', '...wY.Yw...', '....S.S....', '.....S.....', '.....S.....']],
+    [ // 2 sprig ladder → tipped sprig → heart bloom
+      ['...........', '....L......', '.....SL....', '....LS.....', '.....S.....'],
+      ['.....D.....', '....DD.....', '.....SL....', '....LS.....', '.....S.....'],
+      ['....P.P....', '....PPP....', '.....P.....', '.....S.....', '.....S.....']],
+    [ // 3 tulip: shoot → cup → open tulip
+      ['...........', '.....L.....', '....LL.....', '.....S.....', '.....S.....'],
+      ['....DDD....', '....DDD....', '....DDD....', '.....S.....', '.....S.....'],
+      ['....B.B....', '....BBB....', '....BwB....', '.....S.....', '.....S.....']],
+    [ // 4 clover: one leaf → three → lucky four with gold heart
+      ['...........', '.....L.....', '....LL.....', '.....S.....', '.....S.....'],
+      ['....L.L....', '.....L.....', '.....S.....', '.....S.....', '.....S.....'],
+      ['....L.L....', '.....Y.....', '....L.L....', '.....S.....', '.....S.....']],
+    [ // 5 star: slanted leaf → diamond bud → gold star
+      ['...........', '......L....', '.....SL....', '.....S.....', '.....S.....'],
+      ['.....D.....', '....DDD....', '.....D.....', '.....S.....', '.....S.....'],
+      ['.....Y.....', '....YYY....', '.....Y.....', '.....S.....', '.....S.....']],
+    [ // 6 berry sprig: leaf → berry pair → berry cluster
+      ['...........', '....L......', '....LS.....', '.....S.....', '.....S.....'],
+      ['....P.P....', '.....S.....', '.....S.....', '.....S.....', '.....S.....'],
+      ['...P.P.P...', '....P.P....', '.....S.....', '.....S.....', '.....S.....']],
+    [ // 7 curly antenna: curl → curl+leaf → swirl bloom
+      ['...........', '....SS.....', '......S....', '.....S.....', '.....S.....'],
+      ['....SSL....', '......S....', '.....S.....', '.....S.....', '.....S.....'],
+      ['....PP.....', '....SPP....', '.....S.....', '.....S.....', '.....S.....']],
+    [ // 8 mushroom: nub → small cap → wide dotted cap
+      ['...........', '.....L.....', '.....S.....', '.....S.....', '.....S.....'],
+      ['....DDD....', '.....S.....', '.....S.....', '.....S.....', '.....S.....'],
+      ['...DDwDD...', '..DDDDDDD..', '.....S.....', '.....S.....', '.....S.....']],
+    [ // 9 signal antenna: zigzag → ball tip → glowing tip (very computer)
+      ['...........', '....S......', '.....S.....', '....S......', '.....S.....'],
+      ['....D......', '.....S.....', '....S......', '.....S.....', '.....S.....'],
+      ['....Y......', '....YS.....', '.....S.....', '....S......', '.....S.....']]
+  ];
+  /* bespoke bodies for the hidden 22 — the weirdest shapes live here.
+     grey silhouettes of these exact shapes tease the empty dex slots. */
+  const PIK_SPECIES_TPLS = {
+    glitch: [ // a blob rendered wrong on purpose
+      '...........', '....S......', '..DDD......', '...BBBBB...', '.BBBBB.....',
+      '...BBBBBBB.', '..BeBBeB...', '....BBBBuB.', '..BBBBB....', '...BBBBBB..',
+      '..DD..DD...', '...........', '...........', '...........'],
+    matrix: [ // a tiny CRT monitor
+      '...........', '....S.S....', '..DDDDDDD..', '..DBBBBBD..', '..DBeBeBD..',
+      '..DBBBBBD..', '..DBuBuBD..', '..DBBBBBD..', '..DDDDDDD..', '....DDD....',
+      '...DDDDD...', '...........', '...........', '...........'],
+    pointer: [ // literally the cursor
+      '...........', '..B........', '..BB.......', '..BBB......', '..BBBB.....',
+      '..BeBBB....', '..BBBeBB...', '..BBBBBBB..', '..BBBB.....', '..B.BB.....',
+      '....BB.....', '.....BB....', '...........', '...........'],
+    wifi: [ // a walking signal indicator
+      '...........', '.BBBBBBBBB.', '...........', '..BBBBBBB..', '...........',
+      '...BeBeB...', '...BBBBB...', '....BBB....', '.....B.....', '....D.D....',
+      '...........', '...........', '...........', '...........'],
+    lowbatt: [ // a battery at 15%
+      '...........', '.....S.....', '.....L.....', '.DDDDDDDD..', '.DwBBBBBDD.',
+      '.DwBeBeBDD.', '.DwBuBuBDD.', '.DwBBBBBDD.', '.DDDDDDDD..', '..D.....D..',
+      '...........', '...........', '...........', '...........'],
+    post: [ // a keycap with legs
+      '...........', '.....S.....', '....LL.....', '..DDDDDDD..', '.DBWBBBBBD.',
+      '.DBeBBeBBD.', '.DBuBBuBBD.', '.DBBBBBBBD.', '.DDDDDDDDD.', '..D.....D..',
+      '...........', '...........', '...........', '...........'],
+    cumulus: [ // a cloud. no feet. floats.
+      '.............', '.....BBB.....', '...BBBBBBB...', '..BBBBBBBBB..', '.BBWBBBBBBBB.',
+      '.BBeBBBBeBBB.', '.BBBuBBuBBBB.', '..BBBBBBBBB..', '...B.BBB.B...', '.............',
+      '.............', '.............', '.............', '.............'],
+    feature: [ // a long boi with many feet (walks backwards)
+      '.............', '......S......', '.....LL......', '.............', '.............',
+      '.............', '..BBBBBBBBB..', '.BBBBBBBBBBB.', '.BeBeBBBBBBB.', '.BuBBBBBBBBB.',
+      '.BBBBBBBBBBB.', '..D.D.D.D.D..', '.............', '.............'],
+    latency: [ // an hourglass, obviously
+      '...........', '.....S.....', '....LL.....', '.DDDDDDDDD.', '..BBBBBBB..',
+      '...BeBeB...', '....BBB....', '.....B.....', '....BBB....', '...BuBuB...',
+      '..BBBBBBB..', '.DDDDDDDDD.', '...........', '...........'],
+    aliased: [ // rendered at half resolution out of principle
+      '...........', '....SS.....', '....SS.....', '..BBBBBB...', '..BBBBBB...',
+      '..eeBBee...', '..eeBBee...', '..BBBBBB...', '..BBBBBB...', '..DD..DD...',
+      '..DD..DD...', '...........', '...........', '...........'],
+    darkmode: [ // a crescent moon creature
+      '...........', '.....S.....', '....LL.....', '....BBBB...', '..BBBBBB...',
+      '.BBBB......', '.BBeB......', '.BBBB......', '.BBBBB.....', '..BBBBBB...',
+      '....BBBB...', '.....D.D...', '...........', '...........'],
+    gilded: [ // the trophy itself
+      '...........', '.....S.....', '....LL.....', '.D.DDDDD.D.', '.D.BBBBB.D.',
+      '.DDBeBeBDD.', '...BuBuB...', '...BBBBB...', '....BBB....', '.....B.....',
+      '....DDD....', '...DDDDD...', '...........', '...........'],
+    cacheghost: [ // wavy-bottomed, refuses to be freed
+      '...........', '.....S.....', '....LL.....', '....BBB....', '..BBBBBBB..',
+      '..BeBBeBB..', '..BBBBBBB..', '..BuBBBuB..', '..BBBBBBB..', '..BBBBBBB..',
+      '..B.BB.BB..', '...........', '...........', '...........'],
+    cronjob: [ // a round clock with bells
+      '...........', '...D...D...', '..D.....D..', '...BBBBB...', '..BBBwBBB..',
+      '.BBBBDBBBB.', '.BBeBDBeBB.', '.BBBBDDBBB.', '..BBBBBBB..', '...BBBBB...',
+      '....D.D....', '...........', '...........', '...........'],
+    y2kbug: [ // a party-hat cone that never got its apocalypse
+      '.....P.....', '....PY.....', '....BB.....', '...BBBB....', '...BeBe....',
+      '..BBBBBB...', '..BuBBuB...', '.BBBBBBBB..', '.BBBBBBBB..', '.DDDDDDDD..',
+      '....D.D....', '.w...P...Y.', '...........', '...........'],
+    bitflip: [ // half zero, half one — swapped feet included
+      '...........', '.....S.....', '....LL.....', '...BBBDDD..', '..BBBBDDDD.',
+      '..BeBBDDwD.', '..BBBBDDDD.', '..BuBBDDDD.', '..BBBBDDDD.', '...BBBDDD..',
+      '...D....B..', '...........', '...........', '...........'],
+    turbo: [ // flame-topped, warranty voided
+      '.....B.....', '....BB.B...', '...BBBBB...', '....PPP....', '...BBBBB...',
+      '..BBBBBBB..', '..BeBBeBB..', '..BuBBBuB..', '..BBBBBBB..', '...BBBBB...',
+      '...DD.DD...', '...........', '...........', '...........'],
+    dotmatrix: [ // a sheet of tractor-feed paper
+      '...........', '.....S.....', '....LL.....', '.wBBBBBBBw.', '.BBBBBBBBB.',
+      '.wBeBBeBBw.', '.BBBBBBBBB.', '.wBuBBuBBw.', '.BBBBBBBBB.', '.wBBBBBBBw.',
+      '..D.....D..', '...........', '...........', '...........'],
+    bsodjr: [ // a tiny sad window (it gets back up)
+      '...........', '.....S.....', '....LL.....', '.DDDDDDDDD.', '.DwDDDDDDD.',
+      '.DBBBBBBBD.', '.DBeBBeBBD.', '.DBBBBBBBD.', '.DBuBBuBBD.', '.DBBBBBBBD.',
+      '.DDDDDDDDD.', '..D.....D..', '...........', '...........'],
+    rgbrig: [ // hexagonal gamer chassis
+      '...........', '.....S.....', '....LL.....', '....BBB....', '..BBBBBBB..',
+      '.BBWBBBBBB.', '.BeBBBBeBB.', '.BBBBBBBBB.', '.BuBBBBuBB.', '..BBBBBBB..',
+      '....BBB....', '...D...D...', '...........', '...........'],
+    captcha: [ // a checkbox that already ticked itself
+      '...........', '.....S.....', '....LL.....', '.DDDDDDDDD.', '.DBBBBBBBD.',
+      '.DBeBeBwBD.', '.DBBBBwBBD.', '.DBuBwBuBD.', '.DBwBBBBBD.', '.DBBBBBBBD.',
+      '.DDDDDDDDD.', '..D.....D..', '...........', '...........'],
+    kernelpg: [ // an egg with penguin ambitions
+      '...........', '.....S.....', '....LL.....', '....BBB....', '...BBBBB...',
+      '..BBeBeBB..', '..BBBYBBB..', '..BwwwwwB..', '..BwwwwwB..', '..BBBBBBB..',
+      '...Y...Y...', '...........', '...........', '...........']
+  };
+  const PIK_SIL_COLORS = { B: '#948aab', D: '#675d80', W: '#948aab', w: '#948aab', e: '#948aab', u: '#948aab', S: '#948aab', L: '#948aab', Y: '#948aab', P: '#948aab' };
+  function pikHueFromColor(color) {
+    const m = /hsl\((\d+)/.exec(color.body || '');
+    if (m) return parseInt(m[1], 10);
+    const ix = PIK_COLORS.findIndex((pc) => pc.body === color.body);
+    return ix >= 0 ? PIK_LEGACY_HUES[ix] : 330;
+  }
+  function pikDrawTpl(x, rows, pal) {
+    rows.forEach((row, ry) => {
+      for (let rx = 0; rx < row.length; rx++) {
+        const ch = row[rx];
+        if (ch === '.') continue;
+        x.fillStyle = pal[ch] || pal.B;
+        x.fillRect(rx, ry, 1, 1);
+      }
+    });
+  }
+  function pikSprite(color, stage, spId, silhouette) {
+    const key = color.body + '/' + stage + '/' + (spId || '') + '/' + (silhouette ? 1 : 0);
     if (pikSpriteCache[key]) return pikSpriteCache[key];
-    const c = document.createElement('canvas');
-    c.width = 11; c.height = 14;
-    const x = c.getContext('2d');
-    x.fillStyle = '#57c689'; // stem
-    x.fillRect(5, 2, 1, 3);
-    if (stage === 0) { // young leaf
-      x.fillStyle = '#7ddba4';
-      x.fillRect(3, 1, 2, 1); x.fillRect(2, 0, 2, 1);
-    } else if (stage === 1) { // bud
-      x.fillStyle = color.dark;
-      x.fillRect(4, 0, 3, 2); x.fillRect(5, 2, 1, 1);
-    } else { // full pixel flower
-      x.fillStyle = '#ffffff';
-      x.fillRect(4, 0, 1, 1); x.fillRect(6, 0, 1, 1);
-      x.fillRect(3, 1, 1, 1); x.fillRect(7, 1, 1, 1);
-      x.fillRect(4, 2, 1, 1); x.fillRect(6, 2, 1, 1);
-      x.fillStyle = '#ffd400';
-      x.fillRect(5, 1, 1, 1);
+    let rows;
+    if (spId && PIK_SPECIES_TPLS[spId]) {
+      rows = PIK_SPECIES_TPLS[spId];
+    } else {
+      const h = pikHueFromColor(color);
+      const body = PIK_BODY_TPLS[(h * 7) % PIK_BODY_TPLS.length];
+      const plant = PIK_PLANT_TPLS[(h * 13) % PIK_PLANT_TPLS.length][Math.min(stage || 0, 2)];
+      rows = plant.concat(body);
     }
-    // round jelly body
-    x.fillStyle = color.body;
-    x.fillRect(3, 5, 5, 1);
-    x.fillRect(2, 6, 7, 4);
-    x.fillRect(3, 10, 5, 1);
-    x.fillStyle = 'rgba(255,255,255,0.55)'; // glossy highlight
-    x.fillRect(3, 6, 1, 1);
-    x.fillStyle = '#14020e'; // eyes
-    x.fillRect(4, 7, 1, 1); x.fillRect(7, 7, 1, 1);
-    x.fillStyle = 'rgba(255,120,180,0.65)'; // blush
-    x.fillRect(3, 8, 1, 1); x.fillRect(8, 8, 1, 1);
-    x.fillStyle = color.dark; // feet
-    x.fillRect(3, 11, 2, 2); x.fillRect(7, 11, 2, 2);
+    const c = document.createElement('canvas');
+    c.width = rows[0].length; c.height = rows.length;
+    const x = c.getContext('2d');
+    const pal = silhouette ? PIK_SIL_COLORS : {
+      B: color.body, D: color.dark,
+      W: 'rgba(255,255,255,0.55)', w: '#ffffff',
+      e: '#14020e', u: 'rgba(255,120,180,0.65)',
+      S: '#57c689', L: '#7ddba4', Y: '#ffd400', P: '#ff8fc7'
+    };
+    pikDrawTpl(x, rows, pal);
     pikSpriteCache[key] = c.toDataURL();
     return pikSpriteCache[key];
   }
@@ -8987,7 +9159,7 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.className = 'pik-sprout' + (species ? ' pik-sprout-hidden' : '');
     btn.setAttribute('aria-label', t('live.pluck'));
     const img = document.createElement('img');
-    img.src = pikSprite(color, 0);
+    img.src = pikSprite(color, 0, species ? species.id : null);
     img.alt = '';
     img.style.width = '33px';
     // only the sprout's head pokes out of the meadow
@@ -9028,7 +9200,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const el = document.createElement('div');
     el.className = 'pik-buddy' + (species && species.fx ? ' pikfx-' + species.fx : '');
     const img = document.createElement('img');
-    img.src = pikSprite(color, stage);
+    img.src = pikSprite(color, stage, species ? species.id : null);
     img.alt = '';
     img.style.width = '33px';
     el.appendChild(img);
@@ -9118,7 +9290,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function pikSetStage(b, stage) {
     b.stage = stage;
-    b.img.src = pikSprite(b.color, stage);
+    b.img.src = pikSprite(b.color, stage, b.sp ? b.sp.id : null);
     b.img.classList.remove('pik-pluck');
     void b.img.offsetWidth;
     b.img.classList.add('pik-pluck');
@@ -10925,7 +11097,7 @@ document.addEventListener('DOMContentLoaded', () => {
     el.className = 'desk-pik' + (species && species.fx ? ' pikfx-' + species.fx : '');
     el.setAttribute('aria-hidden', 'true');
     const img = document.createElement('img');
-    img.src = pikSprite(color, stage || 0);
+    img.src = pikSprite(color, stage || 0, spId || null);
     img.alt = '';
     el.appendChild(img);
     if (species) { // its hat IS its whole personality
@@ -11304,11 +11476,65 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  /* fifty precision-machined boot jokes — one at random, then a slow
+     rotation while the bar fills. the OS takes loading very seriously. */
+  const LOADER_JOKES = [
+    ['there are 10 kinds of visitors: those who read binary and those who don\'t', 'il y a 10 types de visiteurs : ceux qui lisent le binaire et les autres'],
+    ['it\'s always DNS. even on this screen.', 'c\'est toujours le DNS. même sur cet écran.'],
+    ['99 little bugs in the code… take one down: 127 little bugs in the code', '99 petits bugs dans le code… corriges-en un : 127 petits bugs dans le code'],
+    ['asking the rubber duck for final sign-off…', 'demande de validation finale au canard en plastique…'],
+    ['counting startup steps from 0. always from 0.', 'décompte des étapes depuis 0. toujours depuis 0.'],
+    ['cache warmed. cache cleared. cache warmed again (a lifestyle)', 'cache chauffé. cache vidé. cache réchauffé (un mode de vie)'],
+    ['resolving merge conflict: cute vs cuter…', 'résolution du conflit git : mignon vs plus mignon…'],
+    ['this progress bar is sincere. statistically remarkable.', 'cette barre de progression est sincère. statistiquement remarquable.'],
+    ['TODO: remove this TODO', 'TODO : supprimer ce TODO'],
+    ['works on my machine. you\'re on my machine now.', 'ça marche sur ma machine. vous êtes sur ma machine, là.'],
+    ['off-by-one error detected in the previous joke', 'erreur off-by-one détectée dans la blague précédente'],
+    ['the S in "slime" stands for security', 'le S de « slime » veut dire sécurité'],
+    ['quantum bugfix: it works until you observe it', 'correctif quantique : ça marche tant qu\'on ne regarde pas'],
+    ['!false — it\'s funny because it\'s true', '!false — c\'est drôle parce que c\'est vrai'],
+    ['a SQL query walks into a bar, joins two tables', 'une requête SQL entre dans un bar et JOIN deux tables'],
+    ['I would tell a UDP joke but you might not get it', 'j\'aurais une blague UDP, mais rien ne dit qu\'elle arrivera'],
+    ['the TCP joke is coming. it will be acknowledged.', 'la blague TCP arrive. elle sera acquittée.'],
+    ['loading… (the real load was the friends we cached along the way)', 'chargement… (le vrai chargement, c\'était les amis mis en cache en chemin)'],
+    ['there is no cloud. it\'s just someone else\'s slime.', 'le cloud n\'existe pas. c\'est juste le slime de quelqu\'un d\'autre.'],
+    ['deleting one semicolon to see what happens', 'suppression d\'un point-virgule pour voir ce qui se passe'],
+    ['naming things, cache invalidation, and… the third one', 'nommer les choses, invalider le cache, et… le troisième truc'],
+    ['tabs vs spaces: this OS uses hearts', 'tabs ou espaces : cet OS utilise des cœurs'],
+    ['git commit -m "fixes"  (it did not fix)', 'git commit -m « corrige »  (ça n\'a rien corrigé)'],
+    ['running on 0 frameworks and 1 grudge', 'propulsé par 0 framework et 1 rancune'],
+    ['normalizing the database. the database resists.', 'normalisation de la base. la base résiste.'],
+    ['rm -rf node_modules (37GB freed, feelings mixed)', 'rm -rf node_modules (37 Go libérés, sentiments mitigés)'],
+    ['the bug was in production. the fix is in therapy.', 'le bug était en prod. le correctif est en thérapie.'],
+    ['404: witty loading line not fou—', '404 : blague de chargement introuv—'],
+    ['achieving inbox zero (by declaring inbox bankruptcy)', 'inbox zero atteint (par faillite déclarée de l\'inbox)'],
+    ['float: left; float: right; nobody floats up. CSS is grief.', 'float:left ; float:right ; personne ne flotte vers le haut. le CSS, c\'est du deuil.'],
+    ['while (!asleep) { sheep++ }', 'while (!dodo) { moutons++ }'],
+    ['segmentation fault (core dumped, feelings intact)', 'segmentation fault (core dumpé, sentiments intacts)'],
+    ['my code has no bugs, only spontaneous features', 'mon code n\'a pas de bugs, que des fonctionnalités spontanées'],
+    ['downloading more RAM for the slime…', 'téléchargement de RAM supplémentaire pour le slime…'],
+    ['this line intentionally left funny', 'cette ligne est volontairement drôle'],
+    ['regex: now you have two problems. now three.', 'regex : maintenant vous avez deux problèmes. non, trois.'],
+    ['the pikmin are compiled from source. organic source.', 'les pikmin sont compilés depuis les sources. des sources bio.'],
+    ['premature optimization is the root of all… actually this is fine', 'l\'optimisation prématurée est la racine de tout… bon, en fait ça va'],
+    ['reticulating splines (they asked to be reticulated)', 'réticulation des splines (elles ont insisté)'],
+    ['whiteboard question: draw a slime in O(1)', 'question d\'entretien : dessinez un slime en O(1)'],
+    ['dark mode saves energy. mostly mine.', 'le mode sombre économise de l\'énergie. surtout la mienne.'],
+    ['committing straight to main — we live once', 'commit direct sur main — on ne vit qu\'une fois'],
+    ['P vs NP: the slime verifies snacks faster than it finds them', 'P vs NP : le slime vérifie les snacks plus vite qu\'il ne les trouve'],
+    ['the real 10x engineer was the pet all along', 'l\'ingénieur 10x, c\'était le familier depuis le début'],
+    ['undefined is not a function, but it tries so hard', 'undefined n\'est pas une fonction, mais il fait de son mieux'],
+    ['deploys on Friday. lives dangerously. is a slime.', 'déploie le vendredi. vit dangereusement. est un slime.'],
+    ['garbage collector on strike — everything is precious now', 'ramasse-miettes en grève — tout est précieux maintenant'],
+    ['boot sector decorated with stickers. unbootable. worth it.', 'secteur de boot décoré de stickers. indémarrable. ça valait le coup.'],
+    ['two hard things: naming things and knowing when to sto', 'deux choses dures : nommer les choses et savoir quand s\'arrê'],
+    ['vim exited successfully. the year is 2043.', 'vim s\'est fermé avec succès. nous sommes en 2043.']
+  ];
+
   /* ---------- the living boot screen ----------
      dresses the loader from the visitor's save: their slime (boopable),
      their exact squad (colours, species hats, growth stages) marching
-     underneath, and a subtext that reads THEIR stats. every visit the
-     boot screen is a tiny "previously on…" recap ♡ */
+     underneath — plus fifty rotating boot jokes on the marquee ♡ */
   function loaderDecorate() {
     const slimeBtn = document.getElementById('loader-slime');
     if (slimeBtn && !slimeBtn._wired) {
@@ -11338,7 +11564,7 @@ document.addEventListener('DOMContentLoaded', () => {
         holder.className = 'loader-pik';
         holder.style.animationDelay = (i * 0.13) + 's';
         const img = document.createElement('img');
-        img.src = pikSprite(sp ? sp.body : ((r.h != null) ? hueColor(r.h) : (PIK_COLORS[r.c] || PIK_COLORS[0])), r.s || 0);
+        img.src = pikSprite(sp ? sp.body : ((r.h != null) ? hueColor(r.h) : (PIK_COLORS[r.c] || PIK_COLORS[0])), r.s || 0, r.sp || null);
         img.alt = '';
         holder.appendChild(img);
         if (sp) {
@@ -11352,19 +11578,22 @@ document.addEventListener('DOMContentLoaded', () => {
       });
       window.__loaderHideAt = Math.max(window.__loaderHideAt || 0, Date.now() + 2400); // a beat longer to admire the crew
     }
-    // the subtext reads YOUR save, not a stock line
+    // the subtext is a comedy marquee: one random boot joke, rotating
     const sub = document.querySelector('#loader .loader-subtext');
     if (sub) {
-      const dex = pikdexGet();
-      if (dex.length) {
-        const fans = store.get('yos-followers', 0);
-        const pct = pikdexWheelPct(dex);
-        const bits = [trT(`restoring squad ×${Math.min(roster.length, PIK_MAX)}`, `restauration de l'escouade ×${Math.min(roster.length, PIK_MAX)}`)];
-        if (pct > 0) bits.push(trT(`hue wheel ${pct}%`, `roue chromatique ${pct}%`));
-        if (fans > 0) bits.push(trT(`${fans} ${fans === 1 ? 'fan' : 'fans'}`, `${fans} fan${fans === 1 ? '' : 's'}`));
-        sub.textContent = bits.join(' · ') + '… ok ♡';
-        sub.removeAttribute('data-i18n'); // the personalised line outranks the dictionary
-      }
+      sub.removeAttribute('data-i18n'); // the jokes outrank the dictionary
+      let jokeIx = Math.floor(Math.random() * LOADER_JOKES.length);
+      const tellOne = () => {
+        const j = LOADER_JOKES[jokeIx % LOADER_JOKES.length];
+        sub.textContent = trT(j[0], j[1]);
+        jokeIx++;
+      };
+      tellOne();
+      const jokeTimer = setInterval(() => {
+        const l = document.getElementById('loader');
+        if (!l || l.style.display === 'none' || l.classList.contains('fade-out')) { clearInterval(jokeTimer); return; }
+        tellOne();
+      }, 1600);
     }
   }
 
@@ -11519,7 +11748,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const name = pikNameOf(dex, dexIx);
       cell.title = name;
       const img = document.createElement('img');
-      img.src = pikSprite(p.sp ? pikEntryColor(p) : hueColor(pikHueOf(p)), p.s || 0);
+      img.src = pikSprite(p.sp ? pikEntryColor(p) : hueColor(pikHueOf(p)), p.s || 0, p.sp || null);
       img.alt = '';
       const nm = document.createElement('span');
       nm.className = 'pikdex-cell-name';
@@ -11583,7 +11812,7 @@ document.addEventListener('DOMContentLoaded', () => {
         mys.title = trT(sp.t[0], sp.t[1]); // the riddle — something to hope for
         const shadow = document.createElement('img');
         shadow.className = 'pikdex-shadow-pik'; // an unplucked silhouette, house-made
-        shadow.src = pikSprite({ body: '#8f81a8', dark: '#5c4f75' }, 0);
+        shadow.src = pikSprite({ body: '#8f81a8', dark: '#5c4f75' }, 0, sp.id, true);
         shadow.alt = '';
         const nm = document.createElement('span');
         nm.className = 'pikdex-cell-name';
@@ -11637,7 +11866,7 @@ document.addEventListener('DOMContentLoaded', () => {
     port.className = 'pik-card-portrait';
     const big = document.createElement('img');
     big.alt = '';
-    big.src = pikSprite(pikEntryColor(p), p.s || 0);
+    big.src = pikSprite(pikEntryColor(p), p.s || 0, p.sp || null);
     port.appendChild(big);
     const pSpecies = p.sp ? pikSpecies(p.sp) : null;
     if (pSpecies) {
@@ -11770,7 +11999,7 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.className = 'pik-sprout desk-sprout' + (species ? ' pik-sprout-hidden' : '');
     btn.setAttribute('aria-label', t('live.pluck'));
     const img = document.createElement('img');
-    img.src = pikSprite(color, 0);
+    img.src = pikSprite(color, 0, species ? species.id : null);
     img.alt = '';
     img.style.width = '33px';
     img.style.clipPath = 'inset(0 0 58% 0)';

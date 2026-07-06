@@ -788,15 +788,23 @@ input {
   font-size: 1rem;
   color: var(--text);
   box-shadow: 2px 2px 0 var(--pink-hot);
+  /* every word the slime says stays reachable: no ellipsis — long
+     lines scroll sideways instead (thin candy scrollbar below) */
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow-x: auto;
+  overflow-y: hidden;
+  text-overflow: clip;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
   opacity: 0;
   transform: scale(0.8) translateY(10px);
   transition: opacity 0.3s, transform 0.3s;
-  pointer-events: none;
+  pointer-events: auto;
   z-index: 7;
 }
+.tamagotchi-bubble::-webkit-scrollbar { height: 5px; }
+.tamagotchi-bubble::-webkit-scrollbar-track { background: var(--panel-pink); }
+.tamagotchi-bubble::-webkit-scrollbar-thumb { background: var(--pink-hot); }
 
 .tamagotchi-bubble.show-bubble {
   opacity: 1;
