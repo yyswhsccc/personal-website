@@ -7527,3 +7527,64 @@ body.nm-melt-static::after {
 .piklb-bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--pink), var(--pink-hot)); }
 .piklb-n { text-align: right; color: var(--pink-deep); white-space: nowrap; }
 html[data-theme="dark"] .piklb-bar { background: #3a2452; }
+
+/* ============ 🐇 the terminal door (#terminal entry mode) ============ */
+body.terminal-only .browser-header,
+body.terminal-only .browser-address-bar,
+body.terminal-only .desktop-taskbar,
+body.terminal-only .desktop-layout,
+body.terminal-only .fan-wall-widget,
+body.terminal-only #desk-pik-layer,
+body.terminal-only .cloud-decor,
+body.terminal-only .heart-decor,
+body.terminal-only .window:not(#win-terminal) { display: none !important; }
+body.terminal-only .desktop-area {
+  min-height: 100dvh;
+  background:
+    radial-gradient(circle at 20% 15%, rgba(57, 211, 83, 0.12), transparent 45%),
+    radial-gradient(circle at 85% 80%, rgba(255, 95, 176, 0.10), transparent 50%),
+    #0d1117;
+}
+body.terminal-only #win-terminal.terminal-door-win {
+  position: fixed !important;
+  top: 6vh !important;
+  left: 50% !important;
+  right: auto !important;
+  bottom: auto !important;
+  transform: translateX(-50%);
+  width: min(720px, 94vw) !important;
+  height: min(66vh, 560px);
+  max-height: none;
+  z-index: 300;
+  box-shadow: 0 0 0 2px #fff, 6px 6px 0 rgba(20, 2, 14, 0.5), 0 0 42px rgba(57, 211, 83, 0.25);
+}
+#matrix-greeter {
+  position: fixed;
+  right: max(18px, calc(50% - 360px - 150px));
+  bottom: 7vh;
+  z-index: 320;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+}
+#matrix-greeter canvas { image-rendering: pixelated; filter: drop-shadow(0 0 8px rgba(57, 211, 83, 0.65)); animation: matrix-bob 2.4s ease-in-out infinite; }
+@keyframes matrix-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+.matrix-bubble {
+  max-width: 230px;
+  font-family: var(--font-pixel);
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: #7ee787;
+  background: rgba(13, 17, 23, 0.92);
+  border: 2px solid #2ea043;
+  box-shadow: 0 0 14px rgba(57, 211, 83, 0.35);
+  padding: 8px 10px;
+}
+@media (max-width: 760px) {
+  #matrix-greeter { right: 10px; bottom: 4vh; }
+  #matrix-greeter canvas { width: 56px; }
+  .matrix-bubble { max-width: 160px; font-size: 0.72rem; }
+  body.terminal-only #win-terminal.terminal-door-win { height: 62vh; }
+}

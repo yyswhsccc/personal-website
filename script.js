@@ -3669,7 +3669,11 @@ document.addEventListener('DOMContentLoaded', () => {
     { id: 'apex', icon: '👑', n: ['Apex Gardener', 'Jardinier Apex'], d: ['raised a pikmin to its APEX form. it wears the crown now.', 'a mené un pikmin à sa forme APEX. il porte la couronne désormais.'], t: ['the third form exists. few have seen it.', 'la troisième forme existe. peu l\'ont vue.'] },
     { id: 'evermore', icon: '♾️', n: ['The Meadow Never Sleeps', 'La Prairie Ne Dort Jamais'], d: ['kept collecting after 72/72 — ten dupes and counting. true devotion.', 'a continué après 72/72 — dix doublons et ça continue. dévotion véritable.'], t: ['completion was never the end.', 'compléter n\'a jamais été la fin.'] },
     { id: 'wristslime', icon: '⌚', n: ['Wrist-Mounted Slime', 'Slime de Poignet'], d: ['paired a smartwatch. the slime now lives on your wrist too.', 'a appairé une montre connectée. le slime vit aussi à ton poignet.'], t: ['the OS fits on a wrist. try the terminal.', 'l\'OS tient sur un poignet. essaie le terminal.'] },
-    { id: 'wristfarmer', icon: '🌾', n: ['Wrist Farmer', 'Fermier de Poignet'], d: ['plucked a pikmin FROM A WATCH and it synced home. agriculture, miniaturized.', 'a cueilli un pikmin DEPUIS UNE MONTRE, synchronisé maison. l\'agriculture, miniaturisée.'], t: ['the wrist garden feeds the same meadow.', 'le jardin de poignet nourrit la même prairie.'] }
+    { id: 'wristfarmer', icon: '🌾', n: ['Wrist Farmer', 'Fermier de Poignet'], d: ['plucked a pikmin FROM A WATCH and it synced home. agriculture, miniaturized.', 'a cueilli un pikmin DEPUIS UNE MONTRE, synchronisé maison. l\'agriculture, miniaturisée.'], t: ['the wrist garden feeds the same meadow.', 'le jardin de poignet nourrit la même prairie.'] },
+    { id: 'gitgud', icon: '🌿', n: ['Git Gud', 'Git Gud'], d: ['ran five different git commands in a terminal that lives inside a website.', 'a lancé cinq commandes git dans un terminal qui vit dans un site web.'], t: ['the terminal speaks fluent git. test its accent.', 'le terminal parle git couramment. teste son accent.'] },
+    { id: 'stargazer', icon: '⭐', n: ['Counted Among Stars', 'Compté Parmi les Étoiles'], d: ['the star counter moved while you were around. the terminal noticed. it always notices.', 'le compteur d\'étoiles a bougé en ta présence. le terminal l\'a vu. il voit tout.'], t: ['some buttons on github echo all the way back here.', 'certains boutons de github résonnent jusqu\'ici.'] },
+    { id: 'gitfollow', icon: '💚', n: ['Follower of the Way', 'Disciple de la Voie'], d: ['the follower counter climbed while you were around. adopted forever.', 'le compteur d\'abonnés a grimpé en ta présence. adopté·e pour toujours.'], t: ['following someone is a kind of spell too.', 'suivre quelqu\'un est aussi une sorte de sort.'] },
+    { id: 'redpill', icon: '🐇', n: ['Followed the Pink Rabbit', 'A Suivi le Lapin Rose'], d: ['arrived through the mysterious little command. the desktop has you now.', 'est arrivé·e par la mystérieuse petite commande. le bureau te tient désormais.'], t: ['somewhere on github, a readme whispers a command.', 'quelque part sur github, un readme murmure une commande.'] }
   ];
 
   // ---- metric engine: count things, achievements pop themselves ----
@@ -4313,6 +4317,241 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  /* ================= git — the REAL GitHub wing =================
+     SECURITY MODEL, written down so it never drifts:
+     · this static site holds NO tokens and NEVER asks for any
+     · every "action" (star/follow/fork) only OPENS github.com in a new
+       tab — the visitor consents THERE, on GitHub's own buttons
+     · the only API use is unauthenticated public READS of yongshan's
+       own profile/repo (cached 10 min, a handful of calls, no identity
+       of the visitor is ever read, sent, or stored)
+     · window.open targets come exclusively from the constants below */
+  const GH_USER = 'yyswhsccc';
+  const GH_REPO = 'personal-website';
+  const GH_LINK = {
+    profile: `https://github.com/${GH_USER}`,
+    repo: `https://github.com/${GH_USER}/${GH_REPO}`,
+    fork: `https://github.com/${GH_USER}/${GH_REPO}/fork`
+  };
+  function ghApi(path, fresh) {
+    const cache = store.get('yos-gh-cache', {});
+    const hit = cache[path];
+    if (!fresh && hit && Date.now() - hit.t < 600000) return Promise.resolve(hit.data);
+    if (!navigator.onLine) return Promise.resolve(hit ? hit.data : null);
+    return fetch('https://api.github.com' + path, { headers: { Accept: 'application/vnd.github+json' } })
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then((data) => {
+        const c = store.get('yos-gh-cache', {});
+        c[path] = { t: Date.now(), data };
+        store.set('yos-gh-cache', c);
+        return data;
+      })
+      .catch(() => (hit ? hit.data : null));
+  }
+  function gitMark(sub) {
+    const used = store.get('yos-git-used', []);
+    if (used.indexOf(sub) === -1) {
+      used.push(sub);
+      store.set('yos-git-used', used);
+      if (used.length >= 5) achvUnlock('gitgud');
+    }
+  }
+  var ghWatchTimer = null;
+  function ghWatchDelta(kind) {
+    // after the visitor opens GitHub, we politely peek at the PUBLIC
+    // counter a few times — if it grew, the whole site celebrates. we
+    // never learn WHO pressed the button, only that someone kind did.
+    if (ghWatchTimer) { clearInterval(ghWatchTimer); ghWatchTimer = null; }
+    const path = kind === 'star' ? `/repos/${GH_USER}/${GH_REPO}` : `/users/${GH_USER}`;
+    const read = (d) => (d ? (kind === 'star' ? d.stargazers_count : d.followers) : null);
+    ghApi(path, true).then((d0) => {
+      const base = read(d0);
+      if (base == null) return;
+      let polls = 0;
+      ghWatchTimer = setInterval(() => {
+        if (++polls > 8) { clearInterval(ghWatchTimer); ghWatchTimer = null; return; }
+        ghApi(path, true).then((d) => {
+          const now = read(d);
+          if (now != null && now > base) {
+            clearInterval(ghWatchTimer); ghWatchTimer = null;
+            playFanfare();
+            if (typeof fxBanner === 'function') {
+              fxBanner(kind === 'star' ? '⭐ A NEW STAR!!' : '💚 A NEW FOLLOWER!!',
+                kind === 'star' ? trT('the repo FELT that. thank you ♡', 'le dépôt l\'a SENTI. merci ♡') : trT('yongshan just got a little more famous ♡', 'yongshan vient de gagner en célébrité ♡'));
+            }
+            achvUnlock(kind === 'star' ? 'stargazer' : 'gitfollow');
+            termLine(kind === 'star'
+              ? trT('⭐ the star counter just went UP. was that you?! LEGEND.', '⭐ le compteur d\'étoiles vient de MONTER. c\'était toi ?! LÉGENDE.')
+              : trT('💚 follower count just went UP. was that you?! adopted forever.', '💚 le compteur d\'abonnés vient de MONTER. c\'était toi ?! adopté·e pour toujours.'), 't-ok');
+          }
+        });
+      }, 25000);
+    });
+  }
+  function termGit(args) {
+    const sub = (args[0] || 'status').toLowerCase();
+    gitMark(sub);
+    if (sub === 'help' || sub === '--help') {
+      termLine(trT('git — the fourth-wall edition. real GitHub, cute verbs:', 'git — édition quatrième mur. vrai GitHub, verbes mignons :'), 't-accent');
+      [['status', trT('LIVE repo stats from GitHub', 'stats LIVE du dépôt GitHub')],
+       ['log', trT('her real latest commits', 'ses vrais derniers commits')],
+       ['star', trT('opens the repo — the ⭐ is yours to press', 'ouvre le dépôt — l\'⭐ t\'appartient')],
+       ['follow', trT('opens her profile — the follow button awaits', 'ouvre son profil — le bouton follow attend')],
+       ['clone', trT('copies the REAL clone command', 'copie la VRAIE commande clone')],
+       ['fork / pull / push / commit / branch / checkout / merge', '…'],
+       ['stash / blame / diff / cherry-pick / tag / remote / reflog / bisect', '…']].forEach(([a, b]) => termLine(`  git ${a}  —  ${b}`, 't-dim'));
+      return;
+    }
+    if (sub === 'status') {
+      termLine('On branch main ♡', 't-ok');
+      ghApi(`/repos/${GH_USER}/${GH_REPO}`).then((d) => {
+        if (!d) { termLine(trT('origin unreachable — but the feelings are all staged locally', 'origin injoignable — mais les sentiments sont indexés en local'), 't-dim'); return; }
+        termLine(trT(`origin: github.com/${GH_USER}/${GH_REPO} — LIVE`, `origin : github.com/${GH_USER}/${GH_REPO} — EN DIRECT`), 't-dim');
+        termLine(`  ⭐ ${d.stargazers_count} stars · 🍴 ${d.forks_count} forks · 🐛 ${d.open_issues_count} open issues`, 't-ok');
+        termLine(trT(`  last real push: ${new Date(d.pushed_at).toLocaleString()}`, `  dernier vrai push : ${new Date(d.pushed_at).toLocaleString()}`), 't-dim');
+        termLine(trT('nothing to commit — working tree full of pikmin, all feelings staged', 'rien à valider — arbre plein de pikmin, sentiments indexés'), 't-dim');
+      });
+      return;
+    }
+    if (sub === 'log') {
+      termLine(trT('fetching her ACTUAL commit history…', 'récupération de son VRAI historique…'), 't-dim');
+      ghApi(`/repos/${GH_USER}/${GH_REPO}/commits?per_page=5`).then((list) => {
+        if (!list || !list.length) { termLine('0000000 initial commit: one (1) slime', 't-ok'); return; }
+        list.forEach((c) => {
+          const msg = String((c.commit && c.commit.message) || '').split('\n')[0].slice(0, 72);
+          termLine(`${(c.sha || '').slice(0, 7)} ${msg}`, 't-ok');
+        });
+        termLine(trT('(yes, these are real. the fourth wall was never load-bearing.)', '(oui, ils sont vrais. le quatrième mur n\'a jamais été porteur.)'), 't-dim');
+      });
+      return;
+    }
+    if (sub === 'star') {
+      termLine(trT('⭐ opening the repo — the button is all yours (consent is sacred here)…', '⭐ ouverture du dépôt — le bouton est à toi (le consentement est sacré ici)…'), 't-accent');
+      termLine(trT('   (if the counter moves in the next minutes, this terminal WILL notice ♡)', '   (si le compteur bouge dans les prochaines minutes, ce terminal le SAURA ♡)'), 't-dim');
+      window.open(GH_LINK.repo, '_blank', 'noopener');
+      ghWatchDelta('star');
+      return;
+    }
+    if (sub === 'follow') {
+      termLine(trT('💚 opening her profile — I can\'t follow FOR you, that\'s your click to give…', '💚 ouverture de son profil — je ne peux pas suivre À ta place, ce clic t\'appartient…'), 't-accent');
+      termLine(trT('   (the follow button is top-right. no pressure. okay a LITTLE pressure ♡)', '   (le bouton follow est en haut à droite. sans pression. bon, un PEU ♡)'), 't-dim');
+      window.open(GH_LINK.profile, '_blank', 'noopener');
+      ghWatchDelta('follow');
+      return;
+    }
+    if (sub === 'fork') {
+      termLine(trT('🍴 opening the fork page — take the whole OS home, it\'s MIT-hearted', '🍴 ouverture de la page fork — emporte tout l\'OS, il a le cœur MIT'), 't-ok');
+      window.open(GH_LINK.fork, '_blank', 'noopener');
+      return;
+    }
+    if (sub === 'clone') {
+      const cmd2 = `git clone ${GH_LINK.repo}.git`;
+      const done = () => termLine(trT(`📋 copied: ${cmd2} — paste it in a REAL terminal. it actually works.`, `📋 copié : ${cmd2} — colle-le dans un VRAI terminal. ça marche vraiment.`), 't-ok');
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(cmd2).then(done).catch(done);
+      else done();
+      termLine(trT('cloning yongshanOS into your heart… done. 1 slime, 72 pikmin, 0 conflicts.', 'clonage de yongshanOS dans ton cœur… fini. 1 slime, 72 pikmin, 0 conflit.'), 't-dim');
+      return;
+    }
+    if (sub === 'pull') {
+      termLine(trT('pulling from origin/meadow…', 'récupération depuis origin/meadow…'), 't-dim');
+      termLine(trT('fast-forwarded: you received 1 pikmin parade ♡', 'avance rapide : tu reçois 1 défilé de pikmin ♡'), 't-ok');
+      if (typeof pikParade === 'function') pikParade();
+      return;
+    }
+    if (sub === 'push') {
+      termLine(trT('pushing hugs to origin/main… remote: ♡ accepted (fast-forward)', 'envoi de câlins vers origin/main… remote : ♡ accepté (avance rapide)'), 't-ok');
+      return;
+    }
+    if (sub === 'commit') {
+      termLine(trT('[main ♡♡♡♡♡♡♡] commit: "visited yongshanOS and petted the slime"', '[main ♡♡♡♡♡♡♡] commit : « a visité yongshanOS et caressé le slime »'), 't-ok');
+      termLine(trT(' 1 heart changed, ∞ insertions(+), 0 deletions(-)', ' 1 cœur modifié, ∞ insertions(+), 0 suppression(-)'), 't-dim');
+      return;
+    }
+    if (sub === 'branch') {
+      ['* main', '  feature/more-pikmin', '  feature/wrist-edition', '  fix/nightmare-boss (merged, it lost)', '  dark', '  light'].forEach((b) => termLine(b, b[0] === '*' ? 't-ok' : 't-dim'));
+      termLine(trT('(try: `git checkout dark`)', '(essaie : `git checkout dark`)'), 't-dim');
+      return;
+    }
+    if (sub === 'checkout') {
+      const b = (args[1] || '').toLowerCase();
+      if (b === 'dark' || b === 'light' || b === 'auto') {
+        runTermCommand('theme ' + b, true);
+        termLine(trT(`switched to branch '${b}' — the whole OS came along ♡`, `bascule sur la branche '${b}' — tout l'OS a suivi ♡`), 't-ok');
+      } else {
+        termLine(trT(`error: pathspec '${args[1] || ''}' did not match any branches made of daylight. try dark/light/auto`, `erreur : '${args[1] || ''}' ne correspond à aucune branche faite de lumière. essaie dark/light/auto`), 't-err');
+      }
+      return;
+    }
+    if (sub === 'merge') {
+      termLine(trT('CONFLICT (content): merge conflict in feelings.txt', 'CONFLIT (contenu) : conflit de fusion dans feelings.txt'), 't-err');
+      termLine(trT('auto-resolved: kept BOTH. feelings are not mutually exclusive ♡', 'auto-résolu : on garde LES DEUX. les sentiments ne s\'excluent pas ♡'), 't-ok');
+      return;
+    }
+    if (sub === 'stash') {
+      termLine(trT('stashed: 3 worries, 1 deadline, 0 pikmin (they refused)', 'remisé : 3 soucis, 1 deadline, 0 pikmin (ils ont refusé)'), 't-ok');
+      return;
+    }
+    if (sub === 'blame') {
+      termLine(trT('git blame: the goose. it is always the goose. 🪿', 'git blame : l\'oie. c\'est toujours l\'oie. 🪿'), 't-accent');
+      return;
+    }
+    if (sub === 'diff') {
+      termLine('--- a/you_before_this_site', 't-dim');
+      termLine('+++ b/you_now', 't-dim');
+      termLine(trT('+ knows the pikmin personally', '+ connaît les pikmin personnellement'), 't-ok');
+      termLine(trT('+ has strong opinions about a slime', '+ a des avis tranchés sur un slime'), 't-ok');
+      return;
+    }
+    if (sub === 'cherry-pick') {
+      if (window.__gitCherry) { termLine(trT('🍒 the tree needs a moment. one pick per visit.', '🍒 l\'arbre a besoin d\'un instant. une cueillette par visite.'), 't-err'); return; }
+      window.__gitCherry = 1;
+      store.set('yos-pending-coins', (store.get('yos-pending-coins', 0) || 0) + 2);
+      termLine(trT('🍒 picked: 2 coins — staged for your next slime_run ♡', '🍒 cueilli : 2 pièces — prêtes pour ta prochaine slime_run ♡'), 't-ok');
+      return;
+    }
+    if (sub === 'tag') {
+      ['v41 "the pikdex era"', 'v44 "the nightmare"', 'v46 "the meltdown drills"', 'v48 "the wrist era"', 'v52 "the github wing"'].forEach((t2) => termLine(t2, 't-dim'));
+      return;
+    }
+    if (sub === 'remote') {
+      termLine(`origin  ${GH_LINK.repo}.git (fetch)`, 't-dim');
+      termLine(`origin  ${GH_LINK.repo}.git (push)`, 't-dim');
+      termLine(trT('wrist   your-smartwatch (fetch only, plucks & pets)', 'wrist   ta-montre (fetch uniquement, cueillettes & caresses)'), 't-dim');
+      return;
+    }
+    if (sub === 'reflog') {
+      const got = store.get('yos-achv', {});
+      const recent = Object.keys(got).sort((a, b) => got[b] - got[a]).slice(0, 4);
+      if (!recent.length) { termLine(trT('reflog: empty. go make some history ♡', 'reflog : vide. va écrire l\'histoire ♡'), 't-dim'); return; }
+      recent.forEach((id, i) => termLine(`HEAD@{${i}}: achievement: ${id} unlocked`, 't-ok'));
+      return;
+    }
+    if (sub === 'bisect') {
+      termLine(trT('bisecting your attention span… found it: you are STILL here. remarkable ♡', 'bissection de ton attention… trouvé : tu es ENCORE là. remarquable ♡'), 't-ok');
+      return;
+    }
+    if (sub === 'rebase') {
+      termLine(trT('interactive rebase opens vim. you remember what happened last time. (`vim` if you dare)', 'le rebase interactif ouvre vim. tu te souviens de la dernière fois. (`vim` si tu oses)'), 't-err');
+      return;
+    }
+    if (sub === 'init') {
+      termLine(trT('reinitialized existing repository: this desktop was ALWAYS a repository of feelings', 'dépôt réinitialisé : ce bureau a TOUJOURS été un dépôt de sentiments'), 't-ok');
+      return;
+    }
+    if (sub === 'gc') {
+      termLine(trT('garbage collecting… inspected 12,438 objects. found only treasures. removed 0.', 'nettoyage… 12 438 objets inspectés. que des trésors. 0 supprimé.'), 't-ok');
+      return;
+    }
+    if (sub === 'rm') {
+      termLine(trT('git rm: refused. nothing here is disposable — least of all you ♡', 'git rm : refusé. rien ici n\'est jetable — toi encore moins ♡'), 't-err');
+      return;
+    }
+    if (sub === 'config') {
+      termLine(trT('user.name = a wonderful stranger (this OS never snoops — privacy is load-bearing)', 'user.name = un·e inconnu·e formidable (cet OS ne fouille jamais — la vie privée est porteuse)'), 't-dim');
+      return;
+    }
+    termLine(trT(`git: '${sub}' — not here. \`git help\` shows the whole toolbox`, `git : '${sub}' — pas ici. \`git help\` montre toute la boîte`), 't-err');
+  }
   function runTermCommand(raw, piped, stdin) {
     const input = raw.trim();
     if (!input) return;
@@ -4339,6 +4578,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (typeof pikParade === 'function') pikParade();
         return;
       }
+    }
+
+    // ---- the terminal door: her name opens the rest of the world ----
+    if (document.body.classList.contains('terminal-only') && lower === 'yongshan') {
+      terminalDoorOpen();
+      return;
     }
 
     // ---- nightmare MELTDOWN: the shell is a triage desk. all input is a fix attempt ----
@@ -4543,23 +4788,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       return;
     }
-    if (cmd === 'git') {
-      const sub = args[0] || 'status';
-      if (sub === 'status') {
-        termLine('On branch main ♡', 't-ok');
-        termLine(trT('Your OS is up to date with \'origin/heart\'.', 'Votre OS est à jour avec « origin/heart ».'), 't-dim');
-        termLine(trT('nothing to commit, all feelings staged', 'rien à valider, tous les sentiments sont indexés'), 't-dim');
-      } else if (sub === 'log') {
-        ['a3f9e21 make everything cuter (again)', '9b2c110 teach the pikmin to walk', '547b2ba invent an entire OS', '0000000 initial commit: one (1) slime'].forEach((l) => termLine(l, 't-ok'));
-      } else if (sub === 'push') {
-        termLine(trT('git: everything you do here is already saved — the cloud has you ♡', 'git : tout ce que vous faites ici est déjà sauvegardé — le cloud veille ♡'), 't-ok');
-      } else if (sub === 'blame') {
-        termLine(trT('git blame: it was the slime. it is always the slime.', 'git blame : c\'était le slime. c\'est toujours le slime.'), 't-accent');
-      } else {
-        termLine(trT(`git: '${sub}' is not a git command here. try status/log/push/blame`, `git : « ${sub} » n'est pas une commande git ici. essayez status/log/push/blame`), 't-err');
-      }
-      return;
-    }
+    if (cmd === 'git') { termGit(args); return; }
     if (cmd === 'npm' || cmd === 'pip' || cmd === 'brew') {
       const pkg = args[1] || args[0] || 'happiness';
       termLine(`${cmd}: resolving ${pkg}…`, 't-dim');
@@ -14177,6 +14406,100 @@ document.addEventListener('DOMContentLoaded', () => {
     pikdexWheelCheck(pikdexWheelPct()); // wheel milestones re-checked every boot (cloud restores included)
   });
   bootSafe('desk-piks', () => deskPikInit()); // the desktop IS the meadow now
+
+  /* ================= 🐇 THE TERMINAL DOOR =================
+     visiting #terminal boots ONLY the shell — the whole desktop stays
+     dark until the visitor types the name. entry path: a mysterious
+     little command in yongshan's github README. */
+  const MATRIX_LINES = [
+    ['wake up, visitor… the desktop has you 🐇', 'réveille-toi… le bureau te tient 🐇'],
+    ['you ran a mysterious command from a README. objectively brave.', 'tu as lancé une commande mystérieuse d\'un README. objectivement courageux.'],
+    ['there is no spoon. there IS a slime.', 'il n\'y a pas de cuillère. il y a un slime.'],
+    ['I know kung fu. also CSS. mostly CSS.', 'je connais le kung-fu. et le CSS. surtout le CSS.'],
+    ['this shell is real. the walls around it are negotiable.', 'ce shell est réel. les murs autour sont négociables.'],
+    ['type `yongshan` — the name is the key. it opens EVERYTHING.', 'tape `yongshan` — le nom est la clé. il ouvre TOUT.'],
+    ['(`help` works too. but the name… the name is the good ending.)', '(`help` marche aussi. mais le nom… le nom est la vraie fin.)']
+  ];
+  function matrixGreeterShow() {
+    if (document.getElementById('matrix-greeter')) return;
+    const g = document.createElement('div');
+    g.id = 'matrix-greeter';
+    const cv = document.createElement('canvas');
+    cv.width = 112; cv.height = 112;
+    cv.style.width = '84px';
+    const x = cv.getContext('2d');
+    const ROWS = [
+      '......FF......', '.....F..F.....', '......FF......', '......S.......',
+      '....PPPPPP....', '..PPPPPPPPPP..', '.PwwPPPPPPPPP.', '.PwPPPPPPPPPP.',
+      'PPeeeePPeeeePP', 'PPeeeeeeeeeePP', 'PPuPPPmmPPuPPP', 'PPPPPPmmPPPPPP',
+      '.PPPPPPPPPPPP.', '..DDDDDDDDDD..'];
+    const PAL = { P: '#7ee787', D: '#2ea043', w: 'rgba(255,255,255,0.7)', e: '#0a0f0a', m: '#1f6f2f', u: '#a5f3b4', S: '#57c689', F: '#39d353' };
+    ROWS.forEach((row, ry) => { for (let rx = 0; rx < row.length; rx++) { const ch = row[rx]; if (ch === '.') continue; x.fillStyle = PAL[ch] || PAL.P; x.fillRect(rx * 8, ry * 8, 8, 8); } });
+    const bub = document.createElement('div');
+    bub.className = 'matrix-bubble';
+    let li = 0;
+    const speak = () => { bub.textContent = trT(MATRIX_LINES[li % MATRIX_LINES.length][0], MATRIX_LINES[li % MATRIX_LINES.length][1]); li++; };
+    speak();
+    window.__matrixGreetTimer = setInterval(speak, 6500);
+    g.append(bub, cv);
+    document.body.appendChild(g);
+  }
+  function terminalDoorOpen() {
+    termLine(trT('🔓 the name IS the key. compiling the rest of the world…', '🔓 le nom EST la clé. compilation du reste du monde…'), 't-ok');
+    setTimeout(() => {
+      document.body.classList.remove('terminal-only');
+      const g = document.getElementById('matrix-greeter');
+      if (g) g.remove();
+      if (window.__matrixGreetTimer) { clearInterval(window.__matrixGreetTimer); window.__matrixGreetTimer = null; }
+      const tw = document.getElementById('win-terminal');
+      if (tw) tw.classList.remove('window-maximized', 'terminal-door-win');
+      try { history.replaceState(null, '', location.pathname); } catch (e) { /* hash stays, harmless */ }
+      playFanfare();
+      achvUnlock('truefan');
+      if (typeof pikParade === 'function') pikParade();
+      // the welcome card: lowest-cost way to meet yongshan, highest-warmth
+      let root = document.getElementById('wp-root');
+      if (root) root.remove();
+      root = document.createElement('div');
+      root.id = 'wp-root';
+      const panel = document.createElement('div');
+      panel.className = 'wp-panel';
+      const head = document.createElement('div');
+      head.className = 'wp-panel-head';
+      head.textContent = trT('♡ so nice to meet you!!', '♡ ravie de te rencontrer !!');
+      const body = document.createElement('div');
+      body.className = 'wp-panel-body';
+      const p1 = document.createElement('p');
+      p1.textContent = trT('this is yongshan\'s personal site — and she kindly invites you to come play with the pikmin ♡', 'voici le site personnel de yongshan — et elle t\'invite gentiment à venir jouer avec les pikmin ♡');
+      const p2 = document.createElement('p');
+      p2.className = 'wp-note';
+      p2.textContent = trT('the pikmin live on the desktop · the slime runs a live stream · the arcade is in slime_run.exe · and you clearly already know your way around a terminal.', 'les pikmin vivent sur le bureau · le slime tient un direct · l\'arcade est dans slime_run.exe · et toi, tu sais déjà te servir d\'un terminal.');
+      const go = document.createElement('button');
+      go.type = 'button';
+      go.className = 'wp-btn';
+      go.textContent = trT('let\'s play ♡', 'on joue ♡');
+      go.addEventListener('click', () => root.remove());
+      body.append(p1, p2, go);
+      panel.append(head, body);
+      root.appendChild(panel);
+      document.body.appendChild(root);
+    }, 700);
+  }
+  bootSafe('terminal-door', () => {
+    if (location.hash !== '#terminal' && location.hash !== '#term') return;
+    document.body.classList.add('terminal-only');
+    achvUnlock('redpill');
+    setTimeout(() => {
+      openWindow('win-terminal');
+      const tw = document.getElementById('win-terminal');
+      if (tw) tw.classList.add('window-maximized', 'terminal-door-win');
+      termLine('', '');
+      termLine(trT('🐇 you took the mysterious command. respect.', '🐇 tu as suivi la commande mystérieuse. respect.'), 't-accent');
+      termLine(trT('   this is yongshan\'s terminal — the rest of her OS is still asleep.', '   voici le terminal de yongshan — le reste de son OS dort encore.'), 't-dim');
+      termLine(trT('   type `yongshan` — the name is the key. it opens EVERYTHING.', '   tape `yongshan` — le nom est la clé. il ouvre TOUT.'), 't-ok');
+      matrixGreeterShow();
+    }, 600);
+  });
 
   /* ================= ⌚ THE WRIST WING =================
      watch.html is a featherweight client for smartwatch browsers. pairing
