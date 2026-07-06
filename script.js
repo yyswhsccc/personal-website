@@ -21,10 +21,18 @@ document.addEventListener('DOMContentLoaded', () => {
   function yosAutoMute() {
     const away = document.hidden || !document.hasFocus();
     try {
-      if (!audioCtx) return;
-      if (away && audioCtx.state === 'running') audioCtx.suspend();
-      else if (!away && audioCtx.state === 'suspended') audioCtx.resume();
+      if (audioCtx) {
+        if (away && audioCtx.state === 'running') audioCtx.suspend();
+        else if (!away && audioCtx.state === 'suspended') audioCtx.resume();
+      }
     } catch (e) { /* audio is a luxury, not a right */ }
+    // HTMLAudio loops (weather ambience) follow the same rule
+    try {
+      if (typeof wxAudioEl !== 'undefined' && wxAudioEl && wxAudioEl.src) {
+        if (away) wxAudioEl.pause();
+        else if (typeof liveOpen !== 'undefined' && liveOpen) wxAudioEl.play().catch(() => {});
+      }
+    } catch (e) { /* silence is fine */ }
   }
   document.addEventListener('visibilitychange', yosAutoMute);
   window.addEventListener('blur', () => setTimeout(yosAutoMute, 40));
@@ -258,6 +266,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const liveWin = document.getElementById('win-live');
       if (liveWin && !liveWin.classList.contains('window-closed')) closeWindow(liveWin);
       if (typeof gameFitBig === 'function') gameFitBig();
+      if (typeof gameConsoleEnter === 'function') gameConsoleEnter(win);
       if (typeof gameMaybeRotate === 'function') gameMaybeRotate(win);
       if (typeof gameCamEnter === 'function') gameCamEnter();
       setTimeout(() => { if (typeof gFitCanvas === 'function') gFitCanvas(); }, 120);
@@ -267,7 +276,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (winId === 'win-interview' && typeof setupInterviewWindow === 'function') {
       setupInterviewWindow();
       // the scheduler is a proper standalone modal: centered, on top
-      // of EVERYTHING, with a dimming veil — no more ad soup behind it
+      // of EVERYTHING, with a dimming veil — no more ad soup behind it.
+      // The node moves to <body> so no ancestor stacking context can
+      // trap it UNDER the veil (the freeze bug of legend).
+      if (!win._homeParent) {
+        win._homeParent = win.parentNode;
+        win._homeNext = win.nextSibling;
+      }
+      document.body.appendChild(win);
       win.classList.add('window-itv-modal');
       if (!document.getElementById('itv-backdrop')) {
         const veil = document.createElement('div');
@@ -320,6 +336,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (win.id === 'win-live' && typeof liveExit === 'function') liveExit();
     if (win.id === 'win-interview') {
       win.classList.remove('window-itv-modal');
+      if (win._homeParent) win._homeParent.insertBefore(win, win._homeNext || null);
       const veil = document.getElementById('itv-backdrop');
       if (veil) veil.remove();
       try {
@@ -353,6 +370,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (win.id === 'win-game' && typeof gameUnrotate === 'function') gameUnrotate();
     if (win.id === 'win-interview') {
       win.classList.remove('window-itv-modal');
+      if (win._homeParent) win._homeParent.insertBefore(win, win._homeNext || null);
       const veil = document.getElementById('itv-backdrop');
       if (veil) veil.remove();
     }
@@ -2142,11 +2160,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const AMA_CHIPS = {
     en: {
-      featured: ['What is she best at?', 'What is Druid?', 'Is she open to work?'],
-      pool: ['What is she best at?', 'What is Druid?', 'What\'s her tech stack?', 'Tell me about the LMS', 'Is she open to work?', '她会说中文吗？', 'Who built this site?', 'Research highlights?', 'How do I contact her?', '推荐个餐厅吧！']
+      featured: ['What is she best at?', 'What is Druid?', 'Is she open to work?', 'Recommend a restaurant!!'],
+      pool: ['What is she best at?', 'What is Druid?', 'What\'s her tech stack?', 'Tell me about the LMS', 'Is she open to work?', '她会说中文吗？', 'Who built this site?', 'Research highlights?', 'How do I contact her?', 'Recommend a restaurant!!', '推荐个餐厅吧！']
     },
     fr: {
-      featured: ['Ses points forts ?', 'C\'est quoi Druid ?', 'Est-elle disponible ?'],
+      featured: ['Ses points forts ?', 'C\'est quoi Druid ?', 'Est-elle disponible ?', 'Un resto à conseiller ?'],
       pool: ['Ses points forts ?', 'C\'est quoi Druid ?', 'Sa stack technique ?', 'Parlez-moi du LMS', 'Est-elle disponible ?', 'Elle parle quelles langues ?', 'Qui a fait ce site ?', 'Ses recherches ?', 'Comment la contacter ?', 'Un resto à conseiller ?']
     }
   };
@@ -2778,6 +2796,43 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   const TERM_CHEATS = {
+    /* — north-american politics, lovingly bipartisan, 35 gags — */
+    'build the wall':        ['🧱 a wall of pink pixels rises. the bugs simply jump over it. +stars anyway.', '🧱 un mur de pixels roses s\'élève. les bugs sautent par-dessus. +étoiles quand même.', 'hearts'],
+    'drain the swamp':       ['🚿 swamp drained. found: 3 lobbyists, 1 boba straw, your luck buff.', '🚿 marais vidé. trouvé : 3 lobbyistes, 1 paille à boba, ton buff de chance.', 'luck'],
+    'make slimes great again':['🧢 slimes were always great. free fans for the rally.', '🧢 les slimes ont toujours été super. fans gratuits pour le meeting.', 'fans25'],
+    'yes we can':            ['🌅 hope-based buff dispensed. si se puede, lil jelly.', '🌅 buff à base d\'espoir distribué. si se puede, petit slime.', 'fever'],
+    'i approve this message':['📢 this cheat was paid for by the Committee To Re-Elect The Slime.', '📢 ce code est financé par le Comité pour la Réélection du Slime.', 'fanfare'],
+    'filibuster':            ['🗣 the slime begins reading the dictionary aloud. time slows. so do you.', '🗣 le slime lit le dictionnaire à voix haute. le temps ralentit. toi aussi.', 'tiny'],
+    'supreme court':         ['⚖️ 9 slimes in tiny robes reviewed your case: adorable. case dismissed.', '⚖️ 9 slimes en petites robes ont étudié ton cas : adorable. affaire classée.', 'hearts'],
+    'electoral college':     ['🗳 you won the popular vote (the fans). the coins remain undecided.', '🗳 tu as gagné le vote populaire (les fans). les pièces restent indécises.', 'fans5'],
+    'swing state':           ['🎯 you are the swing state now. both parties send you snacks.', '🎯 tu es l\'État pivot maintenant. les deux partis t\'envoient des snacks.', 'rich5'],
+    'recount':               ['🔢 recount complete: you had MORE coins than reported. corrected.', '🔢 recomptage terminé : tu avais PLUS de pièces qu\'annoncé. corrigé.', 'rich20'],
+    'gerrymander':           ['🗺 your district is now shaped like a boba cup. legally binding.', '🗺 ta circonscription a désormais la forme d\'un boba. juridiquement contraignant.', 'boba'],
+    'lame duck':             ['🦆 a duck appears. it is not lame. it is MAGNIFICENT. it fixes a bug.', '🦆 un canard apparaît. pas boiteux. MAGNIFIQUE. il corrige un bug.', 'honk'],
+    'pork barrel':           ['🥓 earmarked funds approved: 20 coins for "infrastructure" (snacks).', '🥓 fonds fléchés approuvés : 20 pièces pour « l\'infrastructure » (des snacks).', 'rich20'],
+    'red tape':              ['📕 cutting red tape… it was a 🎀 ribbon. we kept it. +style.', '📕 on coupe la paperasse… c\'était un 🎀 ruban. on l\'a gardé. +style.', 'hearts'],
+    'deep state':            ['🕳 the deep state is just the slime, deeper than usual. spooky nap.', '🕳 l\'État profond, c\'est juste le slime, plus profond que d\'habitude. sieste inquiétante.', 'nap'],
+    'term limits':           ['⏳ the slime has served 9999 consecutive terms. the law waves back.', '⏳ le slime en est à 9999 mandats consécutifs. la loi lui fait coucou.', 'fanfare'],
+    'super pac':             ['💼 an anonymous donor (the slime) funds your next run. attack ads incoming.', '💼 un donateur anonyme (le slime) finance ta prochaine run. pubs d\'attaque en approche.', 'muffin'],
+    'attack ad':             ['📺 "my opponent has NEVER petted the slime." — devastating. unverified.', '📺 « mon adversaire n\'a JAMAIS caressé le slime. » — dévastateur. non vérifié.', 'spooky'],
+    'exit poll':             ['📊 exit polls say 100% of visitors love the slime. margin of error: 0.', '📊 les sondages sortie des urnes : 100 % des visiteurs aiment le slime. marge d\'erreur : 0.', 'fans5'],
+    'grassroots':            ['🌱 a genuine grassroots movement sprouts. literally. in the garden.', '🌱 un vrai mouvement de terrain pousse. littéralement. dans le jardin.', 'pikmin'],
+    'october surprise':      ['🎃 the october surprise is a pumpkin costume. devastating cuteness.', '🎃 la surprise d\'octobre est un costume de citrouille. mignonnerie dévastatrice.', 'fit'],
+    'lobbyist':              ['🥐 the croissant lobby has reached the slime. policy: more croissants.', '🥐 le lobby du croissant a atteint le slime. politique : plus de croissants.', 'boba'],
+    'bipartisan':            ['🤝 both parties agree on exactly one thing: this slime. history made.', '🤝 les deux partis d\'accord sur UNE chose : ce slime. historique.', 'hearts'],
+    'commander in chief':    ['🫡 the slime salutes. it now outranks you. respectfully.', '🫡 le slime fait le salut. il te dépasse en grade. respectueusement.', 'fanfare'],
+    'first amendment':       ['🗽 free speech confirmed: the slime may say "pik" at any volume.', '🗽 liberté d\'expression confirmée : le slime peut dire « pik » à tout volume.', 'meow'],
+    'audit the fed':         ['🏦 audit complete: the fed is 3 pikmin in a trench coat. coins printed.', '🏦 audit terminé : la Fed, c\'est 3 pikmin dans un imperméable. pièces imprimées.', 'rich20'],
+    'debt ceiling':          ['📈 debt ceiling raised!! (it was a pixel. we moved it up one pixel.)', '📈 plafond de la dette relevé !! (c\'était un pixel. on l\'a monté d\'un pixel.)', 'rich5'],
+    'inflation':             ['🎈 inflation strikes: the slime is now 50% bigger. purchasing power: cuter.', '🎈 l\'inflation frappe : le slime est 50 % plus gros. pouvoir d\'achat : plus mignon.', 'big'],
+    'carbon tax':            ['🌿 carbon neutral since forever: the slime runs on vibes and boba.', '🌿 neutre en carbone depuis toujours : le slime carbure aux vibes et au boba.', 'wxsun'],
+    'universal healthcare':  ['🏥 in THIS country (Canada), your ♥ is covered. take one, eh.', '🏥 dans CE pays (le Canada), ton ♥ est couvert. prends-en un, eh.', 'life'],
+    'sorry':                 ['🇨🇦 apology accepted. apology returned. apology exchange complete, eh.', '🇨🇦 excuses acceptées. excuses retournées. échange d\'excuses complet, eh.', 'hearts'],
+    'maple syrup':           ['🍁 the strategic maple syrup reserve opens for you. sticky buff.', '🍁 la réserve stratégique de sirop d\'érable s\'ouvre pour toi. buff collant.', 'boba'],
+    'poutine party':         ['🍟 the Poutine Party wins in a landslide. gravy for everyone.', '🍟 le Parti Poutine gagne haut la main. sauce pour tout le monde.', 'rich5'],
+    'question period':       ['🏛 ORDER!! the honourable slime yields the floor to NO ONE.', '🏛 À L\'ORDRE !! l\'honorable slime ne cède la parole à PERSONNE.', 'zerg'],
+    'moose lobby':           ['🫎 the moose lobby endorses you. geese furious. drama at 6.', '🫎 le lobby des orignaux te soutient. les bernaches furieuses. drame à 18 h.', 'geese'],
+
     /* — the classics, 1-30 — */
     'power overwhelming': ['⚡ POWER OVERWHELMING. the bugs already fear your next run.', '⚡ POWER OVERWHELMING. les bugs craignent déjà ta prochaine run.', 'god'],
     'operation cwal':     ['🏃 operation CWAL: next run runs on espresso.', '🏃 opération CWAL : la prochaine run carbure à l\'expresso.', 'fast'],
@@ -3798,6 +3853,11 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     if (cmd === 'rm') { termLine(trT('rm: refusing to delete cuteness (protected path)', 'rm : refus de supprimer la mignonnerie (chemin protégé)'), 't-err'); return; }
+    if (cmd === 'google') {
+      termLine(trT('google? never heard of it. redirecting to the SUPERIOR engine…', 'google ? connais pas. redirection vers le moteur SUPÉRIEUR…'), 't-ok');
+      setTimeout(() => openWindow('win-search'), 500);
+      return;
+    }
     if (cmd === 'exit') {
       termLine(trT('bye!! closing window ♡', 'bye !! fermeture de la fenêtre ♡'), 't-dim');
       setTimeout(() => closeWindow(termWindow), 400);
@@ -3957,9 +4017,22 @@ document.addEventListener('DOMContentLoaded', () => {
   const darkMQ = window.matchMedia('(prefers-color-scheme: dark)');
 
   function resolvedTheme() {
-    if (themePref === 'auto') return darkMQ.matches ? 'dark' : 'light';
+    if (themePref === 'auto') {
+      // auto follows the VISITOR'S local clock: daylight hours get
+      // light mode, evenings get dark. If the clock is unreadable,
+      // fall back to the system preference.
+      try {
+        const hr = new Date().getHours();
+        if (typeof hr === 'number' && hr >= 0 && hr <= 23) return (hr >= 7 && hr < 19) ? 'light' : 'dark';
+      } catch (e) { /* clockless devices exist, apparently */ }
+      return darkMQ.matches ? 'dark' : 'light';
+    }
     return themePref === 'dark' ? 'dark' : 'light';
   }
+  // re-evaluate the sun every 10 minutes so 19:00 flips the lights
+  setInterval(() => {
+    if (themePref === 'auto' && typeof applyTheme === 'function') applyTheme();
+  }, 600000);
 
   function applyThemeChrome() {
     const tabTitle = document.getElementById('tab-title');
@@ -4016,8 +4089,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (resolvedTheme() !== 'dark') return;
     if (pet.busy || pet.sleeping || isGrabbing) return;
     if (slimeBody) slimeBody.classList.add('is-ghost-hidden');
-    // 85% of sleeps turn into a sleepwalking tour
-    if (Math.random() < 0.85) {
+    // 92% of sleeps turn into a sleepwalking tour (dark mode's whole
+    // arcade funnel walks on these little feet)
+    if (Math.random() < 0.92) {
       if (sleepwalkTimer) clearTimeout(sleepwalkTimer);
       sleepwalkTimer = setTimeout(() => startSleepwalk(), 5000 + Math.random() * 6000);
     }
@@ -4202,7 +4276,7 @@ document.addEventListener('DOMContentLoaded', () => {
       line = SW_GAME_LINE;
       isGame = true;
       directDive = true;
-    } else if (Math.random() < 0.85) {
+    } else if (Math.random() < 0.92) {
       target = document.getElementById('chip-game');
       line = SW_GAME_LINE;
       isGame = true;
@@ -4683,6 +4757,97 @@ document.addEventListener('DOMContentLoaded', () => {
     return b === 'edge' ? 'https://www.bing.com/search?q=' : 'https://www.google.com/search?q=';
   }
 
+  /* ---------- Yongshan's Edmonton restaurant chart ----------
+     Surfaces when anyone searches food things. Marked "sponsored"
+     (this ad slot is, of course, for rent). Ranking: NONE — the
+     order means nothing, the love is equal. Likes & wanna-try
+     counts live on the shared Abacus backend. */
+  const RESTO_LIST = [
+    { n: "Nando's Peri Peri", u: 'https://share.google/x4SeYODZtiUIijJ70', note: ['flame-grilled. the slime respects fire.', 'grillé à la flamme. le slime respecte le feu.'] },
+    { n: "McDonald's", u: 'https://share.google/IX6i6CSQh38ylLxQB', note: ['the lil fries?? fragrant. she thinks about them DAILY 😋', 'les petites frites ?? parfumées. elle y pense TOUS les jours 😋'] },
+    { n: 'Starbucks', u: 'https://share.google/JcN6d32MRRlGo3g17', note: ['matcha latte + matcha frap with EXTRA cream. non-negotiable.', 'matcha latte + frappuccino matcha avec SUPPLÉMENT de crème. non négociable.'] },
+    { n: 'Potato Corner', u: 'https://share.google/KiCG1pOlEI4kgfMXQ', note: ['BBQ flavour + sour cream & onion. trust the process.', 'saveur BBQ + oignon-crème. fais confiance au process.'] },
+    { n: 'Nara Katsu', u: 'https://share.google/eBLV7niLsZ7Qq99lU', note: ['MEGA recommendation. the katsu is life-changing.', 'MÉGA recommandation. le katsu change une vie.'] },
+    { n: 'Old Spaghetti Factory', u: 'https://share.google/8rt9OxVsrXXs73O8L', note: ['pasta in an old-timey trolley. peak vibes.', 'des pâtes dans un vieux tramway. ambiance maximale.'] },
+    { n: 'Dorinku Osaka', u: 'https://share.google/3GIDBGf9F54xHOXPz', note: ['izakaya energy. everything slaps.', 'énergie izakaya. tout est excellent.'] },
+    { n: "Emperor's Palace dim sum", u: 'https://share.google/3olYuV4hl1phL7Ybu', note: ['dim sum = microservices, but delicious.', 'dim sum = microservices, mais délicieux.'] },
+    { n: 'Wing Snob', u: 'https://share.google/XwJRLKFyptUGaDbKD', note: ['everything salt & pepper. dip: creamy parmesan. thank me later.', 'tout en sel-poivre. sauce : parmesan crémeux. tu me remercieras.'] },
+    { n: 'Costco', u: 'https://share.google/lBigLGuqPjKb7h3vz', note: ['$1.50 hotdog + bottomless drink + the free-samples world tour.', 'hot-dog à 1,50 $ + boisson à volonté + tour du monde des échantillons gratuits.'] }
+  ];
+  var restoCounts = null;
+  function restoBase(i, kind) { return kind === 'l' ? 37 + (i * 13) % 90 : 21 + (i * 17) % 70; }
+  function restoFetchCounts() {
+    if (restoCounts) return Promise.resolve(restoCounts);
+    const keys = [];
+    RESTO_LIST.forEach((r, i) => { keys.push('resto-l-' + i, 'resto-t-' + i); });
+    return Promise.all(keys.map((k) =>
+      fetch(`${LIKE_API}/get/${LIKE_NS}/${k}`).then((r2) => (r2.ok ? r2.json() : { value: 0 })).then((d) => Math.max(0, Number(d.value) || 0)).catch(() => 0)
+    )).then((vals) => {
+      restoCounts = {};
+      keys.forEach((k, ix) => { restoCounts[k] = vals[ix]; });
+      return restoCounts;
+    });
+  }
+  function restoVoteBtn(i, kind, labelPair) {
+    const key = `resto-${kind}-${i}`;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'resto-vote resto-vote-' + kind;
+    const voted = store.get('yos-resto-voted', {});
+    const count = () => restoBase(i, kind) + ((restoCounts && restoCounts[key]) || 0) + (voted[key] ? 0 : 0);
+    btn.textContent = `${trT(labelPair[0], labelPair[1])} ${count().toLocaleString()}`;
+    if (voted[key]) btn.classList.add('voted');
+    btn.addEventListener('click', () => {
+      const v = store.get('yos-resto-voted', {});
+      if (v[key]) { playTone(987, 'sine', 0.06, 0, 0.04); return; }
+      v[key] = 1;
+      store.set('yos-resto-voted', v);
+      if (restoCounts) restoCounts[key] = (restoCounts[key] || 0) + 1;
+      btn.textContent = `${trT(labelPair[0], labelPair[1])} ${count().toLocaleString()}`;
+      btn.classList.add('voted');
+      playSparkleSound();
+      fetch(`${LIKE_API}/hit/${LIKE_NS}/${key}`).catch(() => { /* offline vote stays local */ });
+    });
+    return btn;
+  }
+  function renderRestoChart() {
+    const wrap = document.createElement('div');
+    wrap.className = 'resto-chart';
+    const head = document.createElement('div');
+    head.className = 'sr-sponsored-tag';
+    head.textContent = trT('♡ sponsored (by my own stomach) · ranking: NONE, love is equal · this ad slot is for rent', '♡ sponsorisé (par mon propre estomac) · classement : AUCUN, amour égal · cet espace pub est à louer');
+    wrap.appendChild(head);
+    RESTO_LIST.forEach((r, i) => {
+      const card = document.createElement('div');
+      card.className = 'search-result resto-card';
+      const a = document.createElement('a');
+      a.href = r.u;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      a.className = 'sr-title';
+      a.textContent = `📍 ${r.n}`;
+      const desc = document.createElement('div');
+      desc.className = 'sr-desc';
+      desc.textContent = trT(r.note[0], r.note[1]);
+      const votes = document.createElement('div');
+      votes.className = 'resto-votes';
+      votes.appendChild(restoVoteBtn(i, 'l', ['💖 I love it too!!', '💖 moi aussi !!']));
+      votes.appendChild(restoVoteBtn(i, 't', ['🍜 wanna try', '🍜 envie d\'essayer']));
+      card.append(a, desc, votes);
+      wrap.appendChild(card);
+    });
+    restoFetchCounts().then(() => {
+      // refresh counts in place once the backend answers
+      wrap.querySelectorAll('.resto-vote').forEach((b) => b.remove());
+      wrap.querySelectorAll('.resto-card').forEach((card, i) => {
+        const votes = card.querySelector('.resto-votes');
+        votes.appendChild(restoVoteBtn(i, 'l', ['💖 I love it too!!', '💖 moi aussi !!']));
+        votes.appendChild(restoVoteBtn(i, 't', ['🍜 wanna try', '🍜 envie d\'essayer']));
+      });
+    });
+    return wrap;
+  }
+
   function renderSearch(q) {
     if (!searchResults) return;
     const query = (q || '').trim();
@@ -4692,6 +4857,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!query) {
       if (searchMeta) searchMeta.textContent = t('search.empty');
       return;
+    }
+
+    // food query? Yongshan's Edmonton chart takes the podium
+    if (/restaurant|resto|food|eat|boba|hungry|餐厅|美食|吃|奶茶/i.test(query)) {
+      searchResults.appendChild(renderRestoChart());
     }
 
     const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
@@ -5145,6 +5315,7 @@ document.addEventListener('DOMContentLoaded', () => {
     GAME.invUntil = 0;
     GAME.adUsed = false; // one ad-revive per run
     GAME.nm = null; GAME.nmPx = null; // nightmares don't survive a reboot
+    if (typeof liveAway === 'function') liveAway(false);
     const rcam = document.getElementById('game-reaction-cam');
     if (rcam) rcam.classList.remove('cam-ad-dock');
     // terminal secret codes cash in here, one per armed run
@@ -5727,6 +5898,18 @@ document.addEventListener('DOMContentLoaded', () => {
     gDrawRogueHud(g2);
     if (GAME.event) gDrawEvent(g2);
 
+    // console mode: score & best live INSIDE the screen, bottom corners
+    if (GAME.consoleMode) {
+      g2.font = "12px 'Jersey 25', 'VT323', monospace";
+      g2.textAlign = 'left';
+      g2.fillStyle = gTheme.pink;
+      g2.fillText(`${t('game.score')} ${Math.floor(GAME.score)}`, 8, G_H - 5);
+      g2.textAlign = 'right';
+      g2.fillStyle = gTheme.ink;
+      g2.fillText(`★ ${GAME.hi}`, G_W - 8, G_H - 5);
+      g2.textAlign = 'left';
+    }
+
     // overlay text
     g2.textAlign = 'center';
     g2.font = "16px 'Jersey 25', 'VT323', monospace";
@@ -6241,53 +6424,53 @@ document.addEventListener('DOMContentLoaded', () => {
   const NM_DREAMS = [
     { id: 'gc', t: ['zzz… garbage collector… sweeping…', 'zzz… ramasse-miettes… il balaie…'],
       outs: [
-        { t: ['it swept 20% of your coins into the void', 'il a balayé 20 % de tes pièces dans le vide'], fx: () => fxCoins(-Math.ceil(GAME.coins * 0.2)) },
-        { t: ['it swept your DEBUFFS away instead!! spotless', 'il a balayé tes DÉBUFFS !! impeccable'], fx: () => { GAME.mods = {}; fxInvincible(2); } }
+        { e: '💸', t: ['it swept 20% of your coins into the void', 'il a balayé 20 % de tes pièces dans le vide'], fx: () => fxCoins(-Math.ceil(GAME.coins * 0.2)) },
+        { e: '🧼', t: ['it swept your DEBUFFS away instead!! spotless', 'il a balayé tes DÉBUFFS !! impeccable'], fx: () => { GAME.mods = {}; fxInvincible(2); } }
       ] },
     { id: 'cache', t: ['zzz… everything is… a cache…', 'zzz… tout est… un cache…'],
       outs: [
-        { t: ['CACHE HIT!! +9 coins from nowhere', 'CACHE HIT !! +9 pièces venues de nulle part'], fx: () => fxCoins(9) },
-        { t: ['cache miss. your speed pays the latency', 'cache miss. ta vitesse paie la latence'], fx: () => setMod('speed', 0.85, 10) }
+        { e: '🪙', t: ['CACHE HIT!! +9 coins from nowhere', 'CACHE HIT !! +9 pièces venues de nulle part'], fx: () => fxCoins(9) },
+        { e: '🐌', t: ['cache miss. your speed pays the latency', 'cache miss. ta vitesse paie la latence'], fx: () => setMod('speed', 0.85, 10) }
       ] },
     { id: 'offby1', t: ['zzz… off by one… always… off by one…', 'zzz… décalé de un… toujours… de un…'],
       outs: [
-        { t: ['+1 ♥. the good kind of off-by-one', '+1 ♥. le bon genre de décalage'], fx: () => fxLife(1) },
-        { t: ['-1 coin. ×10. arrays start at zero, pain starts at ten', '-1 pièce. ×10. les tableaux commencent à zéro, la douleur à dix'], fx: () => fxCoins(-10) }
+        { e: '💖', t: ['+1 ♥. the good kind of off-by-one', '+1 ♥. le bon genre de décalage'], fx: () => fxLife(1) },
+        { e: '💸', t: ['-1 coin. ×10. arrays start at zero, pain starts at ten', '-1 pièce. ×10. les tableaux commencent à zéro, la douleur à dix'], fx: () => fxCoins(-10) }
       ] },
     { id: 'segv', t: ['zzz… segmentation fault… core dumped…', 'zzz… erreur de segmentation… core dumped…'],
       outs: [
-        { t: ['the sky dumps exceptions!! DODGE', 'le ciel vide ses exceptions !! ESQUIVE'], fx: () => { for (let i = 0; i < 7; i++) GAME.nm && GAME.nm.shots.push({ x: 30 + Math.random() * (G_W - 90), y: -10 - i * 26 }); } },
-        { t: ['it dumped ITS core: +12 coins spill out', 'il a vidé SON core : +12 pièces déversées'], fx: () => fxCoins(12) }
+        { e: '⚠️', t: ['the sky dumps exceptions!! DODGE', 'le ciel vide ses exceptions !! ESQUIVE'], fx: () => { for (let i = 0; i < 7; i++) GAME.nm && GAME.nm.shots.push({ x: 30 + Math.random() * (G_W - 90), y: -10 - i * 26 }); } },
+        { e: '🪙', t: ['it dumped ITS core: +12 coins spill out', 'il a vidé SON core : +12 pièces déversées'], fx: () => fxCoins(12) }
       ] },
     { id: 'loop', t: ['zzz… while(true)… forever… together…', 'zzz… while(true)… pour toujours… ensemble…'],
       outs: [
-        { t: ['time loops: your jump doubles for 12s', 'le temps boucle : ton saut double pendant 12 s'], fx: () => setMod('jump', 1.5, 12) },
-        { t: ["the loop won't break. neither will its heart (for a while)", 'la boucle ne casse pas. son cœur non plus (un moment)'], fx: () => { if (GAME.nm) GAME.nm.weakAt = GAME.frame + 300; } }
+        { e: '🦘', t: ['time loops: your jump doubles for 12s', 'le temps boucle : ton saut double pendant 12 s'], fx: () => setMod('jump', 1.5, 12) },
+        { e: '🔒', t: ["the loop won't break. neither will its heart (for a while)", 'la boucle ne casse pas. son cœur non plus (un moment)'], fx: () => { if (GAME.nm) GAME.nm.weakAt = GAME.frame + 300; } }
       ] },
     { id: 'mymachine', t: ['zzz… works on my machine…', 'zzz… ça marche sur MA machine…'],
       outs: [
-        { t: ['your machine agrees: 4s of invincibility shipped', 'ta machine confirme : 4 s d\'invincibilité livrées'], fx: () => fxInvincible(4) },
-        { t: ['well it does not work on YOURS: -6 coins in support fees', 'ben pas sur la TIENNE : -6 pièces de frais de support'], fx: () => fxCoins(-6) }
+        { e: '🛡️', t: ['your machine agrees: 4s of invincibility shipped', 'ta machine confirme : 4 s d\'invincibilité livrées'], fx: () => fxInvincible(4) },
+        { e: '💸', t: ['well it does not work on YOURS: -6 coins in support fees', 'ben pas sur la TIENNE : -6 pièces de frais de support'], fx: () => fxCoins(-6) }
       ] },
     { id: 'merge', t: ['zzz… merge conflict… both of us… kept…', 'zzz… conflit de merge… tous les deux… gardés…'],
       outs: [
-        { t: ['both branches merged: coins +8 AND jump +25%', 'les deux branches fusionnées : +8 pièces ET +25 % de saut'], fx: () => { fxCoins(8); setMod('jump', 1.25, 15); } },
-        { t: ['your pikmin got stashed for 12s (uncommitted changes)', 'tes pikmin sont stash pendant 12 s (changements non commités)'], fx: () => { (GAME.piks || []).forEach((p) => { p.zapAt = GAME.frame + 720; p.nextCoinAt = GAME.frame + 720; }); } }
+        { e: '🎁', t: ['both branches merged: coins +8 AND jump +25%', 'les deux branches fusionnées : +8 pièces ET +25 % de saut'], fx: () => { fxCoins(8); setMod('jump', 1.25, 15); } },
+        { e: '😴', t: ['your pikmin got stashed for 12s (uncommitted changes)', 'tes pikmin sont stash pendant 12 s (changements non commités)'], fx: () => { (GAME.piks || []).forEach((p) => { p.zapAt = GAME.frame + 720; p.nextCoinAt = GAME.frame + 720; }); } }
       ] },
     { id: 'reboot', t: ['zzz… have you tried… turning yourself off and on…', 'zzz… t\'as essayé… de t\'éteindre et te rallumer…'],
       outs: [
-        { t: ['you rebooted: fresh i-frames + position reset', 'redémarrage : i-frames toutes neuves + position réinitialisée'], fx: () => { GAME.nmPx = G_SLIME_X; fxInvincible(3); } },
-        { t: ['forced update: everything is 15% slower while it installs', 'mise à jour forcée : tout est 15 % plus lent pendant l\'installation'], fx: () => setMod('speed', 0.85, 12) }
+        { e: '🔄', t: ['you rebooted: fresh i-frames + position reset', 'redémarrage : i-frames toutes neuves + position réinitialisée'], fx: () => { GAME.nmPx = G_SLIME_X; fxInvincible(3); } },
+        { e: '🐌', t: ['forced update: everything is 15% slower while it installs', 'mise à jour forcée : tout est 15 % plus lent pendant l\'installation'], fx: () => setMod('speed', 0.85, 12) }
       ] },
     { id: 'bugs99', t: ['zzz… 99 little bugs in the code… take one down…', 'zzz… 99 petits bugs dans le code… corriges-en un…'],
       outs: [
-        { t: ['…127 little bugs in the code. RAIN INCOMING', '…127 petits bugs dans le code. PLUIE IMMINENTE'], fx: () => { for (let i = 0; i < 9; i++) GAME.nm && GAME.nm.shots.push({ x: 20 + Math.random() * (G_W - 70), y: -8 - i * 20 }); } },
-        { t: ['one was a feature: +14 coins bounty', 'l\'un était une feature : prime de +14 pièces'], fx: () => fxCoins(14) }
+        { e: '⚠️', t: ['…127 little bugs in the code. RAIN INCOMING', '…127 petits bugs dans le code. PLUIE IMMINENTE'], fx: () => { for (let i = 0; i < 9; i++) GAME.nm && GAME.nm.shots.push({ x: 20 + Math.random() * (G_W - 70), y: -8 - i * 20 }); } },
+        { e: '🪙', t: ['one was a feature: +14 coins bounty', 'l\'un était une feature : prime de +14 pièces'], fx: () => fxCoins(14) }
       ] },
     { id: 'sudo', t: ['zzz… sudo make me… a sandwich…', 'zzz… sudo fais-moi… un sandwich…'],
       outs: [
-        { t: ['permission granted: a snack heals +1 ♥', 'permission accordée : un snack rend +1 ♥'], fx: () => fxLife(1) },
-        { t: ['you are not in the sudoers file. this incident cost 5 coins', 't\'es pas dans le fichier sudoers. cet incident coûte 5 pièces'], fx: () => fxCoins(-5) }
+        { e: '💖', t: ['permission granted: a snack heals +1 ♥', 'permission accordée : un snack rend +1 ♥'], fx: () => fxLife(1) },
+        { e: '💸', t: ['you are not in the sudoers file. this incident cost 5 coins', 't\'es pas dans le fichier sudoers. cet incident coûte 5 pièces'], fx: () => fxCoins(-5) }
       ] }
   ];
 
@@ -6329,8 +6512,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }, 2400);
     }
-    setTimeout(() => { if (GAME.nm) gToast(['tutorial: WASD to move!! W = up, A = left… the rest is homework ♡', 'tuto : WASD pour bouger !! W = haut, A = gauche… le reste, c\'est tes devoirs ♡'], 230); }, 4600);
-    setTimeout(() => { if (GAME.nm) gToast(['RAM ITS GLOWING HEART. beware: its sleep-talk COMES TRUE', 'FONCE DANS SON CŒUR QUI BRILLE. attention : ses paroles de sommeil SE RÉALISENT'], 230); }, 7400);
+    setTimeout(() => { if (GAME.nm) gToast(['tutorial: WASD to move!! your weapon AUTO-FIRES hearts ♡', 'tuto : WASD pour bouger !! ton arme tire des cœurs TOUTE SEULE ♡'], 230); }, 4600);
+    setTimeout(() => { if (GAME.nm) gToast(['RAM the big glowing heart for CRITS. its sleep-talk COMES TRUE', 'FONCE dans le grand cœur qui brille : CRITIQUES. ses paroles de sommeil SE RÉALISENT'], 230); }, 7400);
+    if (typeof liveAway === 'function') liveAway(true); // the streamer has… somewhere to be
   }
 
   function gNmSpeak() {
@@ -6349,7 +6533,10 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => {
       if (!GAME.nm) return;
       out.fx();
-      gToast(out.t, 170);
+      // the consequence lands ON THE PLAYER: a floating chip rises
+      // from the slime so cause and effect read at a glance
+      GAME.nmFloat = { text: (out.e || '✨') + ' ' + trT(out.t[0], out.t[1]), t0: GAME.frame, until: GAME.frame + 130 };
+      playTone(700, 'triangle', 0.08, 0, 0.04);
     }, 1500);
     nm.sayAt = GAME.frame + 380 + (seed % 140);
   }
@@ -6382,6 +6569,33 @@ document.addEventListener('DOMContentLoaded', () => {
     // player rect
     const px = GAME.nmPx + 5, pw = G_SLIME_S - 10;
     const py = G_GROUND - G_SLIME_S - GAME.y + 6, ph = G_SLIME_S - 8;
+    // YOUR WEAPON AUTO-FIRES: a steady stream of heart-bolts. body
+    // hits chip the giant down; RAMMING the glowing heart still crits.
+    if (nm.intro <= 0 && GAME.weapon && GAME.frame >= (nm.fireAt || 0)) {
+      nm.fireAt = GAME.frame + 70;
+      nm.bolts = nm.bolts || [];
+      nm.bolts.push({ x: px + pw, y: py + ph * 0.35, vx: 5.2 });
+      playTone(1180, 'triangle', 0.05, 0, 0.025);
+    }
+    let nmSlain = false;
+    (nm.bolts || []).forEach((bl) => { bl.x += bl.vx; });
+    nm.bolts = (nm.bolts || []).filter((bl) => {
+      if (nmSlain) return false;
+      if (bl.x > nm.x + 8 && bl.x < nm.x + NM_W && bl.y > nmY && bl.y < nmY + NM_H) {
+        nm.chip = (nm.chip || 0) + 1;
+        nm.hitFlash = 4;
+        if (nm.chip >= 3) { // three bolts = one heart of damage
+          nm.chip = 0;
+          nm.hp -= 1;
+          GAME.score += 3;
+          playTone(880, 'triangle', 0.07, 0, 0.04);
+          if (nm.hp <= 0) nmSlain = true;
+        }
+        return false;
+      }
+      return bl.x < G_W + 20;
+    });
+    if (nmSlain) return gNmWin();
     // shot grazes sting a few coins
     nm.shots = nm.shots.filter((s) => {
       if (s.x > px - 6 && s.x < px + pw + 4 && s.y > py - 4 && s.y < py + ph) {
@@ -6395,7 +6609,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const overlap = px < nm.x + NM_W && px + pw > nm.x && py < nmY + NM_H && py + ph > nmY;
     if (overlap) {
       const wk = nm.weak;
-      const hitWeak = wk && px + pw > nm.x + wk.ox - 9 && px < nm.x + wk.ox + 11 && py < nmY + wk.oy + 11 && py + ph > nmY + wk.oy - 9;
+      const hitWeak = wk && px + pw > nm.x + wk.ox - 13 && px < nm.x + wk.ox + 15 && py < nmY + wk.oy + 15 && py + ph > nmY + wk.oy - 13;
       if (hitWeak) {
         nm.hp -= 1;
         nm.weak = null;
@@ -6416,9 +6630,36 @@ document.addEventListener('DOMContentLoaded', () => {
     function burstNote() { playTone(1046, 'triangle', 0.1, 0, 0.04); playTone(1568, 'triangle', 0.12, 0.06, 0.04); }
   }
 
+  // while the nightmare rages, the live room goes DARK: the streamer
+  // is mysteriously "away" (both the big room and the reaction cam)
+  function liveAway(on) {
+    [document.getElementById('live-stage'), document.getElementById('game-reaction-cam')].forEach((el) => {
+      if (!el) return;
+      let card = el.querySelector(':scope > .away-card');
+      if (on && !card) {
+        card = document.createElement('div');
+        card.className = 'away-card';
+        const tv = document.createElement('span');
+        tv.className = 'away-tv';
+        tv.textContent = '📺';
+        const l1 = document.createElement('span');
+        l1.className = 'away-line1';
+        l1.textContent = trT('the streamer stepped away — please wait!! ♡', 'le streamer s\'est absenté — merci de patienter !! ♡');
+        const l2 = document.createElement('span');
+        l2.className = 'away-line2';
+        l2.textContent = trT('(hmm… where DID they go?)', '(hmm… mais où est-il passé ?)');
+        card.append(tv, l1, l2);
+        el.appendChild(card);
+      } else if (!on && card) {
+        card.remove();
+      }
+    });
+  }
+
   function gNmWin() {
     GAME.nm = null;
     GAME.nmPx = null;
+    liveAway(false); // and the streamer strolls back in, suspiciously sleepy
     const nmCam = document.getElementById('game-reaction-cam');
     if (nmCam && GAME.state !== 'ad') nmCam.classList.remove('cam-ad-dock');
     GAME.score += 40;
@@ -6471,12 +6712,7 @@ document.addEventListener('DOMContentLoaded', () => {
       g2.fillText(trT('the sleepwalker grew. a lot.', 'le somnambule a grandi. beaucoup.'), G_W / 2, 58);
       g2.textAlign = 'left';
     }
-    // dream aura: soft violet halo breathing behind the giant
-    const aura = 0.16 + Math.sin(nm.t * 0.04) * 0.08;
-    g2.globalAlpha = aura;
-    g2.fillStyle = '#b388ff';
-    g2.fillRect(nm.x + jx - 12, nmY - 12, NM_W + 24, NM_H + 24);
-    g2.globalAlpha = 1;
+    // (the old violet halo drew as a faint box — retired)
     // the giant sleeper itself — current outfit, baked and enlarged
     const spr = nmSprite();
     if (spr) {
@@ -6495,43 +6731,87 @@ document.addEventListener('DOMContentLoaded', () => {
     g2.fillText('z', nm.x + NM_W - 6, nmY + 6 - zf * 10);
     g2.fillText('Z', nm.x + NM_W + 4, nmY - 2 - zf * 16);
     g2.globalAlpha = 1;
-    // its dream-talk, in a pixel bubble above (the attack you can read)
+    // its dream-talk, in a pixel bubble UNDER the giant — the top edge
+    // belongs to the hp bar, no more text pile-ups
     if (nm.say) {
       g2.font = "11px 'Jersey 25', 'VT323', monospace";
       const tw = g2.measureText(nm.say.text).width;
+      const by = Math.min(G_H - 26, nmY + NM_H + 6);
       const bx = Math.max(6, Math.min(G_W - tw - 22, nm.x + NM_W / 2 - tw / 2 - 8));
       g2.fillStyle = '#14020e';
-      g2.fillRect(bx - 2, 4, tw + 20, 20);
+      g2.fillRect(bx - 2, by - 2, tw + 20, 20);
       g2.fillStyle = '#fff4fb';
-      g2.fillRect(bx, 6, tw + 16, 16);
+      g2.fillRect(bx, by, tw + 16, 16);
       g2.fillStyle = '#5a3d6e';
-      g2.fillText(nm.say.text, bx + 8, 18);
+      g2.fillText(nm.say.text, bx + 8, by + 12);
     }
-    // the glowing weak heart — slow breathing pulse (no strobing)
+    // the weak point is now UNMISSABLE: a big pixel heart, white
+    // outline, gold halo, and a bossy little label
     if (nm.weak) {
-      const pulse = 0.6 + Math.sin(GAME.frame * 0.09) * 0.25;
+      const wx = nm.x + nm.weak.ox, wy = nmY + nm.weak.oy;
+      const pulse = 0.75 + Math.sin(GAME.frame * 0.09) * 0.2;
       g2.globalAlpha = pulse;
       g2.fillStyle = '#ffd400';
-      g2.fillRect(nm.x + nm.weak.ox - 5, nmY + nm.weak.oy - 5, 14, 14);
-      g2.fillStyle = '#ff5f9e';
-      g2.fillRect(nm.x + nm.weak.ox - 2, nmY + nm.weak.oy - 2, 8, 8);
+      g2.fillRect(wx - 11, wy - 11, 24, 24); // gold halo
+      g2.fillStyle = '#ffffff';
+      g2.fillRect(wx - 9, wy - 9, 20, 20); // white outline
+      g2.fillStyle = '#ff2d78'; // the heart (chunky pixel version)
+      g2.fillRect(wx - 7, wy - 6, 6, 6);
+      g2.fillRect(wx + 2, wy - 6, 6, 6);
+      g2.fillRect(wx - 7, wy - 2, 15, 6);
+      g2.fillRect(wx - 4, wy + 4, 9, 4);
+      g2.fillRect(wx - 1, wy + 8, 3, 2);
       g2.globalAlpha = 1;
+      g2.textAlign = 'center';
+      g2.font = "10px 'Jersey 25', 'VT323', monospace";
+      g2.fillStyle = '#14020e';
+      g2.fillRect(wx - 26, wy - 26, 54, 12);
+      g2.fillStyle = '#ffd400';
+      g2.fillText(trT('RAM ME!!', 'FONCE !!'), wx + 1, wy - 17);
+      g2.textAlign = 'left';
     }
+    // your auto-fire heart-bolts, mid-flight
+    (nm.bolts || []).forEach((bl) => {
+      g2.fillStyle = '#ff5f9e';
+      g2.fillRect(bl.x, bl.y, 7, 5);
+      g2.fillStyle = '#ffd8ee';
+      g2.fillRect(bl.x + 1, bl.y + 1, 3, 2);
+    });
     // falling exceptions
     g2.fillStyle = '#ffe98a';
     g2.font = "12px 'Jersey 25', 'VT323', monospace";
     nm.shots.forEach((s) => g2.fillText('!', s.x, s.y));
-    // proper boss hp bar, top-left — big and readable
-    const hpw = 150;
+    // boss hp bar: TOP CENTER, its own lane — the left HUD keeps
+    // hearts/coins/weapon without anyone sitting on anyone
+    const hpw = 170;
+    const hx = G_W / 2 - hpw / 2;
     g2.fillStyle = '#14020e';
-    g2.fillRect(8, 26, hpw + 4, 12);
+    g2.fillRect(hx - 2, 12, hpw + 4, 12);
     g2.fillStyle = '#3d2350';
-    g2.fillRect(10, 28, hpw, 8);
+    g2.fillRect(hx, 14, hpw, 8);
     g2.fillStyle = '#ff5f9e';
-    g2.fillRect(10, 28, hpw * (nm.hp / 12), 8);
+    g2.fillRect(hx, 14, hpw * Math.max(0, nm.hp / 12), 8);
+    g2.textAlign = 'center';
     g2.fillStyle = '#ffb7e2';
     g2.font = "10px 'Jersey 25', 'VT323', monospace";
-    g2.fillText(trT('sleepwalker.exe', 'somnambule.exe'), 10, 24);
+    g2.fillText(trT('sleepwalker.exe', 'somnambule.exe'), G_W / 2, 10);
+    g2.textAlign = 'left';
+    // the dream's consequence floats up FROM THE PLAYER
+    if (GAME.nmFloat && GAME.frame < GAME.nmFloat.until) {
+      const f = GAME.nmFloat;
+      const p = (GAME.frame - f.t0) / (f.until - f.t0);
+      const fx2 = (GAME.nmPx || G_SLIME_X) + G_SLIME_S / 2;
+      const fy = G_GROUND - G_SLIME_S - GAME.y - 12 - p * 26;
+      g2.font = "11px 'Jersey 25', 'VT323', monospace";
+      const ftw = g2.measureText(f.text).width;
+      const fbx = Math.max(4, Math.min(G_W - ftw - 16, fx2 - ftw / 2 - 6));
+      g2.globalAlpha = 1 - p * 0.7;
+      g2.fillStyle = '#f0509f';
+      g2.fillRect(fbx - 2, fy - 12, ftw + 14, 17);
+      g2.fillStyle = '#ffffff';
+      g2.fillText(f.text, fbx + 5, fy);
+      g2.globalAlpha = 1;
+    }
   }
 
   /* ---------- pikmin followers: the garden squad, in-game ----------
@@ -7797,6 +8077,35 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const body = document.createElement('p');
     body.className = 'gi-body';
+    // phones don't get the arcade (tiny screens deserve better) —
+    // they get a sweet invitation to come back on a computer
+    const onPhone = window.innerWidth < 820 && 'ontouchstart' in window;
+    if (onPhone) {
+      body.textContent = trT(
+        'psst — this site hides a full arcade game, but it needs a KEYBOARD. visit me on a computer for the whole slime_run experience ♡',
+        'psst — ce site cache un vrai jeu d\'arcade, mais il lui faut un CLAVIER. reviens me voir sur un ordinateur pour l\'expérience slime_run complète ♡'
+      );
+      const rowM = document.createElement('div');
+      rowM.className = 'gi-row';
+      const ok = document.createElement('button');
+      ok.className = 'gi-hype';
+      const okLabel = document.createElement('span');
+      okLabel.className = 'gi-hype-label';
+      okLabel.textContent = trT('deal!! see you on desktop ♡', 'ça marche !! à tout de suite sur ordi ♡');
+      ok.appendChild(okLabel);
+      ok.addEventListener('click', () => {
+        dismissGameInvite();
+        if (!pet.sleeping) showBubble(trT('I\'ll keep your seat warm ♡', 'je te garde ta place au chaud ♡'), 2600);
+      });
+      rowM.appendChild(ok);
+      box.appendChild(head);
+      box.appendChild(body);
+      box.appendChild(rowM);
+      document.body.appendChild(box);
+      gInviteEl = box;
+      playSparkleSound();
+      return;
+    }
     body.textContent = trT(
       'drowning in bugs all day is no way to live. fancy something fun for a minute?',
       'se noyer dans les bugs toute la journée, ce n\'est pas une vie. un petit moment fun ?'
@@ -7854,9 +8163,9 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(function tryShow() {
       if (gInviteShownThisVisit) return;
       const gameOpen = !document.getElementById('win-game').classList.contains('window-closed');
-      // both themes get the popup now — night owls deserve ads too.
-      // only a hidden tab, an open game, or a sleeping slime delays it.
-      if (document.hidden || gameOpen || pet.sleeping) {
+      // light mode only: in the dark, the SLEEPWALKER is the ad —
+      // it dives into the arcade personally. no popup competition.
+      if (document.hidden || gameOpen || pet.sleeping || resolvedTheme() !== 'light') {
         setTimeout(tryShow, 8000); // wrong moment — lurk and retry
         return;
       }
@@ -7887,8 +8196,18 @@ document.addEventListener('DOMContentLoaded', () => {
     applySlimeTransform(1, 0, 400);
     showBubble(trT("WE'RE LIVE!! hi chat ♡", 'ON EST EN DIRECT !! coucou le chat ♡'), 2600);
     if (typeof moveSlime === 'function') moveSlime({ action: 'happy', mood: trT('streaming', 'en direct'), duration: 800 });
-    // the colourful bullet chat broadcasts from inside the stage while live
-    if (danmakuBox) liveStage.appendChild(danmakuBox);
+    // the colourful bullet chat broadcasts from inside the stage while
+    // live — except on phones, where it sits BELOW the screen showing
+    // one line at a time (the slime must never be curtained off)
+    if (danmakuBox) {
+      if (window.matchMedia('(max-width: 700px)').matches) {
+        danmakuBox.classList.add('mobile-danmaku');
+        liveStage.parentNode.insertBefore(danmakuBox, liveStage.nextSibling);
+      } else {
+        danmakuBox.classList.remove('mobile-danmaku');
+        liveStage.appendChild(danmakuBox);
+      }
+    }
     liveViewerTick();
     gardenStart();
     liveWeather();
@@ -7903,10 +8222,14 @@ document.addEventListener('DOMContentLoaded', () => {
     gardenStop();
     if (gooseTimer) { clearTimeout(gooseTimer); gooseTimer = null; }
     gooseCallStop(); // the honks leave with the audience
+    wxSfxStop(); // and the weather falls silent too
     slimeHabitat.appendChild(slimeBody);
     slimeHabitat.appendChild(speechBubble);
     slimeHabitat.classList.remove('on-air');
-    if (danmakuBox) document.body.appendChild(danmakuBox); // bullet chat back to its corner
+    if (danmakuBox) {
+      danmakuBox.classList.remove('mobile-danmaku');
+      document.body.appendChild(danmakuBox); // bullet chat back to its corner
+    }
     slimePosition.x = 0; slimePosition.y = 0;
     applySlimeTransform(1, 0, 400);
   }
@@ -8270,7 +8593,35 @@ document.addEventListener('DOMContentLoaded', () => {
      One free Open-Meteo call (cached 15 min) → a hand-pixelled sky:
      shaded sprite clouds, a beaming sun (or moon + stars), lightning
      bolts, drifting fog banks — all little canvases, zero images. */
-  const WX_KINDS = ['clear', 'cloud', 'rain', 'snow', 'fog', 'thunder'];
+  const WX_KINDS = ['clear', 'cloud', 'rain', 'snow', 'fog', 'thunder', 'wind', 'hail', 'sleet', 'dust', 'heat', 'blizzard', 'hurricane'];
+
+  /* every sky comes with its soundtrack (Yongshan's 21-track pack) —
+     one looping ambience per weather, variants picked at random */
+  const WX_SFX = {
+    clear: ['assets/wx/01_clear_sunny.mp3'],
+    cloud: ['assets/wx/02_partly_cloudy.mp3', 'assets/wx/03_cloudy_overcast.mp3'],
+    rain: ['assets/wx/07_drizzle.mp3', 'assets/wx/08_steady_rain.mp3', 'assets/wx/09_heavy_rain.mp3', 'assets/wx/10_rain_shower.mp3', 'assets/wx/11_rain_wind.mp3'],
+    snow: ['assets/wx/15_snow.mp3'],
+    fog: ['assets/wx/04_fog_mist_haze.mp3'],
+    thunder: ['assets/wx/12_distant_thunder.mp3', 'assets/wx/13_thunderstorm.mp3', 'assets/wx/14_lightning_thunderclap.mp3'],
+    wind: ['assets/wx/05_light_wind.mp3', 'assets/wx/06_strong_wind_gale.mp3'],
+    hail: ['assets/wx/17_hail.mp3'],
+    sleet: ['assets/wx/18_sleet_freezing_rain.mp3'],
+    dust: ['assets/wx/19_sand_dust_storm.mp3'],
+    heat: ['assets/wx/20_heatwave.mp3'],
+    blizzard: ['assets/wx/16_blizzard.mp3'],
+    hurricane: ['assets/wx/21_hurricane_extreme_storm.mp3']
+  };
+  var wxAudioEl = null;
+  function wxSfx(kind) {
+    if (!wxAudioEl) { wxAudioEl = new Audio(); wxAudioEl.loop = true; }
+    const list = WX_SFX[kind];
+    if (!list || !liveOpen || !soundEnabled) { try { wxAudioEl.pause(); } catch (e) {} return; }
+    wxAudioEl.src = list[Math.floor(Math.random() * list.length)];
+    wxAudioEl.volume = resolvedTheme() === 'dark' ? 0.06 : 0.13;
+    if (!document.hidden && document.hasFocus()) wxAudioEl.play().catch(() => { /* pre-gesture */ });
+  }
+  function wxSfxStop() { if (wxAudioEl) { try { wxAudioEl.pause(); } catch (e) {} } }
   var wxAnnounced = null, wxCurrent = null;
   const wxSpriteCache = {};
 
@@ -8323,6 +8674,11 @@ document.addEventListener('DOMContentLoaded', () => {
       px('#f0b429', [[4, 0, 4, 1], [3, 1, 4, 1], [2, 3, 4, 1], [1, 5, 5, 1], [3, 7, 3, 1], [2, 9, 3, 1], [1, 11, 3, 1], [0, 13, 2, 1]]);
       px('#fff3c4', [[4, 1, 2, 1], [3, 3, 2, 1], [2, 5, 3, 1], [3, 8, 2, 1], [2, 10, 2, 1]]);
       px('#f0b429', [[3, 2, 4, 1], [2, 4, 4, 1], [3, 6, 3, 1], [2, 8, 3, 1], [1, 10, 3, 1], [1, 12, 2, 1]]);
+    } else if (kind === 'leaf') {
+      c.width = 9; c.height = 7;
+      px('#8fd4ae', [[2, 2, 5, 3], [3, 1, 3, 1], [3, 5, 3, 1]]);
+      px('#57c689', [[4, 2, 1, 3], [7, 3, 2, 1]]); // vein + stem
+      px('#b8e8cd', [[3, 2, 1, 1]]);
     } else if (kind === 'fog') {
       c.width = 46; c.height = 7;
       x.fillStyle = 'rgba(255,255,255,0.55)';
@@ -8383,6 +8739,30 @@ document.addEventListener('DOMContentLoaded', () => {
       add('fog', 280, '34%', '50%', 'wx-fog-b');
       add('fog', 210, '16%', '70%', 'wx-fog-a');
       add('fog', 250, '52%', '14%', 'wx-fog-b');
+    } else if (kind === 'wind') {
+      add('cloud', 84, '18%', '10%', 'wx-drift-b');
+      add('leaf', 18, '10%', '34%', 'wx-blow-a');
+      add('leaf', 14, '38%', '52%', 'wx-blow-b');
+      add('leaf', 16, '64%', '26%', 'wx-blow-a');
+      add('leaf', 12, '80%', '58%', 'wx-blow-b');
+    } else if (kind === 'hail' || kind === 'sleet') {
+      add('raincloud', 112, '12%', '5%', 'wx-drift-a');
+      add('raincloud', 90, '58%', '9%', 'wx-drift-b');
+    } else if (kind === 'dust') {
+      add('fog', 240, '8%', '36%', 'wx-blow-a');
+      add('fog', 260, '30%', '58%', 'wx-blow-b');
+    } else if (kind === 'heat') {
+      add('sun', 92, '78%', '5%', 'wx-bob-a'); // an OPPRESSIVE sun
+    } else if (kind === 'blizzard') {
+      add('cloud', 116, '8%', '4%', 'wx-drift-b');
+      add('cloud', 96, '44%', '9%', 'wx-drift-a');
+      add('cloud', 104, '74%', '5%', 'wx-drift-b');
+    } else if (kind === 'hurricane') {
+      add('raincloud', 124, '6%', '4%', 'wx-blow-a');
+      add('raincloud', 104, '40%', '10%', 'wx-blow-b');
+      add('raincloud', 118, '70%', '5%', 'wx-blow-a');
+      add('leaf', 16, '30%', '40%', 'wx-blow-b');
+      add('leaf', 13, '62%', '30%', 'wx-blow-a');
     }
   }
   const WX_LINES = {
@@ -8399,6 +8779,7 @@ document.addEventListener('DOMContentLoaded', () => {
     liveStage.classList.add('wx-' + kind);
     wxCurrent = kind;
     wxDecor(kind);
+    wxSfx(kind);
     if (liveOpen && wxAnnounced !== kind) {
       wxAnnounced = kind;
       setTimeout(() => {
@@ -8566,15 +8947,23 @@ document.addEventListener('DOMContentLoaded', () => {
   function liveWeather() {
     const cached = store.get('yos-wx', null);
     if (cached && Date.now() - cached.t < 900000) { applyWx(cached.k); return; }
-    fetch('https://api.open-meteo.com/v1/forecast?latitude=53.55&longitude=-113.49&current=weather_code')
+    fetch('https://api.open-meteo.com/v1/forecast?latitude=53.55&longitude=-113.49&current=weather_code,wind_speed_10m,temperature_2m')
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         if (!d || !d.current) return;
         const c = Number(d.current.weather_code);
+        const wind = Number(d.current.wind_speed_10m) || 0;
+        const temp = Number(d.current.temperature_2m);
         const k = c >= 95 ? 'thunder'
-          : ((c >= 71 && c <= 77) || c === 85 || c === 86) ? 'snow'
-          : ((c >= 51 && c <= 67) || (c >= 80 && c <= 82)) ? 'rain'
+          : c === 77 ? 'hail'
+          : c === 86 ? 'blizzard'
+          : ((c >= 71 && c <= 75) || c === 85) ? 'snow'
+          : (c === 56 || c === 57 || c === 66 || c === 67) ? 'sleet'
+          : ((c >= 51 && c <= 65) || (c >= 80 && c <= 82)) ? 'rain'
           : (c === 45 || c === 48) ? 'fog'
+          : wind >= 62 ? 'hurricane'
+          : wind >= 30 ? 'wind'
+          : (c === 0 && temp >= 29) ? 'heat'
           : (c >= 1 && c <= 3) ? 'cloud' : 'clear';
         store.set('yos-wx', { t: Date.now(), k });
         applyWx(k);
@@ -8770,6 +9159,71 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => fly.remove(), 900);
   }
 
+  /* 🐿️ the seed-seeker: a pixel squirrel bounds in, frantically
+     pats the meadow ("My seeds! My seeeeeeds!"), then boings away */
+  function squirrelSprite() {
+    if (wxSpriteCache.squirrel) return wxSpriteCache.squirrel;
+    const c = document.createElement('canvas');
+    c.width = 14; c.height = 11;
+    const x = c.getContext('2d');
+    x.fillStyle = '#b5764a'; // big fluffy tail
+    x.fillRect(0, 1, 4, 8);
+    x.fillRect(1, 0, 3, 2);
+    x.fillStyle = '#8a5a2e';
+    x.fillRect(1, 3, 2, 4); // tail shading
+    x.fillStyle = '#c98a5b'; // body
+    x.fillRect(4, 4, 6, 5);
+    x.fillRect(8, 2, 4, 5); // head
+    x.fillStyle = '#f4e0cc'; // belly + cheek
+    x.fillRect(5, 6, 3, 3);
+    x.fillRect(9, 5, 2, 2);
+    x.fillStyle = '#8a5a2e'; // ear
+    x.fillRect(9, 1, 2, 2);
+    x.fillStyle = '#14020e'; // eye + nose
+    x.fillRect(10, 3, 1, 1);
+    x.fillRect(12, 4, 1, 1);
+    wxSpriteCache.squirrel = c.toDataURL();
+    return wxSpriteCache.squirrel;
+  }
+  function squirrelShow() {
+    if (!liveStage || liveStage.querySelector('.live-squirrel')) return;
+    const sq = document.createElement('div');
+    sq.className = 'live-squirrel';
+    sq.setAttribute('aria-hidden', 'true');
+    const img = document.createElement('img');
+    img.src = squirrelSprite();
+    img.alt = '';
+    const bub = document.createElement('span');
+    bub.className = 'pik-bubble squirrel-bubble';
+    bub.textContent = 'My seeds! My seeeeeeds!';
+    sq.appendChild(img);
+    sq.appendChild(bub);
+    liveStage.appendChild(sq);
+    const w = liveStage.clientWidth || 500;
+    const sx = slimeStageX ? slimeStageX() : w / 2;
+    // hop in from the left, dig around beside the slime, hop off right
+    const spots = [Math.max(30, sx - 120), Math.max(60, sx - 70), sx + 80];
+    sq.style.left = '-30px';
+    let step = 0;
+    const hopTo = (xTarget, then) => {
+      sq.style.left = xTarget + 'px';
+      setTimeout(then, 900);
+    };
+    playTone(1500, 'square', 0.05, 0, 0.02);
+    setTimeout(function next() {
+      if (step < spots.length) {
+        sq.classList.add('digging');
+        hopTo(spots[step++], () => { sq.classList.remove('digging'); setTimeout(next, 500); });
+      } else {
+        bub.textContent = trT('found them!! bye!!', 'trouvées !! bye !!');
+        hopTo(w + 40, () => sq.remove());
+      }
+    }, 300);
+    if (!pet.sleeping) {
+      setTimeout(() => showBubble(trT('a squirrel?? on MY stream?? iconic guest', 'un écureuil ?? sur MON stream ?? invité iconique'), 2600), 1200);
+    }
+  }
+
   function sendEmojiGift(raw) {
     if (!liveOpen) return false;
     const parts = (typeof Intl !== 'undefined' && Intl.Segmenter)
@@ -8796,6 +9250,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const { x, y } = slimeAnchor();
         spawnParticle(x + 18, y - 22, 'z', 'p-zzz');
       }, 500);
+      return true;
+    }
+
+    // 🐿️ special guest protocol
+    if (e === '🐿️') {
+      gainFollowers(3);
+      setTimeout(squirrelShow, 500);
       return true;
     }
 
@@ -8860,7 +9321,8 @@ document.addEventListener('DOMContentLoaded', () => {
       ['🦆', 'duck canard 鸭'], ['🪿', 'goose honk bernache 鹅'], ['🐛', 'bug worm insecte 虫'], ['🐱', 'cat chat 猫'],
       ['🐶', 'dog puppy chien 狗'], ['🦄', 'unicorn licorne 独角兽'], ['🐸', 'frog grenouille 蛙'], ['🐢', 'turtle tortue 龟'],
       ['🐰', 'bunny rabbit lapin 兔'], ['🐝', 'bee abeille 蜂'], ['🦋', 'butterfly papillon 蝴蝶'], ['🐙', 'octopus pieuvre 章鱼'],
-      ['🐹', 'hamster 仓鼠'], ['🐧', 'penguin pingouin 企鹅'], ['🦩', 'flamingo flamant'], ['🐌', 'snail escargot 蜗牛']
+      ['🐹', 'hamster 仓鼠'], ['🐧', 'penguin pingouin 企鹅'], ['🦩', 'flamingo flamant'], ['🐌', 'snail escargot 蜗牛'],
+      ['🐿️', 'squirrel seeds ecureuil 松鼠']
     ] },
     { n: ['💻 dev corner', '💻 coin dev'], list: [
       ['🎮', 'game controller manette 游戏'], ['💻', 'laptop code ordi 电脑'], ['⌨️', 'keyboard clavier 键盘'], ['🎧', 'headphones casque 耳机'],
@@ -9110,6 +9572,43 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  /* ---------- the Y2K handheld console ----------
+     slime_run opens INSIDE a candy-pink pixel console: a clean game
+     screen (score baked into the canvas), body-mounted buttons for
+     hall_of_slime and eject, and a little companion screen on the
+     right where the live-cam slime reacts. */
+  function gameConsoleEnter(win) {
+    win.classList.add('game-console');
+    try { GAME.consoleMode = true; } catch (e) { /* pre-boot */ }
+    const body = win.querySelector('.game-body') || win.querySelector('.window-body');
+    if (!body || body.querySelector('.console-side')) return;
+    const side = document.createElement('div');
+    side.className = 'console-side';
+    const screen = document.createElement('div');
+    screen.className = 'console-screen';
+    screen.id = 'console-cam-slot';
+    const lbl = document.createElement('span');
+    lbl.className = 'console-screen-label';
+    lbl.textContent = '● LIVE';
+    screen.appendChild(lbl);
+    const hall = document.createElement('button');
+    hall.type = 'button';
+    hall.className = 'console-btn';
+    hall.innerHTML = '🏆';
+    hall.setAttribute('aria-label', t('game.lb'));
+    hall.title = t('game.lb');
+    hall.addEventListener('click', () => openWindow('win-leaderboard'));
+    const eject = document.createElement('button');
+    eject.type = 'button';
+    eject.className = 'console-btn console-btn-eject';
+    eject.innerHTML = '⏏';
+    eject.setAttribute('aria-label', trT('Eject — close the game', 'Éjecter — fermer le jeu'));
+    eject.title = trT('eject', 'éjecter');
+    eject.addEventListener('click', () => closeWindow(win));
+    side.append(screen, hall, eject);
+    body.appendChild(side);
+  }
+
   // the habitat (slime included) relocates to a picture-in-picture
   // reaction cam pinned to the game's top-right — every spectator
   // feature (cheers, mercy pause, coach leap) rides along untouched
@@ -9124,7 +9623,9 @@ document.addEventListener('DOMContentLoaded', () => {
     tag.textContent = '● REC';
     cam.appendChild(tag);
     cam.appendChild(slimeHabitat);
-    document.getElementById('win-game').appendChild(cam);
+    // console mode: the cam lives on the handheld's companion screen
+    const slot = document.getElementById('console-cam-slot');
+    (slot || document.getElementById('win-game')).appendChild(cam);
   }
   function gameCamExit() {
     const cam = document.getElementById('game-reaction-cam');

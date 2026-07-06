@@ -1897,6 +1897,18 @@ input {
     var(--dither-pink);
   background-size: auto, 8px 8px;
   border: 2px solid var(--border);
+}
+/* dark mode: midnight jelly wall — plum velvet, pink stripes,
+   a faint inner glow. no more blinding white chat wall. */
+html[data-theme="dark"] .ama-feed {
+  background:
+    linear-gradient(rgba(24, 13, 44, 0.93), rgba(29, 17, 53, 0.93)),
+    repeating-linear-gradient(45deg, rgba(240, 80, 159, 0.32) 0 6px, rgba(138, 99, 214, 0.32) 6px 12px);
+  background-size: auto, auto;
+  border-color: var(--pink-hot);
+  box-shadow: inset 0 0 0 2px rgba(255, 143, 199, 0.22), inset 0 0 26px rgba(240, 80, 159, 0.12);
+}
+.ama-feed {
   padding: 10px;
   display: flex;
   flex-direction: column;
@@ -3155,6 +3167,124 @@ input {
   max-width: none;
   margin: 0;
 }
+/* ===== the Y2K NSO handheld console ===== */
+.window-game.window-game-big.game-console {
+  border: 4px solid var(--ink);
+  border-radius: 26px;
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0) 40%),
+    linear-gradient(135deg, #ffb3dd, #d9b8f5 52%, #a8e0ff);
+  box-shadow:
+    0 0 0 3px #fff,
+    0 0 0 6px var(--pink-hot),
+    12px 14px 0 rgba(90, 61, 110, 0.35),
+    inset 0 -8px 0 rgba(154, 111, 224, 0.25);
+  overflow: hidden;
+}
+html[data-theme="dark"] .window-game.window-game-big.game-console {
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0) 40%),
+    linear-gradient(135deg, #3a2154, #2a1a48 52%, #1c2a4e);
+  box-shadow:
+    0 0 0 3px rgba(255, 143, 199, 0.5),
+    0 0 0 6px var(--pink-hot),
+    12px 14px 0 rgba(10, 4, 18, 0.6),
+    0 0 30px rgba(240, 80, 159, 0.3),
+    inset 0 -8px 0 rgba(20, 2, 14, 0.5);
+}
+.game-console .window-header,
+.game-console .window-footer,
+.game-console .game-hud,
+.game-console .game-hint { display: none; }
+.game-console .window-body,
+.game-console .game-body {
+  overflow: hidden !important;
+  height: 100%;
+}
+.game-console .game-body {
+  display: grid;
+  grid-template-columns: 1fr 200px;
+  gap: 16px;
+  align-items: stretch;
+  padding: 18px 20px;
+}
+.game-console .game-shell {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+.game-console .game-canvas {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 3 / 1;
+  margin: auto 0;
+  border: 4px solid var(--ink);
+  border-radius: 12px;
+  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.3), 0 0 18px rgba(255, 179, 221, 0.5);
+}
+.console-side {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+.console-screen {
+  position: relative;
+  height: 152px;
+  background: #14020e;
+  border: 3px solid var(--ink);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: inset 0 0 0 2px rgba(255, 143, 199, 0.35), inset 0 0 18px rgba(0, 0, 0, 0.5);
+}
+.console-screen-label {
+  position: absolute;
+  top: 4px;
+  left: 7px;
+  z-index: 8;
+  font-family: var(--font-pixel);
+  font-size: 0.6rem;
+  color: #ff6ec0;
+  text-shadow: 1px 1px 0 var(--ink);
+  animation: pixel-flash 1.8s infinite;
+  pointer-events: none;
+}
+/* the reaction cam docks INTO the companion screen */
+.console-screen .game-reaction-cam {
+  position: static !important;
+  top: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  width: 100% !important;
+  height: 100%;
+  border: none;
+  box-shadow: none;
+  z-index: auto;
+}
+.console-screen .game-reaction-cam .profile-avatar-wrapper { height: 100%; }
+.console-btn {
+  width: 100%;
+  padding: 12px 0;
+  font-size: 1.5rem;
+  line-height: 1;
+  background: linear-gradient(#fff0fa, #ffb3dd);
+  border: 3px solid var(--ink);
+  border-radius: 16px;
+  box-shadow: 0 5px 0 var(--ink), inset 0 2px 0 rgba(255, 255, 255, 0.8);
+  transition: transform 0.06s, box-shadow 0.06s;
+}
+.console-btn:hover { transform: translateY(-1px); }
+.console-btn:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--ink), inset 0 2px 0 rgba(255, 255, 255, 0.8); }
+.console-btn-eject { background: linear-gradient(#ff9fd0, #f0509f); }
+html[data-theme="dark"] .console-btn { background: linear-gradient(#4a2a6a, #38204f); }
+html[data-theme="dark"] .console-btn-eject { background: linear-gradient(#d6357f, #a02762); }
+@media (max-width: 700px) {
+  .game-console .game-body { grid-template-columns: 1fr; }
+  .console-side { flex-direction: row; align-items: stretch; }
+  .console-screen { flex: 1; height: 100px; }
+  .console-btn { width: 64px; }
+}
+
 .game-reaction-cam {
   position: absolute;
   top: 46px;
@@ -4591,6 +4721,67 @@ html[data-theme="dark"] .live-garden::after {
 @keyframes wx-bolt { 92%, 96% { opacity: 1; } 0%, 91%, 97%, 100% { opacity: 0; } }
 .wx-fog-a { animation: wx-slide-a 40s ease-in-out infinite alternate; opacity: 0.85; }
 .wx-fog-b { animation: wx-slide-b 32s ease-in-out infinite alternate; opacity: 0.7; }
+/* windy things tumble sideways */
+.wx-blow-a { animation: wx-blow 7s linear infinite; }
+.wx-blow-b { animation: wx-blow 9s linear infinite 2s; }
+@keyframes wx-blow {
+  0% { transform: translateX(-40px) rotate(0deg); opacity: 0; }
+  12% { opacity: 1; }
+  88% { opacity: 1; }
+  100% { transform: translateX(70vw) rotate(300deg); opacity: 0; }
+}
+/* hail: fast white pellets, straighter and chunkier than rain */
+.live-stage.wx-hail::before {
+  background-image:
+    radial-gradient(circle, #ffffff 2.2px, transparent 3px),
+    radial-gradient(circle, #e8f5ff 1.8px, transparent 2.6px);
+  background-size: 30px 30px, 44px 44px;
+  animation: wx-hailfall 0.5s linear infinite;
+}
+@keyframes wx-hailfall { to { background-position: -4px 60px, 6px 88px; } }
+/* sleet: rain dashes + ice pellets sharing the sky */
+.live-stage.wx-sleet::before {
+  background-image:
+    linear-gradient(78deg, transparent 34%, rgba(127, 208, 255, 0.5) 34% 46%, transparent 46%),
+    radial-gradient(circle, #ffffff 1.8px, transparent 2.6px);
+  background-size: 26px 30px, 42px 42px;
+  animation: wx-rain 0.7s linear infinite;
+}
+/* dust: sandy sideways grain streams + a dry amber veil */
+.live-stage.wx-dust::before {
+  background-image:
+    linear-gradient(rgba(224, 188, 120, 0.16), rgba(224, 188, 120, 0.16)),
+    repeating-linear-gradient(90deg, transparent 0 14px, rgba(216, 160, 46, 0.34) 14px 16px);
+  animation: wx-dustblow 1.2s linear infinite;
+}
+@keyframes wx-dustblow { to { background-position: 0 0, 64px 0; } }
+/* heatwave: shimmering haze rising off the meadow */
+.live-stage.wx-heat::before {
+  background:
+    linear-gradient(rgba(255, 190, 120, 0.1), rgba(255, 190, 120, 0.16)),
+    repeating-linear-gradient(0deg, transparent 0 12px, rgba(255, 217, 122, 0.16) 12px 14px);
+  animation: wx-heatwave 3s ease-in-out infinite alternate;
+}
+@keyframes wx-heatwave { to { background-position: 0 0, 0 -10px; } }
+/* blizzard: DENSE fast snow + a white gale veil */
+.live-stage.wx-blizzard::before {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.14)),
+    radial-gradient(circle, #ffffff 1.7px, transparent 2.5px),
+    radial-gradient(circle, rgba(255, 255, 255, 0.8) 1.4px, transparent 2.2px);
+  background-size: auto, 26px 26px, 38px 38px;
+  animation: wx-blizz 2.4s linear infinite;
+}
+@keyframes wx-blizz { to { background-position: 0 0, -70px 190px, -95px 260px; } }
+/* hurricane: rain slashing near-horizontal, everything in a hurry */
+.live-stage.wx-hurricane::before {
+  background-image:
+    linear-gradient(62deg, transparent 30%, rgba(127, 208, 255, 0.6) 30% 44%, transparent 44%),
+    linear-gradient(62deg, transparent 38%, rgba(201, 167, 245, 0.45) 38% 50%, transparent 50%);
+  background-size: 30px 24px, 46px 34px;
+  animation: wx-cane 0.45s linear infinite;
+}
+@keyframes wx-cane { to { background-position: -46px 34px, -70px 52px; } }
 /* Canada geese, paddling serenely across the water bands —
    perfectly level, no flapping, maximum dignity */
 .wx-geese {
@@ -5135,6 +5326,30 @@ html[data-theme="dark"] .live-emoji-hint { color: #c9a7f5; }
   .live-stage .mini-danmaku { width: 82%; bottom: 42px; }
   .live-gifts { grid-template-columns: repeat(6, 1fr); }
 }
+/* ----- phones: smaller star, chat below the screen, no sideways scroll ----- */
+@media (max-width: 700px) {
+  html, body { overflow-x: hidden; }
+  .live-stage .slime-pet { width: 88px; height: 78px; left: calc(50% - 44px); }
+  .live-stage .tamagotchi-bubble { bottom: 100px; font-size: 0.8rem; }
+  .browser-tabs { min-width: 0; gap: 4px; }
+  .browser-tabs .tab { font-size: 0.68rem; padding: 3px 7px; min-width: 0; }
+  .browser-tabs .tab .tab-title {
+    max-width: 92px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .btn-save { font-size: 0.68rem; padding: 3px 7px; }
+}
+/* mobile bullet chat: parked BELOW the live screen, one line at a time */
+.mini-danmaku.mobile-danmaku {
+  position: static;
+  width: auto;
+  max-width: none;
+  margin: 6px 0 0;
+  pointer-events: none;
+}
+.mini-danmaku.mobile-danmaku > *:not(:last-child) { display: none; }
 
 /* ===== live stage MEGA FX (rockets, emoji blessings) ===== */
 .live-fx-layer {
@@ -5454,6 +5669,95 @@ body.spell-flash::after {
 }
 
 /* ---------- ad break: reaction cam docks bottom-right (clears the ⏳) ---------- */
+/* ---- Yongshan's restaurant chart on yongle ---- */
+.sr-sponsored-tag {
+  display: inline-block;
+  font-family: var(--font-pixel);
+  font-size: 0.72rem;
+  color: #fff;
+  background: linear-gradient(90deg, var(--pink-hot), var(--purple));
+  border: 2px solid var(--ink);
+  box-shadow: 2px 2px 0 var(--ink);
+  padding: 3px 8px;
+  margin: 6px 0;
+}
+.resto-card { padding-bottom: 8px; }
+.resto-votes { display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap; }
+.resto-vote {
+  font-family: var(--font-pixel);
+  font-size: 0.78rem;
+  padding: 4px 9px;
+  background: var(--panel-pink);
+  border: 2px solid var(--pink-hot);
+  box-shadow: 2px 2px 0 rgba(90, 61, 110, 0.3);
+  color: var(--text);
+  transition: transform 0.08s;
+}
+.resto-vote:hover { transform: translateY(-1px); background: var(--pink); color: #fff; }
+.resto-vote.voted {
+  background: linear-gradient(var(--pink), var(--pink-hot));
+  color: #fff;
+  border-color: var(--ink);
+}
+
+/* the visiting seed-seeker */
+.live-squirrel {
+  position: absolute;
+  bottom: 8px;
+  z-index: 7;
+  transition: left 0.85s cubic-bezier(0.3, 1.3, 0.5, 1);
+  pointer-events: none;
+}
+.live-squirrel img {
+  display: block;
+  width: 42px;
+  image-rendering: pixelated;
+  animation: squirrel-boing 0.4s ease-in-out infinite alternate;
+}
+.live-squirrel.digging img { animation: squirrel-dig 0.3s steps(2) infinite; }
+@keyframes squirrel-boing { to { transform: translateY(-7px); } }
+@keyframes squirrel-dig { to { transform: scaleY(0.8) translateY(3px) rotate(6deg); } }
+.squirrel-bubble {
+  position: absolute;
+  bottom: 46px;
+  left: 50%;
+}
+@media (prefers-reduced-motion: reduce) { .live-squirrel img { animation: none; } }
+
+/* "streamer away" curtain: pixel-black screen with scanlines while
+   the boss fight rages elsewhere. suspicious. very suspicious. */
+.away-card {
+  position: absolute;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
+  padding: 12px;
+  background:
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.03) 0 2px, transparent 2px 4px),
+    #0b0616;
+}
+.away-tv { font-size: 2rem; }
+.away-line1 {
+  font-family: var(--font-pixel);
+  font-size: 0.95rem;
+  color: #ffb7e2;
+  text-shadow: 2px 2px 0 rgba(240, 80, 159, 0.35);
+}
+.away-line2 {
+  font-family: var(--font-pixel);
+  font-size: 0.75rem;
+  color: #8a63d6;
+  font-style: italic;
+}
+.game-reaction-cam .away-card .away-tv { font-size: 1.2rem; }
+.game-reaction-cam .away-card .away-line1 { font-size: 0.62rem; }
+.game-reaction-cam .away-card .away-line2 { font-size: 0.5rem; }
+
 /* interview scheduler = a true standalone modal: centered, above
    everything, with a dreamy dimming veil behind it */
 .window.window-itv-modal {
@@ -5479,7 +5783,9 @@ body.spell-flash::after {
   inset: 0;
   z-index: 4100;
   background: rgba(29, 17, 53, 0.55);
-  backdrop-filter: blur(2px);
+  /* purely decorative: never trap a click, never blur the modal —
+     the veil once ate every pointer event and froze the whole OS */
+  pointer-events: none;
 }
 
 .game-reaction-cam.cam-ad-dock {
