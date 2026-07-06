@@ -4048,8 +4048,10 @@ document.addEventListener('DOMContentLoaded', () => {
      chameleon·skill·SPECIES — two to a counter (a species dimension no
      longer fits three under 2^53). names are derived, never stored.
      the HIDDEN_SPECIES array order is the wire format: append-only! */
-  const PIK_PACK = 17280;              // 360 hues × 3 stages × 2 chameleon × 8 skills
+  const PIK_PACK = 17280;              // v2 wire: 360 hues × 3 stages × 2 chameleon × 8 skills
   const PIK_PACK2 = PIK_PACK * 23;     // × (22 species + 'none') = 397 440
+  const PIK_PACK3 = 51840;             // v3 wire: 360 × 3 × 2 × 24 skills
+  const PIK_PACK3ALL = PIK_PACK3 * 23; // = 1 192 320 · two piks/counter ≈ 1.4e12 < 2^53
   // evolution ledger on the wire: 72 kind-counts, 4 per counter, base 512
   function pikCountsEncode() {
     const c = (typeof pikCounts === 'function') ? pikCounts() : {};
@@ -4091,15 +4093,32 @@ document.addEventListener('DOMContentLoaded', () => {
       const h = p.h != null ? ((p.h % 360) + 360) % 360 : 330;
       const s = Math.min(p.s || 0, 2);
       const ch = p.ch ? 1 : 0;
-      const kIx = Math.max(0, PIK_SKILLS.findIndex((sk) => sk.id === p.k));
+      const kIx = Math.min(23, Math.max(0, PIK_SKILLS.findIndex((sk) => sk.id === p.k)));
       const spIx = p.sp ? Math.max(0, HIDDEN_SPECIES.findIndex((sp) => sp.id === p.sp) + 1) : 0;
-      return h + 360 * (s + 3 * ch + 6 * kIx) + PIK_PACK * spIx;
+      return h + 360 * (s + 3 * ch + 6 * kIx) + PIK_PACK3 * spIx;
     });
     const chunks = [];
     for (let i = 0; i < packed.length; i += 2) {
-      chunks.push(1 + (packed[i] || 0) + (packed[i + 1] || 0) * PIK_PACK2);
+      chunks.push(1 + (packed[i] || 0) + (packed[i + 1] || 0) * PIK_PACK3ALL);
     }
     return { n: packed.length, chunks };
+  }
+  function pikdexDecodeV3(n, vals) {
+    const flat = [];
+    vals.forEach((v) => {
+      v = Math.max(0, Math.floor(Number(v) || 0) - 1);
+      for (let j = 0; j < 2; j++) { flat.push(v % PIK_PACK3ALL); v = Math.floor(v / PIK_PACK3ALL); }
+    });
+    return flat.slice(0, Math.min(n, 78)).map((pv3) => {
+      const spIx = Math.floor(pv3 / PIK_PACK3) % 23;
+      const pv = pv3 % PIK_PACK3;
+      const h = pv % 360;
+      let rest = Math.floor(pv / 360);
+      const s = rest % 3; rest = Math.floor(rest / 3);
+      const ch = rest % 2;
+      const kIx = Math.floor(rest / 2) % 24;
+      return { h, ch, s, k: (PIK_SKILLS[kIx] || PIK_SKILLS[0]).id, sp: spIx > 0 ? (HIDDEN_SPECIES[spIx - 1] || {}).id || null : null, a: 0, t: 0 };
+    });
   }
   function pikdexDecodeV2(n, vals) {
     const flat = [];
@@ -4172,7 +4191,7 @@ document.addEventListener('DOMContentLoaded', () => {
       .then(() => cloudSet(`sv2-${u}-b4`, payload[2]))
       .then(() => cloudSet(`sv2-${u}-spn`, spells.length))
       .then(() => cloudSet(`sv2-${u}-pkn`, piks.n))
-      .then(() => cloudSet(`sv2-${u}-pkv`, 2)); // wire-format version (v2 = species-aware)
+      .then(() => cloudSet(`sv2-${u}-pkv`, 3)); // wire-format version (v3 = 24-skill pack)
     spells.forEach((v, j) => { p = p.then(() => cloudSet(`sv2-${u}-sp${j}`, v)); });
     piks.chunks.forEach((v, j) => { p = p.then(() => cloudSet(`sv2-${u}-pk${j}`, v)); });
     p = p.then(() => cloudSet(`sv2-${u}-pcn`, pcs.length));
@@ -4206,10 +4225,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }));
         }
         if (pkn > 0) {
-          const v2 = pkv >= 2;
-          const nChunks = Math.ceil(Math.min(pkn, 78) / (v2 ? 2 : 3));
+          const nChunks = Math.ceil(Math.min(pkn, 78) / (pkv >= 2 ? 2 : 3));
           jobs.push(Promise.all(Array.from({ length: nChunks }, (_, j) => cloudGet(`sv2-${u}-pk${j}`)))
-            .then((vals) => pikdexMergeRemote(v2 ? pikdexDecodeV2(pkn, vals) : pikdexDecodeV1(pkn, vals))));
+            .then((vals) => pikdexMergeRemote(pkv >= 3 ? pikdexDecodeV3(pkn, vals) : (pkv >= 2 ? pikdexDecodeV2(pkn, vals) : pikdexDecodeV1(pkn, vals)))));
         }
         return Promise.all(jobs);
       })
@@ -8739,7 +8757,25 @@ document.addEventListener('DOMContentLoaded', () => {
     { id: 'zip',     toast: ['🗜 zip.pik compressed it to 0 bytes (+6)', '🗜 zip.pik l\'a compressé à 0 octet (+6)'] },
     { id: 'duck',    toast: ['🦆 duck.pik made it explain itself. it left. (+6)', '🦆 duck.pik l\'a fait s\'expliquer. il est parti. (+6)'] },
     { id: 'lint',    toast: ['🌸 lint.pik refactored it into a flower (+6)', '🌸 lint.pik l\'a refactoré en fleur (+6)'] },
-    { id: 'sudo',    toast: ['👑 sudo.pik asked politely. with authority. (+6)', '👑 sudo.pik a demandé poliment. avec autorité. (+6)'] }
+    { id: 'sudo',    toast: ['👑 sudo.pik asked politely. with authority. (+6)', '👑 sudo.pik a demandé poliment. avec autorité. (+6)'] },
+    /* v3 wing: every id below carries a DISTINCT in-game mechanic —
+       wire format pkv=3 packs 24 skills (append-only, never reorder) */
+    { id: 'trycatch', toast: ['🛡 try-catch.pik caught that. finally.', '🛡 try-catch.pik l\'a attrapé. finally.'] },
+    { id: 'cron',     toast: ['⏰ cron.pik delivered the scheduled coins (+2)', '⏰ cron.pik a livré les pièces planifiées (+2)'] },
+    { id: 'fetch',    toast: ['🧲 git-fetch.pik is pulling loot from origin', '🧲 git-fetch.pik tire le butin depuis origin'] },
+    { id: 'devnull',  toast: ['🕳 devnull.pik swallowed an exception. burp.', '🕳 devnull.pik a avalé une exception. burp.'] },
+    { id: 'pingpik',  toast: ['📶 ping.pik: 8ms + a tip (+1 coin)', '📶 ping.pik : 8 ms + un pourboire (+1 pièce)'] },
+    { id: 'forkb',    toast: ['🍴 fork().pik hit TWO at once (+12)', '🍴 fork().pik en a eu DEUX d\'un coup (+12)'] },
+    { id: 'regex',    toast: ['🔣 regex.pik matched greedily. they all left. (+10)', '🔣 regex.pik a matché goulûment. tous partis. (+10)'] },
+    { id: 'cache',    toast: ['🧊 cache.pik: the world lagged backwards', '🧊 cache.pik : le monde a laggé en arrière'] },
+    { id: 'uptime',   toast: ['🔋 uptime.pik radiates stability (+1/s-ish)', '🔋 uptime.pik irradie la stabilité (+1/s env.)'] },
+    { id: 'defrag',   toast: ['💾 defrag.pik tidied a bug into a coin', '💾 defrag.pik a rangé un bug en pièce'] },
+    { id: 'vpn',      toast: ['🕶 vpn.pik: your hitbox is legally elsewhere', '🕶 vpn.pik : ta hitbox est légalement ailleurs'] },
+    { id: 'popup',    toast: ['🚫 adblock.pik swatted the pop-up (+6)', '🚫 adblock.pik a claqué le pop-up (+6)'] },
+    { id: 'bsod',     toast: ['💙 bsod.pik: it saw the blue screen. crit. (+12)', '💙 bsod.pik : il a vu l\'écran bleu. crit. (+12)'] },
+    { id: 'commit',   toast: ['📌 git-commit.pik saved your progress. emotionally. (+4)', '📌 git-commit.pik a sauvegardé. émotionnellement. (+4)'] },
+    { id: 'overflow', toast: ['📚 overflow.pik copied the top answer. it worked?! (+6)', '📚 overflow.pik a copié la meilleure réponse. ça a marché ?! (+6)'] },
+    { id: 'gpu',      toast: ['🎮 gpu.pik rendered it gone at 240fps (+6)', '🎮 gpu.pik l\'a effacé à 240 fps (+6)'] }
   ];
 
   // the squad follows into EVERY run — plucked buddies are family,
@@ -8781,33 +8817,73 @@ document.addEventListener('DOMContentLoaded', () => {
     const piks = GAME.piks || [];
     if (!piks.length) return;
     piks.forEach((p, i) => {
+      const sid = (p.skill || PIK_SKILLS[0]).id;
       if (p.stage === 2 && GAME.frame >= (p.zapAt || 0)) {
-        const prey = GAME.obs.filter((o) => o.x > G_SLIME_X + 8 && o.x < G_SLIME_X + 190).sort((a, b) => a.x - b.x)[0];
+        // ADBLOCK specializes in fliers; everyone else takes the nearest bug
+        const pool = GAME.obs.filter((o) => o.x > G_SLIME_X + 8 && o.x < G_SLIME_X + 190 && (sid !== 'popup' || o.fly)).sort((a, b) => a.x - b.x);
+        const prey = pool[0];
         if (prey) {
-          p.zapAt = GAME.frame + 380 + Math.random() * 170;
+          const cd = sid === 'gpu' ? 260 : sid === 'popup' ? 300 : 380; // GPU GO BRRR
+          p.zapAt = GAME.frame + cd + Math.random() * 170;
           GAME.obs.splice(GAME.obs.indexOf(prey), 1);
-          GAME.score += 6;
-          const skill = p.skill || PIK_SKILLS[0];
+          let gain = sid === 'bsod' ? 12 : 6; // the blue screen crits
+          // — same hunt, very different paperwork —
+          if (sid === 'forkb' && pool[1]) { const o2 = pool[1]; const j = GAME.obs.indexOf(o2); if (j >= 0) { GAME.obs.splice(j, 1); gain += 6; } }
+          if (sid === 'regex') { // greedy match: sweep the lookalikes
+            const twins = GAME.obs.filter((o) => !!o.fly === !!prey.fly && o.x < G_SLIME_X + 300).slice(0, 2);
+            twins.forEach((o) => { const j = GAME.obs.indexOf(o); if (j >= 0) GAME.obs.splice(j, 1); });
+            gain += twins.length * 2;
+          }
+          if (sid === 'cache') { GAME.obs.forEach((o) => { o.x += 34; }); } // the world lags backwards
+          if (sid === 'defrag') { GAME.loot.push({ kind: 'coin', x: Math.min(prey.x, G_W - 20), y: G_GROUND - 26, t: 0 }); }
+          if (sid === 'pingpik') { GAME.coins += 1; } // 8ms + a tip
+          GAME.score += gain;
+          // STACKOVERFLOW performs a random other skill's move, verbatim
+          const shown = sid === 'overflow' ? PIK_SKILLS[Math.floor(Math.random() * PIK_SKILLS.length)] : (p.skill || PIK_SKILLS[0]);
           GAME.pikFx = {
-            skill: skill.id, t0: GAME.frame, until: GAME.frame + 40,
+            skill: shown.id, t0: GAME.frame, until: GAME.frame + 40,
             x: prey.x, w: prey.w, h: prey.fly ? 16 : prey.h,
             y: prey.fly ? G_GROUND - 58 : G_GROUND - (prey.fly ? 16 : prey.h),
             color: p.color
           };
-          playTone(skill.id === 'duck' ? 620 : 1500, 'square', 0.07, 0, 0.03);
-          if (Math.random() < 0.3) gToast(skill.toast, 130);
+          playTone(shown.id === 'duck' ? 620 : sid === 'bsod' ? 340 : 1500, 'square', 0.07, 0, 0.03);
+          if (sid === 'overflow') gToast(['📚 overflow.pik copied ' + (PIK_SKILL_META[shown.id] || {}).name + '\'s move. it worked?!', '📚 overflow.pik a copié le geste de ' + (PIK_SKILL_META[shown.id] || {}).name + '. ça a marché ?!'], 130);
+          else if (Math.random() < 0.3) gToast((p.skill || PIK_SKILLS[0]).toast, 130);
         }
       }
       if (p.stage === 0 && GAME.frame >= (p.nextCoinAt || 0)) {
         p.nextCoinAt = GAME.frame + 520 + Math.random() * 260;
         GAME.coins += 1;
         playTone(1160, 'triangle', 0.05, 0, 0.02);
-        if (Math.random() < 0.25) gToast(['🪙 cache.pik: passive income (+1 coin)', '🪙 cache.pik : revenu passif (+1 pièce)'], 110);
+        if (Math.random() < 0.25) gToast(['🪙 sprout.pik: passive income (+1 coin)', '🪙 pousse.pik : revenu passif (+1 pièce)'], 110);
+      }
+      // — passives: these fire at ANY growth stage —
+      if (sid === 'cron') {
+        if (!p.cronAt) p.cronAt = GAME.frame + 1800;
+        if (GAME.frame >= p.cronAt) { p.cronAt = GAME.frame + 1800; GAME.coins += 2; playTone(1240, 'triangle', 0.06, 0, 0.03); if (Math.random() < 0.4) gToast(p.skill.toast, 120); }
+      }
+      if (sid === 'uptime' && GAME.frame % 90 === 0) GAME.score += 1;
+      if (sid === 'commit') {
+        if (!p.commitAt) p.commitAt = GAME.frame + 2700;
+        if (GAME.frame >= p.commitAt) { p.commitAt = GAME.frame + 2700; GAME.score += 4; if (Math.random() < 0.4) gToast(p.skill.toast, 120); }
+        if (GAME.lives === 1 && !p.commitRevive) {
+          p.commitRevive = 1;
+          fxLife(1);
+          playFanfare();
+          gToast(['📌 git-commit.pik: EMERGENCY COMMIT — +1 ♥ restored!!', '📌 git-commit.pik : COMMIT D\'URGENCE — +1 ♥ restauré !!'], 200);
+        }
+      }
+      if (sid === 'devnull' && GAME.nm && GAME.nm.shots && GAME.nm.shots.length && GAME.frame >= (p.nullAt || 0)) {
+        p.nullAt = GAME.frame + 420;
+        GAME.nm.shots.pop();
+        if (Math.random() < 0.3) gToast(p.skill.toast, 120);
       }
     });
-    // squad perk: nearby loot drifts toward the slime
+    // squad perk: nearby loot drifts toward the slime — GIT FETCH pulls from origin
     if (GAME.loot && GAME.loot.length) {
-      GAME.loot.forEach((l) => { if (l.x > G_SLIME_X && l.x < G_SLIME_X + 150) l.x -= 2.2; });
+      const hasFetch = piks.some((p) => p.skill && p.skill.id === 'fetch');
+      const range = hasFetch ? 300 : 150, tug = hasFetch ? 3.4 : 2.2;
+      GAME.loot.forEach((l) => { if (l.x > G_SLIME_X && l.x < G_SLIME_X + range) l.x -= tug; });
     }
   }
 
@@ -8868,12 +8944,58 @@ document.addEventListener('DOMContentLoaded', () => {
         const a = t * 6 + k * 1.26;
         g2.fillRect(cx + Math.cos(a) * 12, cy + Math.sin(a) * 9, 2, 2);
       }
-    } else { // sudo: it bows, then simply complies
+    } else if (fx.skill === 'sudo') { // it bows, then simply complies
       g2.fillStyle = '#ffd400';
       g2.font = "10px 'Jersey 25', 'VT323', monospace";
       g2.fillText('👑', cx, fx.y - 6);
       g2.fillStyle = '#e05f8f';
       g2.fillRect(fx.x, fx.y + t * fx.h, fx.w, Math.max(2, fx.h * (1 - t)));
+    } else if (fx.skill === 'forkb') { // one bug, two exits
+      g2.fillStyle = '#e05f8f';
+      g2.globalAlpha = 1 - t;
+      g2.fillRect(fx.x - t * 40, fx.y, fx.w, fx.h);
+      g2.fillRect(fx.x + t * 40, fx.y, fx.w, fx.h);
+      g2.globalAlpha = 1;
+      g2.fillStyle = '#c3aee0';
+      g2.font = "11px 'Jersey 25', 'VT323', monospace";
+      g2.fillText('🍴 fork()', cx, fx.y - 6);
+    } else if (fx.skill === 'bsod') { // a tiny blue screen of reconsideration
+      g2.fillStyle = '#3b6fd4';
+      g2.fillRect(fx.x - 3, fx.y - 3, fx.w + 6, fx.h + 6);
+      g2.fillStyle = '#ffffff';
+      g2.font = "9px 'Jersey 25', 'VT323', monospace";
+      g2.fillText(':(', cx, cy + 3);
+      g2.globalAlpha = t;
+      g2.fillStyle = '#0d1117';
+      g2.fillRect(fx.x - 3, fx.y - 3, fx.w + 6, (fx.h + 6) * t);
+      g2.globalAlpha = 1;
+    } else if (fx.skill === 'cache') { // motion lines: the world snaps back
+      g2.strokeStyle = '#8fd4fa';
+      for (let k = 0; k < 3; k++) {
+        g2.beginPath();
+        g2.moveTo(cx + 8 + k * 7, cy - 6 + k * 6);
+        g2.lineTo(cx + 26 + k * 7 + t * 18, cy - 6 + k * 6);
+        g2.stroke();
+      }
+      g2.fillStyle = '#c3aee0';
+      g2.font = "10px 'Jersey 25', 'VT323', monospace";
+      g2.fillText('🧊 CACHE HIT', cx, fx.y - 6);
+    } else if (fx.skill === 'defrag') { // tidied into a shiny coin
+      g2.globalAlpha = 1 - t;
+      g2.fillStyle = '#e05f8f';
+      g2.fillRect(fx.x, fx.y, fx.w, fx.h);
+      g2.globalAlpha = 1;
+      g2.fillStyle = '#ffd400';
+      g2.fillRect(cx - 3 + Math.sin(t * 9) * 2, cy - 3 - t * 8, 6, 6);
+    } else { // every other talent gets a labeled send-off
+      const meta = PIK_SKILL_META[fx.skill] || { icon: '✨', name: 'PIK' };
+      g2.globalAlpha = 1 - t;
+      g2.fillStyle = '#e05f8f';
+      g2.fillRect(fx.x, fx.y + t * 8, fx.w, Math.max(2, fx.h * (1 - t)));
+      g2.globalAlpha = 1;
+      g2.fillStyle = '#c3aee0';
+      g2.font = "11px 'Jersey 25', 'VT323', monospace";
+      g2.fillText(meta.icon + ' ' + meta.name, cx, fx.y - 6 - t * 10);
     }
     g2.textAlign = 'left';
   }
@@ -8924,7 +9046,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // ---------- hit handling ----------
   function gHit(o) {
     // a bud buddy throws itself in front: exception caught, life saved
-    const guard = (GAME.piks || []).find((p) => p.stage === 1 && GAME.frame >= (p.shieldReadyAt || 0));
+    const guard = (GAME.piks || []).find((p) => (p.stage === 1 || (p.skill && p.skill.id === 'trycatch')) && GAME.frame >= (p.shieldReadyAt || 0));
     if (guard) {
       guard.shieldReadyAt = GAME.frame + 1500; // ~25s to recompile
       const gi = GAME.obs.indexOf(o);
@@ -8938,7 +9060,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (idx >= 0) GAME.obs.splice(idx, 1);
     GAME.lives -= 1;
     if (GAME.lives > 0) {
-      fxInvincible(1.9);
+      const vpnPik = (GAME.piks || []).find((p) => p.skill && p.skill.id === 'vpn');
+      fxInvincible(vpnPik ? 3.6 : 1.9);
+      if (vpnPik && Math.random() < 0.6) gToast(['🕶 vpn.pik: your hitbox is now legally in another country', '🕶 vpn.pik : ta hitbox est désormais légalement à l\'étranger'], 130);
       playTone(180, 'sawtooth', 0.15, 0, 0.06);
       gToast(["ouch!! -1 ♥ (the bug apologized, sort of)", "aïe !! -1 ♥ (le bug s'est excusé, en quelque sorte)"], 110);
       // the sidebar slime can't bear to watch a struggling run (light mode)
@@ -12968,7 +13092,23 @@ document.addEventListener('DOMContentLoaded', () => {
     zip: { icon: '🗜', name: 'ZIP', en: 'compresses a whole bug into 0 bytes of your business.', fr: 'compresse un bug entier en 0 octet de tes affaires.' },
     duck: { icon: '🦆', name: 'RUBBER DUCK', en: 'listens until the bug explains itself and leaves in shame.', fr: 'écoute jusqu\'à ce que le bug s\'explique et parte, honteux.' },
     lint: { icon: '🌸', name: 'LINT --FIX', en: 'refactors bugs into flowers. warnings into petals.', fr: 'refactore les bugs en fleurs. les warnings en pétales.' },
-    sudo: { icon: '👑', name: 'SUDO', en: 'asks the bug to stop. politely. with root.', fr: 'demande au bug d\'arrêter. poliment. avec root.' }
+    sudo: { icon: '👑', name: 'SUDO', en: 'asks the bug to stop. politely. with root.', fr: 'demande au bug d\'arrêter. poliment. avec root.' },
+    trycatch: { icon: '🛡', name: 'TRY/CATCH', en: 'catches one crash per recompile — at ANY growth stage. finally.', fr: 'attrape un crash par recompilation — à N\'IMPORTE quel stade. finally.' },
+    cron: { icon: '⏰', name: 'CRON', en: 'delivers 2 coins every 30s, at :00 sharp. never asks for thanks.', fr: 'livre 2 pièces toutes les 30 s, pile à :00. sans jamais demander merci.' },
+    fetch: { icon: '🧲', name: 'GIT FETCH', en: 'pulls loot in from origin, twice as far. no merge conflicts.', fr: 'tire le butin depuis origin, deux fois plus loin. zéro conflit.' },
+    devnull: { icon: '🕳', name: '/DEV/NULL', en: 'swallows the nightmare\'s falling exceptions. burps quietly.', fr: 'avale les exceptions qui tombent du cauchemar. rote discrètement.' },
+    pingpik: { icon: '📶', name: 'PING', en: 'every takedown comes with a coin tip. 8ms. obstacles blush.', fr: 'chaque élimination laisse une pièce de pourboire. 8 ms.' },
+    forkb: { icon: '🍴', name: 'FORK()', en: 'one zap, two bugs. one bug becomes zero bugs — twice.', fr: 'un zap, deux bugs. un bug devient zéro bug — deux fois.' },
+    regex: { icon: '🔣', name: 'REGEX', en: 'greedy match: sweeps lookalike bugs off the whole screen.', fr: 'match gourmand : balaie tous les bugs similaires de l\'écran.' },
+    cache: { icon: '🧊', name: 'CACHE HIT', en: 'already knew the answer — the whole world lags backwards.', fr: 'connaissait déjà la réponse — le monde entier lag en arrière.' },
+    uptime: { icon: '🔋', name: 'UPTIME', en: 'has never been rebooted. passively radiates score.', fr: 'jamais redémarré. irradie passivement du score.' },
+    defrag: { icon: '💾', name: 'DEFRAG', en: 'tidies defeated bugs into collectible coins. satisfying.', fr: 'range les bugs vaincus en pièces à ramasser. satisfaisant.' },
+    vpn: { icon: '🕶', name: 'VPN', en: 'after a hit, your hitbox spends extra time legally elsewhere.', fr: 'après un coup, ta hitbox reste légalement ailleurs plus longtemps.' },
+    popup: { icon: '🚫', name: 'ADBLOCK', en: 'specialist: swats FLYING bugs on a hair-trigger cooldown.', fr: 'spécialiste : claque les bugs VOLANTS avec un cooldown éclair.' },
+    bsod: { icon: '💙', name: 'BSOD.EXE', en: 'shows bugs the blue screen. they reconsider everything. crits.', fr: 'montre l\'écran bleu aux bugs. ils reconsidèrent tout. crits.' },
+    commit: { icon: '📌', name: 'GIT COMMIT', en: 'banks score on a schedule — and once per run, an emergency commit restores a heart at 1♥.', fr: 'engrange du score régulièrement — et une fois par run, un commit d\'urgence rend un cœur à 1♥.' },
+    overflow: { icon: '📚', name: 'STACKOVERFLOW', en: 'copies a random other skill\'s move every time. it works somehow.', fr: 'copie le geste d\'un autre talent à chaque fois. ça marche, allez savoir.' },
+    gpu: { icon: '🎮', name: 'GPU GO BRRR', en: 'renders bugs out of existence 30% faster. 240fps justice.', fr: 'efface les bugs 30 % plus vite. justice à 240 fps.' }
   };
   const PIK_LEGACY_HUES = [330, 268, 203, 45, 152]; // palette 0-4 → wheel homes
 
@@ -14592,8 +14732,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // — how the magic works, in one breath —
     shell.appendChild(mk('p', 'watch-blurb', trT(
-      'the watch runs a featherweight yongshanOS: a clock, the slime (pettable), and a WRIST GARDEN that grows a real pikmin every ~100 minutes. plucks land in your pikdex, pets become fans — same save, two screens ♡',
-      'la montre fait tourner un yongshanOS plume : une horloge, le slime (caressable) et un JARDIN DE POIGNET qui fait pousser un vrai pikmin toutes les ~100 min. les cueillettes filent dans ton pikdex, les caresses deviennent des fans — même sauvegarde, deux écrans ♡')));
+      'the watch (or a phone — pocket edition ♡) runs a featherweight yongshanOS: a clock, the slime (pettable), and a WRIST GARDEN — first pikmin ready in ~90 seconds, then one every 20-35 min. plucks sync home the SECOND you tap. same save, two screens.',
+      'la montre (ou un téléphone — édition poche ♡) fait tourner un yongshanOS plume : une horloge, le slime (caressable) et un JARDIN DE POIGNET — premier pikmin prêt en ~90 s, puis un toutes les 20-35 min. les cueillettes se synchronisent À L\'INSTANT du tap. même sauvegarde, deux écrans.')));
 
     // — pairing (works for first pairing AND re-pairing) —
     shell.appendChild(mk('p', '', trT('1 · open this on the watch:', '1 · ouvre ceci sur la montre :')));
@@ -14632,7 +14772,7 @@ document.addEventListener('DOMContentLoaded', () => {
       btn.disabled = true;
       watchPair(inp.value).then((res) => {
         btn.disabled = false;
-        if (res === 'ok') { status.textContent = trT('⌚ PAIRED!! the wrist slime is live ♡', '⌚ APPAIRÉE !! le slime de poignet est en ligne ♡'); playFanfare(); setTimeout(renderWatchWin, 1200); }
+        if (res === 'ok') { status.textContent = trT('⌚ PAIRED!! the device that showed the code just BECAME your wrist slime — keep it open, pet it, pluck it ♡', '⌚ APPAIRÉE !! l\'appareil qui affichait le code vient de DEVENIR ton slime de poignet — garde-le ouvert, caresse-le ♡'); playFanfare(); setTimeout(renderWatchWin, 2000); }
         else if (res === 'badpin') status.textContent = trT('that needs to be 4 digits', 'il faut 4 chiffres');
         else if (res === 'taken') status.textContent = trT('code collision (rare!!) — tap the watch for a fresh code and retry', 'collision de code (rare !!) — nouveau code sur la montre et réessaie');
         else status.textContent = trT('cloud unreachable — try again in a moment', 'cloud injoignable — réessaie dans un instant');

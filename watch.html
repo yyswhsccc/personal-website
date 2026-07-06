@@ -197,7 +197,7 @@
     if (!pin) { pin = 1000 + Math.floor(Math.random() * 9000); LS.set('yosw-pin', pin); }
     app.innerHTML = '';
     app.appendChild(el('div', 'clock', 'yongshanOS ⌚'));
-    app.appendChild(el('div', 'hint', 'wrist edition')).style.marginBottom = '4px';
+    app.appendChild(el('div', 'hint', 'wrist edition (a phone works too — pocket edition ♡)')).style.marginBottom = '4px';
     var pinEl = el('div', 'pin', String(pin));
     app.appendChild(pinEl);
     var hint = el('div', 'hint', '');
@@ -219,10 +219,25 @@
           clearInterval(pollTimer);
           LS.set('yosw-uid', numToUid(v));
           LS.set('yosw-pin', 0);
-          showHome(true);
+          pairSplash(function () { showHome(true); });
         }
       });
     }, 2600);
+  }
+
+  function pairSplash(then) {
+    app.innerHTML = '';
+    var s = el('div', '', '');
+    s.style.cssText = 'padding:30px 6px;';
+    var big = el('div', 'clock', '⌚ PAIRED!!');
+    var sub = el('div', 'hint', 'this device is now the wrist slime ♡');
+    sub.style.marginTop = '6px';
+    s.append(big, sub);
+    app.appendChild(s);
+    var burst = setInterval(function () {
+      heartAt(20 + Math.random() * (innerWidth - 40), innerHeight * (0.3 + Math.random() * 0.5));
+    }, 130);
+    setTimeout(function () { clearInterval(burst); then(); }, 2600);
   }
 
   /* ---------- home: clock + slime + garden. the whole OS, wrist-sized ---------- */
@@ -249,7 +264,8 @@
     var stats = el('div', 'stats', '');
     app.append(fans, stats);
     var garden = el('div', 'garden', '');
-    var gLabel = el('div', '', '🌱 wrist garden');
+    var gLabel = el('div', '', '🌱 wrist garden — plucks fly home the second you tap');
+    gLabel.style.fontSize = '9px';
     var gBar = el('div', 'garden-bar', '');
     var gFill = el('i', '', '');
     gBar.appendChild(gFill);
@@ -289,12 +305,21 @@
       for (var i = 0; i < send; i++) hit('sv2-' + uid + '-wpt');
     }, 4000);
 
-    /* the garden: a real-time sprout. return later, pluck, it syncs home. */
-    var GROW_MS = 100 * 60 * 1000; // ~100 minutes per pikmin
+    /* the garden: a real-time sprout. the FIRST one is ready in ~90s
+       (hello, instant joy), then each next takes 20-35 minutes. plucking
+       syncs home the very second you tap — growth is the wait, never sync. */
+    function growMs() {
+      var g = LS.get('yosw-grow', 0);
+      if (!g) {
+        g = LS.get('yosw-plucked', 0) === 0 ? 90 * 1000 : (20 + Math.floor(Math.random() * 16)) * 60 * 1000;
+        LS.set('yosw-grow', g);
+      }
+      return g;
+    }
     function gardenState() {
       var planted = LS.get('yosw-planted', 0);
       if (!planted) { planted = Date.now(); LS.set('yosw-planted', planted); }
-      return Math.min(1, (Date.now() - planted) / GROW_MS);
+      return Math.min(1, (Date.now() - planted) / growMs());
     }
     function gardenTick() {
       var p = gardenState();
@@ -306,20 +331,22 @@
       } else {
         pluck.disabled = true;
         pluck.className = 'btn';
-        var mins = Math.ceil((1 - p) * GROW_MS / 60000);
-        pluck.textContent = '🌱 growing… ' + (mins > 60 ? Math.floor(mins / 60) + 'h ' + (mins % 60) + 'm' : mins + 'm');
+        var msLeft = (1 - p) * growMs();
+        var mins = Math.ceil(msLeft / 60000);
+        pluck.textContent = msLeft < 120000 ? '🌱 almost… ' + Math.ceil(msLeft / 1000) + 's' : '🌱 growing… ' + (mins > 60 ? Math.floor(mins / 60) + 'h ' + (mins % 60) + 'm' : mins + 'm');
       }
     }
     pluck.addEventListener('click', function () {
       if (gardenState() < 1) return;
-      LS.set('yosw-planted', Date.now());
       LS.set('yosw-plucked', LS.get('yosw-plucked', 0) + 1);
-      hit('sv2-' + uid + '-wgp');
+      LS.set('yosw-grow', 0); // roll a fresh 20-35min for the next one
+      LS.set('yosw-planted', Date.now());
       squish = 6;
       var r = pluck.getBoundingClientRect();
       for (var i = 0; i < 5; i++) setTimeout(function () { heartAt(r.left + Math.random() * r.width, r.top); }, i * 90);
-      stats.textContent = '🌸 sent home!! it joins the meadow ♡';
-      setTimeout(refreshStats, 2600);
+      stats.textContent = '🌸 plucked!! sending home…';
+      hit('sv2-' + uid + '-wgp').then(function () { stats.textContent = '🌸 synced ✓ it joins the meadow ♡'; });
+      setTimeout(refreshStats, 3200);
       gardenTick();
     });
     setInterval(gardenTick, 5000);
