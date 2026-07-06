@@ -700,7 +700,24 @@ document.addEventListener('DOMContentLoaded', () => {
     bow(ctx, c) { oR(ctx,13,1,4,4,c); oR(ctx,19,1,4,4,c); oR(ctx,17,2,2,2,INK); },
     sideBow(ctx, c) { oR(ctx,30,3,4,3,c); oR(ctx,35,3,4,3,c); oR(ctx,34,4,1,1,INK); },
     flower(ctx, c) { oR(ctx,31,1,3,3,c); oR(ctx,28,2,3,3,c); oR(ctx,34,2,3,3,c); oR(ctx,31,4,3,3,c); oR(ctx,31.5,2.5,2,2,'#ffe98a'); },
-    sprout(ctx) { oR(ctx,22,-1,2,4,'#4ea564'); oR(ctx,19,-3,4,3,'#7ee0a3'); oR(ctx,24,-3,4,3,'#7ee0a3'); },
+    sprout(ctx) {
+      // v2: a REAL pikmin head-plant — every wear rolls a random style,
+      // stage and tint from the same nursery the buddies grow from
+      // (drawn fully below y=0: the old leaves used to get decapitated
+      // by the canvas edge and read as a lonely green rectangle)
+      if (typeof PIK_PLANT_TPLS === 'undefined') { oR(ctx,22,1,2,4,'#4ea564'); oR(ctx,19,0,4,3,'#7ee0a3'); return; }
+      const style = PIK_PLANT_TPLS[Math.floor(Math.random() * PIK_PLANT_TPLS.length)];
+      const rows = style[Math.floor(Math.random() * 3)];
+      const tint = hueColor(5 + Math.floor(Math.random() * 355));
+      const pal = { S: '#57c689', L: '#7ddba4', Y: '#ffd400', P: '#ff8fc7', w: '#ffffff', D: tint.dark, B: tint.body, W: 'rgba(255,255,255,0.6)', e: INK, u: '#ffb3dd' };
+      rows.forEach((row, ty) => {
+        for (let tx = 0; tx < row.length; tx++) {
+          const ch = row[tx];
+          if (ch === '.') continue;
+          oR(ctx, 21.5 + (tx - 5) * 2, ty * 2, 2, 2, pal[ch] || pal.S);
+        }
+      });
+    },
     antenna(ctx, c) { oR(ctx,22,-2,2,5,INK); oR(ctx,20,-5,6,4,c); oR(ctx,21,-4,2,2,'#fff'); },
     santa(ctx) { oR(ctx,14,4,20,3,'#e34a5f'); oR(ctx,17,1,14,3,'#e34a5f'); oR(ctx,24,-1,6,3,'#e34a5f'); oR(ctx,29,-2,4,4,'#fff'); oR(ctx,13,6,22,2,'#fff'); },
     pumpkin(ctx) { oR(ctx,15,2,17,5,'#f2913d'); oR(ctx,18,1,11,2,'#f2913d'); oR(ctx,22,-1,3,3,'#4ea564'); oR(ctx,18,4,3,2,INK); oR(ctx,26,4,3,2,INK); },
@@ -2429,7 +2446,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const termHistory = [];
   let termHistoryIdx = -1;
 
+  var termCapture = null; // when a pipeline runs, stdout lines pool here instead of the DOM
   function termLine(text = '', cls = '') {
+    if (termCapture) { termCapture.push(String(text)); return; }
     if (!termOut) return;
     const el = document.createElement('span');
     el.className = `t-line ${cls}`.trim();
@@ -2654,6 +2673,10 @@ document.addEventListener('DOMContentLoaded', () => {
       termLine(trT('NETWORK   repos (live GitHub) · like · fans · lb · search <query>', 'RÉSEAU    repos (GitHub en direct) · like · fans · lb · search <requête>'));
       termLine(trT('TALK      ask <question> (pipes into slime_bot) · whoami · contact', 'PARLER    ask <question> (envoyée à slime_bot) · whoami · contact'));
       termLine(trT('CLASSIC   echo · history · man <cmd> · clear · exit', 'CLASSIQUE echo · history · man <cmd> · clear · exit'));
+      termLine(trT('SQUAD     squad (parade!) · pikmin · weather · fortune · slimesay <text>', 'ESCOUADE  squad (parade !) · pikmin · weather · fortune · slimesay <texte>'));
+      termLine(trT('4TH WALL  say <text> · title <text> · notify <text> · copy <text> · fullscreen · boss · reboot · battery · screen · vibrate · invert · flip · gravity', '4E MUR    say <texte> · title <texte> · notify <texte> · copy <texte> · fullscreen · boss · reboot · battery · screen · vibrate · invert · flip · gravity'));
+      termLine(trT('SHELL     pipes work: `help | grep pet` · `fortune | say` — and Tab completes commands', 'SHELL     les tuyaux marchent : `help | grep pet` · `fortune | say` — et Tab complète les commandes'), 't-dim');
+      termLine(trT('EDITORS   vim (enter at your own risk) · nano · emacs', 'ÉDITEURS  vim (entrez à vos risques) · nano · emacs'));
       termLine(trT('sudo hire yongshan — you know you want to', 'sudo hire yongshan — vous en mourez d’envie'), 't-accent');
     },
     ls() {
@@ -2756,8 +2779,164 @@ document.addEventListener('DOMContentLoaded', () => {
       openWindow('win-leaderboard');
     },
     skills() { termCatFile('skills.tree'); },
-    druid() { termCatFile('druid.log'); }
+    druid() { termCatFile('druid.log'); },
+
+    /* ---------- dispatch centre v2: the shell runs the WHOLE show ---------- */
+    fortune() {
+      const j = LOADER_JOKES[Math.floor(Math.random() * LOADER_JOKES.length)];
+      termLine(trT(j[0], j[1]), 't-accent');
+    },
+    date() { termLine(new Date().toString(), 't-ok'); },
+    cal() {
+      const now = new Date();
+      const y = now.getFullYear(), m = now.getMonth();
+      termLine(`     ${now.toLocaleString(yosLang === 'fr' ? 'fr' : 'en', { month: 'long' })} ${y}`, 't-accent');
+      termLine('Su Mo Tu We Th Fr Sa', 't-dim');
+      const first = new Date(y, m, 1).getDay();
+      const days = new Date(y, m + 1, 0).getDate();
+      let line = '   '.repeat(first);
+      for (let d = 1; d <= days; d++) {
+        line += (d === now.getDate() ? `♥${String(d).padStart(1)}` : String(d).padStart(2)) + ' ';
+        if ((first + d) % 7 === 0) { termLine(line, 't-ok'); line = ''; }
+      }
+      if (line.trim()) termLine(line, 't-ok');
+    },
+    df() {
+      termLine('Filesystem      Size  Used Avail Use%', 't-dim');
+      termLine('/dev/heart      100G  100G     0 100%  ♡', 't-ok');
+      termLine('/dev/pixels      64K   62K    2K  97%  /desktop', 't-ok');
+      termLine('/dev/frameworks    0     0     0    -  (none. as always.)', 't-accent');
+    },
+    free() {
+      termLine('              total   used   free', 't-dim');
+      termLine(trT('Mem:           1 heart  1 heart  0 (it\'s yours now)', 'Mém :          1 cœur  1 cœur  0 (il est à vous)'), 't-ok');
+      termLine(trT('Swap:          0 (this OS never swaps you for anyone)', 'Swap :         0 (cet OS ne vous échange contre personne)'), 't-accent');
+    },
+    uname() { termLine('YongshanOS 3.0-pixel #1 SMP PREEMPT_CUTE aarch♡ GNU/slime', 't-ok'); },
+    sl() {
+      // you typed ls wrong. enjoy the slime express.
+      const train = ['   ____', ' _|[]|_.____', '(  SLIME  |_|', ' `-00--00-\'♡'];
+      train.forEach((l) => termLine(l, 't-accent'));
+      termLine(trT('(the slime express only stops for people who type `ls` correctly)', '(le slime express ne s\'arrête que pour ceux qui tapent `ls` correctement)'), 't-dim');
+      if (typeof pikParade === 'function') pikParade(); // the passengers wave
+    },
+    fullscreen() {
+      if (typeof dotFullscreen === 'function') { dotFullscreen(); termLine(trT('⛶ toggling fullscreen — the browser chrome bows out', '⛶ bascule plein écran — le chrome du navigateur s\'efface'), 't-ok'); }
+      else termLine(trT('fullscreen: the green dot does this too ♡', 'fullscreen : le point vert fait pareil ♡'), 't-dim');
+    },
+    boss() {
+      if (typeof dotTuckToggle === 'function') { dotTuckToggle(); termLine(trT('🗂 boss key engaged — everything tucked (run it again to restore)', '🗂 touche patron — tout est rangé (relancez pour restaurer)'), 't-ok'); }
+      else termLine(trT('boss: press the yellow dot ♡', 'boss : appuyez sur le point jaune ♡'), 't-dim');
+    },
+    bsod() {
+      if (typeof bsodShow === 'function') { termLine(trT('☠ deploying the pink screen of death. any key revives.', '☠ déploiement de l\'écran rose de la mort. toute touche ranime.'), 't-err'); setTimeout(bsodShow, 400); }
+      else termLine(trT('bsod: press the red dot if you dare', 'bsod : le point rouge, si vous osez'), 't-dim');
+    },
+    reboot() {
+      termLine(trT('rebooting YongshanOS… your save is safe. see you in 2 seconds ♡', 'redémarrage de YongshanOS… votre sauvegarde est en lieu sûr. à dans 2 secondes ♡'), 't-accent');
+      document.body.classList.add('crt-off');
+      setTimeout(() => location.reload(), 1200);
+    },
+    shutdown() {
+      termLine(trT('this OS refuses to shut down while a slime lives in it.', 'cet OS refuse de s\'éteindre tant qu\'un slime y habite.'), 't-err');
+      termLine(trT('(try `reboot` — or the red dot for drama)', '(essayez `reboot` — ou le point rouge pour le drame)'), 't-dim');
+    },
+    battery() {
+      if (!navigator.getBattery) { termLine(trT('battery: this browser keeps its charge level private. respect.', 'battery : ce navigateur garde son niveau de charge privé. respect.'), 't-dim'); return; }
+      navigator.getBattery().then((b) => {
+        const pct = Math.round(b.level * 100);
+        termLine(`🔋 ${pct}% ${b.charging ? trT('(charging — the wall feeds you)', '(en charge — la prise vous nourrit)') : ''}`, 't-ok');
+        termLine(trT(pct < 20 ? 'the Low Batt pikmin sends solidarity.' : 'plenty of juice for one more run of slime_run.exe.', pct < 20 ? 'le pikmin Batterie Faible envoie sa solidarité.' : 'assez de jus pour une partie de slime_run.exe.'), 't-dim');
+      }).catch(() => termLine('battery: unreadable — assume 100% cute', 't-dim'));
+    },
+    net() {
+      const c = navigator.connection;
+      termLine(`online: ${navigator.onLine ? 'yes ♡' : 'no (offline mode is still cute)'}`, 't-ok');
+      if (c && c.effectiveType) termLine(`link:   ~${c.effectiveType}${c.rtt ? ' · rtt ' + c.rtt + 'ms' : ''} (the Signal pikmin approves)`, 't-dim');
+    },
+    screen() {
+      termLine(`viewport: ${window.innerWidth}×${window.innerHeight} @ ${window.devicePixelRatio}x`, 't-ok');
+      termLine(trT(`scheme: ${matchMedia('(prefers-color-scheme: dark)').matches ? 'dark-leaning' : 'light-leaning'} · motion: ${REDUCED_MOTION ? 'reduced (respected ♡)' : 'full'}`, `schéma : ${matchMedia('(prefers-color-scheme: dark)').matches ? 'plutôt sombre' : 'plutôt clair'} · animations : ${REDUCED_MOTION ? 'réduites (respectées ♡)' : 'complètes'}`), 't-dim');
+    },
+    weather() {
+      if (typeof wxCurrent !== 'undefined' && wxCurrent && wxCurrent.k) {
+        termLine(trT(`Edmonton right now: ${wxCurrent.k} — the live stage is wearing it`, `Edmonton en ce moment : ${wxCurrent.k} — la scène live l'a déjà enfilé`), 't-ok');
+      } else {
+        termLine(trT('the sky is still buffering — open slime_live.exe to wake the forecast', 'le ciel charge encore — ouvrez slime_live.exe pour réveiller la météo'), 't-dim');
+      }
+    },
+    squad() {
+      const dex = pikdexGet();
+      const actives = pikdexActives(dex);
+      if (!dex.length) termLine(trT('no pikmin yet — but watch this…', 'aucun pikmin — mais regardez ça…'), 't-dim');
+      else {
+        termLine(trT(`SQUAD ROSTER (${actives.length}/${PIK_MAX} on duty · ${dex.filter((p) => !p.ch).length}/${PIKDEX_CAP} collected)`, `ESCOUADE (${actives.length}/${PIK_MAX} en service · ${dex.filter((p) => !p.ch).length}/${PIKDEX_CAP} au total)`), 't-accent');
+        actives.slice(0, PIK_MAX).forEach((p) => {
+          const ix = dex.indexOf(p);
+          const sp = p.sp ? pikSpecies(p.sp) : null;
+          termLine(`  ${sp ? sp.hat : '🌱'} ${pikNameOf(dex, ix)}.pik  ${['sprout', 'bud', 'BLOOM'][Math.min(p.s || 0, 2)]}${p.loan ? trT('  (loaner!)', '  (prêt !)') : ''}`, 't-ok');
+        });
+      }
+      if (typeof pikParade === 'function') pikParade();
+      termLine(trT('→ full dossiers in pikdex.exe', '→ dossiers complets dans pikdex.exe'), 't-dim');
+    },
+    vim() {
+      termVimActive = true;
+      const promptEl = document.querySelector('.term-prompt');
+      if (promptEl) { promptEl.dataset.old = promptEl.textContent; promptEl.textContent = '-- INSERT --'; }
+      termLine('VIM - Vi IMproved ~ version ♡.∞', 't-accent');
+      termLine(trT('you are now inside vim. yes, really. good luck.', 'vous êtes maintenant dans vim. oui, vraiment. bonne chance.'), 't-dim');
+      termLine(trT('(the ancients speak of an exit rune…)', '(les anciens parlent d\'une rune de sortie…)'), 't-dim');
+    },
+    vi() { TERM_COMMANDS.vim(); },
+    emacs() { termLine(trT('emacs: a fine operating system. this OS already has one. try `vim` (bring snacks).', 'emacs : un bel OS. celui-ci en a déjà un. essayez `vim` (prévoyez des snacks).'), 't-dim'); },
+    nano() { termLine(trT('nano: opens instantly, exits honestly. the hero we don\'t deserve.', 'nano : s\'ouvre direct, se ferme honnêtement. le héros qu\'on ne mérite pas.'), 't-ok'); },
+    hack() {
+      const lines = ['> initializing l33t mode…', '> bypassing mainframe (pink)…', '> downloading the heart folder…', '> ACCESS GRANTED ♡'];
+      lines.forEach((l, i) => setTimeout(() => termLine(l, i === 3 ? 't-ok' : 't-accent'), i * 420));
+      setTimeout(() => termLine(trT('just kidding. the only thing hacked here is my sleep schedule.', 'je plaisante. la seule chose piratée ici, c\'est mon sommeil.'), 't-dim'), 2000);
+    },
+    invert() {
+      document.documentElement.style.filter = 'invert(1) hue-rotate(180deg)';
+      termLine(trT('🙃 reality inverted for 8 seconds. blink twice if you like it.', '🙃 réalité inversée pendant 8 secondes. clignez deux fois si ça vous plaît.'), 't-ok');
+      setTimeout(() => { document.documentElement.style.filter = ''; }, 8000);
+    },
+    flip() {
+      document.documentElement.style.transition = 'transform 0.8s';
+      document.documentElement.style.transform = 'rotate(180deg)';
+      termLine(trT('🙃 australia mode. 6 seconds.', '🙃 mode australie. 6 secondes.'), 't-ok');
+      setTimeout(() => { document.documentElement.style.transform = ''; setTimeout(() => { document.documentElement.style.transition = ''; }, 900); }, 6000);
+    },
+    gravity() {
+      const wins = [...document.querySelectorAll('.window')].filter((w) => !w.classList.contains('window-closed') && !w.classList.contains('window-minimized'));
+      if (!wins.length) { termLine(trT('gravity: nothing to drop — open some windows first', 'gravity : rien à faire tomber — ouvrez des fenêtres'), 't-dim'); return; }
+      wins.forEach((w) => { w.style.transition = 'transform 0.9s cubic-bezier(0.5, 0, 1, 1)'; w.style.transform = 'translateY(120vh) rotate(6deg)'; });
+      termLine(trT(`🍎 newton mode: ${wins.length} window(s) dropped. restoring in 3s…`, `🍎 mode newton : ${wins.length} fenêtre(s) au sol. restauration dans 3 s…`), 't-ok');
+      setTimeout(() => { wins.forEach((w) => { w.style.transform = ''; setTimeout(() => { w.style.transition = ''; }, 1000); }); }, 3000);
+    }
   };
+  TERM_COMMANDS.pikmin = TERM_COMMANDS.squad;
+  TERM_COMMANDS.piks = TERM_COMMANDS.squad;
+  TERM_COMMANDS.online = TERM_COMMANDS.net;
+  var termVimActive = false;
+  function termVimHandle(input) {
+    termLine(input, 't-dim');
+    const s = input.trim();
+    if (s === ':q!' || s === ':wq' || s === ':x' || s === 'ZZ') {
+      termVimActive = false;
+      const promptEl = document.querySelector('.term-prompt');
+      if (promptEl && promptEl.dataset.old) promptEl.textContent = promptEl.dataset.old;
+      termLine(trT('you ESCAPED vim. the shell erects a statue in your honour.', 'vous êtes SORTI·E de vim. le shell vous érige une statue.'), 't-ok');
+      achvUnlock('vimescape');
+      if (typeof pikParade === 'function') pikParade(); // the squad celebrates survivors
+    } else if (s === ':q') {
+      termLine('E37: No write since last change (add ! to override)', 't-err');
+    } else if (s === ':help' || s === 'help') {
+      termLine(trT('there is no help inside vim. only the exit rune: `:q!`', 'aucune aide dans vim. seulement la rune de sortie : `:q!`'), 't-dim');
+    } else {
+      termLine(trT('-- INSERT -- (psst: the exit rune is `:q!`)', '-- INSERT -- (psst : la rune de sortie est `:q!`)'), 't-dim');
+    }
+  }
 
   const TERM_MAN = {
     ask: ['ask <question> — pipes your question into slime_bot (the AMA engine) and prints the answer here.', 'ask <question> — envoie votre question à slime_bot (le moteur AMA) et affiche la réponse ici.'],
@@ -2854,6 +3033,20 @@ document.addEventListener('DOMContentLoaded', () => {
       case 'wxfog': cheatWx('fog'); break;
       case 'rainmoney': cheatWx('rain'); pend('rich5'); break;
       case 'geese': openWindow('win-live'); achvUnlock('goose'); setTimeout(() => { if (typeof spawnGeese === 'function') spawnGeese(); }, 1300); break;
+      case 'yongshanfx': // her name is a spell — the whole squad answers it
+        if (typeof pikParade === 'function') pikParade();
+        achvUnlock('truefan');
+        gainFollowers(5);
+        store.set('yos-pending-coins', store.get('yos-pending-coins', 0) + 15);
+        termLine(trT('💰 +15 coins armed for your next run · +5 fans · the squad is SO proud', '💰 +15 pièces armées pour ta prochaine partie · +5 fans · l\'escouade est TROP fière'), 't-ok');
+        break;
+      case 'nihaofx': // 你好 — a greeting the whole meadow understands
+        if (typeof pikParade === 'function') pikParade();
+        achvUnlock('nihao');
+        gainFollowers(5);
+        store.set('yos-pending-coins', store.get('yos-pending-coins', 0) + 12);
+        termLine(trT('💰 +12 coins armed for your next run · +5 fans · 你好你好!!', '💰 +12 pièces armées pour ta prochaine partie · +5 fans · 你好你好 !!'), 't-ok');
+        break;
       case 'pikmin': openWindow('win-live'); setTimeout(() => { for (let i = 0; i < 3; i++) gardenSpawnSprout(); }, 1100); break;
       case 'boba': feedSlime(); break;
       case 'nap': sleepSlime(); break;
@@ -2971,6 +3164,8 @@ document.addEventListener('DOMContentLoaded', () => {
     'winter is coming':   ['❄ in Edmonton? it never left.', '❄ à Edmonton ? il n\'est jamais parti.', 'wxsnow'],
     'honk':               ['📣 HONK. HONK HONK.', '📣 HONK. HONK HONK.', 'honk'],
     'goose':              ['🪿 deploying the squadron.', '🪿 déploiement de l\'escadrille.', 'geese'],
+    'yongshan':           ['♡ you know her NAME. the entire squad reports for the parade!!', '♡ tu connais son NOM. toute l\'escouade se présente pour la parade !!', 'yongshanfx'],
+    '你好':               ['你好!! the whole meadow heard you — full squad parade!!', '你好 !! toute la prairie t\'a entendu — parade complète !!', 'nihaofx'],
     'geese':              ['🪿 they were already on their way.', '🪿 elles étaient déjà en route.', 'geese'],
     'oh canada':          ['🍁 standing at attention. sending geese.', '🍁 au garde-à-vous. envoi des bernaches.', 'geese'],
     'eh':                 ['🇨🇦 eh.', '🇨🇦 eh.', 'honk'],
@@ -3388,7 +3583,10 @@ document.addEventListener('DOMContentLoaded', () => {
     { id: 'robot', icon: '🤖', n: ['beep boop?', 'bip boup ?'], d: ['typed faster than any human should. the shell asked to see some ID.', 'a tapé plus vite qu\'aucun humain. le shell a demandé une pièce d\'identité.'], t: ['type. very. fast.', 'tape. très. vite.'] },
     { id: 'haxx', icon: '🛡️', n: ['hacker-chan', 'hacker-chan'], d: ['tried an injection on a textContent-pilled search bar. 0 rows dropped.', 'a tenté une injection sur une barre blindée au textContent. 0 table supprimée.'], t: ['the search bar has seen things.', 'la barre de recherche en a vu d\'autres.'] },
     { id: 'yue', icon: '🥟', n: ['Gwong Dung Waa', 'Gwong Dung Waa'], d: ['asked the terminal for Cantonese. it tried its very best ♡', 'a demandé le cantonais au terminal. il a fait de son mieux ♡'], t: ['the shell speaks more languages than it admits.', 'le shell parle plus de langues qu\'il ne l\'avoue.'] },
-    { id: 'archmage', icon: '🔮', n: ['MEGA Archmage', 'Archimage MÉGA'], d: ['discovered all 8 MEGA spells in the gift grimoire. the stage bows.', 'a découvert les 8 sorts MÉGA du grimoire à cadeaux. la scène s\'incline.'], t: ['some emojis are blessed. find all 8 blessings.', 'certains emojis sont bénis. trouve les 8 bénédictions.'] }
+    { id: 'archmage', icon: '🔮', n: ['MEGA Archmage', 'Archimage MÉGA'], d: ['discovered all 8 MEGA spells in the gift grimoire. the stage bows.', 'a découvert les 8 sorts MÉGA du grimoire à cadeaux. la scène s\'incline.'], t: ['some emojis are blessed. find all 8 blessings.', 'certains emojis sont bénis. trouve les 8 bénédictions.'] },
+    { id: 'truefan', icon: '💌', n: ['On a First-Name Basis', 'On Se Tutoie'], d: ['typed her name like a spell. the whole squad paraded for it.', 'a tapé son nom comme un sort. toute l\'escouade a défilé.'], t: ['the OS answers to a name.', 'l\'OS répond à un nom.'] },
+    { id: 'nihao', icon: '🀄', n: ['Nǐ Hǎo, World', 'Nǐ Hǎo, World'], d: ['said hello in Chinese. the meadow understood perfectly.', 'a dit bonjour en chinois. la prairie a parfaitement compris.'], t: ['greet the OS like home.', 'salue l\'OS comme à la maison.'] },
+    { id: 'vimescape', icon: '🚪', n: ['Vim Escapee', 'Évadé·e de Vim'], d: ['entered vim. LEFT vim. statistically a legend.', 'est entré·e dans vim. en est SORTI·E. statistiquement une légende.'], t: ['some editors are one-way doors.', 'certains éditeurs sont des portes sans retour.'] }
   ];
 
   // ---- metric engine: count things, achievements pop themselves ----
@@ -3742,7 +3940,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const PIK_PACK = 17280;              // 360 hues × 3 stages × 2 chameleon × 8 skills
   const PIK_PACK2 = PIK_PACK * 23;     // × (22 species + 'none') = 397 440
   function pikdexEncodeChunks() {
-    const dex = (typeof pikdexGet === 'function' ? pikdexGet() : []).slice(0, 78);
+    const dex = (typeof pikdexGet === 'function' ? pikdexGet() : []).filter((p) => !p.loan).slice(0, 78); // loaners never sync — they're borrowed
     const packed = dex.map((p) => {
       const h = p.h != null ? ((p.h % 360) + 360) % 360 : 330;
       const s = Math.min(p.s || 0, 2);
@@ -3953,10 +4151,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
   window.addEventListener('online', () => cloudQueueSync());
 
-  function runTermCommand(raw) {
+  /* ---------- pipelines: like a real shell, but with more hearts ----------
+     `help | grep pet` · `fortune | say` · `ls | wc` · 2-4 stages max */
+  function termRunPipeline(input) {
+    const stages = input.split('|').map((s) => s.trim()).filter(Boolean);
+    if (stages.length < 2 || stages.length > 4) {
+      termLine(trT('pipeline: 2-4 stages, this is a boutique shell', 'pipeline : 2-4 étages, c\'est un shell de boutique'), 't-err');
+      return;
+    }
+    let stdin = null;
+    for (let i = 0; i < stages.length; i++) {
+      if (i < stages.length - 1) {
+        termCapture = [];
+        try { runTermCommand(stages[i], true, stdin); } finally { stdin = termCapture; termCapture = null; }
+      } else {
+        runTermCommand(stages[i], true, stdin);
+      }
+    }
+  }
+
+  function runTermCommand(raw, piped, stdin) {
     const input = raw.trim();
     if (!input) return;
-    termLine(`yongshan@os:~$ ${input}`, 't-cmd');
+    if (termVimActive) { termVimHandle(input); return; } // there is no shell inside vim
+    if (!piped) termLine(`yongshan@os:~$ ${input}`, 't-cmd');
+    if (!piped && input.indexOf('|') > 0) { termRunPipeline(input); return; }
 
     const lower = input.toLowerCase();
     const parts = input.split(/\s+/);
@@ -4017,6 +4236,140 @@ document.addEventListener('DOMContentLoaded', () => {
     if (cmd === 'sudo') { termLine(trT('nice try. this slime respects the principle of least privilege.', 'bien tenté. ce slime respecte le principe du moindre privilège.'), 't-err'); return; }
     if (cmd === 'echo') { termLine(rest || ''); return; }
     if (cmd === 'cat') { termCatFile(rest); return; }
+
+    // ---- pipe-aware classics (stdin arrives from `a | b` pipelines) ----
+    if (cmd === 'grep') {
+      if (!stdin) { termLine(trT('grep: pipe me something — try `help | grep pet`', 'grep : donnez-moi un tuyau — essayez `help | grep pet`'), 't-err'); return; }
+      const pat = rest.toLowerCase();
+      const hits = stdin.filter((l) => l.toLowerCase().includes(pat));
+      if (hits.length) hits.forEach((l) => termLine(l, 't-ok'));
+      else termLine(trT(`grep: no match for "${rest}"`, `grep : rien pour « ${rest} »`), 't-dim');
+      return;
+    }
+    if (cmd === 'wc') {
+      const src2 = stdin || (rest ? [rest] : []);
+      const joined = src2.join(' ');
+      termLine(`${src2.length} ${trT('lines', 'lignes')} · ${joined.split(/\s+/).filter(Boolean).length} ${trT('words', 'mots')} · ${joined.length} ${trT('chars', 'caractères')}`, 't-ok');
+      return;
+    }
+    if (cmd === 'say' || cmd === 'speak') {
+      const text = (rest || (stdin ? stdin.join('. ') : '')).slice(0, 220);
+      if (!text) { termLine(trT('say: give me words — `say hi` (or pipe one: `fortune | say`)', 'say : donnez-moi des mots — `say hi` (ou en tuyau : `fortune | say`)'), 't-err'); return; }
+      if (!('speechSynthesis' in window)) { termLine(trT('say: this browser has no voice. it mimes instead 🤐', 'say : ce navigateur n\'a pas de voix. il mime 🤐'), 't-err'); return; }
+      const u = new SpeechSynthesisUtterance(text);
+      u.rate = 1.05; u.pitch = 1.5;
+      try { u.lang = yosLang === 'fr' ? 'fr-FR' : 'en-US'; } catch (e) { /* voice picks itself */ }
+      speechSynthesis.speak(u);
+      termLine(trT('🔊 the OS clears its throat and SAYS it. out loud. fourth wall: gone.', '🔊 l\'OS s\'éclaircit la voix et le DIT. à voix haute. quatrième mur : envolé.'), 't-ok');
+      return;
+    }
+    if (cmd === 'slimesay') {
+      const text = (rest || (stdin ? stdin.join(' ') : '') || 'pik?').slice(0, 58);
+      const bar = '─'.repeat(text.length + 2);
+      termLine('  ╭' + bar + '╮', 't-accent');
+      termLine('  │ ' + text + ' │', 't-accent');
+      termLine('  ╰' + bar + '╯', 't-accent');
+      termLine('    \\', 't-dim');
+      termLine('   ▄▄████▄▄', 't-accent');
+      termLine('  █ ◕ ▽ ◕ █', 't-accent');
+      termLine('   ▀▀▀▀▀▀▀▀', 't-accent');
+      return;
+    }
+
+    // ---- fourth-wall department (privacy-first: we WRITE, we never read) ----
+    if (cmd === 'title') {
+      if (!rest) { termLine(trT('title <text> — rename the browser tab for 30s', 'title <texte> — renomme l\'onglet pendant 30 s'), 't-err'); return; }
+      const old = document.title;
+      document.title = rest.slice(0, 48);
+      termLine(trT('👀 look up. the TAB believes you now. (reverting in 30s)', '👀 regardez en haut. l\'ONGLET vous croit. (retour dans 30 s)'), 't-ok');
+      setTimeout(() => { document.title = old; }, 30000);
+      return;
+    }
+    if (cmd === 'notify') {
+      if (!('Notification' in window)) { termLine(trT('notify: this browser doesn\'t do notifications. it prefers eye contact.', 'notify : ce navigateur ne notifie pas. il préfère le contact visuel.'), 't-err'); return; }
+      const msg = (rest || 'the slime says hi ♡').slice(0, 90);
+      Notification.requestPermission().then((perm) => {
+        if (perm === 'granted') {
+          new Notification('YongshanOS ♡', { body: msg, icon: 'apple-touch-icon.png' });
+          termLine(trT('📬 delivered OUTSIDE the browser window. fourth wall: dust.', '📬 livré HORS de la fenêtre du navigateur. quatrième mur : poussière.'), 't-ok');
+        } else {
+          termLine(trT('📪 permission declined — extremely valid. the slime respects boundaries.', '📪 permission refusée — parfaitement valide. le slime respecte les limites.'), 't-dim');
+        }
+      });
+      return;
+    }
+    if (cmd === 'copy') {
+      if (!rest) { termLine(trT('copy <text> — puts text on YOUR clipboard (we never read it, only give)', 'copy <texte> — met du texte dans VOTRE presse-papiers (jamais lu, seulement offert)'), 't-err'); return; }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(rest).then(
+          () => termLine(trT('📋 copied. it\'s on your clipboard, a tiny gift.', '📋 copié. c\'est dans votre presse-papiers, un petit cadeau.'), 't-ok'),
+          () => termLine(trT('copy: the browser said no. it happens.', 'copy : le navigateur a dit non. ça arrive.'), 't-err'));
+      } else termLine(trT('copy: no clipboard API here', 'copy : pas d\'API presse-papiers ici'), 't-err');
+      return;
+    }
+    if (cmd === 'paste') {
+      termLine(trT('paste: refused. I don\'t read clipboards — not even adorable ones. privacy first ♡', 'paste : refusé. je ne lis pas les presse-papiers — même adorables. vie privée d\'abord ♡'), 't-err');
+      return;
+    }
+    if (cmd === 'zoom') {
+      const z = parseFloat(args[0]);
+      if (!z || z < 0.5 || z > 2) { termLine(trT('zoom <0.5-2> — e.g. `zoom 1.3` (and `zoom 1` to undo)', 'zoom <0.5-2> — ex. `zoom 1.3` (et `zoom 1` pour annuler)'), 't-err'); return; }
+      document.body.style.zoom = z;
+      termLine(`🔍 zoom → ${z}${z === 1 ? trT(' (back to normal)', ' (retour à la normale)') : ''}`, 't-ok');
+      return;
+    }
+    if (cmd === 'vibrate') {
+      if (!navigator.vibrate) { termLine(trT('vibrate: this device sits perfectly still. dignified.', 'vibrate : cet appareil reste parfaitement immobile. digne.'), 't-dim'); return; }
+      navigator.vibrate([80, 40, 80, 40, 160]);
+      termLine(trT('📳 bzzt bzzt — that was a hug in morse code', '📳 bzzt bzzt — c\'était un câlin en morse'), 't-ok');
+      return;
+    }
+    if (cmd === 'ping') {
+      const host = args[0] || 'yongshan.dev';
+      [1, 2, 3].forEach((n) => setTimeout(() => {
+        termLine(`64 bytes from ${host}: icmp_seq=${n} time=${(2 + Math.random() * 20).toFixed(1)}ms ♡`, 't-ok');
+      }, n * 340));
+      setTimeout(() => termLine(trT(`--- ${host} ping statistics: 3 packets, 0% loss, 100% love ---`, `--- statistiques ${host} : 3 paquets, 0 % de perte, 100 % d'amour ---`), 't-dim'), 1500);
+      return;
+    }
+    if (cmd === 'curl' || cmd === 'wget') {
+      if (/yongshan\.dev/.test(lower) || !rest) {
+        termLine('<!doctype cute>', 't-dim');
+        termLine('<os name="YongshanOS" frameworks="0" slimes="1" pikmin="up to 72">', 't-dim');
+        termLine(trT('  <p>you\'re already looking at the response body ♡</p>', '  <p>vous regardez déjà le corps de la réponse ♡</p>'), 't-ok');
+        termLine('</os>', 't-dim');
+      } else {
+        termLine(trT(`curl: refusing to fetch "${args[0]}" — this shell only surfs the yongshan-web`, `curl : refus de récupérer « ${args[0]} » — ce shell ne surfe que le yongshan-web`), 't-err');
+      }
+      return;
+    }
+    if (cmd === 'git') {
+      const sub = args[0] || 'status';
+      if (sub === 'status') {
+        termLine('On branch main ♡', 't-ok');
+        termLine(trT('Your OS is up to date with \'origin/heart\'.', 'Votre OS est à jour avec « origin/heart ».'), 't-dim');
+        termLine(trT('nothing to commit, all feelings staged', 'rien à valider, tous les sentiments sont indexés'), 't-dim');
+      } else if (sub === 'log') {
+        ['a3f9e21 make everything cuter (again)', '9b2c110 teach the pikmin to walk', '547b2ba invent an entire OS', '0000000 initial commit: one (1) slime'].forEach((l) => termLine(l, 't-ok'));
+      } else if (sub === 'push') {
+        termLine(trT('git: everything you do here is already saved — the cloud has you ♡', 'git : tout ce que vous faites ici est déjà sauvegardé — le cloud veille ♡'), 't-ok');
+      } else if (sub === 'blame') {
+        termLine(trT('git blame: it was the slime. it is always the slime.', 'git blame : c\'était le slime. c\'est toujours le slime.'), 't-accent');
+      } else {
+        termLine(trT(`git: '${sub}' is not a git command here. try status/log/push/blame`, `git : « ${sub} » n'est pas une commande git ici. essayez status/log/push/blame`), 't-err');
+      }
+      return;
+    }
+    if (cmd === 'npm' || cmd === 'pip' || cmd === 'brew') {
+      const pkg = args[1] || args[0] || 'happiness';
+      termLine(`${cmd}: resolving ${pkg}…`, 't-dim');
+      setTimeout(() => termLine(trT(`${cmd}: refused. this OS ships 0 dependencies and it SHOWS ♡ (${pkg} not installed)`, `${cmd} : refusé. cet OS embarque 0 dépendance et ÇA SE VOIT ♡ (${pkg} non installé)`), 't-err'), 600);
+      return;
+    }
+    if (cmd === 'whois') {
+      TERM_COMMANDS.whoami();
+      return;
+    }
     if (cmd === 'man') {
       const man = TERM_MAN[args[0]];
       if (man) termLine(trT(man[0], man[1]), 't-dim');
@@ -4139,6 +4492,30 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
           termHistoryIdx = termHistory.length;
           termInput.value = '';
+        }
+      } else if (e.key === 'Tab') {
+        // a real shell completes. so do we. (double-tab lists the options)
+        e.preventDefault();
+        const val = termInput.value;
+        const parts0 = val.split(/\s+/);
+        const isArg = parts0.length > 1;
+        const token = parts0[parts0.length - 1].toLowerCase();
+        if (!token) return;
+        const pool = isArg && (parts0[0] === 'open' || parts0[0] === 'kill')
+          ? Object.keys(TERM_OPEN_MAP)
+          : Object.keys(TERM_COMMANDS).concat(['echo', 'cat', 'man', 'ask', 'search', 'open', 'kill', 'theme', 'lang', 'pet', 'sudo', 'grep', 'wc', 'say', 'slimesay', 'title', 'notify', 'copy', 'zoom', 'vibrate', 'ping', 'curl', 'git', 'npm', 'whois', 'cheats', 'hint', 'help']);
+        const hits = [...new Set(pool)].filter((c) => c.startsWith(token)).sort();
+        if (hits.length === 1) {
+          parts0[parts0.length - 1] = hits[0];
+          termInput.value = parts0.join(' ') + ' ';
+        } else if (hits.length > 1) {
+          const common = hits.reduce((a, b) => { let i = 0; while (i < a.length && a[i] === b[i]) i++; return a.slice(0, i); });
+          if (common.length > token.length) {
+            parts0[parts0.length - 1] = common;
+            termInput.value = parts0.join(' ');
+          } else {
+            termLine(hits.slice(0, 14).join('  '), 't-dim');
+          }
         }
       }
     });
@@ -11595,6 +11972,76 @@ document.addEventListener('DOMContentLoaded', () => {
         tellOne();
       }, 1600);
     }
+  }
+
+  /* ---------- PIK PARADE — special commands are performed by YOUR squad ----------
+     no faceless emoji rain: the visitor's own pikmin march across the
+     screen. no pikmin yet? the agency dispatches LOANERS — guaranteed
+     hidden species (or the chameleon), yours for exactly 5 minutes ♡ */
+  const PIK_LOAN_MS = 5 * 60 * 1000;
+  function pikLoanSweep() {
+    const dex = pikdexGet();
+    const now = Date.now();
+    const keep = dex.filter((p) => !p.loan || p.loan > now);
+    if (keep.length === dex.length) return;
+    pikdexSave(keep);
+    pikdexRosterProject();
+    if (typeof deskPikResync === 'function') deskPikResync();
+    renderPikdexSoon();
+    showToast(trT('the loaner pikmin went home — the agency says hi ♡', 'les pikmin de prêt sont rentrés — l\'agence vous salue ♡'));
+  }
+  setInterval(pikLoanSweep, 30000);
+  function pikEnsureCast() {
+    const dex = pikdexGet();
+    if (dex.length) {
+      const actives = pikdexActives(dex);
+      return actives.length ? actives : dex.slice(0, PIK_MAX);
+    }
+    // empty deck → summon 3 loaners, 100% hidden species / chameleon
+    const pool = HIDDEN_SPECIES.slice();
+    const picks = [];
+    for (let i = 0; i < 3; i++) {
+      if (i === 2 && Math.random() < 0.34) {
+        picks.push({ h: 5 + Math.floor(Math.random() * 355), ch: 1, s: 2, k: PIK_SKILLS[Math.floor(Math.random() * PIK_SKILLS.length)].id, a: 1, t: Date.now(), loan: Date.now() + PIK_LOAN_MS });
+        continue;
+      }
+      const sp = pool.splice(Math.floor(Math.random() * pool.length), 1)[0];
+      picks.push({ h: 5 + Math.floor(Math.random() * 355), ch: 0, s: 2, k: PIK_SKILLS[Math.floor(Math.random() * PIK_SKILLS.length)].id, sp: sp.id, a: 1, t: Date.now(), loan: Date.now() + PIK_LOAN_MS });
+    }
+    pikdexSave(picks);
+    pikdexRosterProject();
+    if (typeof deskPikResync === 'function') deskPikResync();
+    renderPikdexSoon();
+    showToast(trT('no squad?! the agency dispatched 3 RARE loaners — yours for 5 minutes ♡', 'pas d\'escouade ?! l\'agence dépêche 3 prêts RARES — à vous pour 5 minutes ♡'));
+    return picks;
+  }
+  function pikParade() {
+    const cast = pikEnsureCast();
+    playFanfare();
+    if (REDUCED_MOTION) return cast; // the fanfare + rewards still land
+    const n = Math.max(4, Math.min(9, cast.length * 2));
+    for (let i = 0; i < n; i++) {
+      const p = cast[i % cast.length];
+      const sp = p.sp ? pikSpecies(p.sp) : null;
+      const el = document.createElement('div');
+      el.className = 'pik-parade' + (sp && sp.fx ? ' pikfx-' + sp.fx : '') + (p.ch ? ' pikfx-rgbcycle' : '');
+      const img = document.createElement('img');
+      img.src = pikSprite(pikEntryColor(p), p.s || 0, p.sp || null);
+      img.alt = '';
+      el.appendChild(img);
+      if (sp) {
+        const hat = document.createElement('span');
+        hat.className = 'pik-hat';
+        hat.textContent = sp.hat;
+        el.appendChild(hat);
+      }
+      el.style.top = (16 + Math.random() * 58) + 'vh';
+      el.style.animationDelay = (i * 0.32) + 's';
+      el.style.animationDuration = (4.6 + Math.random() * 2.2) + 's';
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), 9500);
+    }
+    return cast;
   }
 
   /* a hidden-species pull: rarer than candy, cheaper than a GPU */
