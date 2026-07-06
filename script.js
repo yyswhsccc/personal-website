@@ -2765,7 +2765,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // the `honk` spell is a purist: ALWAYS jasonlee's honk. no lottery.
         if (soundEnabled && !document.hidden && document.hasFocus()) {
           const hk = new Audio('assets/goose_c.mp3');
-          hk.volume = (resolvedTheme() === 'dark') ? 0.18 : 0.55;
+          hk.volume = (resolvedTheme() === 'dark') ? 0.08 : 0.55;
           hk.play().catch(() => {});
         }
         break;
@@ -7854,7 +7854,9 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(function tryShow() {
       if (gInviteShownThisVisit) return;
       const gameOpen = !document.getElementById('win-game').classList.contains('window-closed');
-      if (document.hidden || resolvedTheme() !== 'light' || gameOpen) {
+      // both themes get the popup now — night owls deserve ads too.
+      // only a hidden tab, an open game, or a sleeping slime delays it.
+      if (document.hidden || gameOpen || pet.sleeping) {
         setTimeout(tryShow, 8000); // wrong moment — lurk and retry
         return;
       }
@@ -8442,7 +8444,7 @@ document.addEventListener('DOMContentLoaded', () => {
     a.loop = looping;
     const seg = looping ? 24 : Math.min(pick.dur, 27);
     const startAt = (!looping && pick.dur > seg) ? Math.random() * (pick.dur - seg) : 0;
-    const peak = (resolvedTheme() === 'dark') ? 0.16 : 0.55;
+    const peak = (resolvedTheme() === 'dark') ? 0.07 : 0.55; // night honks are a whisper
     try { a.currentTime = startAt; } catch (e) { /* not seekable yet */ }
     a.volume = 0;
     a.play().catch(() => { /* autoplay gate — geese stay polite */ });
