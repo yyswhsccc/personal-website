@@ -212,6 +212,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function focusWindow(win) {
     highestZ++;
+    if (highestZ > 1800) {
+      // re-deal the stack: same order, lower numbers — windows must stay
+      // below the taskbar (z 2000) no matter how many times they're focused
+      const stack = [...document.querySelectorAll('.window')]
+        .sort((a, b) => (Number(a.style.zIndex) || 100) - (Number(b.style.zIndex) || 100));
+      highestZ = 500;
+      stack.forEach((w) => { if (w.style.zIndex) w.style.zIndex = String(++highestZ); });
+      highestZ++;
+    }
     win.style.zIndex = highestZ;
     windows.forEach(w => w.classList.remove('window-active'));
     win.classList.remove('window-minimized');
@@ -1155,45 +1164,65 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // --- speech bubble ---
+  function bubbleHide() {
+    if (!speechBubble) return;
+    speechBubble.classList.remove('show-bubble');
+    if (speechBubble._marquee) { clearInterval(speechBubble._marquee); speechBubble._marquee = null; }
+    speechBubble._busy = false;
+    const q = speechBubble._queued;
+    speechBubble._queued = null;
+    if (q) showBubble(q.text, q.duration, q.allow); // the waiter takes the mic
+  }
   function showBubble(text, duration = 2500, allowWhileAway = false) {
     if (!speechBubble) return;
     // while the slime is in bed (dark mode), only sleep-talk may surface
     if (typeof ghostHidden === 'function' && ghostHidden() && !allowWhileAway) return;
+    // a long line that is STILL SCROLLING may not be interrupted: the new
+    // line waits in the wings instead (one seat — the latest waiter wins)
+    if (speechBubble._busy && speechBubble._marquee && speechBubble.classList.contains('show-bubble')) {
+      speechBubble._queued = { text, duration, allow: allowWhileAway };
+      return;
+    }
     if (speechTimeout) clearTimeout(speechTimeout);
     if (speechBubble._marquee) { clearInterval(speechBubble._marquee); speechBubble._marquee = null; }
+    speechBubble._busy = false;
+    speechBubble._queued = null; // a direct replacement supersedes any waiter
 
     speechBubble.textContent = text;
     speechBubble.scrollLeft = 0;
     speechBubble.classList.add('show-bubble');
 
-    // long lines read THEMSELVES: one slow, single pass to the end —
-    // like the game's ad marquee — then the bubble takes its bow
+    // long lines read THEMSELVES: one slow, single pass — and the bubble
+    // bows out only when the scroll has ACTUALLY reached the end. (the old
+    // clock-based hide drifted under load and cut long lines mid-scroll.)
     requestAnimationFrame(() => {
       if (speechBubble.textContent !== text) return; // a newer line took the mic
       const over = speechBubble.scrollWidth - speechBubble.clientWidth;
       if (over > 8) {
-        const pxPerTick = 0.55;                       // ≈23px/s: an actual reading pace
-        duration = 1400 + (over / pxPerTick) * 24 + 1200; // lead-in + one pass + linger
-        let pauseUntil = Date.now() + 1400;
+        speechBubble._busy = true;
+        const pxPerTick = 0.55;                 // ≈23px/s: an actual reading pace
+        const lead = 1400, linger = 1200;
+        let pauseUntil = Date.now() + lead;
         speechBubble._marquee = setInterval(() => {
           if (Date.now() < pauseUntil) return;
           speechBubble.scrollLeft += pxPerTick;
-          if (speechBubble.scrollLeft >= over - 1) {  // the end: linger, then bow out
+          if (speechBubble.scrollLeft >= over - 1) { // the TRUE end of the line
             clearInterval(speechBubble._marquee);
             speechBubble._marquee = null;
+            if (speechTimeout) clearTimeout(speechTimeout);
+            speechTimeout = setTimeout(bubbleHide, linger);
           }
         }, 24);
+        // safety net only (hidden tab / stalled timers) — generous, never early
+        if (speechTimeout) clearTimeout(speechTimeout);
+        speechTimeout = setTimeout(bubbleHide, lead + (over / pxPerTick) * 24 * 2 + linger + 4000);
+      } else {
+        if (speechTimeout) clearTimeout(speechTimeout);
+        speechTimeout = setTimeout(bubbleHide, duration);
       }
-      if (speechTimeout) clearTimeout(speechTimeout);
-      speechTimeout = setTimeout(() => {
-        speechBubble.classList.remove('show-bubble');
-        if (speechBubble._marquee) { clearInterval(speechBubble._marquee); speechBubble._marquee = null; }
-      }, duration);
     });
 
-    speechTimeout = setTimeout(() => {
-      speechBubble.classList.remove('show-bubble');
-    }, duration + 4000); // hidden-tab fallback; the rAF path replaces it
+    speechTimeout = setTimeout(bubbleHide, duration + 4000); // pre-rAF fallback (hidden tab)
   }
 
   function randomPhrase(list = dynD().idle) {
@@ -3655,6 +3684,19 @@ document.addEventListener('DOMContentLoaded', () => {
       el = document.createElement('div');
       el.id = 'achv-toast';
       el.className = 'achv-toast';
+      el.setAttribute('role', 'button');
+      el.setAttribute('tabindex', '0');
+      el.title = trT('click to open the achievement wall', 'clic : ouvrir le mur des succès');
+      el.addEventListener('click', () => {
+        el.classList.remove('achv-show');
+        if (achvToastTimer) clearTimeout(achvToastTimer);
+        openWindow('win-leaderboard');
+        setTimeout(() => { // glide the wall into view below the leaderboard
+          const body = document.querySelector('#win-leaderboard .window-body');
+          const grid = document.getElementById('lb-achv-grid');
+          if (body && grid) body.scrollTop = Math.max(0, grid.offsetTop - 64);
+        }, 160);
+      });
       document.body.appendChild(el);
     }
     el.innerHTML = '';
@@ -9855,6 +9897,8 @@ document.addEventListener('DOMContentLoaded', () => {
     liveViewerTick();
     gardenStart();
     liveWeather();
+    if (wxRefreshTimer) clearInterval(wxRefreshTimer);
+    wxRefreshTimer = setInterval(liveWeather, 270000); // fresh sky every ~4.5min on air
     gooseLoop();
     setTimeout(() => { if (liveOpen) spawnGeese(); }, 4500); // welcome flock
   }
@@ -9867,6 +9911,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (gooseTimer) { clearTimeout(gooseTimer); gooseTimer = null; }
     gooseCallStop(); // the honks leave with the audience
     wxSfxStop(); // and the weather falls silent too
+    if (wxRefreshTimer) { clearInterval(wxRefreshTimer); wxRefreshTimer = null; }
     slimeHabitat.appendChild(slimeBody);
     slimeHabitat.appendChild(speechBubble);
     slimeHabitat.classList.remove('on-air');
@@ -10580,7 +10625,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!document.hidden && document.hasFocus()) wxAudioEl.play().catch(() => { /* pre-gesture */ });
   }
   function wxSfxStop() { if (wxAudioEl) { try { wxAudioEl.pause(); } catch (e) {} } }
-  var wxAnnounced = null, wxCurrent = null;
+  var wxAnnounced = null, wxCurrent = null, wxRefreshTimer = null;
   const wxSpriteCache = {};
 
   function wxSprite(kind) {
@@ -10904,7 +10949,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function liveWeather() {
     const cached = store.get('yos-wx', null);
-    if (cached && Date.now() - cached.t < 900000) { applyWx(cached.k); return; }
+    if (cached && Date.now() - cached.t < 240000) { applyWx(cached.k); return; } // 4min: live-feeling sky
     fetch('https://api.open-meteo.com/v1/forecast?latitude=53.55&longitude=-113.49&current=weather_code,wind_speed_10m,temperature_2m')
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {

@@ -452,6 +452,7 @@ input {
   display: flex;
   flex-direction: column;
   position: relative;
+  overflow: hidden; /* windows slide UNDER the desk edge — never through the taskbar */
   background:
     radial-gradient(circle at 82% 12%, rgba(255, 233, 138, 0.30), transparent 42%),
     radial-gradient(circle at 8% 88%, rgba(168, 224, 255, 0.35), transparent 46%),
@@ -1232,7 +1233,7 @@ input {
   width: 92%;
   max-width: 800px;
   min-height: 380px;
-  max-height: 540px;
+  max-height: min(540px, calc(100dvh - var(--taskbar-avoid-bottom, 68px) - 96px));
   transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.15), opacity 0.2s ease;
 }
 
@@ -5655,10 +5656,12 @@ html[data-theme="dark"] .achv-card.is-got {
     4px 4px 0 var(--shadow),
     0 0 18px rgba(255, 110, 192, 0.5);
   padding: 8px 20px;
-  pointer-events: none;
+  pointer-events: auto; /* clickable: it IS the door to the achievement wall */
+  cursor: var(--cursor-heart);
   transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .achv-toast.achv-show { transform: translate(-50%, 0); }
+.achv-toast.achv-show:hover { transform: translate(-50%, 2px) scale(1.03); box-shadow: 0 0 0 2px var(--panel), 4px 4px 0 var(--shadow), 0 0 26px rgba(255, 110, 192, 0.8); }
 .achv-toast-top {
   font-family: var(--font-pixel);
   font-size: 0.85rem;
@@ -7335,3 +7338,7 @@ body.nm-melt-static::after {
   25% { transform: translateX(calc(-50% - 8px)); }
   75% { transform: translateX(calc(-50% + 8px)); }
 }
+
+
+/* hello-cam parked for further development (latency + gesture accuracy) */
+.live-cam-btn { display: none !important; }
