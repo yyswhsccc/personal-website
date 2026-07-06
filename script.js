@@ -1282,7 +1282,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const bl = slimeBody.offsetLeft, bt = slimeBody.offsetTop;
     const bw = slimeBody.offsetWidth || 85, bh = slimeBody.offsetHeight || 75;
     const minX = Math.min(-(bl - m), 0), maxX = Math.max(arena.clientWidth - bw - bl - m, 0);
-    const minY = Math.min(-(bt - m), 0), maxY = Math.max(arena.clientHeight - bh - bt - m, 0);
+    // the top ~58px belong to the speech bubble: the pet may wander, but its
+    // head-plant must NEVER climb into the bubble's airspace
+    const topReserve = 58;
+    const minY = Math.min(-(bt - topReserve), 0), maxY = Math.max(arena.clientHeight - bh - bt - m, 0);
     return {
       minX, maxX, minY, maxY,
       // legacy symmetric half-ranges for wander/forage targets
@@ -3660,7 +3663,12 @@ document.addEventListener('DOMContentLoaded', () => {
     { id: 'vimescape', icon: '🚪', n: ['Vim Escapee', 'Évadé·e de Vim'], d: ['entered vim. LEFT vim. statistically a legend.', 'est entré·e dans vim. en est SORTI·E. statistiquement une légende.'], t: ['some editors are one-way doors.', 'certains éditeurs sont des portes sans retour.'] },
     { id: 'handtalk', icon: '🖐', n: ['Signed, Understood', 'Signé, Compris'], d: ['spoke to the slime in GESTURES. the hand-cam read every word.', 'a parlé au slime en GESTES. la main-cam a tout lu.'], t: ['the camera reads more than faces.', 'la caméra lit plus que les visages.'] },
     { id: 'hearthands', icon: '🫶', n: ['Certified Hand Heart', 'Cœur de Mains Certifié'], d: ['made the two-handed heart. the slime is legally yours now.', 'a fait le cœur à deux mains. le slime est légalement à toi.'], t: ['some gestures need both hands.', 'certains gestes demandent les deux mains.'] },
-    { id: 'hotfix', icon: '🧯', n: ['Merge Conflict Medic', 'Médecin des Conflits de Merge'], d: ['hot-patched a melting production site in under 15 seconds. inside a dream.', 'a réparé à chaud un site en fusion en moins de 15 secondes. dans un rêve.'], t: ['when the nightmare breaks the site, someone has to ship the fix.', 'quand le cauchemar casse le site, quelqu\'un doit livrer le correctif.'] }
+    { id: 'hotfix', icon: '🧯', n: ['Merge Conflict Medic', 'Médecin des Conflits de Merge'], d: ['hot-patched a melting production site in under 15 seconds. inside a dream.', 'a réparé à chaud un site en fusion en moins de 15 secondes. dans un rêve.'], t: ['when the nightmare breaks the site, someone has to ship the fix.', 'quand le cauchemar casse le site, quelqu\'un doit livrer le correctif.'] },
+    { id: 'evolve', icon: '🌺', n: ['Second Bloom', 'Seconde Floraison'], d: ['merged enough duplicates that a pikmin EVOLVED into form ★★.', 'a fusionné assez de doublons pour qu\'un pikmin ÉVOLUE en forme ★★.'], t: ['catch the same kind again. and again. something blooms.', 'attrape la même espèce encore. et encore. quelque chose fleurit.'] },
+    { id: 'apex', icon: '👑', n: ['Apex Gardener', 'Jardinier Apex'], d: ['raised a pikmin to its APEX form. it wears the crown now.', 'a mené un pikmin à sa forme APEX. il porte la couronne désormais.'], t: ['the third form exists. few have seen it.', 'la troisième forme existe. peu l\'ont vue.'] },
+    { id: 'evermore', icon: '♾️', n: ['The Meadow Never Sleeps', 'La Prairie Ne Dort Jamais'], d: ['kept collecting after 72/72 — ten dupes and counting. true devotion.', 'a continué après 72/72 — dix doublons et ça continue. dévotion véritable.'], t: ['completion was never the end.', 'compléter n\'a jamais été la fin.'] },
+    { id: 'wristslime', icon: '⌚', n: ['Wrist-Mounted Slime', 'Slime de Poignet'], d: ['paired a smartwatch. the slime now lives on your wrist too.', 'a appairé une montre connectée. le slime vit aussi à ton poignet.'], t: ['the OS fits on a wrist. try the terminal.', 'l\'OS tient sur un poignet. essaie le terminal.'] },
+    { id: 'wristfarmer', icon: '🌾', n: ['Wrist Farmer', 'Fermier de Poignet'], d: ['plucked a pikmin FROM A WATCH and it synced home. agriculture, miniaturized.', 'a cueilli un pikmin DEPUIS UNE MONTRE, synchronisé maison. l\'agriculture, miniaturisée.'], t: ['the wrist garden feeds the same meadow.', 'le jardin de poignet nourrit la même prairie.'] }
   ];
 
   // ---- metric engine: count things, achievements pop themselves ----
@@ -4026,6 +4034,41 @@ document.addEventListener('DOMContentLoaded', () => {
      the HIDDEN_SPECIES array order is the wire format: append-only! */
   const PIK_PACK = 17280;              // 360 hues × 3 stages × 2 chameleon × 8 skills
   const PIK_PACK2 = PIK_PACK * 23;     // × (22 species + 'none') = 397 440
+  // evolution ledger on the wire: 72 kind-counts, 4 per counter, base 512
+  function pikCountsEncode() {
+    const c = (typeof pikCounts === 'function') ? pikCounts() : {};
+    const keys = [];
+    for (let i = 0; i < WHEEL_SEGS; i++) keys.push('w:' + i);
+    HIDDEN_SPECIES.forEach((sp) => keys.push('s:' + sp.id));
+    const chunks = [];
+    for (let i = 0; i < keys.length; i += 4) {
+      let v = 0;
+      for (let j = 3; j >= 0; j--) v = v * 512 + Math.min(511, (c[keys[i + j]] || 0));
+      chunks.push(1 + v);
+    }
+    return chunks; // 18 counters, max value ≈ 6.9e10 (< 2^53, comfortably)
+  }
+  function pikCountsMergeRemote(vals) {
+    const keys = [];
+    for (let i = 0; i < WHEEL_SEGS; i++) keys.push('w:' + i);
+    HIDDEN_SPECIES.forEach((sp) => keys.push('s:' + sp.id));
+    const c = pikCounts();
+    let changed = false;
+    (vals || []).forEach((v, ci) => {
+      v = Math.max(0, Math.floor(Number(v) || 0) - 1);
+      for (let j = 0; j < 4; j++) {
+        const key = keys[ci * 4 + j];
+        if (!key) break;
+        const n = v % 512; v = Math.floor(v / 512);
+        if (n > (c[key] || 0)) { c[key] = n; changed = true; } // counts only ever grow
+      }
+    });
+    if (changed) {
+      pikCountsSave(c);
+      if (typeof deskPikResync === 'function') deskPikResync();
+      if (typeof renderPikdexSoon === 'function') renderPikdexSoon();
+    }
+  }
   function pikdexEncodeChunks() {
     const dex = (typeof pikdexGet === 'function' ? pikdexGet() : []).filter((p) => !p.loan).slice(0, 78); // loaners never sync — they're borrowed
     const packed = dex.map((p) => {
@@ -4100,7 +4143,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const piks = pikdexEncodeChunks();
     // b4 widened from (118, 138) to (118, 168): the patch achievements push ACHV to 142,
     // past the old annex ceiling — the pull loop already walks 50 bits so only the pack changes
-    const payload = [achvBitsRange(18, 68), achvBitsRange(68, 118), achvBitsRange(118, 168), spells.length, piks.n, 2].concat(spells).concat(piks.chunks);
+    const pcs = (typeof pikCountsEncode === 'function') ? pikCountsEncode() : [];
+    // wst: one compact counter the WATCH client reads — fans + plucks + wheel%
+    const wst = 1 + Math.min(pet.followers || 0, 99999)
+      + 100000 * Math.min((typeof pikCountTotal === 'function') ? pikCountTotal() : 0, 9999)
+      + 1000000000 * Math.min(100, (typeof pikdexWheelPct === 'function') ? pikdexWheelPct(pikdexGet()) : 0);
+    const payload = [achvBitsRange(18, 68), achvBitsRange(68, 118), achvBitsRange(118, 168), spells.length, piks.n, 2].concat(spells).concat(piks.chunks).concat(pcs).concat([wst]);
     const sig = payload.join(',');
     if (sig === cloudExtraLast) return;
     let p = cloudSet(`sv2-${u}-b2`, payload[0])
@@ -4111,19 +4159,26 @@ document.addEventListener('DOMContentLoaded', () => {
       .then(() => cloudSet(`sv2-${u}-pkv`, 2)); // wire-format version (v2 = species-aware)
     spells.forEach((v, j) => { p = p.then(() => cloudSet(`sv2-${u}-sp${j}`, v)); });
     piks.chunks.forEach((v, j) => { p = p.then(() => cloudSet(`sv2-${u}-pk${j}`, v)); });
+    p = p.then(() => cloudSet(`sv2-${u}-pcn`, pcs.length));
+    pcs.forEach((v, j) => { p = p.then(() => cloudSet(`sv2-${u}-pc${j}`, v)); });
+    p = p.then(() => cloudSet(`sv2-${u}-wst`, wst));
     p.then(() => { cloudExtraLast = sig; }).catch(() => { /* retried on next sync */ });
   }
   function cloudExtraPull() {
     if (!cloudSlot) return;
     const u = cloudSlot.uid;
-    Promise.all([cloudGet(`sv2-${u}-b2`), cloudGet(`sv2-${u}-b3`), cloudGet(`sv2-${u}-b4`), cloudGet(`sv2-${u}-spn`), cloudGet(`sv2-${u}-pkn`), cloudGet(`sv2-${u}-pkv`)])
-      .then(([b2, b3, b4, spn, pkn, pkv]) => {
+    Promise.all([cloudGet(`sv2-${u}-b2`), cloudGet(`sv2-${u}-b3`), cloudGet(`sv2-${u}-b4`), cloudGet(`sv2-${u}-spn`), cloudGet(`sv2-${u}-pkn`), cloudGet(`sv2-${u}-pkv`), cloudGet(`sv2-${u}-pcn`)])
+      .then(([b2, b3, b4, spn, pkn, pkv, pcn]) => {
         [[b2, 18], [b3, 68], [b4, 118]].forEach(([bits, off]) => {
           for (let i = 0; bits > 0 && i < 50; i++) {
             if (Math.floor(bits / Math.pow(2, i)) % 2 === 1 && ACHV[off + i]) achvUnlock(ACHV[off + i].id, true, true);
           }
         });
         const jobs = [];
+        if (pcn > 0) {
+          jobs.push(Promise.all(Array.from({ length: Math.min(pcn, 18) }, (_, j) => cloudGet(`sv2-${u}-pc${j}`)))
+            .then((vals) => { if (typeof pikCountsMergeRemote === 'function') pikCountsMergeRemote(vals); }));
+        }
         if (spn > 0) {
           jobs.push(Promise.all(Array.from({ length: Math.min(spn, 12) }, (_, j) => cloudGet(`sv2-${u}-sp${j}`)))
             .then((vals) => {
@@ -4373,6 +4428,11 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     if (cmd === 'sudo') { termLine(trT('nice try. this slime respects the principle of least privilege.', 'bien tenté. ce slime respecte le principe du moindre privilège.'), 't-err'); return; }
+    if (cmd === 'watch' && !rest) {
+      termLine(trT('⌚ opening the smartwatch pairing panel…', '⌚ ouverture du panneau d\'appairage montre…'), 't-ok');
+      if (typeof watchPanelOpen === 'function') watchPanelOpen();
+      return;
+    }
     if (cmd === 'echo') { termLine(rest || ''); return; }
     if (cmd === 'cat') { termCatFile(rest); return; }
 
@@ -7978,6 +8038,7 @@ document.addEventListener('DOMContentLoaded', () => {
       },
       game() { return GAME; } // raw state, for scripted playtests only
     };
+    window.__yosPik = { roll: pikRollSprout, counts: pikCounts, add: pikdexAdd, total: pikCountTotal, form: pikFormOfKind, th: pikThresholds, pull: watchPullSync, enc: pikCountsEncode, dec: pikCountsMergeRemote };
   } catch (e) { /* no window, no toys */ }
 
   /* — the random checkpoint disk: catch it mid-fight, keep your progress
@@ -8433,7 +8494,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function gAttachPiks(quiet) {
     let src = [];
     if (GARDEN.buddies.length) {
-      src = GARDEN.buddies.map((b) => ({ color: b.color, stage: b.stage, skill: b.skill, hat: b.sp ? b.sp.hat : null }));
+      src = GARDEN.buddies.map((b) => ({ color: b.color, stage: b.stage, skill: b.skill, hat: b.sp ? b.sp.hat : null, form: pikFormOfKind(b.ch ? 'ch' : (b.sp ? 's:' + b.sp.id : (b.h != null ? 'w:' + pikSegOfHue(b.h) : 'w:0'))) }));
     } else {
       src = store.get('yos-pik-roster', []).map((r) => {
         const sp = (r.sp && typeof pikSpecies === 'function') ? pikSpecies(r.sp) : null;
@@ -8441,13 +8502,14 @@ document.addEventListener('DOMContentLoaded', () => {
           color: sp ? sp.body : ((r.h != null && typeof hueColor === 'function') ? hueColor(r.h) : (PIK_COLORS[r.c] || PIK_COLORS[0])),
           stage: r.s || 0,
           skill: PIK_SKILLS.find((sk) => sk.id === r.k) || null,
-          hat: sp ? sp.hat : null
+          hat: sp ? sp.hat : null,
+          form: pikFormOfKind(r.ch ? 'ch' : (r.sp ? 's:' + r.sp : (r.h != null ? 'w:' + pikSegOfHue(r.h) : 'w:0')))
         };
       });
     }
     if (!src.length) { GAME.piks = []; return; }
     GAME.piks = src.map((b, i) => ({
-      color: b.color.body, dark: b.color.dark, stage: b.stage, hat: b.hat || null,
+      color: b.color.body, dark: b.color.dark, stage: b.stage, hat: b.hat || null, form: b.form || 1,
       phase: Math.random() * 6.28,
       shieldReadyAt: 0,
       zapAt: GAME.frame + 260 + i * 90,
@@ -8568,9 +8630,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // full-squad escort: evens trail behind the slime, odds SCOUT AHEAD —
     // and past 4 buddies everyone shrinks a notch so all six stay on screen
     const small = piks.length >= 5;
-    const bw = small ? 8 : 10, bh = small ? 6 : 8;
+    const bw0 = small ? 8 : 10, bh0 = small ? 6 : 8;
     const step = small ? 13 : 16;
     piks.forEach((p, i) => {
+      // evolved forms stand visibly taller in the parade
+      const formMult = p.form === 3 ? 1.5 : p.form === 2 ? 1.25 : 1;
+      const bw = Math.round(bw0 * formMult), bh = Math.round(bh0 * formMult);
       const rank = Math.floor(i / 2);
       const bx = (i % 2 === 0)
         ? G_SLIME_X - (bw + 6) - rank * step               // rear guard
@@ -8590,6 +8655,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       g2.fillStyle = p.color; // glowing jelly body
       g2.fillRect(bx, by, bw, bh); g2.fillRect(bx + 1, by + bh, bw - 2, 2);
+      if (p.form === 3) { g2.fillStyle = '#ffd400'; g2.fillRect(bx - 1, by - 1, bw + 2, 1); } // apex gold rim
       g2.fillStyle = 'rgba(255,255,255,0.7)'; g2.fillRect(bx + 1, by + 1, 2, 2);
       g2.fillStyle = '#14020e'; // eyes
       g2.fillRect(bx + 2, by + Math.round(bh * 0.38), 2, 2);
@@ -8736,11 +8802,27 @@ document.addEventListener('DOMContentLoaded', () => {
       for (let i = 0; i < 3; i++) items.push(pool.splice(gStateHash('shop' + i) % pool.length, 1)[0]);
       // dark-mode exclusive: the dream muffler, so the roommate sleeps through your run
       if (resolvedTheme() === 'dark' && !GAME.muffled) items[0] = MUFFLER_ITEM;
-      // the boba cat is an ADORABLE scalper: the fatter your wallet, the
-      // higher the stickers — policy posted right on the stall, zero shame
-      const mark = Math.min(4, Math.round((1 + 0.35 * Math.floor(GAME.coins / 25)) * 100) / 100);
-      const prices = items.map((it) => Math.round(it.price * mark));
-      GAME.event = { type: 'shop', items, prices, mark, sold: [false, false, false], sel: 0 };
+      // the boba cat is a PROPER scalper now: steeper wealth tax, a flat
+      // ⛁1 "paw-handling fee" on every sticker, and cardiac surge pricing
+      // on spare hearts when you're one hit from the void. all of it POSTED —
+      // crooked prices, honest signage ♡
+      const mark = Math.min(6, Math.round((1 + 0.5 * Math.floor(GAME.coins / 20)) * 100) / 100);
+      // ~30% of visits: a LIMITED OFFER that costs literally EVERYTHING you
+      // have — genuinely legendary gear, comedy pricing, zero refunds.
+      // (picked BEFORE pricing so the surge notice matches the final shelf)
+      let limited = null;
+      if (GAME.coins >= 12 && gStateHash('ltd') % 100 < 30) {
+        limited = 2;
+        items[2] = LIMITED_OFFERS[gStateHash('ltdpick') % LIMITED_OFFERS.length];
+      }
+      let surge = false;
+      const prices = items.map((it, ix) => {
+        if (ix === limited) return -1; // sentinel: rendered and charged as ALL current coins
+        let p = Math.round(it.price * mark) + 1; // +1: the paw fee
+        if (it.icon === '💖' && GAME.lives <= 1) { p *= 2; surge = true; }
+        return p;
+      });
+      GAME.event = { type: 'shop', items, prices, mark, surge, limited, sold: [false, false, false], sel: 0 };
     } else {
       const cursed = gStateHash('ofr') % 100 < 55;
       const w = cursed ? gPick(CURSED_WEAPONS, 'cw') : WEAPONS[gPick(['bubble_blaster', 'baguette', 'meow_cannon'], 'ow')];
@@ -8830,7 +8912,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (ev.sel === 3) { gEndEvent(["the boba cat waves you goodbye ♡", "le chat-boba te fait coucou de la patte ♡"], 'shop:leave'); return; }
         if (ev.sold[ev.sel]) return;
         const item = ev.items[ev.sel];
-        const cost = (ev.prices && ev.prices[ev.sel] != null) ? ev.prices[ev.sel] : item.price;
+        const isLtd = ev.limited != null && ev.sel === ev.limited;
+        if (isLtd && GAME.coins < 5) {
+          gToast([`⏳ the cat checks your ⛁${GAME.coins}… and politely pretends the offer just sold out`, `⏳ le chat regarde tes ⛁${GAME.coins}… et prétend poliment que l'offre vient de partir`], 160);
+          playTone(180, 'sawtooth', 0.12, 0, 0.05);
+          return;
+        }
+        const cost = isLtd ? GAME.coins : ((ev.prices && ev.prices[ev.sel] != null) ? ev.prices[ev.sel] : item.price);
         if (GAME.coins < cost) {
           // broke, but make it fashion
           const BROKE = [
@@ -8844,6 +8932,7 @@ document.addEventListener('DOMContentLoaded', () => {
           return;
         }
         GAME.coins -= cost;
+        if (isLtd) gToast(['💸 your wallet: a clean slate. minimalism ♡', '💸 ton portefeuille : une page blanche. minimalisme ♡'], 150);
         ev.sold[ev.sel] = true;
         GAME.decisions.push('buy:' + item.icon);
         achvBump('buys');
@@ -9203,17 +9292,34 @@ document.addEventListener('DOMContentLoaded', () => {
         g2.strokeRect(bx + 1, 33, 126, 54);
         g2.fillStyle = '#ffe6f4';
         g2.font = "11px 'Jersey 25', 'VT323', monospace";
-        g2.fillText(`${it.icon} ${ev.sold[i] ? L(["SOLD", "VENDU"]) : '⛁' + ((ev.prices && ev.prices[i] != null) ? ev.prices[i] : it.price)}`, bx + 8, 48);
+        const tag = ev.sold[i] ? L(["SOLD", "VENDU"])
+          : (ev.limited === i ? L([`ALL ⛁${GAME.coins}!!`, `TOUT ⛁${GAME.coins} !!`])
+            : '⛁' + ((ev.prices && ev.prices[i] != null) ? ev.prices[i] : it.price));
+        if (ev.limited === i && !ev.sold[i]) {
+          g2.fillStyle = (GAME.frame >> 4) % 2 ? 'rgba(255,233,138,0.35)' : 'rgba(255,143,199,0.4)';
+          g2.fillRect(bx, 32, 128, 56);
+          g2.fillStyle = '#ffe98a';
+        }
+        g2.fillText(`${ev.limited === i && !ev.sold[i] ? '⏳' : it.icon} ${tag}`, bx + 8, 48);
+        g2.fillStyle = '#ffe6f4';
         g2.font = "9px 'Jersey 25', 'VT323', monospace";
         g2.fillStyle = ev.sold[i] ? '#8a7a9a' : '#ffc2e2';
         g2.fillText(L(it.name).slice(0, 22), bx + 8, 64);
         GAME.hitRects.push({ x: bx, y: 32, w: 128, h: 56, sel: i });
       }
       gOption(g2, 150, 96, 180, 24, L(["👋 leave shop [N]", "👋 quitter [N]"]), ev.sel === 3, 3);
-      if (ev.mark && ev.mark > 1) {
-        g2.font = "9px 'Jersey 25', 'VT323', monospace";
+      g2.font = "9px 'Jersey 25', 'VT323', monospace";
+      g2.fillStyle = '#ffc2e2';
+      if (ev.limited != null && !ev.sold[ev.limited]) {
+        g2.fillStyle = '#ffe98a';
+        g2.fillText(L(['⏳ LIMITED OFFER: costs literally everything you have. worth it (source: the cat)', '⏳ OFFRE LIMITÉE : coûte littéralement tout ce que tu as. rentable (source : le chat)']), 20, 126);
         g2.fillStyle = '#ffc2e2';
-        g2.fillText(L([`📈 wealth tax ×${ev.mark}: the cat saw your wallet. adorable scalper, fully transparent ♡`, `📈 taxe fortune ×${ev.mark} : le chat a vu ton portefeuille. arnaqueur adorable et transparent ♡`]), 20, 138);
+      }
+      if (ev.surge) {
+        g2.fillText(L(['🚑 cardiac surge pricing: you look like you NEED that heart ♡', '🚑 tarif urgence cardiaque : tu as l\'air d\'en avoir BESOIN ♡']), 20, ev.limited != null ? 114 : 126);
+      }
+      if (ev.mark && ev.mark > 1) {
+        g2.fillText(L([`📈 wealth tax ×${ev.mark} + ⛁1 paw fee: the cat saw your wallet. crooked prices, honest signage ♡`, `📈 taxe fortune ×${ev.mark} + ⛁1 de frais de patte : prix tordus, affichage honnête ♡`]), 20, 138);
       }
     }
   }
@@ -9275,6 +9381,13 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ---------- dark-mode exclusive: the dream muffler ----------
+  const LIMITED_OFFERS = [
+    { icon: '🗡️', price: 999, name: ["sudo sword (runs as root)", "épée sudo (lancée en root)"], out: { t: ["every command now runs as root. the bugs comply out of RESPECT. (+weapon, luck ×1.5, 10s shield)", "chaque commande tourne en root. les bugs obéissent par RESPECT. (+arme, chance ×1,5, bouclier 10 s)"], fx: () => { gGiveWeapon('meow_cannon', false); setMod('luck', 1.5, 60); fxInvincible(10); } } },
+    { icon: '🐧', price: 999, name: ["kernel plushie (huggable)", "peluche kernel (câlinable)"], out: { t: ["you hug the kernel. the kernel hugs back. TWICE. (+2 ♥, 8s shield)", "tu câlines le kernel. le kernel te rend le câlin. DEUX FOIS. (+2 ♥, bouclier 8 s)"], fx: () => { fxLife(2); fxInvincible(8); } } },
+    { icon: '☁️', price: 999, name: ["the cloud (physical copy)", "le cloud (exemplaire physique)"], out: { t: ["someone printed the cloud. gravity is now a suggestion. (jump ×1.5, speed ×1.25, 60s)", "quelqu'un a imprimé le cloud. la gravité devient une suggestion. (saut ×1,5, vitesse ×1,25, 60 s)"], fx: () => { setMod('jump', 1.5, 60); setMod('speed', 1.25, 60); } } },
+    { icon: '🧿', price: 999, name: ["RAID-0 charm (no backups)", "amulette RAID-0 (sans sauvegarde)"], out: { t: ["twice the sparkle, ZERO redundancy. what could go wrong ♡ (fever 14s, luck ×1.6)", "deux fois plus d'éclat, ZÉRO redondance. qu'est-ce qui pourrait mal tourner ♡ (fièvre 14 s, chance ×1,6)"], fx: () => { fxFever(14); setMod('luck', 1.6, 45); } } },
+    { icon: '📀', price: 999, name: ["vintage driver disk (plug&play)", "disquette de pilotes vintage (plug&play)"], out: { t: ["plug and play. mostly play. (+40 score, 12s shield)", "plug and play. surtout play. (+40 points, bouclier 12 s)"], fx: () => { fxScore(40); fxInvincible(12); } } }
+  ];
   const MUFFLER_ITEM = { icon: '🎧', price: 7, name: ["dream muffler (roommate-safe gaming)", "casque anti-bruit des rêves (jeu sans réveil)"], out: { t: ["equipped!! your run is now whisper-quiet. the sleeper sleeps on 💤", "équipé !! ta partie est désormais silencieuse. le dormeur dort 💤"], fx: () => { GAME.muffled = true; } } };
   const MUFFLER_DROP = { t: ["inside: a dream muffler 🎧 !! game noise can't wake the sleeper now", "dedans : un casque anti-bruit des rêves 🎧 !! le bruit du jeu ne réveillera plus le dormeur"], fx: () => { GAME.muffled = true; } };
 
@@ -10409,7 +10522,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const img = document.createElement('img');
     img.src = pikSprite(color, stage, species ? species.id : null);
     img.alt = '';
-    img.style.width = '33px';
+    const gbKey = ch ? 'ch' : (species ? 's:' + species.id : (hue != null ? 'w:' + pikSegOfHue(hue) : null));
+    const gbForm = gbKey && typeof pikFormOfKind === 'function' ? pikFormOfKind(gbKey) : 1;
+    img.style.width = gbForm === 3 ? '46px' : gbForm === 2 ? '39px' : '33px';
+    if (gbForm >= 2) el.classList.add('pik-form' + gbForm);
     el.appendChild(img);
     if (species) { // the hat performs live, too
       const hat = document.createElement('span');
@@ -10458,8 +10574,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const color = species ? species.body : hueColor(hue);
     const entry = { h: hue, ch: chameleon ? 1 : 0, s: 0, k: PIK_SKILLS[Math.floor(Math.random() * PIK_SKILLS.length)].id, sp: species ? species.id : null };
     const verdict = pikdexAdd(entry); // deck first, stage second
-    if (verdict === 'full') {
-      showBubble(trT('the pikdex is FULL. 72 friends. a perfect shoebox ♡', 'le pikdex est PLEIN. 72 copains. une boîte à chaussures parfaite ♡'), 2600);
+    if (verdict === 'dup') {
+      // duplicate catch: no new slot, but its KIND climbs toward evolution
+      playSparkleSound(); pikChirp();
+      const kk = pikKindKey(entry);
+      const cnt = pikCounts()[kk] || 1;
+      const th = pikThresholds(kk);
+      const nxt = cnt >= th[1] ? null : (cnt >= th[0] ? th[1] : th[0]);
+      showBubble(nxt
+        ? trT(`+1 of that kind!! ${cnt}/${nxt} toward its next form ♡`, `+1 de cette espèce !! ${cnt}/${nxt} vers sa prochaine forme ♡`)
+        : trT('+1 for an APEX legend — pure leaderboard fuel ♡', '+1 pour une légende APEX — pur carburant de classement ♡'), 2600);
+      gainFollowers(1);
       return;
     }
     store.set('yos-pik-plucked', true);
@@ -12427,6 +12552,16 @@ document.addEventListener('DOMContentLoaded', () => {
     img.src = pikSprite(color, stage || 0, spId || null);
     img.alt = '';
     el.appendChild(img);
+    // evolved forms walk taller (★★) and the apex wears the crown (★★★)
+    const formKey = chameleon ? 'ch' : (species ? 's:' + species.id : (hue !== null ? 'w:' + pikSegOfHue(hue) : null));
+    const form = formKey && typeof pikFormOfKind === 'function' ? pikFormOfKind(formKey) : 1;
+    if (form >= 2) el.classList.add('pik-form' + form);
+    if (form === 3 && !species) {
+      const crown = document.createElement('span');
+      crown.className = 'pik-crown';
+      crown.textContent = '👑';
+      el.appendChild(crown);
+    }
     if (species) { // its hat IS its whole personality
       const hat = document.createElement('span');
       hat.className = 'pik-hat';
@@ -12619,7 +12754,26 @@ document.addEventListener('DOMContentLoaded', () => {
     const complete = nonCh >= PIKDEX_CAP;
     // the chameleon lives outside the 72 — post-completion it gets generous
     if (!hasCh && Math.random() < (complete ? 0.06 : 0.01)) return { type: 'chameleon' };
-    if (complete) return null; // the meadow rests, complete ♡
+    if (complete) {
+      // THE ENDLESS MEADOW: full wheel, full shelf — now the garden grows
+      // duplicates, and duplicates become EVOLUTIONS. sprout choice leans
+      // toward whoever is closest to its next form (a thoughtful gardener).
+      const counts = pikCounts();
+      const kinds = [];
+      for (let i = 0; i < WHEEL_SEGS; i++) kinds.push('w:' + i);
+      HIDDEN_SPECIES.forEach((sp) => kinds.push('s:' + sp.id));
+      const gap = (k) => {
+        const n = counts[k] || 1;
+        const t = pikThresholds(k);
+        return n >= t[1] ? 99 + (n % 7) : (n >= t[0] ? t[1] - n : t[0] - n);
+      };
+      kinds.sort((a, b) => gap(a) - gap(b));
+      const pool = Math.random() < 0.6 ? kinds.slice(0, 10) : kinds;
+      const k = pool[Math.floor(Math.random() * pool.length)];
+      if (k[0] === 's') { const spDup = pikSpecies(k.slice(2)); if (spDup) return { type: 'hidden', sp: spDup }; }
+      const dupSeg = parseInt(k.slice(2), 10) || 0;
+      return { type: 'normal', hue: Math.max(5, Math.round(dupSeg * WHEEL_STEP + 1 + Math.random() * (WHEEL_STEP - 2))) };
+    }
     const hiddenLeft = pikHiddenLeft(dex);
     const segs = pikdexWheelSegs(dex);
     const missing = [];
@@ -12637,6 +12791,83 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function pikdexGet() { const d = store.get('yos-pikdex', []); return Array.isArray(d) ? d : []; }
   function pikdexSave(d) { store.set('yos-pikdex', d); }
+
+  /* ===== EVOLUTION LEDGER — every pluck of a KIND counts, forever =====
+     72 kinds (50 wheel segments + 22 species) each climb three forms at
+     their own pace. duplicates stopped being waste the day this shipped. */
+  function pikSegOfHue(h) { return Math.floor((((h % 360) + 360) % 360) / WHEEL_STEP) % WHEEL_SEGS; }
+  function pikKindKey(e) { return e.ch ? 'ch' : (e.sp ? 's:' + e.sp : 'w:' + pikSegOfHue(e.h != null ? e.h : 300)); }
+  function pikCounts() { const c = store.get('yos-pik-counts', null); return c && typeof c === 'object' && !Array.isArray(c) ? c : {}; }
+  function pikCountsSave(c) { store.set('yos-pik-counts', c); }
+  function pikThresholds(key) {
+    // per-kind pacing: hidden species are rarer pulls, so they evolve sooner
+    if (key === 'ch') return [3, 7];
+    if (key[0] === 's') {
+      const i = Math.max(0, HIDDEN_SPECIES.findIndex((sp) => 's:' + sp.id === key));
+      const t2 = 2 + (i % 3);                       // 2-4 for form ★★
+      return [t2, t2 + 3 + ((i * 5) % 5)];          // +3-7 more for APEX
+    }
+    const seg = parseInt(key.slice(2), 10) || 0;
+    const t2 = 3 + ((seg * 7) % 4);                 // 3-6 for form ★★
+    return [t2, t2 + 5 + ((seg * 11) % 7)];         // +5-11 more for APEX
+  }
+  function pikFormOfCount(n, key) { const t = pikThresholds(key); return n >= t[1] ? 3 : n >= t[0] ? 2 : 1; }
+  function pikFormOf(e) { const k = pikKindKey(e); return pikFormOfCount(pikCounts()[k] || 1, k); }
+  function pikFormOfKind(key) { return pikFormOfCount(pikCounts()[key] || 1, key); }
+  function pikCountTotal() { const c = pikCounts(); let t = 0; Object.keys(c).forEach((k) => { t += c[k] || 0; }); return t; }
+  const PIKLB_TIERS = [10, 30, 72, 100, 140, 200, 300];
+  function pikLbTier(total) { let ix = 0; PIKLB_TIERS.forEach((t, i) => { if (total >= t) ix = i + 1; }); return ix; }
+  function pikLbMaybeHit() {
+    const tier = pikLbTier(pikCountTotal());
+    const sent = store.get('yos-piklb-sent', 0);
+    if (tier > sent && navigator.onLine) {
+      store.set('yos-piklb-sent', tier);
+      for (let i = sent + 1; i <= tier; i++) fetch(`${ACHV_API}/hit/${ACHV_NS}/piklb-t${i}`).catch(() => {});
+    }
+  }
+  function pikEvolveCelebrate(entry, key, form) {
+    const sp = entry.sp && pikSpecies(entry.sp);
+    const label = sp ? trT(sp.n[0], sp.n[1]) : (entry.ch ? trT('the chameleon', 'le caméléon') : trT('a wheel pikmin', 'un pikmin de la roue'));
+    try { playFanfare(); } catch (e) { /* pre-audio */ }
+    if (typeof fxBanner === 'function') {
+      fxBanner(form === 3 ? '👑 APEX FORM!!' : '🌺 EVOLVED!!',
+        form === 3 ? trT(`${label} reached its FINAL form`, `${label} atteint sa forme FINALE`) : trT(`${label} grew into form ★★`, `${label} passe en forme ★★`));
+    }
+    achvUnlock('evolve');
+    if (form === 3) achvUnlock('apex');
+    // the resident dex copy blooms fully to show off its new rank
+    const dex = pikdexGet();
+    const own = dex.find((q) => !q.loan && pikKindKey(q) === key);
+    if (own && (own.s || 0) < 2) { own.s = 2; pikdexSave(dex); }
+    if (typeof deskPikResync === 'function') deskPikResync();
+    if (typeof renderPikdexSoon === 'function') renderPikdexSoon();
+  }
+  function pikCountBump(entry) {
+    if (entry.loan) return 0; // borrowed friends belong to someone else's ledger
+    const c = pikCounts();
+    const key = pikKindKey(entry);
+    const before = c[key] || 0;
+    c[key] = Math.min(before + 1, 950);
+    pikCountsSave(c);
+    if (before >= 1) {
+      const extra = store.get('yos-pik-extra', 0) + 1;
+      store.set('yos-pik-extra', extra);
+      if (extra >= 10) achvUnlock('evermore');
+      const f0 = pikFormOfCount(before, key), f1 = pikFormOfCount(c[key], key);
+      if (f1 > f0) pikEvolveCelebrate(entry, key, f1);
+    }
+    pikLbMaybeHit();
+    if (typeof cloudQueueSync === 'function') cloudQueueSync();
+    return c[key];
+  }
+  function pikCountsMigrate() {
+    const dex = pikdexGet();
+    if (!dex.length) return;
+    const c = pikCounts();
+    let changed = false;
+    dex.forEach((p) => { if (p.loan) return; const k = pikKindKey(p); if (!c[k]) { c[k] = 1; changed = true; } });
+    if (changed) pikCountsSave(c);
+  }
   function pikHueOf(p) { return p.h != null ? ((p.h % 360) + 360) % 360 : (PIK_LEGACY_HUES[p.c] != null ? PIK_LEGACY_HUES[p.c] : 330); }
   function pikdexActives(dex) { return (dex || pikdexGet()).filter((p) => p.a); }
   function pikNameBaseOf(p) { return PIK_NAMES[Math.floor(pikHueOf(p) / (360 / PIK_NAMES.length)) % PIK_NAMES.length]; }
@@ -12700,8 +12931,10 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   function pikdexAdd(entry) {
     const dex = pikdexGet();
-    // the chameleon is capless (it lives in the wheel hub, not a slot)
-    if (!entry.ch && dex.filter((p) => !p.ch).length >= PIKDEX_CAP) return 'full';
+    pikCountBump(entry); // the evolution ledger counts EVERY pluck, first or fiftieth
+    // the chameleon is capless (it lives in the wheel hub, not a slot);
+    // a full dex means this pluck is a DUPLICATE — ledger fuel, no new slot
+    if (!entry.ch && dex.filter((p) => !p.ch).length >= PIKDEX_CAP) return 'dup';
     const before = pikdexWheelPct(dex);
     entry.a = pikdexActives(dex).length < PIK_MAX ? 1 : 0;
     entry.t = Date.now();
@@ -13039,6 +13272,32 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   /* ---------- pikdex.exe rendering: hue wheel + deck grid + dossier ---------- */
+  var pikLbCache = null, pikLbCacheAt = 0;
+  function pikLbRender(el) {
+    const total = pikCountTotal();
+    const mine = trT(`🧺 your lifetime plucks: ${total}`, `🧺 tes cueillettes : ${total}`);
+    const paint = (counts) => {
+      const reached1 = counts[1] || 0;
+      if (!reached1) {
+        el.textContent = mine + ' · ' + trT('🌍 the worldwide meadow is brand new — plant the flag!!', '🌍 la prairie mondiale est toute neuve — plante le drapeau !!');
+        return;
+      }
+      const myTier = pikLbTier(total);
+      const atOrAbove = myTier >= 1 ? (counts[myTier] || 0) : reached1;
+      const topPct = Math.max(1, Math.min(100, Math.round((atOrAbove / reached1) * 100)));
+      el.textContent = mine + ' · ' + trT(
+        `🌍 ${reached1} gardeners worldwide — your meadow sits around the top ${topPct}%`,
+        `🌍 ${reached1} jardiniers dans le monde — ta prairie est dans le top ${topPct}% environ`
+      );
+    };
+    if (pikLbCache && Date.now() - pikLbCacheAt < 600000) { paint(pikLbCache); return; }
+    el.textContent = mine + ' · ' + trT('🌍 contacting the worldwide meadow…', '🌍 contact de la prairie mondiale…');
+    if (!navigator.onLine) return;
+    Promise.all(Array.from({ length: PIKLB_TIERS.length + 1 }, (_, i) =>
+      fetch(`${ACHV_API}/get/${ACHV_NS}/piklb-t${i}`).then((r) => (r.ok ? r.json() : { value: 0 })).then((d) => Math.max(0, Number(d.value) || 0)).catch(() => 0)
+    )).then((counts) => { pikLbCache = counts; pikLbCacheAt = Date.now(); paint(counts); })
+      .catch(() => { el.textContent = mine; });
+  }
   function renderPikdex() {
     const grid = document.getElementById('pikdex-grid');
     if (!grid) return;
@@ -13087,13 +13346,22 @@ document.addEventListener('DOMContentLoaded', () => {
         `${segs}/50 segments de teinte (2 % chacun) — la roue complète = TRUE COLOR (les cinquante nuances)`
       );
     }
+    let lbLine = document.getElementById('pikdex-lb-line');
+    if (!lbLine && note && note.parentNode) {
+      lbLine = document.createElement('div');
+      lbLine.id = 'pikdex-lb-line';
+      lbLine.className = 'pikdex-lb-line';
+      note.parentNode.insertBefore(lbLine, note.nextSibling);
+    }
+    if (lbLine && typeof pikLbRender === 'function') pikLbRender(lbLine);
     const squad = document.getElementById('pikdex-squadline');
     if (squad) {
       const nonChN = dex.filter((p) => !p.ch).length;
       const chTag = dex.some((p) => p.ch) ? ' · 🦎' : '';
+      const lbTotal = pikCountTotal();
       squad.textContent = trT(
-        `⭐ on duty: ${pikdexActives(dex).length}/${PIK_MAX} · deck: ${nonChN}/${PIKDEX_CAP}${chTag}`,
-        `⭐ en service : ${pikdexActives(dex).length}/${PIK_MAX} · deck : ${nonChN}/${PIKDEX_CAP}${chTag}`
+        `⭐ on duty: ${pikdexActives(dex).length}/${PIK_MAX} · deck: ${nonChN}/${PIKDEX_CAP}${chTag} · 🧺 lifetime plucks: ${lbTotal}`,
+        `⭐ en service : ${pikdexActives(dex).length}/${PIK_MAX} · deck : ${nonChN}/${PIKDEX_CAP}${chTag} · 🧺 cueillettes : ${lbTotal}`
       );
     }
     // float-mode picker: exactly how high the squad hovers over the OS
@@ -13156,6 +13424,14 @@ document.addEventListener('DOMContentLoaded', () => {
         star.textContent = '⭐';
         star.setAttribute('aria-label', trT('on the squad', 'dans l\'escouade'));
         cell.appendChild(star);
+      }
+      const cellForm = pikFormOf(p);
+      if (cellForm >= 2) {
+        const fb = document.createElement('span');
+        fb.className = 'pikdex-cell-form' + (cellForm === 3 ? ' is-apex' : '');
+        fb.textContent = cellForm === 3 ? '👑' : '★★';
+        fb.setAttribute('aria-label', trT('form ' + cellForm, 'forme ' + cellForm));
+        cell.appendChild(fb);
       }
       if (p.sp) {
         const sp = pikSpecies(p.sp);
@@ -13222,7 +13498,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (hint) {
       const nonCh = dex.filter((p) => !p.ch).length;
       if (nonCh >= PIKDEX_CAP) {
-        hint.textContent = trT('PIKDEX COMPLETE — 72/72. the meadow rests. you are a legend ♡', 'PIKDEX COMPLET — 72/72. la prairie se repose. tu es une légende ♡');
+        hint.textContent = trT('PIKDEX COMPLETE — 72/72!! the meadow now grows DUPLICATES: same kind × enough = EVOLUTION (3 forms each) ♡', 'PIKDEX COMPLET — 72/72 !! la prairie fait pousser des DOUBLONS : même espèce × assez = ÉVOLUTION (3 formes) ♡');
       } else if (dex.length) {
         hint.textContent = trT('tap a cell for the personnel file ♡ — 50 hues + 22 hidden species = a perfect 72. hidden sprouts ✨glitter✨, pluck them fast!!', 'touche une case pour le dossier ♡ — 50 teintes + 22 espèces cachées = un 72 parfait. les pousses cachées ✨scintillent✨, cueille-les vite !!');
       } else {
@@ -13299,6 +13575,15 @@ document.addEventListener('DOMContentLoaded', () => {
     if (pSpecies) line(trT('ORIGIN', 'ORIGINE'), trT(pSpecies.lore[0], pSpecies.lore[1]));
     const stages = [trT('🌱 sprout', '🌱 pousse'), trT('🌿 bud', '🌿 bourgeon'), trT('🌸 bloom', '🌸 floraison')];
     line(trT('STAGE', 'STADE'), stages[Math.min(p.s || 0, 2)]);
+    const kk = pikKindKey(p);
+    const kCnt = pikCounts()[kk] || 1;
+    const kTh = pikThresholds(kk);
+    const kForm = pikFormOfCount(kCnt, kk);
+    line(trT('FORM', 'FORME'), kForm === 3
+      ? trT(`👑 APEX — ×${kCnt} collected. a walking legend.`, `👑 APEX — ×${kCnt} attrapés. une légende ambulante.`)
+      : kForm === 2
+        ? trT(`★★ evolved · ${kCnt}/${kTh[1]} to APEX (dupes count!)`, `★★ évolué · ${kCnt}/${kTh[1]} vers APEX (les doublons comptent !)`)
+        : trT(`★ base · ${kCnt}/${kTh[0]} to evolve (dupes count!)`, `★ base · ${kCnt}/${kTh[0]} pour évoluer (les doublons comptent !)`));
     line('UPTIME', pikAgeOf(p));
     line(trT('DUTY', 'SERVICE'), p.a
       ? trT('⭐ on the squad — desktop patrol + slime_run.exe combat', '⭐ dans l\'escouade — patrouille bureau + combat slime_run.exe')
@@ -13417,9 +13702,17 @@ document.addEventListener('DOMContentLoaded', () => {
       if (btn._hueTimer) clearInterval(btn._hueTimer);
       const entry = { h: hue, ch: chameleon ? 1 : 0, s: 0, k: PIK_SKILLS[Math.floor(Math.random() * PIK_SKILLS.length)].id, sp: species ? species.id : null };
       const verdict = pikdexAdd(entry); // archived forever, squad if there's room
-      if (verdict === 'full') {
+      if (verdict === 'dup') {
         btn.remove();
-        showBubble(trT('the pikdex is FULL. 72 friends. a perfect shoebox ♡', 'le pikdex est PLEIN. 72 copains. une boîte à chaussures parfaite ♡'), 2600);
+        playSparkleSound(); pikChirp();
+        const kk = pikKindKey(entry);
+        const cnt = pikCounts()[kk] || 1;
+        const th = pikThresholds(kk);
+        const nxt = cnt >= th[1] ? null : (cnt >= th[0] ? th[1] : th[0]);
+        achvBump('plucks');
+        if (!pet.sleeping) showBubble(nxt
+          ? trT(`+1 of that kind!! ${cnt}/${nxt} toward its next form ♡`, `+1 de cette espèce !! ${cnt}/${nxt} vers sa prochaine forme ♡`)
+          : trT('+1 for an APEX legend — pure leaderboard fuel ♡', '+1 pour une légende APEX — pur carburant de classement ♡'), 2600);
         return;
       }
       store.set('yos-pik-plucked', true);
@@ -13626,6 +13919,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function deskPikInit() {
     const area = document.getElementById('main-desktop');
     if (!area || DESK_PIK.layer) return;
+    pikCountsMigrate(); // pre-evolution saves: every collected kind starts at ×1
     const layer = document.createElement('div');
     layer.id = 'desk-pik-layer';
     layer.setAttribute('aria-hidden', 'true');
@@ -13796,6 +14090,154 @@ document.addEventListener('DOMContentLoaded', () => {
     pikdexWheelCheck(pikdexWheelPct()); // wheel milestones re-checked every boot (cloud restores included)
   });
   bootSafe('desk-piks', () => deskPikInit()); // the desktop IS the meadow now
+
+  /* ================= ⌚ THE WRIST WING =================
+     watch.html is a featherweight client for smartwatch browsers. pairing
+     is DESKTOP-TYPED (the watch only ever displays a 4-digit pin), and all
+     cross-device play flows through the same Abacus counters as cloud save:
+       wpair-{pin}  — pairing handshake (uid, base-31 encoded)
+       sv2-{u}-wgp  — wrist-garden plucks (watch hits, main site consumes)
+       sv2-{u}-wgs  — plucks already consumed (so new devices don't double-grant)
+       sv2-{u}-wpt  — wrist pets (converted to fans over here)
+       sv2-{u}-wst  — packed status the watch displays (fans/plucks/wheel%) */
+  const WATCH_ABC = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+  function watchUidToNum(uid) {
+    let v = 0;
+    for (let i = uid.length - 1; i >= 0; i--) v = v * 31 + Math.max(0, WATCH_ABC.indexOf(uid[i]));
+    return v + 1;
+  }
+  function watchPair(pin) {
+    pin = String(pin || '').replace(/\D/g, '').slice(0, 4);
+    if (pin.length !== 4) return Promise.resolve('badpin');
+    return cloudEnsure().then((cs) => {
+      if (!cs) return 'nocloud';
+      const v = watchUidToNum(cs.uid);
+      return fetch(`${ACHV_API}/create/${ACHV_NS}/wpair-${pin}`, { method: 'POST' })
+        .then((r) => (r.ok ? r.json() : Promise.reject()))
+        .then((d) => fetch(`${ACHV_API}/set/${ACHV_NS}/wpair-${pin}?value=${v}`, { method: 'POST', headers: { Authorization: `Bearer ${d.admin_key}` } }))
+        .then((r) => {
+          if (!r.ok) throw new Error('set failed');
+          store.set('yos-watch-paired', Date.now());
+          achvUnlock('wristslime');
+          watchPullArm();
+          return 'ok';
+        })
+        .catch(() => 'taken'); // a stale pin squats that counter — new pin, please
+    });
+  }
+  function watchPanelOpen() {
+    let root = document.getElementById('wp-root');
+    if (root) { root.remove(); }
+    root = document.createElement('div');
+    root.id = 'wp-root';
+    const panel = document.createElement('div');
+    panel.className = 'wp-panel';
+    const head = document.createElement('div');
+    head.className = 'wp-panel-head';
+    head.textContent = trT('⌚ pair a smartwatch', '⌚ appairer une montre');
+    const body = document.createElement('div');
+    body.className = 'wp-panel-body';
+    const mk = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt) e.textContent = txt; return e; };
+    body.appendChild(mk('p', '', trT('1 · open this on the watch browser:', '1 · ouvre ceci dans le navigateur de la montre :')));
+    const url = mk('p', 'wp-url', 'yyswhsccc.github.io/personal-website/watch.html');
+    body.appendChild(url);
+    body.appendChild(mk('p', '', trT('2 · the watch shows a 4-digit code. type it here (all the typing happens on the BIG screen ♡):', '2 · la montre affiche un code à 4 chiffres. tape-le ici (tout le clavier reste sur le GRAND écran ♡) :')));
+    const row = mk('div', 'wp-row');
+    const inp = document.createElement('input');
+    inp.type = 'text';
+    inp.inputMode = 'numeric';
+    inp.maxLength = 4;
+    inp.placeholder = '0000';
+    inp.className = 'wp-pin';
+    inp.setAttribute('aria-label', trT('watch pairing code', 'code d\'appairage montre'));
+    const btn = mk('button', 'wp-btn', trT('pair ♡', 'appairer ♡'));
+    btn.type = 'button';
+    const status = mk('div', 'wp-status', store.get('yos-watch-paired', 0) ? trT('⌚ a watch is already paired — pairing again is fine.', '⌚ une montre est déjà appairée — ré-appairer ne casse rien.') : '');
+    btn.addEventListener('click', () => {
+      status.textContent = trT('pairing…', 'appairage…');
+      btn.disabled = true;
+      watchPair(inp.value).then((res) => {
+        btn.disabled = false;
+        if (res === 'ok') { status.textContent = trT('⌚ PAIRED!! the wrist slime is live. pets & plucks sync home ♡', '⌚ APPAIRÉ !! le slime de poignet est en ligne. caresses & cueillettes se synchronisent ♡'); playFanfare(); }
+        else if (res === 'badpin') status.textContent = trT('that needs to be 4 digits', 'il faut 4 chiffres');
+        else if (res === 'taken') status.textContent = trT('code collision (rare!!) — tap the watch for a fresh code and retry', 'collision de code (rare !!) — nouveau code sur la montre et réessaie');
+        else status.textContent = trT('cloud unreachable — try again in a moment', 'cloud injoignable — réessaie dans un instant');
+      });
+    });
+    row.append(inp, btn);
+    body.append(row, status);
+    const close = mk('button', 'wp-close', '✕');
+    close.type = 'button';
+    close.setAttribute('aria-label', trT('close', 'fermer'));
+    close.addEventListener('click', () => root.remove());
+    panel.append(close, head, body);
+    root.appendChild(panel);
+    document.body.appendChild(root);
+    inp.focus();
+  }
+  var watchPullTimer = null;
+  function watchPullArm() {
+    if (watchPullTimer) return;
+    if (!store.get('yos-watch-paired', 0)) return;
+    watchPullTimer = setInterval(watchPullSync, 150000);
+    setTimeout(watchPullSync, 5000);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) watchPullSync(); });
+  }
+  var watchPullBusy = false;
+  function watchPullSync() {
+    if (watchPullBusy || !navigator.onLine || !cloudSlot || !store.get('yos-watch-paired', 0)) return;
+    watchPullBusy = true;
+    const u = cloudSlot.uid;
+    Promise.all([cloudGet(`sv2-${u}-wgp`), cloudGet(`sv2-${u}-wgs`), cloudGet(`sv2-${u}-wpt`)])
+      .then(([wgp, wgs, wpt]) => {
+        const seenP = Math.max(store.get('yos-wgp-seen', 0), wgs || 0);
+        const newPlucks = Math.min(Math.max(0, (wgp || 0) - seenP), 12);
+        const seenT = store.get('yos-wpt-seen', 0);
+        const newPets = Math.min(Math.max(0, (wpt || 0) - seenT), 60);
+        if (newPlucks > 0) {
+          for (let i = 0; i < newPlucks; i++) {
+            const roll = pikRollSprout();
+            if (!roll) break;
+            const sp = roll.type === 'hidden' ? roll.sp : null;
+            const hue = roll.type === 'normal' ? roll.hue : 5 + Math.floor(Math.random() * 355);
+            pikdexAdd({ h: hue, ch: roll.type === 'chameleon' ? 1 : 0, s: 0, k: PIK_SKILLS[Math.floor(Math.random() * PIK_SKILLS.length)].id, sp: sp ? sp.id : null });
+          }
+          achvUnlock('wristfarmer');
+          store.set('yos-wgp-seen', wgp || 0);
+          cloudSet(`sv2-${u}-wgs`, wgp || 0).catch(() => {});
+          if (typeof deskPikResync === 'function') deskPikResync();
+        }
+        if (newPets > 0) {
+          store.set('yos-wpt-seen', wpt || 0);
+          gainFollowers(newPets);
+        }
+        if (newPlucks > 0 || newPets > 0) {
+          showToast(trT(
+            `⌚ from your wrist: ${newPlucks ? '+' + newPlucks + ' pikmin' : ''}${newPlucks && newPets ? ' · ' : ''}${newPets ? '+' + newPets + ' pets → fans' : ''} ♡`,
+            `⌚ depuis ton poignet : ${newPlucks ? '+' + newPlucks + ' pikmin' : ''}${newPlucks && newPets ? ' · ' : ''}${newPets ? '+' + newPets + ' caresses → fans' : ''} ♡`
+          ));
+        }
+      })
+      .catch(() => { /* the wrist can wait */ })
+      .then(() => { watchPullBusy = false; });
+  }
+  bootSafe('watch-wing', () => {
+    watchPullArm();
+    // one-time hint: the site pairs with a smartwatch now
+    if (!store.get('yos-watch-hint', 0) && !store.get('yos-watch-paired', 0)) {
+      setTimeout(() => {
+        store.set('yos-watch-hint', 1);
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.id = 'watch-hint-banner';
+        b.className = 'watch-hint-banner';
+        b.textContent = trT('⌚ NEW: yongshanOS pairs with your smartwatch — tap to set up (or type `watch` in the terminal)', '⌚ NOUVEAU : yongshanOS s\'appaire à ta montre — touche ici (ou tape `watch` dans le terminal)');
+        b.addEventListener('click', () => { b.remove(); watchPanelOpen(); });
+        document.body.appendChild(b);
+        setTimeout(() => { if (b.parentNode) { b.classList.add('is-leaving'); setTimeout(() => b.remove(), 600); } }, 16000);
+      }, 9000);
+    }
+  });
   bootSafe('mobile-start-max', () => {
     // phones: the welcome note opens FULL SCREEN, no fiddly window
     if (window.innerWidth < 820) {

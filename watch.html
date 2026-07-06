@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#ffd9ec">
+<title>yongshanOS ⌚</title>
+<style>
+  /* ⌚ wrist edition — one file, zero dependencies, pure Y2K jelly */
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; }
+  body {
+    font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+    background: linear-gradient(180deg, #ffd9ec 0%, #f3e0f8 40%, #d9eafc 75%, #c8f3f7 100%);
+    color: #5a3d6e;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    overflow: hidden;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  #app { width: 100%; max-width: 230px; text-align: center; }
+  .clock {
+    font-size: 30px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: #b0186c;
+    text-shadow: 1px 1px 0 #fff, 2px 2px 0 rgba(240, 80, 159, 0.35);
+    line-height: 1.1;
+  }
+  .clock small { display: block; font-size: 9px; letter-spacing: 1px; color: #8a6da3; font-weight: 400; }
+  #slime-tap {
+    display: block;
+    margin: 6px auto 2px;
+    border: 0;
+    background: transparent;
+    line-height: 0;
+    -webkit-touch-callout: none;
+  }
+  canvas { image-rendering: pixelated; }
+  .fans { font-size: 11px; color: #b0186c; min-height: 14px; }
+  .stats { font-size: 9px; color: #8a6da3; min-height: 12px; }
+  .garden {
+    margin: 8px auto 0;
+    width: 100%;
+    background: rgba(255, 255, 255, 0.55);
+    border: 2px solid #f0509f;
+    border-radius: 10px;
+    padding: 6px 8px;
+    font-size: 10px;
+    color: #5a3d6e;
+  }
+  .garden-bar { height: 7px; background: #efe3f6; border: 1px solid #c9a7f5; border-radius: 4px; overflow: hidden; margin-top: 4px; }
+  .garden-bar i { display: block; height: 100%; background: linear-gradient(90deg, #7ee0a3, #57c689); transition: width 1s linear; }
+  .btn {
+    display: block;
+    width: 100%;
+    margin-top: 8px;
+    padding: 12px 8px;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    color: #fff;
+    background: linear-gradient(#ff8fc7, #f0509f);
+    border: 2px solid #5a3d6e;
+    border-radius: 12px;
+    box-shadow: 0 3px 0 #5a3d6e;
+  }
+  .btn:active { transform: translateY(2px); box-shadow: 0 1px 0 #5a3d6e; }
+  .btn[disabled] { opacity: 0.45; box-shadow: 0 3px 0 #9a86ab; }
+  .btn.ready { animation: throb 1.2s ease-in-out infinite; }
+  @keyframes throb { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+  .pin {
+    font-size: 44px;
+    font-weight: 700;
+    letter-spacing: 8px;
+    color: #b0186c;
+    background: #fff;
+    border: 3px solid #f0509f;
+    border-radius: 14px;
+    padding: 10px 4px 10px 12px;
+    margin: 10px 0;
+    text-shadow: 2px 2px 0 rgba(240, 80, 159, 0.25);
+  }
+  .hint { font-size: 10px; line-height: 1.5; color: #6d5585; }
+  .hint b { color: #b0186c; }
+  .status { font-size: 10px; min-height: 14px; margin-top: 6px; color: #8a6da3; }
+  .heart {
+    position: fixed;
+    font-size: 16px;
+    pointer-events: none;
+    animation: float-up 1.1s ease-out forwards;
+  }
+  @keyframes float-up { to { transform: translateY(-46px) scale(1.5); opacity: 0; } }
+  .offline { color: #d6323e; }
+  .tiny { font-size: 8px; color: #9a86ab; margin-top: 6px; }
+</style>
+</head>
+<body>
+<div id="app" aria-live="polite"></div>
+<script>
+(function () {
+  'use strict';
+  /* the wrist client speaks the same counter dialect as the big site */
+  var API = 'https://abacus.jasoncameron.dev';
+  var NS = 'yongshanos-yyswhsccc';
+  var ABC = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+  var app = document.getElementById('app');
+  var LS = {
+    get: function (k, f) { try { var v = localStorage.getItem(k); return v === null ? f : JSON.parse(v); } catch (e) { return f; } },
+    set: function (k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+  };
+  function numToUid(n) {
+    n = Math.max(0, Math.floor(n) - 1);
+    var s = '';
+    for (var i = 0; i < 6; i++) { s += ABC[n % 31]; n = Math.floor(n / 31); }
+    return s;
+  }
+  function get(key) {
+    return fetch(API + '/get/' + NS + '/' + key)
+      .then(function (r) { return r.ok ? r.json() : { value: 0 }; })
+      .then(function (d) { return Math.max(0, Number(d.value) || 0); })
+      .catch(function () { return 0; });
+  }
+  function hit(key) { return fetch(API + '/hit/' + NS + '/' + key).catch(function () {}); }
+
+  /* ---- the pixel slime, drawn by hand, worn on a wrist ---- */
+  var ROWS = [
+    '......FF......',
+    '.....FYYF.....',
+    '......FF......',
+    '......S.......',
+    '....PPPPPP....',
+    '..PPPPPPPPPP..',
+    '.PwwPPPPPPPPP.',
+    '.PwPPPPPPPPPP.',
+    'PPPePPPPPPePPP',
+    'PPPePPPPPPePPP',
+    'PPuPPPmmPPuPPP',
+    'PPPPPPmmPPPPPP',
+    '.PPPPPPPPPPPP.',
+    '..DDDDDDDDDD..'
+  ];
+  var PAL = { P: '#ff9ed2', D: '#d6539b', w: '#ffffff', e: '#14020e', m: '#b0186c', u: '#ff6fb0', S: '#57c689', F: '#ff8fc7', Y: '#ffd400' };
+  var CELL = 8, CW = 14 * CELL, CH = 14 * CELL;
+  var cv, ctx, base;
+  function buildBase() {
+    base = document.createElement('canvas');
+    base.width = CW; base.height = CH;
+    var b = base.getContext('2d');
+    ROWS.forEach(function (row, y) {
+      for (var x = 0; x < row.length; x++) {
+        var ch = row[x];
+        if (ch === '.') continue;
+        b.fillStyle = PAL[ch] || PAL.P;
+        b.fillRect(x * CELL, y * CELL, CELL, CELL);
+      }
+    });
+  }
+  var squish = 0, blinkAt = Date.now() + 2500;
+  function drawSlime() {
+    if (!ctx) return;
+    ctx.clearRect(0, 0, CW, CH);
+    var s = squish > 0 ? 1 - 0.08 * Math.sin((squish / 6) * Math.PI) : 1;
+    if (squish > 0) squish--;
+    ctx.save();
+    ctx.translate(CW / 2, CH);
+    ctx.scale(2 - s, s);
+    ctx.drawImage(base, -CW / 2, -CH);
+    ctx.restore();
+    var now = Date.now();
+    if (now > blinkAt) {
+      if (now > blinkAt + 160) blinkAt = now + 1800 + Math.random() * 2600;
+      else { // two sleepy dashes over the eyes
+        ctx.fillStyle = PAL.P; ctx.fillRect(3 * CELL, 8 * CELL, CELL, 2 * CELL); ctx.fillRect(10 * CELL, 8 * CELL, CELL, 2 * CELL);
+        ctx.fillStyle = PAL.e; ctx.fillRect(3 * CELL, 9 * CELL, CELL, 2); ctx.fillRect(10 * CELL, 9 * CELL, CELL, 2);
+      }
+    }
+  }
+
+  function el(tag, cls, txt) { var e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; }
+  function heartAt(x, y) {
+    var h = el('span', 'heart', ['♡', '♥', '🫧', '✦'][Math.floor(Math.random() * 4)]);
+    h.style.left = (x - 8 + Math.random() * 16) + 'px';
+    h.style.top = (y - 10) + 'px';
+    document.body.appendChild(h);
+    setTimeout(function () { h.remove(); }, 1100);
+  }
+
+  /* ---------- pairing screen: the watch only DISPLAYS. never types. ---------- */
+  var pollTimer = null, clockTimer = null, drawTimer = null, wstTimer = null, flushTimer = null;
+  function showPairing() {
+    if (pollTimer) clearInterval(pollTimer);
+    var pin = LS.get('yosw-pin', 0);
+    if (!pin) { pin = 1000 + Math.floor(Math.random() * 9000); LS.set('yosw-pin', pin); }
+    app.innerHTML = '';
+    app.appendChild(el('div', 'clock', 'yongshanOS ⌚'));
+    app.appendChild(el('div', 'hint', 'wrist edition')).style.marginBottom = '4px';
+    var pinEl = el('div', 'pin', String(pin));
+    app.appendChild(pinEl);
+    var hint = el('div', 'hint', '');
+    hint.innerHTML = 'on the <b>desktop site</b>, open the terminal and type <b>watch</b> — then enter this code there. no typing on tiny screens, promise ♡';
+    app.appendChild(hint);
+    var status = el('div', 'status', 'listening for the desktop…');
+    app.appendChild(status);
+    var re = el('button', 'btn', 'new code');
+    re.addEventListener('click', function () { LS.set('yosw-pin', 0); showPairing(); });
+    app.appendChild(re);
+    var tries = 0;
+    pollTimer = setInterval(function () {
+      if (!navigator.onLine) { status.textContent = 'offline — waiting for signal'; status.className = 'status offline'; return; }
+      status.className = 'status';
+      tries++;
+      if (tries > 70) { clearInterval(pollTimer); status.textContent = 'paused — tap NEW CODE to retry'; return; }
+      get('wpair-' + pin).then(function (v) {
+        if (v > 0) {
+          clearInterval(pollTimer);
+          LS.set('yosw-uid', numToUid(v));
+          LS.set('yosw-pin', 0);
+          showHome(true);
+        }
+      });
+    }, 2600);
+  }
+
+  /* ---------- home: clock + slime + garden. the whole OS, wrist-sized ---------- */
+  function showHome(freshPair) {
+    var uid = LS.get('yosw-uid', null);
+    if (!uid) { showPairing(); return; }
+    [pollTimer, clockTimer, drawTimer, wstTimer, flushTimer].forEach(function (t) { if (t) clearInterval(t); });
+    app.innerHTML = '';
+    var clock = el('div', 'clock', '--:--');
+    var sub = el('small', '', 'yongshanOS ⌚ · slime #' + uid.slice(0, 3) + '···');
+    clock.appendChild(sub);
+    app.appendChild(clock);
+    var tap = el('button', '', '');
+    tap.id = 'slime-tap';
+    tap.setAttribute('aria-label', 'pet the slime');
+    cv = document.createElement('canvas');
+    cv.width = CW; cv.height = CH;
+    cv.style.width = '112px';
+    tap.appendChild(cv);
+    app.appendChild(tap);
+    ctx = cv.getContext('2d');
+    if (!base) buildBase();
+    var fans = el('div', 'fans', '♥ …');
+    var stats = el('div', 'stats', '');
+    app.append(fans, stats);
+    var garden = el('div', 'garden', '');
+    var gLabel = el('div', '', '🌱 wrist garden');
+    var gBar = el('div', 'garden-bar', '');
+    var gFill = el('i', '', '');
+    gBar.appendChild(gFill);
+    garden.append(gLabel, gBar);
+    app.appendChild(garden);
+    var pluck = el('button', 'btn', '…');
+    pluck.disabled = true;
+    app.appendChild(pluck);
+    var tiny = el('div', 'tiny', freshPair ? 'paired ♡ everything you do here syncs home' : 'hold the clock 2s to unpair');
+    app.appendChild(tiny);
+
+    function tickClock() {
+      var d = new Date();
+      clock.childNodes[0].nodeValue = ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
+    }
+    clockTimer = setInterval(tickClock, 1000);
+    tickClock();
+    drawTimer = setInterval(drawSlime, 90);
+
+    /* petting: instant joy locally, polite drip to the cloud */
+    var petsPending = LS.get('yosw-pets-q', 0);
+    var petLines = ['pik!! ♡', 'more!!', 'hehe', '!!!', '♥♥♥', 'best human'];
+    tap.addEventListener('click', function (ev) {
+      squish = 6;
+      petsPending++;
+      LS.set('yosw-pets-q', petsPending);
+      var r = tap.getBoundingClientRect();
+      heartAt(r.left + r.width / 2 + (Math.random() - 0.5) * 40, r.top + 10);
+      fans.textContent = '♥ ' + (lastFans != null ? (lastFans + petsPending) : ('+' + petsPending + ' queued'));
+      if (Math.random() < 0.3) { stats.textContent = petLines[Math.floor(Math.random() * petLines.length)]; setTimeout(refreshStats, 1400); }
+    });
+    flushTimer = setInterval(function () {
+      if (!navigator.onLine || petsPending <= 0) return;
+      var send = Math.min(petsPending, 3); // three love-packets per flush, max
+      petsPending -= send;
+      LS.set('yosw-pets-q', petsPending);
+      for (var i = 0; i < send; i++) hit('sv2-' + uid + '-wpt');
+    }, 4000);
+
+    /* the garden: a real-time sprout. return later, pluck, it syncs home. */
+    var GROW_MS = 100 * 60 * 1000; // ~100 minutes per pikmin
+    function gardenState() {
+      var planted = LS.get('yosw-planted', 0);
+      if (!planted) { planted = Date.now(); LS.set('yosw-planted', planted); }
+      return Math.min(1, (Date.now() - planted) / GROW_MS);
+    }
+    function gardenTick() {
+      var p = gardenState();
+      gFill.style.width = Math.round(p * 100) + '%';
+      if (p >= 1) {
+        pluck.disabled = false;
+        pluck.className = 'btn ready';
+        pluck.textContent = '🌸 PLUCK — sends it home!!';
+      } else {
+        pluck.disabled = true;
+        pluck.className = 'btn';
+        var mins = Math.ceil((1 - p) * GROW_MS / 60000);
+        pluck.textContent = '🌱 growing… ' + (mins > 60 ? Math.floor(mins / 60) + 'h ' + (mins % 60) + 'm' : mins + 'm');
+      }
+    }
+    pluck.addEventListener('click', function () {
+      if (gardenState() < 1) return;
+      LS.set('yosw-planted', Date.now());
+      LS.set('yosw-plucked', LS.get('yosw-plucked', 0) + 1);
+      hit('sv2-' + uid + '-wgp');
+      squish = 6;
+      var r = pluck.getBoundingClientRect();
+      for (var i = 0; i < 5; i++) setTimeout(function () { heartAt(r.left + Math.random() * r.width, r.top); }, i * 90);
+      stats.textContent = '🌸 sent home!! it joins the meadow ♡';
+      setTimeout(refreshStats, 2600);
+      gardenTick();
+    });
+    setInterval(gardenTick, 5000);
+    gardenTick();
+
+    /* status from home base: fans, lifetime plucks, wheel completion */
+    var lastFans = null, lastStats = '';
+    function refreshStats() { stats.textContent = lastStats; }
+    function pollWst() {
+      if (!navigator.onLine) { stats.textContent = 'offline — pets are queued ♡'; return; }
+      get('sv2-' + uid + '-wst').then(function (v) {
+        if (v <= 0) { lastStats = 'open the big site once to sync ♡'; refreshStats(); return; }
+        v = v - 1;
+        lastFans = v % 100000;
+        var plucks = Math.floor(v / 100000) % 10000;
+        var pct = Math.floor(v / 1000000000);
+        fans.textContent = '♥ ' + lastFans + ' fans';
+        lastStats = '🧺 ' + plucks + ' plucks · 🌈 wheel ' + pct + '%';
+        refreshStats();
+      });
+    }
+    wstTimer = setInterval(pollWst, 40000);
+    pollWst();
+
+    /* unpair: hold the clock */
+    var holdT = null;
+    clock.addEventListener('touchstart', function () { holdT = setTimeout(function () { if (confirm('unpair this watch?')) { LS.set('yosw-uid', null); showPairing(); } }, 2000); });
+    clock.addEventListener('touchend', function () { if (holdT) clearTimeout(holdT); });
+    clock.addEventListener('mousedown', function () { holdT = setTimeout(function () { if (confirm('unpair this watch?')) { LS.set('yosw-uid', null); showPairing(); } }, 2000); });
+    clock.addEventListener('mouseup', function () { if (holdT) clearTimeout(holdT); });
+  }
+
+  buildBase();
+  if (LS.get('yosw-uid', null)) showHome(false);
+  else showPairing();
+})();
+</script>
+</body>
+</html>
