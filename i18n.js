@@ -7,7 +7,7 @@
 window.YOS_I18N = {
 
   en: {
-    'meta.title': 'YongshanOS ♡ — Yongshan Yu Portfolio',
+    'meta.title': 'YongshanOS ♡',
     'meta.desc': 'Personal portfolio of Yongshan Yu, AI/LMS Systems & Full-Stack Lead. A hand-built Y2K pixel desktop OS with a playable slime pet.',
 
     /* loader */
@@ -73,6 +73,9 @@ window.YOS_I18N = {
 
     /* sidebar */
     'side.tagline': 'AI/LMS Systems & Full-Stack Lead',
+    'sb.tab.slime': 'slime ♡',
+    'sb.tab.profile': 'profile',
+    'sb.tab.contact': 'contact',
     'side.online': 'streaming code & cuteness',
     'side.board.text': 'I build small, explorable interfaces on top of serious infrastructure — clear states, playful feedback, zero hidden engineering.',
     'side.q.career': '▶ Quest log: career history',
@@ -328,7 +331,7 @@ window.YOS_I18N = {
   },
 
   fr: {
-    'meta.title': 'YongshanOS ♡ — Portfolio de Yongshan Yu',
+    'meta.title': 'YongshanOS ♡',
     'meta.desc': 'Portfolio personnel de Yongshan Yu, responsable systèmes IA/LMS et développement full-stack. Un bureau pixel Y2K fait main, avec un slime de compagnie jouable.',
 
     'a11y.skip': 'Aller au contenu du bureau',
@@ -391,6 +394,9 @@ window.YOS_I18N = {
     'chrome.addr.aria': 'Barre d\'adresse — tapez pour rechercher ou ouvrir des applis',
 
     'side.tagline': 'Responsable systèmes IA/LMS & full-stack',
+    'sb.tab.slime': 'slime ♡',
+    'sb.tab.profile': 'profil',
+    'sb.tab.contact': 'contact',
     'side.online': 'du code et de la mignonnerie',
     'side.board.text': 'Je construis de petites interfaces explorables sur des infrastructures sérieuses — des états clairs, un feedback ludique, zéro ingénierie cachée.',
     'side.q.career': '▶ Journal de quêtes : parcours',

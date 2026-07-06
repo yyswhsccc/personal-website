@@ -3282,7 +3282,8 @@ document.addEventListener('DOMContentLoaded', () => {
     { id: 'cmd500', icon: '🧠', m: 'cmds', v: 500, n: ['Shell of Theseus', 'Shell de Thésée'], d: ['500 commands. at what point did you become the terminal?', '500 commandes. à quel moment es-tu devenu·e le terminal ?'], t: ['five hundred prompts.', 'cinq cents prompts.'] },
     { id: 'gift500', icon: '🎆', m: 'gifts', v: 500, n: ['GDP Contributor', 'Contributeur·rice au PIB'], d: ['500 gifts. the stream economy issued you a passport.', '500 cadeaux. l\'économie du stream t\'a délivré un passeport.'], t: ['five hundred parcels.', 'cinq cents colis.'] },
     { id: 'nap300', icon: '🌌', m: 'naps', v: 300, n: ['Curator of Dreams', 'Conservateur·rice des Rêves'], d: ['300 naps curated. the dream museum has a you-shaped statue.', '300 siestes organisées. le musée du rêve a une statue à ton effigie.'], t: ['three hundred lullabies.', 'trois cents berceuses.'] },
-    { id: 'jump100', icon: '🐇', m: 'jumps', v: 100, n: ['Bunny Apprentice', 'Apprenti·e Lapin'], d: ['100 jumps. the rabbits accepted your application.', '100 sauts. les lapins ont accepté ta candidature.'], t: ['the first hundred hops.', 'les cent premiers bonds.'] }
+    { id: 'jump100', icon: '🐇', m: 'jumps', v: 100, n: ['Bunny Apprentice', 'Apprenti·e Lapin'], d: ['100 jumps. the rabbits accepted your application.', '100 sauts. les lapins ont accepté ta candidature.'], t: ['the first hundred hops.', 'les cent premiers bonds.'] },
+    { id: 'chameleon', icon: '🦎', n: ['The Impossible Shade', 'La Teinte Impossible'], d: ['plucked the hidden CHAMELEON pikmin — it refuses to pick a colour. mood.', 'a cueilli le pikmin CAMÉLÉON caché — il refuse de choisir une couleur. tellement relatable.'], t: ['1 in 10 sprouts hides a secret.', '1 pousse sur 10 cache un secret.'] }
   ];
 
   // ---- metric engine: count things, achievements pop themselves ----
@@ -3606,7 +3607,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!cloudSlot || !navigator.onLine) return;
     const u = cloudSlot.uid;
     const spells = spellEncodeChunks();
-    const payload = [achvBitsRange(18, 68), achvBitsRange(68, 118), achvBitsRange(118, 128), spells.length].concat(spells);
+    const payload = [achvBitsRange(18, 68), achvBitsRange(68, 118), achvBitsRange(118, 138), spells.length].concat(spells);
     const sig = payload.join(',');
     if (sig === cloudExtraLast) return;
     let p = cloudSet(`sv2-${u}-b2`, payload[0])
@@ -4038,7 +4039,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const tabTitle = document.getElementById('tab-title');
     const tabIcon = document.getElementById('tab-icon');
     const secureIcon = document.getElementById('secure-icon');
-    if (tabTitle) tabTitle.innerHTML = 'YongshanOS&nbsp;♡&nbsp;v2.0';
+    if (tabTitle) tabTitle.innerHTML = 'YongshanOS&nbsp;♡';
     if (tabIcon) tabIcon.textContent = '🌐';
     if (secureIcon) secureIcon.textContent = '🔒';
     document.title = t('meta.title');
@@ -4834,6 +4835,18 @@ document.addEventListener('DOMContentLoaded', () => {
       votes.appendChild(restoVoteBtn(i, 'l', ['💖 I love it too!!', '💖 moi aussi !!']));
       votes.appendChild(restoVoteBtn(i, 't', ['🍜 wanna try', '🍜 envie d\'essayer']));
       card.append(a, desc, votes);
+      // any tap makes the card do a happy lil hop — driven by the
+      // Web Animations API so no CSS rule can ever eat the bounce
+      card.addEventListener('click', () => {
+        try {
+          card.animate([
+            { transform: 'translateY(0)' },
+            { transform: 'translateY(-7px) scale(1.015)', offset: 0.35 },
+            { transform: 'translateY(2px)', offset: 0.75 },
+            { transform: 'translateY(0)' }
+          ], { duration: 340, easing: 'ease-out' });
+        } catch (e) { /* ancient browsers just get the click */ }
+      });
       wrap.appendChild(card);
     });
     restoFetchCounts().then(() => {
@@ -4859,9 +4872,12 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    // food query? Yongshan's Edmonton chart takes the podium
+    // food query? Yongshan's Edmonton chart IS the whole page —
+    // no site results, no web line, just the good eats
     if (/restaurant|resto|food|eat|boba|hungry|餐厅|美食|吃|奶茶/i.test(query)) {
+      if (searchMeta) searchMeta.textContent = trT('10 hand-picked spots (0.0001s — all of them delicious)', '10 adresses choisies à la main (0,0001 s — toutes délicieuses)');
       searchResults.appendChild(renderRestoChart());
+      return;
     }
 
     const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
@@ -5657,14 +5673,8 @@ document.addEventListener('DOMContentLoaded', () => {
       g2.fillRect(0, 0, G_W, G_H);
       GAME.flash--;
     }
-    if (GAME.toast) {
-      g2.textAlign = 'center';
-      g2.font = "12px 'Jersey 25', 'VT323', monospace";
-      g2.fillStyle = GAME.toast.ttl % 12 < 6 ? gTheme.pink : gTheme.purple;
-      g2.fillText(GAME.toast.text, G_W / 2, 22);
-      g2.textAlign = 'left';
-      if (--GAME.toast.ttl <= 0) GAME.toast = null;
-    }
+    // (toast now draws AFTER the event card — see below — so shop
+    // cards can never bury a "not enough coins" message again)
 
     // dashed pixel ground (the world stands STILL during the nightmare)
     g2.fillStyle = gTheme.purple;
@@ -5898,22 +5908,45 @@ document.addEventListener('DOMContentLoaded', () => {
     gDrawRogueHud(g2);
     if (GAME.event) gDrawEvent(g2);
 
+    // toast rides ABOVE everything. during an encounter it drops to
+    // the footer lane on a dark chip — visible over any shop card
+    if (GAME.toast) {
+      g2.textAlign = 'center';
+      g2.font = "12px 'Jersey 25', 'VT323', monospace";
+      if (GAME.event) {
+        const ty = G_H - 8;
+        const tw = g2.measureText(GAME.toast.text).width;
+        g2.fillStyle = '#14020e';
+        g2.fillRect(G_W / 2 - tw / 2 - 9, ty - 13, tw + 18, 18);
+        g2.fillStyle = GAME.toast.ttl % 12 < 6 ? '#ffd400' : '#ffb7e2';
+        g2.fillText(GAME.toast.text, G_W / 2, ty);
+      } else {
+        g2.fillStyle = GAME.toast.ttl % 12 < 6 ? gTheme.pink : gTheme.purple;
+        g2.fillText(GAME.toast.text, G_W / 2, 22);
+      }
+      g2.textAlign = 'left';
+      if (--GAME.toast.ttl <= 0) GAME.toast = null;
+    }
+
     // console mode: score & best live INSIDE the screen, bottom corners
     if (GAME.consoleMode) {
       g2.font = "12px 'Jersey 25', 'VT323', monospace";
       g2.textAlign = 'left';
       g2.fillStyle = gTheme.pink;
-      g2.fillText(`${t('game.score')} ${Math.floor(GAME.score)}`, 8, G_H - 5);
+      g2.fillText(`${t('game.score')} ${Math.floor(GAME.score)}`, 8, G_H - 9);
       g2.textAlign = 'right';
       g2.fillStyle = gTheme.ink;
-      g2.fillText(`★ ${GAME.hi}`, G_W - 8, G_H - 5);
+      g2.fillText(`★ ${GAME.hi}`, G_W - 8, G_H - 9);
       g2.textAlign = 'left';
     }
 
-    // overlay text
+    // overlay text — NEVER while an encounter card (coach, gods,
+    // shop…) is on screen: one storyteller at a time
     g2.textAlign = 'center';
     g2.font = "16px 'Jersey 25', 'VT323', monospace";
-    if (GAME.state === 'idle') {
+    if (GAME.event) {
+      // the event card owns the screen — no overlay text at all
+    } else if (GAME.state === 'idle') {
       g2.fillStyle = gTheme.ink;
       g2.fillText(t('game.start'), G_W / 2, 58);
       g2.fillStyle = gTheme.pink;
@@ -6264,7 +6297,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const AD_FRAMES = 900; // 15s at 60fps
 
   function gAdStart() {
-    if (GAME.state !== 'over' || GAME.adUsed) return;
+    if (GAME.state !== 'over' || GAME.adUsed || GAME.event) return;
     GAME.adUsed = true;
     GAME.state = 'ad';
     GAME.adT = 0;
@@ -6837,7 +6870,7 @@ document.addEventListener('DOMContentLoaded', () => {
       src = GARDEN.buddies.map((b) => ({ color: b.color, stage: b.stage, skill: b.skill }));
     } else {
       src = store.get('yos-pik-roster', []).map((r) => ({
-        color: PIK_COLORS[r.c] || PIK_COLORS[0],
+        color: (r.h != null && typeof hueColor === 'function') ? hueColor(r.h) : (PIK_COLORS[r.c] || PIK_COLORS[0]),
         stage: r.s || 0,
         skill: PIK_SKILLS.find((sk) => sk.id === r.k) || null
       }));
@@ -8447,7 +8480,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!roster.length) return;
     const stageW = liveStage.clientWidth || 500;
     roster.slice(0, PIK_MAX).forEach((r, i) => {
-      gardenMakeBuddy(PIK_COLORS[r.c] || PIK_COLORS[0], r.s || 0, 60 + (i * (stageW - 120)) / Math.max(1, roster.length - 1 || 1), r.k);
+      gardenMakeBuddy((r.h != null && typeof hueColor === 'function') ? hueColor(r.h) : (PIK_COLORS[r.c] || PIK_COLORS[0]), r.s || 0, 60 + (i * (stageW - 120)) / Math.max(1, roster.length - 1 || 1), r.k);
     });
     setTimeout(() => {
       GARDEN.buddies.forEach((b, i) => setTimeout(() => { pikChirp(); if (i === 0) pikSay(b, 'pik!! ♡', 1600); }, i * 140));
@@ -9205,15 +9238,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const spots = [Math.max(30, sx - 120), Math.max(60, sx - 70), sx + 80];
     sq.style.left = '-30px';
     let step = 0;
+    // unhurried little creature: slow stepped hops (very 8-bit),
+    // long dig pauses — plenty of time to fall in love with it
     const hopTo = (xTarget, then) => {
       sq.style.left = xTarget + 'px';
-      setTimeout(then, 900);
+      setTimeout(then, 2600);
     };
     playTone(1500, 'square', 0.05, 0, 0.02);
     setTimeout(function next() {
       if (step < spots.length) {
-        sq.classList.add('digging');
-        hopTo(spots[step++], () => { sq.classList.remove('digging'); setTimeout(next, 500); });
+        hopTo(spots[step++], () => {
+          sq.classList.add('digging');
+          setTimeout(() => { sq.classList.remove('digging'); next(); }, 1600);
+        });
       } else {
         bub.textContent = trT('found them!! bye!!', 'trouvées !! bye !!');
         hopTo(w + 40, () => sq.remove());
@@ -9589,24 +9626,39 @@ document.addEventListener('DOMContentLoaded', () => {
     screen.id = 'console-cam-slot';
     const lbl = document.createElement('span');
     lbl.className = 'console-screen-label';
-    lbl.textContent = '● LIVE';
+    lbl.textContent = 'LIVE'; // the blinking dot is CSS's job now
     screen.appendChild(lbl);
-    const hall = document.createElement('button');
-    hall.type = 'button';
-    hall.className = 'console-btn';
-    hall.innerHTML = '🏆';
-    hall.setAttribute('aria-label', t('game.lb'));
-    hall.title = t('game.lb');
+    const mkBtn = (icon, label, extraClass) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'console-btn' + (extraClass ? ' ' + extraClass : '');
+      const ic = document.createElement('span');
+      ic.className = 'console-btn-icon';
+      ic.textContent = icon;
+      const lb = document.createElement('span');
+      lb.className = 'console-btn-label';
+      lb.textContent = label;
+      b.append(ic, lb);
+      b.setAttribute('aria-label', label);
+      return b;
+    };
+    const hall = mkBtn('🏆', trT('hall of slime', 'hall of slime'));
     hall.addEventListener('click', () => openWindow('win-leaderboard'));
-    const eject = document.createElement('button');
-    eject.type = 'button';
-    eject.className = 'console-btn console-btn-eject';
-    eject.innerHTML = '⏏';
-    eject.setAttribute('aria-label', trT('Eject — close the game', 'Éjecter — fermer le jeu'));
-    eject.title = trT('eject', 'éjecter');
+    const eject = mkBtn('⏏', trT('quit game', 'quitter le jeu'), 'console-btn-eject');
     eject.addEventListener('click', () => closeWindow(win));
     side.append(screen, hall, eject);
     body.appendChild(side);
+    // corner screws — load-bearing cuteness
+    [['10px', '10px'], ['10px', ''], ['', '10px'], ['', '']].forEach(([tp, lf], i) => {
+      const sc = document.createElement('span');
+      sc.className = 'console-screw';
+      sc.setAttribute('aria-hidden', 'true');
+      sc.style.top = tp || 'auto';
+      sc.style.left = lf || 'auto';
+      if (!tp) sc.style.bottom = '10px';
+      if (!lf) sc.style.right = '10px';
+      body.appendChild(sc);
+    });
   }
 
   // the habitat (slime included) relocates to a picture-in-picture
@@ -10066,7 +10118,7 @@ document.addEventListener('DOMContentLoaded', () => {
         gEventTap((e.clientX - r.left) * (G_W / r.width), (e.clientY - r.top) * (G_H / r.height));
         return;
       }
-      if (GAME.state === 'over' && !GAME.adUsed) {
+      if (GAME.state === 'over' && !GAME.adUsed && !GAME.event) {
         // tapping the ad-offer line starts the ad; anywhere else retries
         const r = gCanvas.getBoundingClientRect();
         const ly = (e.clientY - r.top) * (G_H / r.height);
@@ -10088,7 +10140,7 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         return;
       }
-      if (GAME.state === 'over' && !GAME.adUsed && e.code === 'KeyA') {
+      if (GAME.state === 'over' && !GAME.adUsed && !GAME.event && e.code === 'KeyA') {
         e.preventDefault();
         gAdStart();
         return;
@@ -10175,6 +10227,373 @@ document.addEventListener('DOMContentLoaded', () => {
     try { fn(); } catch (e) { console.warn('[yos boot] step "' + label + '" skipped:', e); }
   }
 
+  /* ---------- THE DESKTOP IS A PIKMIN MEADOW ----------
+     Your petal buddies live HERE now: they patrol between the icons,
+     inspect files, squeak in inverted bubbles, and fresh sprouts pop
+     out of the wallpaper for you to pluck. The whole desktop is one
+     big cozy Pikmin playground — no fridge-magnet widgets needed. */
+  var DESK_PIK = { layer: null, walkers: [], sproutAt: 0, timer: null };
+  function deskRoster() { return store.get('yos-pik-roster', []); }
+  function deskPikSpawn(hueOrIdx, stage, chameleon) {
+    // hue number (new, full colour wheel) or legacy palette index
+    const hue = (typeof hueOrIdx === 'number' && hueOrIdx > 4) ? hueOrIdx : null;
+    const color = hue !== null ? hueColor(hue) : (PIK_COLORS[hueOrIdx] || PIK_COLORS[0]);
+    const el = document.createElement('div');
+    el.className = 'desk-pik';
+    el.setAttribute('aria-hidden', 'true');
+    const img = document.createElement('img');
+    img.src = pikSprite(color, stage || 0);
+    img.alt = '';
+    el.appendChild(img);
+    DESK_PIK.layer.appendChild(el);
+    const r = DESK_PIK.layer.getBoundingClientRect();
+    const w = {
+      el, img, hue: hue !== null ? hue : null, chameleon: !!chameleon, hueAt: 0, stage: stage || 0,
+      x: 40 + Math.random() * Math.max(120, r.width - 160),
+      y: r.height * 0.35 + Math.random() * (r.height * 0.5),
+      tx: 0, ty: 0, restUntil: 0, bubbleEl: null
+    };
+    w.tx = w.x; w.ty = w.y;
+    el.style.left = w.x + 'px';
+    el.style.top = w.y + 'px';
+    // poke a buddy!! it stops, squishes, squeaks, sometimes blooms
+    el.addEventListener('click', () => {
+      w.restUntil = Date.now() + 1800; // pauses to enjoy the attention
+      el.classList.remove('poked');
+      void el.offsetWidth;
+      el.classList.add('poked');
+      pikChirp();
+      setTimeout(pikChirp, 120);
+      const POKE_LINES = ['pik?!', 'hehe ♡', 'pik pik!!', 'mi~!', '♪♪', 'pik ♡'];
+      deskPikSay(w, POKE_LINES[Math.floor(Math.random() * POKE_LINES.length)]);
+      achvBump('pets');
+      if (Math.random() < 0.35) { // a delighted bloom-burst at its feet
+        for (let k = 0; k < 4; k++) {
+          const f = document.createElement('img');
+          f.className = 'pik-trail';
+          f.src = trailBloomSprite(Math.floor(Math.random() * 6));
+          f.alt = '';
+          const size = 14 + Math.random() * 12;
+          f.style.width = size + 'px';
+          const ang = (k / 4) * 6.283 + Math.random() * 0.6;
+          f.style.left = (w.x + 14 + Math.cos(ang) * 20 - size / 2) + 'px';
+          f.style.top = (w.y + 34 + Math.abs(Math.sin(ang)) * 16) + 'px';
+          DESK_PIK.layer.appendChild(f);
+          setTimeout(() => f.classList.add('fading'), 10500);
+          setTimeout(() => f.remove(), 12000);
+        }
+      }
+    });
+    DESK_PIK.walkers.push(w);
+    return w;
+  }
+  function deskPikSay(w, text) {
+    if (w.bubbleEl) w.bubbleEl.remove();
+    const s = document.createElement('span');
+    s.className = 'pik-bubble';
+    s.style.left = '16px';
+    s.style.bottom = '40px';
+    s.textContent = text;
+    w.el.appendChild(s);
+    w.bubbleEl = s;
+    setTimeout(() => { if (w.bubbleEl === s) w.bubbleEl = null; s.remove(); }, 1600);
+  }
+  function deskAnchorPoints() {
+    const pts = [];
+    const base = DESK_PIK.layer.getBoundingClientRect();
+    document.querySelectorAll('.desktop-icon-btn').forEach((ic) => {
+      const r = ic.getBoundingClientRect();
+      if (r.width > 0) pts.push({ x: r.left - base.left + r.width / 2 - 16, y: r.bottom - base.top + 4 });
+    });
+    return pts;
+  }
+  // the FULL colour wheel: any hue can hatch. 10% of sprouts are the
+  // hidden CHAMELEON — it never stops cycling colours.
+  function hueColor(h) {
+    h = ((h % 360) + 360) % 360;
+    return { body: `hsl(${h}, 74%, 74%)`, dark: `hsl(${h}, 62%, 54%)` };
+  }
+  function deskSprout() {
+    if (!DESK_PIK.layer || deskRoster().length >= PIK_MAX) return;
+    if (DESK_PIK.layer.querySelector('.desk-sprout')) return;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'pik-sprout desk-sprout';
+    btn.setAttribute('aria-label', t('live.pluck'));
+    const hue = 5 + Math.floor(Math.random() * 355); // 5-359 (0-4 is reserved for legacy palette indexes)
+    const chameleon = Math.random() < 0.10; // the hidden one
+    const img = document.createElement('img');
+    img.src = pikSprite(hueColor(hue), 0);
+    img.alt = '';
+    img.style.width = '33px';
+    img.style.clipPath = 'inset(0 0 58% 0)';
+    btn.appendChild(img);
+    const r = DESK_PIK.layer.getBoundingClientRect();
+    btn.style.left = (60 + Math.random() * Math.max(100, r.width - 200)) + 'px';
+    btn.style.top = (r.height * 0.4 + Math.random() * (r.height * 0.45)) + 'px';
+    if (chameleon) { // even the sprout can't hold a colour
+      btn._hueTimer = setInterval(() => { img.src = pikSprite(hueColor(hue + Date.now() / 14 % 360), 0); }, 420);
+    }
+    btn.addEventListener('click', () => {
+      if (btn._hueTimer) clearInterval(btn._hueTimer);
+      const roster = deskRoster();
+      roster.push({ h: hue, ch: chameleon ? 1 : 0, s: 0, k: PIK_SKILLS[Math.floor(Math.random() * PIK_SKILLS.length)].id });
+      store.set('yos-pik-roster', roster);
+      store.set('yos-pik-plucked', true);
+      if (typeof updateLiveTab === 'function') updateLiveTab();
+      const w = deskPikSpawn(hue, 0, chameleon);
+      w.x = parseFloat(btn.style.left); w.y = parseFloat(btn.style.top);
+      w.tx = w.x; w.ty = w.y;
+      w.el.style.left = w.x + 'px'; w.el.style.top = w.y + 'px';
+      btn.remove();
+      playSparkleSound(); pikChirp(); pikChirp();
+      deskPikSay(w, chameleon ? 'p̷i̷k̷?̷!̷ ♡' : 'pik!!');
+      achvBump('plucks');
+      if (chameleon) {
+        achvUnlock('chameleon');
+        playFanfare();
+        if (!pet.sleeping) showBubble(trT('WAIT. that one keeps CHANGING COLOURS?! a hidden chameleon!!', 'ATTENDS. il n\'arrête pas de CHANGER DE COULEUR ?! un caméléon caché !!'), 3200);
+      } else if (!pet.sleeping) {
+        showBubble(trT('a wild buddy joined the DESKTOP crew ♡', 'un copain sauvage rejoint l\'équipe du BUREAU ♡'), 2400);
+      }
+    });
+    DESK_PIK.layer.appendChild(btn);
+  }
+  function deskPikTick() {
+    const now = Date.now();
+    if (now > DESK_PIK.sproutAt) {
+      DESK_PIK.sproutAt = now + 16000 + Math.random() * 16000; // brisk regrowth (16-32s)
+      deskSprout();
+    }
+    DESK_PIK.walkers.forEach((w) => {
+      // the chameleon never settles on a colour — cycles the wheel
+      if (w.chameleon && now > w.hueAt) {
+        w.hueAt = now + 480;
+        w.hue = ((w.hue || 5) + 30) % 360 || 5;
+        w.img.src = pikSprite(hueColor(w.hue), w.stage);
+      }
+      if (now < w.restUntil) return;
+      const dx = w.tx - w.x, dy = w.ty - w.y;
+      const d = Math.hypot(dx, dy);
+      if (d < 4) {
+        w.el.classList.remove('walking');
+        w.restUntil = now + 1800 + Math.random() * 4200;
+        if (Math.random() < 0.3) pikChirp();
+        if (Math.random() < 0.3) deskPikSay(w, PIK_LINES[Math.floor(Math.random() * PIK_LINES.length)]);
+        const anchors = deskAnchorPoints();
+        const r = DESK_PIK.layer.getBoundingClientRect();
+        const p = (anchors.length && Math.random() < 0.45)
+          ? anchors[Math.floor(Math.random() * anchors.length)]
+          : { x: 30 + Math.random() * Math.max(120, r.width - 140), y: r.height * 0.3 + Math.random() * (r.height * 0.55) };
+        w.tx = Math.max(6, p.x);
+        w.ty = Math.max(60, p.y);
+      } else {
+        const sp = 1.6;
+        w.x += (dx / d) * sp;
+        w.y += (dy / d) * sp;
+        w.el.classList.add('walking');
+        w.img.style.transform = dx < 0 ? 'scaleX(-1)' : '';
+        w.el.style.left = w.x + 'px';
+        w.el.style.top = w.y + 'px';
+        // footprint blooms: RAINBOW confetti-flowers, 1-10 per step —
+        // 3+ cluster into a round posy. Always UNDER the walker's feet,
+        // never on its body; the whole patch melts away in 7 seconds.
+        if (now > (w.trailAt || 0)) {
+          w.trailAt = now + 750 + Math.random() * 450; // airier cadence
+          const n = 1 + Math.floor(Math.random() * 10);
+          const cx = w.x + 14, cy = w.y + 34; // strictly below the sprite
+          const posyR = n > 2 ? 15 + n * 3 : 0; // roomy, breathable posies
+          for (let k = 0; k < n; k++) {
+            const f = document.createElement('img');
+            f.className = 'pik-trail';
+            f.src = trailBloomSprite(Math.floor(Math.random() * 6));
+            f.alt = '';
+            const size = 12 + Math.random() * 18; // 12-30px — generous blooms
+            f.style.width = size + 'px';
+            let ox = Math.random() * 26 - 13;
+            let oy = Math.random() * 10;
+            if (n > 2) { // round posy, loosely fanned below the feet
+              const ang = (k / n) * 6.283 + Math.random() * 0.5;
+              const rr = posyR * (0.45 + Math.random() * 0.55);
+              ox = Math.cos(ang) * rr;
+              oy = Math.abs(Math.sin(ang)) * rr * 0.9;
+            }
+            f.style.left = (cx + ox - size / 2) + 'px';
+            f.style.top = (cy + oy) + 'px';
+            DESK_PIK.layer.appendChild(f);
+            setTimeout(() => f.classList.add('fading'), 10500);
+            setTimeout(() => f.remove(), 12000);
+          }
+          const trails = DESK_PIK.layer.querySelectorAll('.pik-trail');
+          for (let k = 0; k < trails.length - 120; k++) trails[k].remove(); // tidy meadow
+        }
+      }
+    });
+  }
+
+  // six SOFT pastel bloom sprites — powder pink / milk lilac /
+  // custard / powder blue / mint cream / peach milk. gentle on
+  // the eyes, unmistakably Y2K NSO.
+  var trailBloomCache = null;
+  function trailBloomSprite(i) {
+    if (!trailBloomCache) {
+      trailBloomCache = [
+        ['#ffc9e4', '#fff0f8'], ['#ddc9f7', '#f5edfd'], ['#ffedb3', '#fff9e3'],
+        ['#c9e6ff', '#eef7ff'], ['#cdeedd', '#effaf4'], ['#ffd9c4', '#fff1e8']
+      ].map(([a, b]) => {
+        const c = document.createElement('canvas');
+        c.width = 7; c.height = 7;
+        const x = c.getContext('2d');
+        x.fillStyle = a;
+        x.fillRect(3, 1, 1, 5); x.fillRect(1, 3, 5, 1);
+        x.fillRect(2, 2, 1, 1); x.fillRect(4, 2, 1, 1); x.fillRect(2, 4, 1, 1); x.fillRect(4, 4, 1, 1);
+        x.fillStyle = b;
+        x.fillRect(3, 3, 1, 1);
+        return c.toDataURL();
+      });
+    }
+    return trailBloomCache[(i || 0) % trailBloomCache.length];
+  }
+  /* ---------- sidebar drawers: three stacked cards, one visible,
+     switched by folder-tab buttons underneath. NO scrollbar, ever. */
+  function sidebarTabsInit() {
+    const card = document.querySelector('.profile-card');
+    if (!card || card.querySelector('.sb-tabs')) return;
+    const habitat = card.querySelector('.habitat-shell');
+    const hud = card.querySelector('.slime-hud');
+    const info = card.querySelector('.profile-info');
+    if (!habitat || !hud || !info) return;
+    const contacts = info.querySelector('.profile-contacts');
+    const socials = info.querySelector('.contact-socials');
+    const mk = (id) => {
+      const d = document.createElement('div');
+      d.className = 'sb-card';
+      d.id = id;
+      d.setAttribute('role', 'tabpanel');
+      return d;
+    };
+    const cardA = mk('sb-card-slime');
+    const cardB = mk('sb-card-profile');
+    const cardC = mk('sb-card-contact');
+    cardA.append(habitat, hud);
+    [...info.children].forEach((ch) => {
+      if (ch === contacts || ch === socials) cardC.appendChild(ch);
+      else cardB.appendChild(ch);
+    });
+    info.remove();
+    const tabs = document.createElement('div');
+    tabs.className = 'sb-tabs';
+    tabs.setAttribute('role', 'tablist');
+    const cards = { 'sb-card-slime': cardA, 'sb-card-profile': cardB, 'sb-card-contact': cardC };
+    const btns = {};
+    const select = (id, silent) => {
+      Object.keys(cards).forEach((k) => {
+        cards[k].classList.toggle('sb-active', k === id);
+        btns[k].classList.toggle('active', k === id);
+        btns[k].setAttribute('aria-selected', String(k === id));
+      });
+      if (!silent) playClickSound();
+    };
+    [
+      ['sb-card-slime', '🐣', 'sb.tab.slime'],
+      ['sb-card-profile', '📇', 'sb.tab.profile'],
+      ['sb-card-contact', '✉️', 'sb.tab.contact']
+    ].forEach(([id, icon, key]) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'sb-tab';
+      b.setAttribute('role', 'tab');
+      const i1 = document.createElement('span');
+      i1.className = 'sb-tab-icon';
+      i1.textContent = icon;
+      const l1 = document.createElement('span');
+      l1.className = 'sb-tab-label';
+      l1.setAttribute('data-i18n', key);
+      l1.textContent = t(key);
+      b.append(i1, l1);
+      b.addEventListener('click', () => select(id));
+      btns[id] = b;
+      tabs.appendChild(b);
+    });
+    card.append(cardA, cardB, cardC);
+    // the divider pulls clip onto the BOTTOM EDGE OF THE WHOLE SIDEBAR,
+    // hanging just outside it like real archive tabs
+    const sidebar = document.querySelector('.desktop-sidebar') || card;
+    sidebar.appendChild(tabs);
+    select('sb-card-slime', true);
+  }
+
+  function deskPikInit() {
+    const area = document.getElementById('main-desktop');
+    if (!area || DESK_PIK.layer) return;
+    const layer = document.createElement('div');
+    layer.id = 'desk-pik-layer';
+    layer.setAttribute('aria-hidden', 'true');
+    area.appendChild(layer);
+    DESK_PIK.layer = layer;
+    deskRoster().slice(0, PIK_MAX).forEach((rr) => deskPikSpawn(rr.h != null ? rr.h : rr.c, rr.s, !!rr.ch));
+    DESK_PIK.sproutAt = Date.now() + (deskRoster().length ? 10000 : 5000); // sprouts waste no time
+    DESK_PIK.timer = setInterval(deskPikTick, 90);
+  }
+
+  /* retired fridge-magnet decor (superseded by the meadow) */
+  function desktopDecorate() {
+    const area = document.getElementById('main-desktop');
+    if (!area || document.getElementById('desk-clock')) return;
+    // 1) clock + weather tile (click = open the live room)
+    const tile = document.createElement('button');
+    tile.type = 'button';
+    tile.id = 'desk-clock';
+    tile.className = 'desk-clock';
+    tile.setAttribute('aria-label', trT('Local time and Edmonton weather — open the live room', 'Heure locale et météo d\'Edmonton — ouvrir le direct'));
+    const tTime = document.createElement('span');
+    tTime.className = 'desk-clock-time';
+    const tSub = document.createElement('span');
+    tSub.className = 'desk-clock-sub';
+    tile.append(tTime, tSub);
+    tile.addEventListener('click', () => openWindow('win-live'));
+    area.appendChild(tile);
+    const WX_ICON = { clear: '☀️', cloud: '☁️', rain: '🌧️', snow: '❄️', fog: '🌫️', thunder: '⛈️', wind: '🍃', hail: '🧊', sleet: '🌨️', dust: '🌪️', heat: '🥵', blizzard: '🌨️', hurricane: '🌀' };
+    const tickClock = () => {
+      const d = new Date();
+      tTime.textContent = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+      const day = trT(
+        ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'][d.getDay()],
+        ['dim', 'lun', 'mar', 'mer', 'jeu', 'ven', 'sam'][d.getDay()]
+      );
+      const wxIco = (typeof wxCurrent !== 'undefined' && wxCurrent && WX_ICON[wxCurrent]) || '✦';
+      tSub.textContent = `${day} · yeg ${wxIco}`;
+    };
+    tickClock();
+    setInterval(tickClock, 20000);
+    // 2) sticker layer — pure decoration, zero clicks stolen
+    [['⭐', '46%', '12%', '-8deg'], ['🌈', '58%', '30%', '6deg'], ['☁️', '38%', '55%', '0deg'], ['✦', '30%', '26%', '12deg'], ['♡', '62%', '64%', '-10deg']].forEach(([ch, left, top, rot]) => {
+      const st = document.createElement('span');
+      st.className = 'desk-sticker';
+      st.textContent = ch;
+      st.setAttribute('aria-hidden', 'true');
+      st.style.left = left;
+      st.style.top = top;
+      st.style.setProperty('--rot', rot);
+      area.appendChild(st);
+    });
+    // 3) the sticky note (a nudge toward the secrets)
+    const note = document.createElement('button');
+    note.type = 'button';
+    note.className = 'desk-note';
+    note.innerHTML = '';
+    const n1 = document.createElement('span');
+    n1.className = 'desk-note-title';
+    n1.textContent = trT('note to self ♡', 'pense-bête ♡');
+    const n2 = document.createElement('span');
+    n2.className = 'desk-note-body';
+    n2.textContent = trT('the terminal knows 100 secret codes… type `cheats`', 'le terminal connaît 100 codes secrets… tape `cheats`');
+    note.append(n1, n2);
+    note.setAttribute('aria-label', n2.textContent);
+    note.addEventListener('click', () => openWindow('win-terminal'));
+    area.appendChild(note);
+  }
+
   // one hook to count them all: wrap the interesting verbs so the
   // achievement metrics tick without littering every function
   function hookAchievements() {
@@ -10254,6 +10673,18 @@ document.addEventListener('DOMContentLoaded', () => {
   bootSafe('search', () => renderSearch(''));
   bootSafe('addr', () => updateAddressBar());
   bootSafe('achv-hooks', () => hookAchievements());
+  bootSafe('sb-tabs', () => sidebarTabsInit()); // sidebar drawers before anything measures it
+  // every visit starts with a FRESH meadow: the roster clears so new
+  // sprouts always have room — plucking is this session's little joy
+  bootSafe('pik-fresh', () => store.set('yos-pik-roster', []));
+  bootSafe('desk-piks', () => deskPikInit()); // the desktop IS the meadow now
+  bootSafe('mobile-start-max', () => {
+    // phones: the welcome note opens FULL SCREEN, no fiddly window
+    if (window.innerWidth < 820) {
+      const ws = document.getElementById('win-start-here');
+      if (ws && !ws.classList.contains('window-closed')) ws.classList.add('window-maximized');
+    }
+  });
 
   // equipped-item names: marquee instead of "AWS S3/…" truncation
   function initEquipMarquee() {
