@@ -14258,8 +14258,9 @@ document.addEventListener('DOMContentLoaded', () => {
     copyBtn.type = 'button';
     copyBtn.setAttribute('aria-label', trT('copy the watch link', 'copier le lien montre'));
     const status = mk('div', 'wp-status', '');
+    const copyStatus = mk('div', 'wp-status', '');
     const doCopy = () => {
-      const done = () => { status.textContent = trT('📋 link copied — paste it into a message to yourself ♡', '📋 lien copié — colle-le dans un message pour toi ♡'); };
+      const done = () => { copyStatus.textContent = trT('📋 link copied — paste it into a message to yourself ♡', '📋 lien copié — colle-le dans un message pour toi ♡'); };
       if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(WATCH_URL).then(done).catch(done);
       else { try { const ta = document.createElement('textarea'); ta.value = WATCH_URL; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); done(); } catch (e) { /* selection stays, user can ⌘C */ } }
     };
@@ -14267,6 +14268,7 @@ document.addEventListener('DOMContentLoaded', () => {
     copyBtn.addEventListener('click', doCopy);
     urlRow.append(url, copyBtn);
     shell.appendChild(urlRow);
+    shell.appendChild(copyStatus);
     shell.appendChild(mk('p', '', trT('2 · the watch shows a 4-digit code. type it here (all the typing happens on the BIG screen ♡):', '2 · la montre affiche un code à 4 chiffres. tape-le ici (tout le clavier reste sur le GRAND écran ♡) :')));
     const row = mk('div', 'wp-row');
     const inp = document.createElement('input');
@@ -14346,10 +14348,11 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   bootSafe('watch-wing', () => {
     watchPullArm();
-    // one-time hint: the site pairs with a smartwatch now
-    if (!store.get('yos-watch-hint', 0) && !store.get('yos-watch-paired', 0)) {
+    // the hint returns EVERY visit until a watch is actually paired —
+    // pairing history (yos-watch-paired) is the only thing that silences it
+    if (!store.get('yos-watch-paired', 0)) {
       setTimeout(() => {
-        store.set('yos-watch-hint', 1);
+        if (store.get('yos-watch-paired', 0)) return; // paired mid-session
         const b = document.createElement('button');
         b.type = 'button';
         b.id = 'watch-hint-banner';
