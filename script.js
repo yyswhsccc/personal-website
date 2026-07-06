@@ -3684,7 +3684,8 @@ document.addEventListener('DOMContentLoaded', () => {
     { id: 'gitgud', icon: '🌿', n: ['Git Gud', 'Git Gud'], d: ['ran five different git commands in a terminal that lives inside a website.', 'a lancé cinq commandes git dans un terminal qui vit dans un site web.'], t: ['the terminal speaks fluent git. test its accent.', 'le terminal parle git couramment. teste son accent.'] },
     { id: 'stargazer', icon: '⭐', n: ['Counted Among Stars', 'Compté Parmi les Étoiles'], d: ['the star counter moved while you were around. the terminal noticed. it always notices.', 'le compteur d\'étoiles a bougé en ta présence. le terminal l\'a vu. il voit tout.'], t: ['some buttons on github echo all the way back here.', 'certains boutons de github résonnent jusqu\'ici.'] },
     { id: 'gitfollow', icon: '💚', n: ['Follower of the Way', 'Disciple de la Voie'], d: ['the follower counter climbed while you were around. adopted forever.', 'le compteur d\'abonnés a grimpé en ta présence. adopté·e pour toujours.'], t: ['following someone is a kind of spell too.', 'suivre quelqu\'un est aussi une sorte de sort.'] },
-    { id: 'redpill', icon: '🐇', n: ['Followed the Pink Rabbit', 'A Suivi le Lapin Rose'], d: ['arrived through the mysterious little command. the desktop has you now.', 'est arrivé·e par la mystérieuse petite commande. le bureau te tient désormais.'], t: ['somewhere on github, a readme whispers a command.', 'quelque part sur github, un readme murmure une commande.'] }
+    { id: 'redpill', icon: '🐇', n: ['Followed the Pink Rabbit', 'A Suivi le Lapin Rose'], d: ['arrived through the mysterious little command. the desktop has you now.', 'est arrivé·e par la mystérieuse petite commande. le bureau te tient désormais.'], t: ['somewhere on github, a readme whispers a command.', 'quelque part sur github, un readme murmure une commande.'] },
+    { id: 'ctfslime', icon: '🚩', n: ['Capture the Slime', 'Capture le Slime'], d: ['decoded key.enc at the door instead of just reading the hint. certified hacker-chan.', 'a décodé key.enc à la porte au lieu de lire l\'indice. hacker-chan certifié·e.'], t: ['the door has a puzzle for the brave. `ls` first.', 'la porte cache une énigme pour les braves. `ls` d\'abord.'] }
   ];
 
   // ---- metric engine: count things, achievements pop themselves ----
@@ -4621,10 +4622,59 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    // ---- the terminal door: her name opens the rest of the world ----
-    if (document.body.classList.contains('terminal-only') && lower === 'yongshan') {
-      terminalDoorOpen();
-      return;
+    // ---- the terminal door: a tiny CTF playground until the name is spoken ----
+    if (document.body.classList.contains('terminal-only')) {
+      const door = window.__door || (window.__door = { tries: 0, decoded: false, enc: ['rot13', 'base64', 'hex'][Math.floor(Math.random() * 3)] });
+      if (lower === 'yongshan' || lower === 'sudo yongshan' || lower === 'wake up' || lower === 'wakeup') {
+        if (lower === 'sudo yongshan') termLine(trT('🔑 root acknowledged. the door never needed it — but the bow is appreciated.', '🔑 root reconnu. la porte n\'en avait pas besoin — mais la révérence est appréciée.'), 't-ok');
+        if (lower === 'wake up' || lower === 'wakeup') termLine(trT('🐇 the classic line. the door respects a purist.', '🐇 la réplique classique. la porte respecte les puristes.'), 't-ok');
+        if (door.decoded) {
+          achvUnlock('ctfslime');
+          store.set('yos-pending-coins', (store.get('yos-pending-coins', 0) || 0) + 10);
+          termLine(trT('🚩 CTF CLEARED — you DECODED your way in. +10 coins staged for slime_run ♡', '🚩 CTF RÉUSSI — tu es entré·e en DÉCODANT. +10 pièces pour slime_run ♡'), 't-ok');
+        }
+        terminalDoorOpen();
+        return;
+      }
+      const ENCODED = { rot13: 'lbatfuna', base64: 'eW9uZ3NoYW4=', hex: '796f6e677368616e' };
+      if (lower === 'ls' || lower === 'ls -la' || lower === 'dir') {
+        termLine('key.enc          README.whisper          the_rest_of_the_OS.zzz', 't-ok');
+        matrixGreeterSay(trT('ooh. a LOOKER. `cat` them. I would.', 'oh. quelqu\'un qui REGARDE. `cat`-les. moi je le ferais.'));
+        return;
+      }
+      if (lower === 'cat readme.whisper' || lower === 'cat readme') {
+        termLine(trT('the name is the key. it is on the github readme you came from.', 'le nom est la clé. il est sur le readme github d\'où tu viens.'), 't-dim');
+        termLine(trT('…but key.enc holds the same key, encoded. decode it yourself for the 🚩 flag.', '…mais key.enc contient la même clé, encodée. décode-la toi-même pour le drapeau 🚩.'), 't-accent');
+        return;
+      }
+      if (lower === 'cat key.enc') {
+        termLine(ENCODED[door.enc], 't-ok');
+        termLine(trT(`   (encoding: ${door.enc} — decode it IRL, or \`decode key.enc\` if your wrists are tired)`, `   (encodage : ${door.enc} — décode-le en vrai, ou \`decode key.enc\` si tes poignets fatiguent)`), 't-dim');
+        matrixGreeterSay(trT('a cipher!! I love this part.', 'un chiffre !! j\'adore ce moment.'));
+        return;
+      }
+      if (lower === 'decode key.enc' || lower === 'decode') {
+        if (door.enc === 'rot13') termLine("$ tr 'a-z' 'n-za-m' <<< lbatfuna  →  yongshan", 't-ok');
+        else if (door.enc === 'base64') termLine('$ echo eW9uZ3NoYW4= | base64 -d  →  yongshan', 't-ok');
+        else termLine('$ xxd -r -p <<< 796f6e677368616e  →  yongshan', 't-ok');
+        termLine(trT('   (that is the REAL command, by the way — it works in your terminal too)', '   (c\'est la VRAIE commande, au passage — elle marche aussi dans ton terminal)'), 't-dim');
+        door.decoded = true;
+        matrixGreeterSay(trT('DECODED. now say it like you mean it.', 'DÉCODÉ. maintenant dis-le avec conviction.'));
+        return;
+      }
+      if (lower === 'visitorfetch' || lower === 'neofetch --visitor') {
+        termVisitorFetch();
+        return;
+      }
+      if (lower === 'matrix') {
+        termLine(trT('☔ initiating digital drizzle… (6s, purely decorative)', '☔ bruine numérique… (6 s, purement décoratif)'), 't-ok');
+        matrixRain();
+        return;
+      }
+      // anything else falls through to the REAL shell — but the greeter watches
+      door.tries++;
+      if (door.tries === 3) matrixGreeterSay(trT('psst. try `ls`. doors have pockets.', 'psst. essaie `ls`. les portes ont des poches.'));
+      if (door.tries === 6) matrixGreeterSay(trT('the key is literally her name. I cannot be clearer without RUNNING it for you.', 'la clé est littéralement son nom. je ne peux pas être plus clair sans la TAPER pour toi.'));
     }
 
     // ---- nightmare MELTDOWN: the shell is a triage desk. all input is a fix attempt ----
@@ -14600,12 +14650,75 @@ document.addEventListener('DOMContentLoaded', () => {
     ROWS.forEach((row, ry) => { for (let rx = 0; rx < row.length; rx++) { const ch = row[rx]; if (ch === '.') continue; x.fillStyle = PAL[ch] || PAL.P; x.fillRect(rx * 8, ry * 8, 8, 8); } });
     const bub = document.createElement('div');
     bub.className = 'matrix-bubble';
+    window.__matrixBub = bub;
     let li = 0;
     const speak = () => { bub.textContent = trT(MATRIX_LINES[li % MATRIX_LINES.length][0], MATRIX_LINES[li % MATRIX_LINES.length][1]); li++; };
     speak();
     window.__matrixGreetTimer = setInterval(speak, 6500);
     g.append(bub, cv);
     document.body.appendChild(g);
+  }
+  function matrixGreeterSay(text) {
+    // the greeter reacts to what you DO — and holds the thought a while
+    const bub = window.__matrixBub;
+    if (!bub) return;
+    bub.textContent = text;
+    if (window.__matrixGreetTimer) { clearInterval(window.__matrixGreetTimer); }
+    window.__matrixGreetTimer = setInterval(() => {
+      const l = MATRIX_LINES[Math.floor(Math.random() * MATRIX_LINES.length)];
+      bub.textContent = trT(l[0], l[1]);
+    }, 9000);
+  }
+  function termVisitorFetch() {
+    // a neofetch for the VISITOR — read locally from what the browser
+    // already announces to every site. displayed here, sent nowhere. ever.
+    const ua = navigator.userAgent || '';
+    const browser = /firefox/i.test(ua) ? 'Firefox' : /edg/i.test(ua) ? 'Edge' : /chrome|crios/i.test(ua) ? 'Chrome' : /safari/i.test(ua) ? 'Safari' : 'a mystery browser';
+    const os = /iphone|ipad/i.test(ua) ? 'iOS' : /android/i.test(ua) ? 'Android' : /mac/i.test(ua) ? 'macOS' : /win/i.test(ua) ? 'Windows' : /linux/i.test(ua) ? 'Linux' : '???';
+    const rows = [
+      ['visitor@yongshanOS', ''],
+      ['-----------------', ''],
+      ['Browser', browser],
+      ['OS', os],
+      ['Viewport', innerWidth + '×' + innerHeight + ' @' + (window.devicePixelRatio || 1) + 'x'],
+      ['Threads', String(navigator.hardwareConcurrency || '?') + ' cores'],
+      ['Memory', navigator.deviceMemory ? navigator.deviceMemory + 'GB-ish' : 'politely undisclosed'],
+      ['Language', navigator.language || '?'],
+      ['Online', navigator.onLine ? 'yes' : 'somehow no'],
+      ['Slimes nearby', '1 (dressed for the matrix)']
+    ];
+    rows.forEach(([k, v]) => termLine(v ? '  ' + k.padEnd(14, ' ') + v : '  ' + k, v ? 't-ok' : 't-accent'));
+    termLine(trT('  (read locally from your browser\'s own public announcements. sent nowhere. ever.)', '  (lu localement depuis ce que ton navigateur annonce déjà. envoyé nulle part. jamais.)'), 't-dim');
+  }
+  function matrixRain() {
+    if (document.getElementById('matrix-rain')) return;
+    const cv = document.createElement('canvas');
+    cv.id = 'matrix-rain';
+    cv.width = innerWidth; cv.height = innerHeight;
+    cv.style.cssText = 'position:fixed;inset:0;z-index:310;pointer-events:none;';
+    document.body.appendChild(cv);
+    const x = cv.getContext('2d');
+    const GLYPHS = 'ｱｲｳｴｵｶｷｸｹｺ01♡yongshan';
+    const cols = Math.floor(cv.width / 14);
+    const drops = Array.from({ length: cols }, () => Math.random() * -40);
+    const t0 = Date.now();
+    const iv = setInterval(() => {
+      x.fillStyle = 'rgba(13,17,23,0.16)';
+      x.fillRect(0, 0, cv.width, cv.height);
+      x.font = '13px monospace';
+      drops.forEach((d, i) => {
+        const ch = GLYPHS[Math.floor(Math.random() * GLYPHS.length)];
+        x.fillStyle = ch === '♡' ? '#ff8fc7' : '#39d353';
+        x.fillText(ch, i * 14, d * 14);
+        drops[i] = d * 14 > cv.height && Math.random() > 0.975 ? 0 : d + 1;
+      });
+      if (Date.now() - t0 > 6000) {
+        clearInterval(iv);
+        cv.style.transition = 'opacity 0.8s';
+        cv.style.opacity = '0';
+        setTimeout(() => cv.remove(), 900);
+      }
+    }, 50);
   }
   function terminalDoorOpen() {
     termLine(trT('🔓 the name IS the key. compiling the rest of the world…', '🔓 le nom EST la clé. compilation du reste du monde…'), 't-ok');
@@ -14657,10 +14770,26 @@ document.addEventListener('DOMContentLoaded', () => {
       openWindow('win-terminal');
       const tw = document.getElementById('win-terminal');
       if (tw) tw.classList.add('window-maximized', 'terminal-door-win');
+      // — a little kernel theater before the curtain line —
+      const BOOT = [
+        ['[  OK  ] reached target basic-cuteness.target', 't-ok', 60],
+        ['[  OK  ] mounted /dev/meadow (rw,pikmin=72)', 't-ok', 140],
+        ['[  OK  ] started slime.service — 1 instance, extremely round', 't-ok', 230],
+        ['[ WARN ] 6 pikmin requested desktop access (queued until wake)', 't-err', 330],
+        ['[  OK  ] loaded module: matrix_greeter.ko (sunglasses=on)', 't-ok', 420],
+        ['[  OK  ] entropy pool topped up with heart emojis', 't-ok', 500],
+        ['[ SKIP ] telemetry.service — not installed, never will be', 't-dim', 590],
+        ['[  OK  ] yongshanOS door ready on tty1 ♡', 't-ok', 700]
+      ];
       termLine('', '');
-      termLine(trT('🐇 you took the mysterious command. respect.', '🐇 tu as suivi la commande mystérieuse. respect.'), 't-accent');
-      termLine(trT('   this is yongshan\'s terminal — the rest of her OS is still asleep.', '   voici le terminal de yongshan — le reste de son OS dort encore.'), 't-dim');
-      termLine(trT('   type `yongshan` — the name is the key. it opens EVERYTHING.', '   tape `yongshan` — le nom est la clé. il ouvre TOUT.'), 't-ok');
+      BOOT.forEach(([l, cls, at]) => setTimeout(() => termLine(l, cls), at));
+      setTimeout(() => {
+        termLine('', '');
+        termLine(trT('🐇 you took the mysterious command. respect.', '🐇 tu as suivi la commande mystérieuse. respect.'), 't-accent');
+        termLine(trT('   the rest of her OS is asleep. type `yongshan` — the name is the key.', '   le reste de son OS dort. tape `yongshan` — le nom est la clé.'), 't-ok');
+        termLine(trT('   (the curious try `ls` first. the brave decode what they find. 🚩)', '   (les curieux tapent `ls` d\'abord. les braves décodent ce qu\'ils trouvent. 🚩)'), 't-dim');
+        termLine(trT('   (also in stock: `visitorfetch` · `matrix` · the ENTIRE regular shell)', '   (aussi en rayon : `visitorfetch` · `matrix` · TOUT le shell habituel)'), 't-dim');
+      }, 850);
       matrixGreeterShow();
     }, 600);
   });

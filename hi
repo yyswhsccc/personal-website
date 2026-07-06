@@ -1,20 +1,28 @@
 [95m
-     ▄▄██████▄▄
-   ▄██████████▄
-  ███[30m██[95m████[30m██[95m███
-  █████[91m▄▄▄▄[95m█████
-   ▀██████████▀
+       ▄▄██████▄▄        [92m┌──────────────────────────────┐[95m
+     ▄██████████▄▄       [92m│[0m  yongshanOS · wrist to wall  [92m│[95m
+    ███[30m██[95m████[30m██[95m███      [92m│[0m  0 frameworks · 72 pikmin    [92m│[95m
+    █████[91m▄▄▄▄[95m█████      [92m│[0m  1 slime · ∞ soft pixels     [92m│[95m
+    ██[91m▀[95m██████████      [92m└──────────────────────────────┘[95m
+     ▀██████████▀    [32m▲[95m  [36m▲[95m  [33m▲[95m  [35m▲[95m  [31m▲[95m  [34m▲[95m   [2m← the squad says hi[0m[95m
 [0m
-[1mhi!! you found yongshan’s mysterious little command ♡[0m
+[1mhi!! you found yongshan's mysterious little command ♡[0m
 
-this was only step one. the slime lives here:
+[1mSTEP 2 — open her terminal[0m (the site itself stays asleep):
 
   [92mmacOS  :[0m open "https://yyswhsccc.github.io/personal-website/#terminal"
   [92mlinux  :[0m xdg-open "https://yyswhsccc.github.io/personal-website/#terminal"
   [92mwindows:[0m start https://yyswhsccc.github.io/personal-website/#terminal
 
-that opens her TERMINAL only — the rest of the site stays asleep.
-inside, type [95myongshan[0m — the name is the key. it opens everything ♡
+inside: the name [95myongshan[0m is the key. the curious run [96mls[0m first —
+there is a cipher at the door, and a 🚩 flag for whoever decodes it.
 
-(this command only prints. it runs nothing. yongshan respects your shell.)
+[1mBONUS — pikmin trading cards, dealt by YOUR shell:[0m
+
+  curl -sL "https://yyswhsccc.github.io/personal-website/pik/$((RANDOM % 5))"
+
+  [2m(yes — $((RANDOM % 5)) is computed by your own shell. we simply
+  cannot see your dice. collect all five.)[0m
+
+[2m(everything here only prints. nothing executes. yongshan respects your shell.)[0m
 
