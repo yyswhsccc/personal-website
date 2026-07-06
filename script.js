@@ -710,11 +710,13 @@ document.addEventListener('DOMContentLoaded', () => {
       const rows = style[Math.floor(seed * 331) % 3];
       const tint = hueColor(5 + Math.floor(seed * 355));
       const pal = { S: '#57c689', L: '#7ddba4', Y: '#ffd400', P: '#ff8fc7', w: '#ffffff', D: tint.dark, B: tint.body, W: 'rgba(255,255,255,0.6)', e: INK, u: '#ffb3dd' };
+      // 1:1 pixel scale, perched ON the crown (rows 0-4) — exactly like a
+      // pikmin's: a small topknot, never a mid-forehead flag pole
       rows.forEach((row, ty) => {
         for (let tx = 0; tx < row.length; tx++) {
           const ch = row[tx];
           if (ch === '.') continue;
-          oR(ctx, 21.5 + (tx - 5) * 2, ty * 2, 2, 2, pal[ch] || pal.S);
+          oR(ctx, 17 + tx, ty, 1, 1, pal[ch] || pal.S);
         }
       });
     },
@@ -859,11 +861,11 @@ document.addEventListener('DOMContentLoaded', () => {
   // read as hats from across the room; face/body accessories stay 1:1
   const HEAD_PARTS = new Set([
     'beret', 'cone', 'wizard', 'crown', 'catEars', 'bunnyEars', 'bearEars',
-    'halo', 'bow', 'sideBow', 'flower', 'sprout', 'antenna', 'santa',
+    'halo', 'bow', 'sideBow', 'flower', 'antenna', 'santa',
     'pumpkin', 'gradCap', 'headphones', 'earmuffs', 'cowboy', 'mushroom',
     'strawHat', 'propeller', 'chefHat', 'beanie', 'leafClip', 'snowClip',
     'moonClip', 'starGarland', 'sleepMaskUp'
-  ]);
+  ]); // 'sprout' left out on purpose: the head-plant draws 1:1, no hat scaling
   const HAT_SCALE = 1.45;
 
   function drawOutfitPart(ctx, fn, args) {
@@ -1157,20 +1159,22 @@ document.addEventListener('DOMContentLoaded', () => {
     speechBubble.scrollLeft = 0;
     speechBubble.classList.add('show-bubble');
 
-    // long lines read THEMSELVES: the bubble auto-pans to the end and
-    // back, and stays up long enough for an actual human to follow
+    // long lines read THEMSELVES: one slow, single pass to the end —
+    // like the game's ad marquee — then the bubble takes its bow
     requestAnimationFrame(() => {
       if (speechBubble.textContent !== text) return; // a newer line took the mic
       const over = speechBubble.scrollWidth - speechBubble.clientWidth;
       if (over > 8) {
-        duration = Math.max(duration, 2600 + over * 18);
-        let dir = 1;
-        let pauseUntil = Date.now() + 900;
+        const pxPerTick = 0.55;                       // ≈23px/s: an actual reading pace
+        duration = 1400 + (over / pxPerTick) * 24 + 1200; // lead-in + one pass + linger
+        let pauseUntil = Date.now() + 1400;
         speechBubble._marquee = setInterval(() => {
           if (Date.now() < pauseUntil) return;
-          speechBubble.scrollLeft += dir * 1.5;
-          if (dir > 0 && speechBubble.scrollLeft >= over - 1) { dir = -1; pauseUntil = Date.now() + 700; }
-          else if (dir < 0 && speechBubble.scrollLeft <= 0) { dir = 1; pauseUntil = Date.now() + 700; }
+          speechBubble.scrollLeft += pxPerTick;
+          if (speechBubble.scrollLeft >= over - 1) {  // the end: linger, then bow out
+            clearInterval(speechBubble._marquee);
+            speechBubble._marquee = null;
+          }
         }, 24);
       }
       if (speechTimeout) clearTimeout(speechTimeout);
@@ -3617,7 +3621,9 @@ document.addEventListener('DOMContentLoaded', () => {
     { id: 'archmage', icon: '🔮', n: ['MEGA Archmage', 'Archimage MÉGA'], d: ['discovered all 8 MEGA spells in the gift grimoire. the stage bows.', 'a découvert les 8 sorts MÉGA du grimoire à cadeaux. la scène s\'incline.'], t: ['some emojis are blessed. find all 8 blessings.', 'certains emojis sont bénis. trouve les 8 bénédictions.'] },
     { id: 'truefan', icon: '💌', n: ['On a First-Name Basis', 'On Se Tutoie'], d: ['typed her name like a spell. the whole squad paraded for it.', 'a tapé son nom comme un sort. toute l\'escouade a défilé.'], t: ['the OS answers to a name.', 'l\'OS répond à un nom.'] },
     { id: 'nihao', icon: '🀄', n: ['Nǐ Hǎo, World', 'Nǐ Hǎo, World'], d: ['said hello in Chinese. the meadow understood perfectly.', 'a dit bonjour en chinois. la prairie a parfaitement compris.'], t: ['greet the OS like home.', 'salue l\'OS comme à la maison.'] },
-    { id: 'vimescape', icon: '🚪', n: ['Vim Escapee', 'Évadé·e de Vim'], d: ['entered vim. LEFT vim. statistically a legend.', 'est entré·e dans vim. en est SORTI·E. statistiquement une légende.'], t: ['some editors are one-way doors.', 'certains éditeurs sont des portes sans retour.'] }
+    { id: 'vimescape', icon: '🚪', n: ['Vim Escapee', 'Évadé·e de Vim'], d: ['entered vim. LEFT vim. statistically a legend.', 'est entré·e dans vim. en est SORTI·E. statistiquement une légende.'], t: ['some editors are one-way doors.', 'certains éditeurs sont des portes sans retour.'] },
+    { id: 'handtalk', icon: '🖐', n: ['Signed, Understood', 'Signé, Compris'], d: ['spoke to the slime in GESTURES. the hand-cam read every word.', 'a parlé au slime en GESTES. la main-cam a tout lu.'], t: ['the camera reads more than faces.', 'la caméra lit plus que les visages.'] },
+    { id: 'hearthands', icon: '🫶', n: ['Certified Hand Heart', 'Cœur de Mains Certifié'], d: ['made the two-handed heart. the slime is legally yours now.', 'a fait le cœur à deux mains. le slime est légalement à toi.'], t: ['some gestures need both hands.', 'certains gestes demandent les deux mains.'] }
   ];
 
   // ---- metric engine: count things, achievements pop themselves ----
@@ -7168,8 +7174,9 @@ document.addEventListener('DOMContentLoaded', () => {
       store.set('yos-pending-coins', store.get('yos-pending-coins', 0) + 5);
       gToast(["💤 a sleepwalker left 5 coins on the start line", "💤 un somnambule a laissé 5 pièces sur la ligne de départ"], 240);
     }
-    // mid-run, some dreams curdle: 45% of dives become THE NIGHTMARE
-    if (GAME.state === 'run' && Math.random() < 0.45) {
+    // mid-run, dreams curdle: 95% of dives become THE NIGHTMARE —
+    // but only once the runner has EARNED it (2000+ score)
+    if (GAME.state === 'run' && GAME.score >= 2000 && Math.random() < 0.95) {
       setTimeout(() => { if (GAME.state === 'run' && !GAME.nm) gNightmareStart(); }, 700);
     }
     // the dreaming slime never travels alone: the whole petal squad
@@ -11426,7 +11433,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const camCanvas = document.createElement('canvas');
   camCanvas.width = CAM_W; camCanvas.height = CAM_H;
 
-  const CAM_COOLDOWN = { wave: 9000, nod: 14000, peek: 9000, close: 45000, duo: 90000, light: 120000, drink: 30000 };
+  const CAM_COOLDOWN = { wave: 9000, nod: 14000, peek: 9000, close: 45000, duo: 90000, light: 120000, drink: 30000,
+    'hand-heart': 45000, 'hand-palm': 12000, 'hand-fist': 15000, 'hand-thumbsup': 20000, 'hand-peace': 18000,
+    'hand-point': 12000, 'hand-rock': 25000, 'hand-ok': 20000, 'hand-three': 30000 };
   function camSay(type, en, fr, fans, action) {
     const now = Date.now();
     if (now - camLastSpeak < 5000) return false;
@@ -11570,12 +11579,128 @@ document.addEventListener('DOMContentLoaded', () => {
         cocoLoading = false;
         camBtnLabel(t('live.cam.on'));
         if (camStream) showBubble(trT('neural eyes online!! show me what you got ♡', 'yeux neuronaux en ligne !! montre-moi ce que tu as ♡'), 2600);
+        handEnsure(inject); // the hand-reader rides in on the same TF.js
       })
       .catch(() => {
         cocoFailed = true; // offline / blocked CDN — colour-blob fallback takes over
         cocoLoading = false;
         camBtnLabel(t('live.cam.on'));
       });
+  }
+
+  /* ---------- hand-cam: MediaPipe Hands (21-keypoint landmark net) ----------
+     The CV career flex: a real hand-landmark model runs ON-DEVICE and a
+     hand-rolled classifier reads gestures off the skeleton — palm, fist,
+     thumbs-up, peace, point, rock, OK, finger counts, and the sacred
+     two-handed heart. Frames never leave the browser. Misreads are a
+     feature: the slime commits to its guess with total confidence. */
+  var handDetector = null, handLoading = false, handFailed = false, handTimer = null,
+      handBusy = false, handLastGesture = null, handStreak = 0, handXTrail = [];
+  function handEnsure(inject) {
+    if (handDetector || handLoading || handFailed) return;
+    handLoading = true;
+    inject('https://cdn.jsdelivr.net/npm/@tensorflow-models/hand-pose-detection@2.0.1/dist/hand-pose-detection.min.js')
+      .then(() => window.handPoseDetection.createDetector(
+        window.handPoseDetection.SupportedModels.MediaPipeHands,
+        { runtime: 'tfjs', modelType: 'lite', maxHands: 2 }
+      ))
+      .then((d) => {
+        handDetector = d;
+        handLoading = false;
+        if (handTimer) clearInterval(handTimer);
+        handTimer = setInterval(handTick, 420);
+        if (camStream) showBubble(trT('hand-cam online!! show me a gesture — I studied ALL of them ♡', 'main-cam en ligne !! montre-moi un geste — je les ai TOUS étudiés ♡'), 2800);
+      })
+      .catch(() => { handFailed = true; handLoading = false; });
+  }
+  function handDist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
+  function handRead(kp) {
+    // 0 wrist · 4 thumb tip · tips 8/12/16/20 · pips 6/10/14/18
+    const wrist = kp[0];
+    const size = handDist(wrist, kp[9]) || 1; // wrist → middle MCP = hand scale
+    const up = [[8, 6], [12, 10], [16, 14], [20, 18]].map(([tip, pip]) =>
+      handDist(kp[tip], wrist) > handDist(kp[pip], wrist) * 1.12);
+    const nUp = up.filter(Boolean).length;
+    const thumbOut = handDist(kp[4], kp[17]) > size * 1.15; // thumb far from pinky base
+    const thumbHigh = kp[4].y < wrist.y - size * 0.55;
+    const okPinch = handDist(kp[4], kp[8]) < size * 0.35;
+    const thumbLong = handDist(kp[4], wrist) > size * 1.1; // an actually raised thumb
+    if (okPinch && up[1] && up[2] && up[3]) return 'ok';
+    if (nUp === 0 && thumbHigh && thumbLong) return 'thumbsup';
+    if (nUp === 0) return 'fist';
+    if (nUp === 4 && thumbOut) return 'palm';
+    if (up[0] && up[1] && !up[2] && !up[3]) return 'peace';
+    if (up[0] && !up[1] && !up[2] && !up[3]) return 'point';
+    if (up[0] && !up[1] && !up[2] && up[3]) return 'rock';
+    if (nUp === 3) return 'three';
+    return null;
+  }
+  const HAND_LINES = {
+    palm: ['✋ HIGH FIVE!! *presses entire face against the glass*', '✋ HIGH FIVE !! *écrase tout son visage contre la vitre*', 1],
+    fist: ['✊ fist bump. respectfully. through the fourth wall.', '✊ check du poing. respectueusement. à travers le quatrième mur.', 1],
+    thumbsup: ['👍 A THUMBS UP?! chat, CLIP IT!!', '👍 UN POUCE LEVÉ ?! chat, CLIPPEZ ÇA !!', 2],
+    peace: ['✌️ pose!! wait, let me find my good side— I\'m a circle. all sides.', '✌️ pose !! attends, mon meilleur profil— je suis un cercle. tous les profils.', 1],
+    point: ['☝️ pointing… at ME?? (if you were ordering a menu item, I am the boba)', '☝️ tu pointes… MOI ?? (si tu commandais au menu, je suis le bubble tea)', 1],
+    rock: ['🤘 ROCK MODE. headbang initiated. do not adjust your stream.', '🤘 MODE ROCK. headbang lancé. ne réglez pas votre stream.', 1],
+    ok: ['👌 chef\'s kiss. perfectly balanced, like all snacks should be.', '👌 baiser du chef. parfaitement équilibré, comme tout bon snack.', 1],
+    three: ['🖐 counting… THREE!! math is my passion (today)', '🖐 je compte… TROIS !! les maths sont ma passion (aujourd\'hui)', 0],
+    heart: ['🫶 HAND HEART?! I am LEGALLY yours now. no take-backs.', '🫶 UN CŒUR AVEC LES MAINS ?! je suis LÉGALEMENT à toi. sans retour.', 5],
+    unsure: ['🖐 that was either jazz hands or a sneeze. both valid. both art.', '🖐 c\'était soit des jazz hands soit un éternuement. les deux sont valides. les deux sont de l\'art.', 0]
+  };
+  try { window.__yosHand = handRead; window.__yosSay = showBubble; } catch (e) { /* testing hook, optional */ }
+  function handTick() {
+    if (!handDetector || !camStream || !camVideo.videoWidth || handBusy) return;
+    handBusy = true;
+    handDetector.estimateHands(camVideo, { flipHorizontal: true }).then((hands) => {
+      handBusy = false;
+      if (!hands || !hands.length) { handLastGesture = null; handStreak = 0; return; }
+      const kp = hands[0].keypoints;
+      // ---- the sacred two-handed heart outranks everything ----
+      if (hands.length === 2) {
+        const k2 = hands[1].keypoints;
+        const size = handDist(kp[0], kp[9]) || 1;
+        if (handDist(kp[4], k2[4]) < size * 0.9 && handDist(kp[8], k2[8]) < size * 0.9) {
+          if (camSay('hand-heart', HAND_LINES.heart[0], HAND_LINES.heart[1], HAND_LINES.heart[2])) {
+            camShowTag('🫶 heart hands', 0.99);
+            achvUnlock('hearthands');
+            achvUnlock('handtalk');
+            if (typeof fxBanner === 'function' && liveOpen) { try { fxBanner(trT('🫶 THE STREAMER IS LEGALLY YOURS', '🫶 LE STREAMER EST LÉGALEMENT À TOI')); } catch (e) { /* stage shy */ } }
+            burstAtSlime(['💗', '♡', '💖'], 14);
+          }
+          return;
+        }
+      }
+      const g = handRead(kp);
+      // wave: an open palm swinging sideways beats the static read
+      if (g === 'palm') {
+        handXTrail.push(kp[0].x);
+        if (handXTrail.length > 8) handXTrail.shift();
+        let flips = 0;
+        for (let i = 2; i < handXTrail.length; i++) {
+          const a = handXTrail[i - 1] - handXTrail[i - 2], b = handXTrail[i] - handXTrail[i - 1];
+          if (a * b < 0 && Math.abs(b) > 6) flips++;
+        }
+        if (flips >= 2) {
+          handXTrail = [];
+          if (camSay('wave', '!!! you WAVED!! hi hi hi ♡', '!!! tu as fait COUCOU !! salut salut ♡', 2)) { camShowTag('👋 wave', 0.97); achvUnlock('handtalk'); }
+          return;
+        }
+      } else handXTrail = [];
+      if (!g) { handStreak = 0; handLastGesture = null; return; }
+      if (g === handLastGesture) handStreak++; else { handLastGesture = g; handStreak = 1; }
+      if (handStreak !== 2) return; // two agreeing frames = a committed guess
+      const line = HAND_LINES[g] || HAND_LINES.unsure;
+      if (camSay('hand-' + g, line[0], line[1], line[2])) {
+        camShowTag({ palm: '✋', fist: '✊', thumbsup: '👍', peace: '✌️', point: '☝️', rock: '🤘', ok: '👌', three: '3️⃣' }[g] + ' ' + g, hands[0].score || 0.9);
+        achvUnlock('handtalk');
+        if (g === 'point' && typeof moveSlime === 'function') {
+          // it walks toward wherever you point. obedient. suspicious.
+          const goRight = kp[8].x > kp[0].x;
+          try { moveSlime({ action: 'happy', duration: 900, distance: 0.8, direction: goRight ? 1 : -1 }); } catch (e) { /* stays put, still cute */ }
+        }
+        if (g === 'rock') { try { document.getElementById('slime-pet').classList.add('is-flip'); setTimeout(() => document.getElementById('slime-pet').classList.remove('is-flip'), 900); } catch (e) { /* no flip, no problem */ } }
+      }
+    }).catch(() => { handBusy = false; });
   }
 
   // a tiny "what the net sees" tag in the stage corner — the receipts
@@ -11617,6 +11742,8 @@ document.addEventListener('DOMContentLoaded', () => {
   function camStop() {
     if (camTimer) { clearInterval(camTimer); camTimer = null; }
     if (cocoTimer) { clearInterval(cocoTimer); cocoTimer = null; }
+    if (handTimer) { clearInterval(handTimer); handTimer = null; }
+    handLastGesture = null; handStreak = 0; handXTrail = []; handBusy = false;
     if (camStream) { camStream.getTracks().forEach((t) => t.stop()); camStream = null; }
     camPrev = null; camBase = null; camBaseN = 0; camTrail = [];
     camPresent = false; camBlob = null; camLumEMA = null; cocoPersons = 0;
