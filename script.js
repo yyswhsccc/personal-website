@@ -127,16 +127,23 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ================= LOADER SCREEN =================
+  // the boot screen is ALIVE: it shows YOUR saved slime + squad, and
+  // booping the slime stalls the boot a little (a soft deadline, not a
+  // fixed timer). loaderDecorate() dresses it from localStorage.
   const loader = document.getElementById('loader');
   if (loader) {
-    setTimeout(() => {
+    window.__loaderHideAt = Date.now() + 1800;
+    setTimeout(() => { try { loaderDecorate(); } catch (e) { /* boots plain, still cute */ } }, 0);
+    const loaderTick = setInterval(() => {
+      if (Date.now() < window.__loaderHideAt) return;
+      clearInterval(loaderTick);
       loader.classList.add('fade-out');
       document.documentElement.classList.remove('is-booting');
       setTimeout(() => playStartupChime(), 100);
       setTimeout(() => {
         loader.style.display = 'none';
       }, 500);
-    }, 1800);
+    }, 120);
   } else {
     document.documentElement.classList.remove('is-booting');
   }
@@ -210,6 +217,7 @@ document.addEventListener('DOMContentLoaded', () => {
     win.classList.remove('window-minimized');
     win.classList.add('window-active');
     updateTaskbarAppButtons();
+    if (typeof applyPikFloat === 'function') applyPikFloat(); // the squad re-checks its altitude
   }
 
   function focusTopWindow() {
@@ -307,6 +315,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (winId === 'win-leaderboard' && typeof renderLeaderboard === 'function') renderLeaderboard();
     if (winId === 'win-leaderboard' && typeof renderAchievements === 'function') renderAchievements();
+    if (winId === 'win-pikdex' && typeof renderPikdex === 'function') renderPikdex();
+    if (typeof applyPikFloat === 'function') applyPikFloat(); // live/game open → desktop twins tuck away
 
     // Fresh opens always land inside the CURRENT viewport, sized to fit the
     // space above the sticky taskbar — never guillotined by the bottom bar.
@@ -333,7 +343,11 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function closeWindow(win) {
-    if (win.id === 'win-live' && typeof liveExit === 'function') liveExit();
+    if (win.id === 'win-live' && typeof liveExit === 'function') {
+      liveExit();
+      // stage recruits + bloom-ups walk home to the desktop with you
+      if (typeof deskPikResync === 'function') deskPikResync();
+    }
     if (win.id === 'win-interview') {
       win.classList.remove('window-itv-modal');
       if (win._homeParent) win._homeParent.insertBefore(win, win._homeNext || null);
@@ -362,10 +376,14 @@ document.addEventListener('DOMContentLoaded', () => {
       const main = document.getElementById('main-desktop');
       if (main) main.focus();
     }
+    if (typeof applyPikFloat === 'function') applyPikFloat(); // squad altitude re-check
   }
 
   function minimizeWindow(win) {
-    if (win.id === 'win-live' && typeof liveExit === 'function') liveExit();
+    if (win.id === 'win-live' && typeof liveExit === 'function') {
+      liveExit();
+      if (typeof deskPikResync === 'function') deskPikResync(); // squad walks home
+    }
     if (win.id === 'win-game' && typeof gameCamExit === 'function') gameCamExit();
     if (win.id === 'win-game' && typeof gameUnrotate === 'function') gameUnrotate();
     if (win.id === 'win-interview') {
@@ -378,6 +396,7 @@ document.addEventListener('DOMContentLoaded', () => {
     win.classList.add('window-minimized');
     win.classList.remove('window-active');
     focusTopWindow();
+    if (typeof applyPikFloat === 'function') applyPikFloat(); // squad altitude re-check
   }
 
   function toggleMaximizeWindow(win, btn) {
@@ -471,8 +490,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
         const clientY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
 
-        win.style.left = `${initialLeft + (clientX - startX)}px`;
-        win.style.top = `${initialTop + (clientY - startY)}px`;
+        // clamp: at least 40px of width and the top 48px (the title bar)
+        // always stay reachable — no window ever escapes the desk
+        const parent = win.offsetParent;
+        const pw = parent ? parent.clientWidth : window.innerWidth;
+        const ph = parent ? parent.clientHeight : window.innerHeight;
+        let nl = initialLeft + (clientX - startX);
+        let nt = initialTop + (clientY - startY);
+        nl = Math.max(40 - win.offsetWidth, Math.min(nl, pw - 40));
+        nt = Math.max(0, Math.min(nt, ph - 48));
+        win.style.left = `${nl}px`;
+        win.style.top = `${nt}px`;
       }
 
       function dragEnd() {
@@ -876,12 +904,26 @@ document.addEventListener('DOMContentLoaded', () => {
     return (resolvedTheme() === 'dark') ? DARK_OUTFITS : LIGHT_OUTFITS;
   }
 
+  // achievement-limited looks: these hang in the closet until earned
+  // (closest stand-ins: propeller cap ≈ goose aviator gear, mushroom
+  // cap ≈ storm umbrella, nightcap ≈ certified night owl uniform)
+  const OUTFIT_LOCKS = {
+    'propeller kid': 'goose', 'dream propeller': 'goose',
+    'mushroom cap': 'stormchaser', 'glow mushroom': 'stormchaser',
+    'classic nightcap': 'nightowl', 'sleep mask up': 'nightowl'
+  };
+  function outfitUnlocked(o) {
+    const need = OUTFIT_LOCKS[o.n[0]];
+    return !need || !!store.get('yos-achv', {})[need];
+  }
+
   function pickOutfit() {
     const pool = wardrobePool();
     const tags = seasonTags();
     const weighted = [];
     pool.forEach((o) => {
       if (o.season && !tags.includes(o.season)) return; // seasonal looks wait their turn
+      if (!outfitUnlocked(o)) return; // achievement-limited merch
       const w = o.season ? 4 : 1;
       for (let i = 0; i < w; i++) weighted.push(o);
     });
@@ -1880,16 +1922,31 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   if (chatLoveBtn) {
+    // hearts are free; fan counts have an 8s cooldown (anti-mash union rule)
+    let loveFanAt = 0, loveMash = 0;
     chatLoveBtn.addEventListener('click', () => {
       playSparkleSound();
       const msg = document.createElement('div');
       msg.className = 'chat-msg chat-self';
       msg.textContent = 'you: ♡♡♡♡♡';
       appendChatMessage(msg);
-      gainFollowers(1);
-      if (!pet.sleeping && !pet.busy) {
-        showBubble(trT('chat is sending love!! ♡', 'le chat envoie de l\'amour !! ♡'), 2000);
-        moveSlime({ action: 'happy', mood: 'adored', duration: 700, distance: 0.2 });
+      const now = Date.now();
+      if (now - loveFanAt > 8000) {
+        loveFanAt = now;
+        loveMash = 0;
+        gainFollowers(1);
+        if (!pet.sleeping && !pet.busy) {
+          showBubble(trT('chat is sending love!! ♡', 'le chat envoie de l\'amour !! ♡'), 2000);
+          moveSlime({ action: 'happy', mood: 'adored', duration: 700, distance: 0.2 });
+        }
+      } else if (!pet.sleeping && !pet.busy) {
+        loveMash++;
+        const lines = [
+          ['one heart at a time, chat ♡', 'un cœur à la fois, le chat ♡'],
+          ['the love meter needs a lil breather', 'le compteur d\'amour reprend son souffle'],
+          ['I FEEL it. counting resumes in a sec ♡', 'je le SENS. le comptage reprend dans une seconde ♡']
+        ][Math.min(loveMash - 1, 2)];
+        showBubble(trT(lines[0], lines[1]), 1800);
       }
     });
   }
@@ -2028,7 +2085,7 @@ document.addEventListener('DOMContentLoaded', () => {
       fr: 'Yongshan Yu — Lead Systèmes/LMS & Full-Stack + praticienne IA/Data, 3 ans et plus en ingénierie de plateforme, data science et MLOps.\nConcrètement : elle amène les projets JUSQU\'EN production — stacks cloud natives AWS/Azure, sécurité durcie (TLS/HSTS, UFW/Fail2ban, IAM au moindre privilège) et automatisation SRE : sauvegardes, reprise après sinistre, auto-réparation, observabilité.\nCe site est sa preuve de savoir-faire : HTML/CSS/JS écrits à la main, un gestionnaire de fenêtres, un synthé 8-bit, et moi. Zéro framework.'
     },
     {
-      k: ['skill', 'stack', 'tech', 'technology', 'programming', 'code', '技能', '技术栈', '会什么', '编程', 'compétence', 'compétences'],
+      k: ['skill', 'skills', 'stack', 'tech stack', 'tech', 'technology', 'technologies', 'programming', 'code', '技能', '技术栈', '会什么', '编程', 'compétence', 'compétences'],
       a: 'Her loadout:\n• Python (Pandas/NumPy/PyTorch/TF/HuggingFace), C/C++, SQL, R\n• AWS S3/EC2, Azure, Nginx, Redis, MariaDB\n• AgentOps: autonomous coding-agent orchestration\n• CV (YOLO), time series (ARIMA-GARCH), GenAI\n• SRE: CloudWatch, TLS/HSTS, UFW/Fail2ban, cron automation\n• WCAG 2.1 AA accessibility\nOpen inventory.sav for the full item box!',
       zh: '她的装备栏：\n• Python（Pandas/NumPy/PyTorch/TF/HuggingFace）、C/C++、SQL、R\n• AWS S3/EC2、Azure、Nginx、Redis、MariaDB\n• AgentOps：自主编码智能体编排\n• 计算机视觉（YOLO）、时间序列（ARIMA-GARCH）、生成式 AI\n• SRE：CloudWatch、TLS/HSTS、UFW/Fail2ban、cron 自动化\n• WCAG 2.1 AA 无障碍\n打开 inventory.sav 看完整道具箱！',
       fr: 'Son équipement :\n• Python (Pandas/NumPy/PyTorch/TF/HuggingFace), C/C++, SQL, R\n• AWS S3/EC2, Azure, Nginx, Redis, MariaDB\n• AgentOps : orchestration d\'agents de code autonomes\n• Vision (YOLO), séries temporelles (ARIMA-GARCH), IA générative\n• SRE : CloudWatch, TLS/HSTS, UFW/Fail2ban, automatisation cron\n• Accessibilité WCAG 2.1 AA\nOuvrez inventory.sav pour l\'inventaire complet !'
@@ -2094,7 +2151,14 @@ document.addEventListener('DOMContentLoaded', () => {
     {
       k: ['salary', 'pay', 'compensation', 'rate', '薪资', '工资', '报价', 'salaire'],
       a: 'A slime does not negotiate compensation!! That\'s between you and her inbox: yuyongshan573@gmail.com ♡',
+      zh: '史莱姆不谈薪资！！这种事归你和她的邮箱管：yuyongshan573@gmail.com ♡',
       fr: 'Un slime ne négocie pas les salaires !! C\'est entre vous et sa boîte mail : yuyongshan573@gmail.com ♡'
+    },
+    {
+      k: ['resume', 'cv', 'curriculum'],
+      a: 'The full quest log is in career_quest.exe — open it from the desktop, or type `resume` in the terminal! (spoiler: 3+ years, a production LMS, 47 merged agent PRs.)',
+      zh: '完整履历都在 career_quest.exe 里——双击桌面图标打开，或者在终端输入 `resume`！（剧透：3 年+ 经验、生产级 LMS、47 个合并的智能体 PR。）',
+      fr: 'Le journal de quêtes complet vit dans career_quest.exe — ouvrez-le depuis le bureau, ou tapez `resume` dans le terminal ! (spoiler : 3+ ans, un LMS en production, 47 PR d\'agents fusionnées.)'
     },
     {
       k: ['location', 'where', 'based', 'canada', 'timezone', '在哪', '哪里', '时区', 'basée', 'fuseau', 'habite'],
@@ -2301,6 +2365,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   let amaBusy = false;
+  let amaFanAt = 0; // fans grow at most once per 30s — no farming the bot
 
   function amaAsk(question) {
     try { achvBump('asks'); } catch (e) { /* pre-achv boot */ }
@@ -2324,7 +2389,10 @@ document.addEventListener('DOMContentLoaded', () => {
       playTone(987.77, 'sine', 0.08, 0, 0.05);
       amaBusy = false;
       amaRenderChips();
-      gainFollowers(1);
+      if (Date.now() - amaFanAt > 30000) {
+        amaFanAt = Date.now();
+        gainFollowers(1);
+      }
       if (!pet.sleeping && !pet.busy && Math.random() < 0.5) {
         showBubble(trT('someone\'s asking about her!! ♡', 'quelqu\'un pose des questions sur elle !! ♡'), 1800);
       }
@@ -2367,6 +2435,8 @@ document.addEventListener('DOMContentLoaded', () => {
     el.className = `t-line ${cls}`.trim();
     el.textContent = text;
     termOut.appendChild(el);
+    // scrollback budget: 350 lines, the oldest quietly retire
+    while (termOut.children.length > 350) termOut.removeChild(termOut.firstChild);
     termOut.scrollTop = termOut.scrollHeight;
   }
 
@@ -2382,6 +2452,7 @@ document.addEventListener('DOMContentLoaded', () => {
     a.textContent = text;
     wrap.appendChild(a);
     termOut.appendChild(wrap);
+    while (termOut.children.length > 350) termOut.removeChild(termOut.firstChild);
     termOut.scrollTop = termOut.scrollHeight;
   }
 
@@ -2392,10 +2463,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function termCmdRepos() {
     termLine('fetching api.github.com/users/yyswhsccc …', 't-dim');
+    // 8s deadline — "fetching…" is a status line, not a lifestyle
+    const ctl = new AbortController();
+    const deadline = setTimeout(() => ctl.abort(), 8000);
     try {
       const [userRes, repoRes] = await Promise.all([
-        fetch('https://api.github.com/users/yyswhsccc'),
-        fetch('https://api.github.com/users/yyswhsccc/repos?per_page=100&sort=updated')
+        fetch('https://api.github.com/users/yyswhsccc', { signal: ctl.signal }),
+        fetch('https://api.github.com/users/yyswhsccc/repos?per_page=100&sort=updated', { signal: ctl.signal })
       ]);
       if (!userRes.ok || !repoRes.ok) throw new Error('rate-limited');
       const user = await userRes.json();
@@ -2407,10 +2481,15 @@ document.addEventListener('DOMContentLoaded', () => {
         termLine(`  ${r.name}${r.description ? ' — ' + r.description : ''}`, 't-accent');
       });
       termLink('  ↗ github.com/yyswhsccc', 'https://github.com/yyswhsccc');
-    } catch {
-      termLine('✘ GitHub API unreachable (rate limit?) — cached copy:', 't-err');
+    } catch (e) {
+      const timedOut = e && e.name === 'AbortError';
+      termLine(timedOut
+        ? trT('✘ GitHub took longer than 8s — giving up politely. cached copy:', '✘ GitHub a dépassé 8 s — on abandonne poliment. copie en cache :')
+        : '✘ GitHub API unreachable (rate limit?) — cached copy:', 't-err');
       GITHUB_FALLBACK_REPOS.forEach(([n, d]) => termLine(`  ${n} — ${d}`, 't-accent'));
       termLink('  ↗ github.com/yyswhsccc', 'https://github.com/yyswhsccc');
+    } finally {
+      clearTimeout(deadline);
     }
   }
 
@@ -2532,6 +2611,7 @@ document.addEventListener('DOMContentLoaded', () => {
     'slime_live.exe': 'win-live',
     'hall_of_slime.exe': 'win-leaderboard',
     'interview_scheduler.exe': 'win-interview',
+    'pikdex.exe': 'win-pikdex',
     'terminal.exe': 'win-terminal'
   };
 
@@ -2542,6 +2622,7 @@ document.addEventListener('DOMContentLoaded', () => {
     ama: 'win-ama', ask: 'win-ama', about: 'win-ama',
     game: 'win-game', run: 'win-game',
     lb: 'win-leaderboard', top: 'win-leaderboard', hall: 'win-leaderboard',
+    pikdex: 'win-pikdex', dex: 'win-pikdex', pikmin: 'win-pikdex',
     interview: 'win-interview',
     edu: 'win-education', education: 'win-education',
     search: 'win-search', start: 'win-start-here', terminal: 'win-terminal'
@@ -2695,6 +2776,9 @@ document.addEventListener('DOMContentLoaded', () => {
      drops cryptic clues; `cheats` counts your finds.
      ===================================================== */
   function cheatFall(chars, n) {
+    // confetti budget: never more than 200 falling glyphs alive at once
+    const alive = document.querySelectorAll('.cheat-fall').length;
+    n = Math.max(0, Math.min(n, 200 - alive));
     for (let i = 0; i < n; i++) {
       const s = document.createElement('span');
       s.className = 'cheat-fall';
@@ -2740,6 +2824,7 @@ document.addEventListener('DOMContentLoaded', () => {
       termLine(trT('(the sky changed. open slime_live.exe to see it)', '(le ciel a changé. ouvre slime_live.exe pour le voir)'), 't-dim');
     }
   }
+  var honkLive = 0; // concurrent goose honks in flight
   function cheatFx(key) {
     const pend = (k) => { store.set('yos-cheat-next', k); termLine(trT('…armed for your NEXT run of slime_run.exe ♡', '…armé pour ta PROCHAINE run de slime_run.exe ♡'), 't-dim'); };
     switch (key) {
@@ -2781,10 +2866,15 @@ document.addEventListener('DOMContentLoaded', () => {
       case 'fanfare': playFanfare(); break;
       case 'honk': {
         // the `honk` spell is a purist: ALWAYS jasonlee's honk. no lottery.
-        if (soundEnabled && !document.hidden && document.hasFocus()) {
+        // (max 3 honks in flight — this is a stream, not an airport)
+        if (soundEnabled && !document.hidden && document.hasFocus() && honkLive < 3) {
+          honkLive++;
           const hk = new Audio('assets/goose_c.mp3');
           hk.volume = (resolvedTheme() === 'dark') ? 0.08 : 0.55;
-          hk.play().catch(() => {});
+          const honkDone = () => { honkLive = Math.max(0, honkLive - 1); };
+          hk.addEventListener('ended', honkDone);
+          hk.addEventListener('error', honkDone);
+          hk.play().catch(honkDone);
         }
         break;
       }
@@ -2827,8 +2917,8 @@ document.addEventListener('DOMContentLoaded', () => {
     'inflation':             ['🎈 inflation strikes: the slime is now 50% bigger. purchasing power: cuter.', '🎈 l\'inflation frappe : le slime est 50 % plus gros. pouvoir d\'achat : plus mignon.', 'big'],
     'carbon tax':            ['🌿 carbon neutral since forever: the slime runs on vibes and boba.', '🌿 neutre en carbone depuis toujours : le slime carbure aux vibes et au boba.', 'wxsun'],
     'universal healthcare':  ['🏥 in THIS country (Canada), your ♥ is covered. take one, eh.', '🏥 dans CE pays (le Canada), ton ♥ est couvert. prends-en un, eh.', 'life'],
-    'sorry':                 ['🇨🇦 apology accepted. apology returned. apology exchange complete, eh.', '🇨🇦 excuses acceptées. excuses retournées. échange d\'excuses complet, eh.', 'hearts'],
-    'maple syrup':           ['🍁 the strategic maple syrup reserve opens for you. sticky buff.', '🍁 la réserve stratégique de sirop d\'érable s\'ouvre pour toi. buff collant.', 'boba'],
+    'sorry eh':              ['🇨🇦 apology accepted. apology returned. apology exchange complete, eh.', '🇨🇦 excuses acceptées. excuses retournées. échange d\'excuses complet, eh.', 'hearts'],
+    'maple syrup please':    ['🍁 the strategic maple syrup reserve opens for you. sticky buff.', '🍁 la réserve stratégique de sirop d\'érable s\'ouvre pour toi. buff collant.', 'boba'],
     'poutine party':         ['🍟 the Poutine Party wins in a landslide. gravy for everyone.', '🍟 le Parti Poutine gagne haut la main. sauce pour tout le monde.', 'rich5'],
     'question period':       ['🏛 ORDER!! the honourable slime yields the floor to NO ONE.', '🏛 À L\'ORDRE !! l\'honorable slime ne cède la parole à PERSONNE.', 'zerg'],
     'moose lobby':           ['🫎 the moose lobby endorses you. geese furious. drama at 6.', '🫎 le lobby des orignaux te soutient. les bernaches furieuses. drame à 18 h.', 'geese'],
@@ -2943,6 +3033,8 @@ document.addEventListener('DOMContentLoaded', () => {
     'i am the danger':    ['🔥 a boss knocks. you answer. next run.', '🔥 un boss frappe à la porte. tu réponds. prochaine run.', 'boss'],
     'roll credits':       ['🎬 rolling…', '🎬 ça tourne…', 'credits']
   };
+  // the banner never lies: count the grimoire instead of hardcoding it
+  const CHEAT_COUNT = Object.keys(TERM_CHEATS).length;
 
   /* =====================================================
      FUZZY SPELLCASTING — close guesses count. The slime god
@@ -3154,7 +3246,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const ACHV_NS = 'yongshanos-yyswhsccc';
 
   var ACHV = [
-    { id: 'spellcaster', icon: '🔮', n: ['First Words of Power', 'Premiers Mots de Pouvoir'], d: ['cast a hidden cheat code. totally didn\'t google it.', 'a lancé un code secret. sans googler, évidemment.'], t: ['the terminal keeps 100 secrets.', 'le terminal garde 100 secrets.'] },
+    { id: 'spellcaster', icon: '🔮', n: ['First Words of Power', 'Premiers Mots de Pouvoir'], d: ['cast a hidden cheat code. totally didn\'t google it.', 'a lancé un code secret. sans googler, évidemment.'], t: ['the terminal keeps its secrets. all of them.', 'le terminal garde ses secrets. tous.'] },
     { id: 'spellsmith', icon: '✍️', n: ['The Slime God\'s Co-Author', 'Co-auteur·rice du Dieu Slime'], d: ['guessed a cheat SO wrong it became the official spelling.', 'a si mal deviné un code qu\'il est devenu l\'orthographe officielle.'], t: ['guess a cheat badly. with confidence.', 'devine un code mal. avec assurance.'] },
     { id: 'dreamwatcher', icon: '👀', n: ['Do Not Wake', 'Ne Pas Réveiller'], d: ['watched the slime sleepwalk across the desktop. said nothing.', 'a regardé le slime traverser le bureau en dormant. sans rien dire.'], t: ['midnight. the habitat empties…', 'minuit. l\'habitat se vide…'] },
     { id: 'nightmare', icon: '💀', n: ['It Got Worse', 'C\'est Devenu Pire'], d: ['met the sleepwalker\'s nightmare form: the biggest bug ever recorded.', 'a rencontré la forme cauchemar du somnambule : le plus gros bug jamais vu.'], t: ['sometimes a dream dives into the arcade… and curdles.', 'parfois un rêve plonge dans l\'arcade… et tourne mal.'] },
@@ -3212,12 +3304,12 @@ document.addEventListener('DOMContentLoaded', () => {
     { id: 'tarot1', icon: '🃏', m: 'tarots', v: 1, n: ['One Card Curious', 'Curieux·se d\'une Carte'], d: ['drew from the wizard. the card judged you gently.', 'a tiré chez le mage. la carte t\'a jugé·e avec douceur.'], t: ['the wizard shuffles.', 'le mage mélange.'] },
     { id: 'tarot10', icon: '🔮', m: 'tarots', v: 10, n: ['Fate\'s Frequent Customer', 'Client·e Fidèle du Destin'], d: ['10 draws. the wizard started a punch card too.', '10 tirages. le mage a lancé une carte de fidélité aussi.'], t: ['ten spreads deep.', 'dix tirages plus loin.'] },
     { id: 'tarot30', icon: '🌟', m: 'tarots', v: 30, n: ['Arcana Sommelier', 'Sommelier·ère des Arcanes'], d: ['30 draws. you can smell a reversed card from two events away.', '30 tirages. tu flaires une carte renversée à deux événements.'], t: ['thirty cards later…', 'trente cartes plus tard…'] },
-    { id: 'c5', icon: '🗝️', n: ['Keyring Started', 'Trousseau Entamé'], d: ['found 5 cheat codes. 95 still hiding. they giggle.', 'a trouvé 5 codes. 95 se cachent encore. ils gloussent.'], t: ['find five secrets.', 'trouve cinq secrets.'] },
+    { id: 'c5', icon: '🗝️', n: ['Keyring Started', 'Trousseau Entamé'], d: ['found 5 cheat codes. the rest are still hiding. they giggle.', 'a trouvé 5 codes. les autres se cachent encore. ils gloussent.'], t: ['find five secrets.', 'trouve cinq secrets.'] },
     { id: 'c10', icon: '🕵️', n: ['Spellbook: Chapter One', 'Grimoire : Chapitre Un'], d: ['10 codes found. the terminal is mildly impressed.', '10 codes trouvés. le terminal est modérément impressionné.'], t: ['double digits of secrets.', 'des secrets à deux chiffres.'] },
     { id: 'c25', icon: '📖', n: ['Forbidden Librarian', 'Bibliothécaire de l\'Interdit'], d: ['25 codes. you shelve secrets by smell now.', '25 codes. tu ranges les secrets à l\'odeur.'], t: ['a quarter of the truth.', 'un quart de la vérité.'] },
     { id: 'c50', icon: '🧙', n: ['Half the Grimoire', 'La Moitié du Grimoire'], d: ['50 codes. the slime god follows YOU for updates.', '50 codes. le dieu slime TE suit pour les mises à jour.'], t: ['fifty whispers down.', 'cinquante murmures percés.'] },
     { id: 'c75', icon: '⚗️', n: ['Three Quarters Mad', 'Fou·folle aux Trois Quarts'], d: ['75 codes. you type in tongues.', '75 codes. tu tapes en langues anciennes.'], t: ['past the point of return.', 'passé le point de non-retour.'] },
-    { id: 'c100', icon: '🏆', n: ['The Whole Grimoire', 'Le Grimoire Entier'], d: ['ALL 100 codes. the terminal bows. we\'re not worthy.', 'les 100 codes. le terminal s\'incline. on n\'est pas dignes.'], t: ['all of them. all.', 'tous. absolument tous.'] },
+    { id: 'c100', icon: '🏆', n: ['The Whole Grimoire', 'Le Grimoire Entier'], d: ['100 codes deep. the terminal bows. we\'re not worthy.', '100 codes au compteur. le terminal s\'incline. on n\'est pas dignes.'], t: ['all of them. all.', 'tous. absolument tous.'] },
     { id: 'gift10', icon: '🎁', m: 'gifts', v: 10, n: ['Reliable Patron', 'Mécène Fiable'], d: ['sent 10 stream gifts. the slime practices its surprised face.', 'a envoyé 10 cadeaux. le slime répète sa tête surprise.'], t: ['the gift row exists.', 'la rangée de cadeaux existe.'] },
     { id: 'gift50', icon: '💝', m: 'gifts', v: 50, n: ['Whale (Affectionate)', 'Baleine (Affectueuse)'], d: ['50 gifts. the stream economy is 80% you.', '50 cadeaux. l\'économie du stream, c\'est 80 % toi.'], t: ['fifty deliveries.', 'cinquante livraisons.'] },
     { id: 'gift200', icon: '🐋', m: 'gifts', v: 200, n: ['Central Bank of Cute', 'Banque Centrale du Mignon'], d: ['200 gifts. economists study your generosity curve.', '200 cadeaux. des économistes étudient ta courbe de générosité.'], t: ['two hundred parcels.', 'deux cents colis.'] },
@@ -3283,7 +3375,20 @@ document.addEventListener('DOMContentLoaded', () => {
     { id: 'gift500', icon: '🎆', m: 'gifts', v: 500, n: ['GDP Contributor', 'Contributeur·rice au PIB'], d: ['500 gifts. the stream economy issued you a passport.', '500 cadeaux. l\'économie du stream t\'a délivré un passeport.'], t: ['five hundred parcels.', 'cinq cents colis.'] },
     { id: 'nap300', icon: '🌌', m: 'naps', v: 300, n: ['Curator of Dreams', 'Conservateur·rice des Rêves'], d: ['300 naps curated. the dream museum has a you-shaped statue.', '300 siestes organisées. le musée du rêve a une statue à ton effigie.'], t: ['three hundred lullabies.', 'trois cents berceuses.'] },
     { id: 'jump100', icon: '🐇', m: 'jumps', v: 100, n: ['Bunny Apprentice', 'Apprenti·e Lapin'], d: ['100 jumps. the rabbits accepted your application.', '100 sauts. les lapins ont accepté ta candidature.'], t: ['the first hundred hops.', 'les cent premiers bonds.'] },
-    { id: 'chameleon', icon: '🦎', n: ['The Impossible Shade', 'La Teinte Impossible'], d: ['plucked the hidden CHAMELEON pikmin — it refuses to pick a colour. mood.', 'a cueilli le pikmin CAMÉLÉON caché — il refuse de choisir une couleur. tellement relatable.'], t: ['1 in 10 sprouts hides a secret.', '1 pousse sur 10 cache un secret.'] }
+    { id: 'chameleon', icon: '🦎', n: ['The Impossible Shade', 'La Teinte Impossible'], d: ['plucked the hidden CHAMELEON pikmin — it refuses to pick a colour. mood.', 'a cueilli le pikmin CAMÉLÉON caché — il refuse de choisir une couleur. tellement relatable.'], t: ['1 in 10 sprouts hides a secret.', '1 pousse sur 10 cache un secret.'] },
+    { id: 'colorpicker', icon: '🎨', n: ['Color Picker', 'Pipette à Couleurs'], d: ['25% of the hue wheel collected. the eyedropper nods, professionally.', '25 % de la roue chromatique. la pipette hoche la tête, en pro.'], t: ['pluck across the rainbow.', 'cueille à travers l\'arc-en-ciel.'] },
+    { id: 'halftone', icon: '🖨️', n: ['Halftone Hero', 'Héros du Demi-Ton'], d: ['half the hue wheel. serious print-shop energy.', 'la moitié de la roue. sérieuse énergie d\'imprimerie.'], t: ['the wheel is half full.', 'la roue est à moitié pleine.'] },
+    { id: 'truecolor', icon: '🌈', n: ['TRUE COLOR', 'TRUE COLOR'], d: ['all 50 wheel segments — the fifty shades of hue, every last one home.', 'les 50 segments — les cinquante nuances de teinte, toutes rentrées.'], t: ['fifty shades. of hue. you see where this goes.', 'cinquante nuances. de teinte. tu vois où ça mène.'] },
+    { id: 'censored', icon: '🧼', n: ['Family Friendly', 'Adapté aux Familles'], d: ['tried to swear on an arcade board. the soap won.', 'a tenté de jurer sur une borne d\'arcade. le savon a gagné.'], t: ['the slime has standards.', 'le slime a des principes.'] },
+    { id: 'bsod', icon: '💖', n: ['Pink Screen of Death', 'Écran Rose de la Mort'], d: ['crashed the whole OS into a wall of pink. it un-crashed on request.', 'a planté l\'OS entier dans un mur de rose. il s\'est déplanté sur demande.'], t: ['the red dot is not decorative.', 'le point rouge n\'est pas décoratif.'] },
+    { id: 'whale', icon: '🐋', n: ['Certified Whale', 'Baleine Certifiée'], d: ['sent 50 lifetime gifts. the slime is shopping for a bigger stage.', 'a envoyé 50 cadeaux en tout. le slime cherche une plus grande scène.'], t: ['gifts add up. all of them.', 'les cadeaux s\'additionnent. tous.'] },
+    { id: 'spamlord', icon: '📦', n: ['Storm Herald', 'Héraut de la Tempête'], d: ['triggered 3 gift storms. the slime\'s union sends its regards.', 'a déclenché 3 tempêtes de cadeaux. le syndicat du slime envoie ses amitiés.'], t: ['too many gifts, too fast. three times.', 'trop de cadeaux, trop vite. trois fois.'] },
+    { id: 'clingy', icon: '📌', n: ['Load-Bearing Bookmark', 'Marque-Page Porteur'], d: ['pressed save 10 times in one visit. the bookmark holds the site up now.', 'a appuyé 10 fois sur « sauvegarder » en une visite. le marque-page soutient le site.'], t: ['save. again. and again…', 'sauvegarde. encore. et encore…'] },
+    { id: 'greedy', icon: '🧾', n: ['Audited by the Tax Slime', 'Contrôlé·e par le Slime Fiscal'], d: ['re-submitted the same cheat until the tax slime showed up: 0 coins.', 'a resoumis la même triche jusqu\'à l\'arrivée du slime fiscal : 0 pièce.'], t: ['greed has diminishing returns.', 'l\'avidité a des rendements décroissants.'] },
+    { id: 'robot', icon: '🤖', n: ['beep boop?', 'bip boup ?'], d: ['typed faster than any human should. the shell asked to see some ID.', 'a tapé plus vite qu\'aucun humain. le shell a demandé une pièce d\'identité.'], t: ['type. very. fast.', 'tape. très. vite.'] },
+    { id: 'haxx', icon: '🛡️', n: ['hacker-chan', 'hacker-chan'], d: ['tried an injection on a textContent-pilled search bar. 0 rows dropped.', 'a tenté une injection sur une barre blindée au textContent. 0 table supprimée.'], t: ['the search bar has seen things.', 'la barre de recherche en a vu d\'autres.'] },
+    { id: 'yue', icon: '🥟', n: ['Gwong Dung Waa', 'Gwong Dung Waa'], d: ['asked the terminal for Cantonese. it tried its very best ♡', 'a demandé le cantonais au terminal. il a fait de son mieux ♡'], t: ['the shell speaks more languages than it admits.', 'le shell parle plus de langues qu\'il ne l\'avoue.'] },
+    { id: 'archmage', icon: '🔮', n: ['MEGA Archmage', 'Archimage MÉGA'], d: ['discovered all 8 MEGA spells in the gift grimoire. the stage bows.', 'a découvert les 8 sorts MÉGA du grimoire à cadeaux. la scène s\'incline.'], t: ['some emojis are blessed. find all 8 blessings.', 'certains emojis sont bénis. trouve les 8 bénédictions.'] }
   ];
 
   // ---- metric engine: count things, achievements pop themselves ----
@@ -3298,6 +3403,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   var achvCounts = null;
   var achvCountsAt = 0;
+  var achvCountsPending = null; // one census at a time, please
   var achvToastTimer = null;
 
   function achvToastShow(a) {
@@ -3334,6 +3440,13 @@ document.addEventListener('DOMContentLoaded', () => {
     got[id] = Date.now();
     store.set('yos-achv', got);
     if (!quiet) achvToastShow(a);
+    // some trophies come with merch: announce the freshly unlocked fit
+    const fit = {
+      goose: ['new fit unlocked: 🪿 propeller cap ♡', 'nouvelle tenue : 🪿 casquette à hélice ♡'],
+      stormchaser: ['new fit unlocked: ☔ mushroom umbrella cap ♡', 'nouvelle tenue : ☔ chapeau-champignon parapluie ♡'],
+      nightowl: ['new fit unlocked: 🌙 classic nightcap ♡', 'nouvelle tenue : 🌙 bonnet de nuit classique ♡']
+    }[id];
+    if (fit && !quiet) setTimeout(() => showToast(trT(fit[0], fit[1])), 2600);
     if (achvCounts && typeof achvCounts[id] === 'number') achvCounts[id]++;
     // skipRemote: cloud-restored unlocks were already counted on the original device
     if (navigator.onLine && !skipRemote) fetch(`${ACHV_API}/hit/${ACHV_NS}/achv-${id}`).catch(() => {});
@@ -3343,19 +3456,38 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function achvFetchCounts() {
-    if (!navigator.onLine) return Promise.resolve(null);
     if (achvCounts && Date.now() - achvCountsAt < 120000) return Promise.resolve(achvCounts);
-    return Promise.all(
-      ACHV.map((a) => fetch(`${ACHV_API}/get/${ACHV_NS}/achv-${a.id}`)
+    // 10-minute disk cache — reopening the hall shouldn't re-poll the world
+    const cached = store.get('yos-achv-counts-cache', null);
+    if (cached && cached.at && Date.now() - cached.at < 600000 && cached.counts) {
+      achvCounts = cached.counts;
+      achvCountsAt = cached.at;
+      return Promise.resolve(achvCounts);
+    }
+    if (!navigator.onLine) return Promise.resolve(null);
+    if (achvCountsPending) return achvCountsPending;
+    // polite census: max 8 requests in flight instead of ~140 at once
+    const ids = ACHV.map((a) => a.id);
+    const vals = new Array(ids.length).fill(0);
+    let next = 0;
+    const worker = () => {
+      const i = next++;
+      if (i >= ids.length) return Promise.resolve();
+      return fetch(`${ACHV_API}/get/${ACHV_NS}/achv-${ids[i]}`)
         .then((r) => (r.ok ? r.json() : { value: 0 }))
-        .then((d) => Math.max(0, Number(d.value) || 0))
-        .catch(() => 0))
-    ).then((vals) => {
+        .then((d) => { vals[i] = Math.max(0, Number(d.value) || 0); })
+        .catch(() => { vals[i] = 0; })
+        .then(worker);
+    };
+    achvCountsPending = Promise.all(Array.from({ length: 8 }, worker)).then(() => {
       achvCounts = {};
-      ACHV.forEach((a, i) => { achvCounts[a.id] = vals[i]; });
+      ids.forEach((id, i) => { achvCounts[id] = vals[i]; });
       achvCountsAt = Date.now();
+      store.set('yos-achv-counts-cache', { at: achvCountsAt, counts: achvCounts });
+      achvCountsPending = null;
       return achvCounts;
-    }).catch(() => null);
+    }).catch(() => { achvCountsPending = null; return null; });
+    return achvCountsPending;
   }
 
   function renderAchievements() {
@@ -3395,6 +3527,7 @@ document.addEventListener('DOMContentLoaded', () => {
       grid.appendChild(card);
     });
     if (!achvCounts) achvFetchCounts().then((c) => { if (c) renderAchievements(); });
+    renderSpellbook(); // the MEGA grimoire lives right under the trophies
     cloudRenderPanel();
   }
 
@@ -3602,48 +3735,134 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     return out;
   }
+  /* the pikdex travels too. format v2: each pikmin packs hue·stage·
+     chameleon·skill·SPECIES — two to a counter (a species dimension no
+     longer fits three under 2^53). names are derived, never stored.
+     the HIDDEN_SPECIES array order is the wire format: append-only! */
+  const PIK_PACK = 17280;              // 360 hues × 3 stages × 2 chameleon × 8 skills
+  const PIK_PACK2 = PIK_PACK * 23;     // × (22 species + 'none') = 397 440
+  function pikdexEncodeChunks() {
+    const dex = (typeof pikdexGet === 'function' ? pikdexGet() : []).slice(0, 78);
+    const packed = dex.map((p) => {
+      const h = p.h != null ? ((p.h % 360) + 360) % 360 : 330;
+      const s = Math.min(p.s || 0, 2);
+      const ch = p.ch ? 1 : 0;
+      const kIx = Math.max(0, PIK_SKILLS.findIndex((sk) => sk.id === p.k));
+      const spIx = p.sp ? Math.max(0, HIDDEN_SPECIES.findIndex((sp) => sp.id === p.sp) + 1) : 0;
+      return h + 360 * (s + 3 * ch + 6 * kIx) + PIK_PACK * spIx;
+    });
+    const chunks = [];
+    for (let i = 0; i < packed.length; i += 2) {
+      chunks.push(1 + (packed[i] || 0) + (packed[i + 1] || 0) * PIK_PACK2);
+    }
+    return { n: packed.length, chunks };
+  }
+  function pikdexDecodeV2(n, vals) {
+    const flat = [];
+    vals.forEach((v) => {
+      v = Math.max(0, Math.floor(Number(v) || 0) - 1);
+      for (let j = 0; j < 2; j++) { flat.push(v % PIK_PACK2); v = Math.floor(v / PIK_PACK2); }
+    });
+    return flat.slice(0, Math.min(n, 78)).map((pv2) => {
+      const spIx = Math.floor(pv2 / PIK_PACK) % 23;
+      const pv = pv2 % PIK_PACK;
+      const h = pv % 360;
+      let rest = Math.floor(pv / 360);
+      const s = rest % 3; rest = Math.floor(rest / 3);
+      const ch = rest % 2;
+      const kIx = Math.floor(rest / 2) % 8;
+      return { h, ch, s, k: (PIK_SKILLS[kIx] || PIK_SKILLS[0]).id, sp: spIx > 0 ? (HIDDEN_SPECIES[spIx - 1] || {}).id || null : null, a: 0, t: 0 };
+    });
+  }
+  function pikdexDecodeV1(n, vals) {
+    // legacy 3-per-counter chunks from before hidden species existed
+    const flat = [];
+    vals.forEach((v) => {
+      v = Math.max(0, Math.floor(Number(v) || 0) - 1);
+      for (let j = 0; j < 3; j++) { flat.push(v % PIK_PACK); v = Math.floor(v / PIK_PACK); }
+    });
+    return flat.slice(0, Math.min(n, 72)).map((pv) => {
+      const h = pv % 360;
+      let rest = Math.floor(pv / 360);
+      const s = rest % 3; rest = Math.floor(rest / 3);
+      const ch = rest % 2;
+      const kIx = Math.floor(rest / 2) % 8;
+      return { h, ch, s, k: (PIK_SKILLS[kIx] || PIK_SKILLS[0]).id, sp: null, a: 0, t: 0 };
+    });
+  }
+  function pikdexMergeRemote(remote) {
+    // append-only union: both devices grew from a shared prefix, so the
+    // longer list wins the tail; local duty picks are always respected
+    if (!remote.length) return;
+    const dex = pikdexGet();
+    if (remote.length <= dex.length) return;
+    const before = pikdexWheelPct(dex);
+    remote.slice(dex.length).forEach((r) => { dex.push(r); });
+    // keep the squad staffed: if there's room on duty, promote arrivals
+    let active = dex.filter((p) => p.a).length;
+    dex.forEach((p) => { if (!p.a && active < PIK_MAX) { p.a = 1; active++; } });
+    pikdexSave(dex);
+    pikdexRosterProject();
+    pikdexWheelCheck(before);
+    if (typeof deskPikResync === 'function') deskPikResync();
+    if (typeof renderPikdexSoon === 'function') renderPikdexSoon();
+  }
   var cloudExtraLast = '';
   function cloudExtraSync() {
     if (!cloudSlot || !navigator.onLine) return;
     const u = cloudSlot.uid;
     const spells = spellEncodeChunks();
-    const payload = [achvBitsRange(18, 68), achvBitsRange(68, 118), achvBitsRange(118, 138), spells.length].concat(spells);
+    const piks = pikdexEncodeChunks();
+    // b4 widened from (118, 138) to (118, 168): the patch achievements push ACHV to 142,
+    // past the old annex ceiling — the pull loop already walks 50 bits so only the pack changes
+    const payload = [achvBitsRange(18, 68), achvBitsRange(68, 118), achvBitsRange(118, 168), spells.length, piks.n, 2].concat(spells).concat(piks.chunks);
     const sig = payload.join(',');
     if (sig === cloudExtraLast) return;
     let p = cloudSet(`sv2-${u}-b2`, payload[0])
       .then(() => cloudSet(`sv2-${u}-b3`, payload[1]))
       .then(() => cloudSet(`sv2-${u}-b4`, payload[2]))
-      .then(() => cloudSet(`sv2-${u}-spn`, spells.length));
+      .then(() => cloudSet(`sv2-${u}-spn`, spells.length))
+      .then(() => cloudSet(`sv2-${u}-pkn`, piks.n))
+      .then(() => cloudSet(`sv2-${u}-pkv`, 2)); // wire-format version (v2 = species-aware)
     spells.forEach((v, j) => { p = p.then(() => cloudSet(`sv2-${u}-sp${j}`, v)); });
+    piks.chunks.forEach((v, j) => { p = p.then(() => cloudSet(`sv2-${u}-pk${j}`, v)); });
     p.then(() => { cloudExtraLast = sig; }).catch(() => { /* retried on next sync */ });
   }
   function cloudExtraPull() {
     if (!cloudSlot) return;
     const u = cloudSlot.uid;
-    Promise.all([cloudGet(`sv2-${u}-b2`), cloudGet(`sv2-${u}-b3`), cloudGet(`sv2-${u}-b4`), cloudGet(`sv2-${u}-spn`)])
-      .then(([b2, b3, b4, spn]) => {
+    Promise.all([cloudGet(`sv2-${u}-b2`), cloudGet(`sv2-${u}-b3`), cloudGet(`sv2-${u}-b4`), cloudGet(`sv2-${u}-spn`), cloudGet(`sv2-${u}-pkn`), cloudGet(`sv2-${u}-pkv`)])
+      .then(([b2, b3, b4, spn, pkn, pkv]) => {
         [[b2, 18], [b3, 68], [b4, 118]].forEach(([bits, off]) => {
           for (let i = 0; bits > 0 && i < 50; i++) {
             if (Math.floor(bits / Math.pow(2, i)) % 2 === 1 && ACHV[off + i]) achvUnlock(ACHV[off + i].id, true, true);
           }
         });
+        const jobs = [];
         if (spn > 0) {
-          return Promise.all(Array.from({ length: Math.min(spn, 12) }, (_, j) => cloudGet(`sv2-${u}-sp${j}`)))
+          jobs.push(Promise.all(Array.from({ length: Math.min(spn, 12) }, (_, j) => cloudGet(`sv2-${u}-sp${j}`)))
             .then((vals) => {
               const remote = spellDecode(vals);
               const local = store.get('yos-cheat-renames', {});
               let changed = false;
               Object.keys(remote).forEach((k) => { if (!local[k]) { local[k] = remote[k]; changed = true; } });
               if (changed) store.set('yos-cheat-renames', local);
-            });
+            }));
         }
+        if (pkn > 0) {
+          const v2 = pkv >= 2;
+          const nChunks = Math.ceil(Math.min(pkn, 78) / (v2 ? 2 : 3));
+          jobs.push(Promise.all(Array.from({ length: nChunks }, (_, j) => cloudGet(`sv2-${u}-pk${j}`)))
+            .then((vals) => pikdexMergeRemote(v2 ? pikdexDecodeV2(pkn, vals) : pikdexDecodeV1(pkn, vals))));
+        }
+        return Promise.all(jobs);
       })
       .catch(() => { /* the annex can wait */ });
   }
 
   function cloudStatusLine() {
     if (!navigator.onLine || cloudState === 'offline') return trT('📡 offline — will sync when the internet returns', '📡 hors-ligne — synchro au retour d\'internet');
-    if (cloudState === 'synced') return trT('☁ saved to the backend ♡ (achievements · hi-score · cheat census · fans)', '☁ sauvegardé côté serveur ♡ (succès · record · codes · fans)');
+    if (cloudState === 'synced') return trT('☁ saved to the backend ♡ (achievements · hi-score · cheats · fans · pikdex)', '☁ sauvegardé côté serveur ♡ (succès · record · codes · fans · pikdex)');
     if (cloudState === 'creating') return trT('☁ reserving your save slot…', '☁ réservation de ton emplacement…');
     if (cloudState === 'error') return trT('☁ backend unreachable — retrying on the next change', '☁ serveur injoignable — nouvel essai au prochain changement');
     return trT('☁ cloud save armed', '☁ sauvegarde cloud armée');
@@ -3763,7 +3982,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (lower === 'cheats' || lower === 'secrets') {
       const found = Math.max(store.get('yos-cheats-found', []).length, store.get('yos-cheats-cloudn', 0));
       const renamed = Object.keys(store.get('yos-cheat-renames', {})).length;
-      termLine(trT(`there are 100 secret codes hidden in this OS. you have found ${found}.`, `il y a 100 codes secrets cachés dans cet OS. tu en as trouvé ${found}.`), 't-accent');
+      termLine(trT(`there are ${CHEAT_COUNT} secret codes hidden in this OS. you have found ${found}.`, `il y a ${CHEAT_COUNT} codes secrets cachés dans cet OS. tu en as trouvé ${found}.`), 't-accent');
       termLine(trT('I will never list them. try `hint` if you must.', 'je ne les listerai jamais. essaie `hint` en désespoir de cause.'), 't-dim');
       termLine(trT('close guesses count — the slime god grades fan fiction as canon.', 'les réponses approximatives comptent — le dieu slime accepte la fanfiction comme canon.'), 't-dim');
       if (renamed) termLine(trT(`(${renamed} spell${renamed === 1 ? '' : 's'} in the book now bear YOUR handwriting)`, `(${renamed} sort${renamed === 1 ? '' : 's'} du grimoire porte${renamed === 1 ? '' : 'nt'} désormais TON écriture)`), 't-ok');
@@ -3843,6 +4062,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (cmd === 'lang') {
       if (args[0] === 'en' || args[0] === 'fr') { applyLang(args[0], true); termLine(`lang → ${args[0]}`, 't-ok'); }
+      else if (args[0] === 'yue') {
+        // 粤语 easter egg — the shell tries its best
+        termLine('识听唔识讲？冇问题，slime 都係咁 ♡（粤语模式研发中）', 't-accent');
+        achvUnlock('yue');
+      }
       else termLine(trT('lang: usage `lang en|fr`', 'lang : usage `lang en|fr`'), 't-err');
       return;
     }
@@ -3871,6 +4095,20 @@ document.addEventListener('DOMContentLoaded', () => {
     else termLine(trT(`${cmd}: command not found — try \`help\``, `${cmd} : commande introuvable — essayez \`help\``), 't-err');
   }
 
+  // rapid-fire detector: >5 commands in 1.2s smells like automation
+  var termBurst = [];
+  var termBurstQuipAt = 0;
+  function termBurstCheck() {
+    const now = Date.now();
+    termBurst.push(now);
+    termBurst = termBurst.filter((ts) => now - ts <= 1200);
+    if (termBurst.length > 5 && now - termBurstQuipAt > 30000) {
+      termBurstQuipAt = now;
+      termLine(trT('…are you a script? blink twice', '…tu es un script ? cligne deux fois'), 't-accent');
+      achvUnlock('robot');
+    }
+  }
+
   if (termForm && termInput) {
     termForm.addEventListener('submit', (e) => {
       e.preventDefault();
@@ -3879,7 +4117,9 @@ document.addEventListener('DOMContentLoaded', () => {
       if (value.trim()) {
         try { achvBump('cmds'); } catch (err) { /* metrics are optional */ }
         termHistory.push(value);
+        if (termHistory.length > 200) termHistory.shift(); // history has limits
         termHistoryIdx = termHistory.length;
+        termBurstCheck();
       }
       runTermCommand(value);
     });
@@ -3913,17 +4153,34 @@ document.addEventListener('DOMContentLoaded', () => {
     termLine(trT('YongshanOS terminal — hand-rolled, no libraries.', 'terminal YongshanOS — fait main, sans bibliothèques.'), 't-accent');
     termLine(trT('this shell drives the whole OS: windows, themes, the pet, even the fan wall.', 'ce shell pilote tout l\'OS : fenêtres, thèmes, le familier, même le mur de fans.'), 't-dim');
     termLine(trT('type `help` to see everything · `neofetch` to vibe · `ask <question>` to talk.', 'tapez `help` pour tout voir · `neofetch` pour l\'ambiance · `ask <question>` pour discuter.'), 't-dim');
-    termLine(trT('…oh, and this OS hides 100 cheat codes. type `cheats`. that\'s all I\'m saying ♡', '…oh, et cet OS cache 100 codes secrets. tapez `cheats`. je n\'en dirai pas plus ♡'), 't-accent');
+    termLine(trT(`…oh, and this OS hides ${CHEAT_COUNT} cheat codes. type \`cheats\`. that's all I'm saying ♡`, `…oh, et cet OS cache ${CHEAT_COUNT} codes secrets. tapez \`cheats\`. je n'en dirai pas plus ♡`), 't-accent');
     termLine('');
   }
 
-  // Save bookmark click
+  // Save bookmark click — repeat pressers get an escalating storyline
+  // (and an 8s cooldown on the actual fan gain, one heart per save spree)
   const btnSave = document.getElementById('btn-save-page');
+  var saveClicks = 0;
+  var saveFanAt = 0;
   if (btnSave) {
     btnSave.addEventListener('click', () => {
       playSparkleSound();
-      showToast(t('toast.saved'));
-      gainFollowers(1);
+      saveClicks++;
+      if (saveClicks >= 10) {
+        showToast(trT('ok. you can stop now. (you won\'t.)', 'ok. tu peux arrêter. (tu n\'arrêteras pas.)'));
+        achvUnlock('clingy');
+        if (!pet.sleeping && !pet.busy) showBubble(trT('you\'ve saved me 10 times. I live in your bookmarks bar now.', 'tu m\'as sauvegardé 10 fois. j\'habite dans ta barre de favoris maintenant.'), 3000);
+      } else if (saveClicks >= 5) {
+        showToast(trT('the bookmark is now load-bearing', 'le marque-page est désormais porteur'));
+      } else if (saveClicks === 3) {
+        showToast(trT('I remember you. I never forgot ♡', 'je me souviens de toi. je n\'ai jamais oublié ♡'));
+      } else if (saveClicks === 2) {
+        showToast(trT('already saved!! double pinky promise', 'déjà sauvegardé !! double promesse jurée'));
+      } else {
+        showToast(trT('✨ bookmarked in your heart ✨', '✨ enregistré dans ton cœur ✨'));
+      }
+      const now = Date.now();
+      if (now - saveFanAt > 8000) { saveFanAt = now; gainFollowers(1); }
     });
   }
 
@@ -3986,6 +4243,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (typeof refreshGameInvite === 'function') refreshGameInvite();
     // live search results re-rank in the new language too
     try { if (searchInput && searchInput.value) renderSearch(searchInput.value); } catch (e) { /* pre-boot */ }
+    // an open pikdex re-renders on the spot (wheel note, dossiers, buttons)
+    try {
+      const pikWin = document.getElementById('win-pikdex');
+      if (pikWin && !pikWin.classList.contains('window-closed') && typeof renderPikdex === 'function') {
+        if (typeof pikProfileHide === 'function') pikProfileHide();
+        renderPikdex();
+      }
+    } catch (e) { /* pre-boot */ }
 
     // the AMA feed follows too: re-greet if untouched, otherwise hand over politely
     if (typeof amaFeed !== 'undefined' && amaFeed && amaFeed.children.length) {
@@ -4054,7 +4319,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const themeBtn = document.getElementById('btn-theme-toggle');
     if (themeBtn) themeBtn.textContent = th === 'dark' ? '🌞' : '🌙';
 
-    if (th === 'dark') buildNightSky();
+    if (th === 'dark') { buildNightSky(); nsShootStart(); }
+    else { nsShootStop(); if (typeof scheduleGameInvite === 'function') scheduleGameInvite(); }
     if (th === 'dark') achvUnlock('nightowl');
     applyThemeChrome();
     gRefreshTheme();
@@ -4457,8 +4723,17 @@ document.addEventListener('DOMContentLoaded', () => {
       sky.appendChild(star);
     }
 
-    setInterval(() => {
-      if (REDUCED_MOTION) return;
+    nsShootStart();
+  }
+
+  // shooting stars only tick while it's actually night — light mode
+  // clears the interval instead of idling forever
+  var nsShootTimer = null;
+  function nsShootStart() {
+    if (nsShootTimer || REDUCED_MOTION) return;
+    const sky = document.getElementById('night-sky');
+    if (!sky) return;
+    nsShootTimer = setInterval(() => {
       if (document.documentElement.getAttribute('data-theme') !== 'dark') return;
       if (Math.random() < 0.45) return;
       const shoot = document.createElement('span');
@@ -4468,6 +4743,9 @@ document.addEventListener('DOMContentLoaded', () => {
       sky.appendChild(shoot);
       shoot.addEventListener('animationend', () => shoot.remove());
     }, 7000);
+  }
+  function nsShootStop() {
+    if (nsShootTimer) { clearInterval(nsShootTimer); nsShootTimer = null; }
   }
 
   /* =====================================================
@@ -4484,6 +4762,7 @@ document.addEventListener('DOMContentLoaded', () => {
     'win-game': 'slime_run.exe',
     'win-live': 'slime_live.exe',
     'win-leaderboard': 'hall_of_slime.exe',
+    'win-pikdex': 'pikdex.exe',
     'win-interview': 'interview_scheduler.exe',
     'win-education': 'education_awards.txt',
     'win-start-here': 'start_here.txt'
@@ -4494,6 +4773,7 @@ document.addEventListener('DOMContentLoaded', () => {
     terminal: 'win-terminal', term: 'win-terminal', search: 'win-search',
     game: 'win-game', run: 'win-game', play: 'win-game',
     live: 'win-live',
+    pikdex: 'win-pikdex', pikmin: 'win-pikdex', dex: 'win-pikdex',
     hiscore: 'win-leaderboard', top: 'win-leaderboard', leaderboard: 'win-leaderboard', hall: 'win-leaderboard',
     interview: 'win-interview', hire: 'win-interview',
     edu: 'win-education', education: 'win-education',
@@ -4565,6 +4845,93 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  /* =====================================================
+     S2 EXTRAS — the traffic lights are REAL buttons now
+     🔴 pink screen of death · 🟡 boss key · 🟢 fullscreen
+     ===================================================== */
+  var dotTuckedAway = null; // the yellow dot remembers who it tucked in
+  var addrCheatTax = {};    // per-session greed ledger for address-bar cheats
+
+  function bsodShow() {
+    if (document.getElementById('yos-bsod')) return;
+    const ov = document.createElement('div');
+    ov.id = 'yos-bsod';
+    ov.className = 'yos-bsod' + (REDUCED_MOTION ? ' bsod-still' : '');
+    ov.setAttribute('role', 'alertdialog');
+    ov.setAttribute('aria-label', 'SLIME_SCREEN_OF_DEATH — harmless easter egg');
+    const face = document.createElement('div');
+    face.className = 'bsod-face';
+    face.textContent = ':(';
+    const h = document.createElement('div');
+    h.className = 'bsod-title';
+    h.textContent = 'SLIME_SCREEN_OF_DEATH ♡';
+    const body = document.createElement('div');
+    body.className = 'bsod-body';
+    [
+      trT('your OS ran into a problem it kind of enjoys: CUTE_OVERFLOW at 0xFFB3DD', 'votre OS a rencontré un problème qui lui plaît un peu : CUTE_OVERFLOW à 0xFFB3DD'),
+      trT('collecting error info… 100% (it was hearts. it was always hearts.)', 'collecte des infos d\'erreur… 100 % (c\'était des cœurs. depuis le début.)'),
+      trT('press any key (or tap) to un-crash ♡', 'appuyez sur n\'importe quelle touche (ou tapotez) pour déplanter ♡')
+    ].forEach((line) => {
+      const p = document.createElement('p');
+      p.textContent = line;
+      body.appendChild(p);
+    });
+    ov.append(face, h, body);
+    document.body.appendChild(ov);
+    playTone(196, 'square', 0.22, 0, 0.06);
+    playTone(147, 'square', 0.22, 0.18, 0.06);
+    achvUnlock('bsod');
+    const unCrash = (e) => {
+      if (e && e.stopPropagation) { e.stopPropagation(); e.preventDefault(); }
+      document.removeEventListener('keydown', unCrash, true);
+      if (REDUCED_MOTION) { ov.remove(); return; }
+      ov.classList.add('bsod-out'); // one CRT blink on the way back to life
+      setTimeout(() => ov.remove(), 420);
+    };
+    ov.addEventListener('click', unCrash);
+    document.addEventListener('keydown', unCrash, true);
+  }
+
+  function dotTuckToggle() {
+    const open = [...document.querySelectorAll('.window')].filter((w) =>
+      !w.classList.contains('window-closed') && !w.classList.contains('window-minimized'));
+    if (open.length) {
+      dotTuckedAway = open;
+      open.forEach((w) => minimizeWindow(w));
+      showToast(trT('everything tucked in ♡', 'tout le monde est bordé ♡'));
+    } else if (dotTuckedAway && dotTuckedAway.length) {
+      const batch = dotTuckedAway.filter((w) => !w.classList.contains('window-closed'));
+      dotTuckedAway = null;
+      batch.forEach((w) => {
+        w.classList.remove('window-minimized');
+        if (w.id === 'win-live' && typeof liveEnter === 'function') setTimeout(liveEnter, 120);
+      });
+      if (batch.length) focusWindow(batch[batch.length - 1]);
+      if (typeof updateTaskbarAppButtons === 'function') updateTaskbarAppButtons();
+      showToast(trT('rise and shine!! ♡', 'debout tout le monde !! ♡'));
+    } else {
+      showToast(trT('nothing to tuck in — the desktop is already dreaming ♡', 'rien à border — le bureau rêve déjà ♡'));
+    }
+  }
+
+  function dotFullscreen() {
+    const saidNo = () => showToast(trT('your browser said no… respect ♡', 'ton navigateur a dit non… respect ♡'));
+    if (document.fullscreenElement) {
+      if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
+      return;
+    }
+    if (!document.documentElement.requestFullscreen) { saidNo(); return; }
+    const req = document.documentElement.requestFullscreen();
+    if (req && req.catch) req.catch(saidNo);
+  }
+
+  const dotRed = document.querySelector('.browser-dots .dot.red');
+  const dotYellow = document.querySelector('.browser-dots .dot.yellow');
+  const dotGreen = document.querySelector('.browser-dots .dot.green');
+  if (dotRed) dotRed.addEventListener('click', () => { playClickSound(); bsodShow(); });
+  if (dotYellow) dotYellow.addEventListener('click', () => { playClickSound(); dotTuckToggle(); });
+  if (dotGreen) dotGreen.addEventListener('click', () => { playClickSound(); dotFullscreen(); });
+
   function handleAddressSubmit(raw) {
     const q = raw.trim();
     if (!q) return;
@@ -4579,11 +4946,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const path = lower.startsWith('yongshan.dev/') ? lower.slice('yongshan.dev/'.length) : lower;
 
 
-    // konami spirit: whisper a cheat into the address bar, get coins next run
+    // konami spirit: whisper a cheat into the address bar, get coins next run.
+    // greed tax: the same word pays out 10 → 5 → 2 → 0 per session
     if (path === 'cheat' || path === 'uwu' || path === 'iddqd') {
-      store.set('yos-pending-coins', store.get('yos-pending-coins', 0) + 10);
-      showToast(trT('cheat accepted. +10 coins next run. the slime saw nothing 👀', 'triche acceptée. +10 pièces à la prochaine run. le slime n\'a rien vu 👀'));
-      playSparkleSound();
+      const n = (addrCheatTax[path] = (addrCheatTax[path] || 0) + 1);
+      const payout = n === 1 ? 10 : n === 2 ? 5 : n === 3 ? 2 : 0;
+      if (payout > 0) {
+        store.set('yos-pending-coins', store.get('yos-pending-coins', 0) + payout);
+        showToast(n === 1
+          ? trT('cheat accepted. +10 coins next run. the slime saw nothing 👀', 'triche acceptée. +10 pièces à la prochaine run. le slime n\'a rien vu 👀')
+          : trT(`same spell again?? fine. +${payout} coins (inflation is real)`, `encore le même sort ?? bon. +${payout} pièces (l'inflation existe)`));
+        playSparkleSound();
+      } else {
+        showToast(trT('the tax slime has entered the chat: 0 coins', 'le slime fiscal est entré dans le chat : 0 pièce'));
+        playTone(220, 'square', 0.12, 0, 0.05);
+        achvUnlock('greedy');
+      }
       updateAddressBar();
       return;
     }
@@ -4660,6 +5038,7 @@ document.addEventListener('DOMContentLoaded', () => {
     { title: 'fan_wall.exe — people who ♥ this site', url: 'yongshan.dev/fan_wall.exe', desc: 'The avatar wall of everyone who clicked like. You could be on it in one click.', k: 'fan wall like heart love avatar popular 点赞 喜欢' },
     { title: 'the slime — a production-grade virtual pet', url: 'yongshan.dev/slime.pet', desc: 'State machine, combo detection, drag physics, sprite frames, auto-nap health protocol. Also: adorable.', win: 'win-start-here', k: 'slime pet cute tamagotchi mascot 史莱姆 宠物 mignon' },
     { title: 'hall_of_slime.exe — global leaderboard', url: 'yongshan.dev/hall_of_slime.exe', desc: 'Local arcade top-10 plus a worldwide tier census. Where does your run rank?', win: 'win-leaderboard', k: 'leaderboard hiscore high score rank top hall record classement 排行榜 排名' },
+    { title: 'pikdex.exe — the pikmin collection deck', url: 'yongshan.dev/pikdex.exe', desc: 'Every plucked buddy archived forever: tech names, CS techniques, and a 24-segment hue wheel to complete.', win: 'win-pikdex', k: 'pikdex pikmin collection deck hue wheel colour color roue chromatique collection 图鉴 收集' },
     { title: 'interview_scheduler.exe — book time with Yongshan', url: 'yongshan.dev/interview_scheduler.exe', desc: 'See her availability, pick a slot, both sides get emails. The HR fairy approves.', win: 'win-interview', k: 'interview hire schedule calendar meeting book entretien embauche 面试 日历 约' }
   ];
 
@@ -4880,6 +5259,41 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
+    // ---------- pinned special cards (trolls, soap, ego) ----------
+    const specialCard = (cls, title, desc, clickToast) => {
+      const card = document.createElement('div');
+      card.className = 'search-result sr-special ' + cls;
+      const tl = document.createElement('div');
+      tl.className = 'sr-title';
+      tl.textContent = title;
+      const d = document.createElement('div');
+      d.className = 'sr-desc';
+      d.textContent = desc;
+      card.append(tl, d);
+      card.addEventListener('click', () => showToast(clickToast));
+      searchResults.appendChild(card);
+    };
+    // 🚨 injection attempts earn a commemorative card, not a parser
+    if (/(<|>|script|onerror|alert\(|drop table|union select|\.\.\/)/i.test(query)) {
+      specialCard('sr-haxx',
+        trT('🚨 nice try, hacker-chan ♡', '🚨 bien tenté, hacker-chan ♡'),
+        trT('this input is textContent-pilled. 0 rows dropped.', 'cette barre carbure au textContent. 0 table supprimée.'),
+        trT('still textContent. still 0 rows ♡', 'toujours du textContent. toujours 0 table ♡'));
+      achvUnlock('haxx');
+    } else if (/\b(fuck|fucking|shit|bitch|cunt|asshole|bastard|damn|merde|putain)\b/i.test(query)) {
+      // 🧼 potty-mouth queries meet the soap
+      specialCard('sr-soap',
+        '🧼 * * * * *',
+        trT('washed. try a kinder query ♡', 'lavé. essaie une recherche plus gentille ♡'),
+        trT('the soap remains undefeated', 'le savon reste invaincu'));
+    } else if (/yongshan/i.test(query)) {
+      // ⭐ the ego result — objectively accurate
+      specialCard('sr-ego',
+        '★★★★★ Yongshan Yu — 10/10 would ship again',
+        trT('reviewed by: the slime, the geese, two recruiters and this entire OS.', 'notée par : le slime, les bernaches, deux recruteurs et cet OS tout entier.'),
+        trT('rating locked at 5 stars ♡', 'note verrouillée à 5 étoiles ♡'));
+    }
+
     const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
     // 1) navigational hits (apps & features by keyword)
     const navHits = SEARCH_LOCAL
@@ -4913,7 +5327,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     all.forEach(({ r }) => searchResults.appendChild(makeSearchResult(r)));
 
-    if (!all.length) {
+    if (!all.length && !searchResults.querySelector('.sr-special')) {
       const none = document.createElement('div');
       none.className = 'sr-desc';
       none.textContent = t('search.none');
@@ -5032,10 +5446,25 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
-    hideCtxMenu();
+    // Esc triage: 1) an open context menu eats the whole keypress
+    if (ctxMenu && !ctxMenu.hidden) { hideCtxMenu(); return; }
     const active = [...windows].find((w) => w.classList.contains('window-active') &&
       !w.classList.contains('window-closed') && !w.classList.contains('window-minimized'));
-    if (active) closeWindow(active);
+    if (!active) return;
+    // 2) a game mid-run pauses first — the SECOND Esc closes the window
+    if (active.id === 'win-game' && typeof GAME !== 'undefined' && GAME.state === 'run' && !GAME.itvPause && !GAME.escPause) {
+      GAME.escPause = true;
+      GAME.adT = 0;
+      GAME.adSkit = Math.floor(Math.random() * 4);
+      if (typeof gToast === 'function') gToast(['⏸ paused ♡ — Esc again to close', '⏸ pause ♡ — encore Esc pour fermer'], 240);
+      if (!pet.sleeping && !pet.busy && typeof showBubble === 'function') {
+        showBubble(trT('paused ♡ — Esc again to close', 'pause ♡ — encore Esc pour fermer'), 2200);
+      }
+      return;
+    }
+    // 3) everything else: close the active window
+    if (active.id === 'win-game' && typeof GAME !== 'undefined') GAME.escPause = false; // never trap a future run
+    closeWindow(active);
   });
   window.addEventListener('resize', hideCtxMenu);
   window.addEventListener('scroll', hideCtxMenu, { passive: true });
@@ -5377,6 +5806,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (GAME.event) return; // world is frozen mid-encounter
     if (GAME.state === 'ad') return; // the sponsor bought these 15 seconds
     if (GAME.itvPause) return; // paused for interview booking — relax ♡
+    if (GAME.escPause) { // Esc-paused: a jump input un-pauses instead
+      GAME.escPause = false;
+      gToast(['▶ resumed ♡', '▶ reprise ♡'], 140);
+      return;
+    }
     if (GAME.state === 'idle' || GAME.state === 'over') {
       if (GAME.state === 'over' && Date.now() < (GAME.overLockUntil || 0)) return; // read the offer first ♡
       GAME.state = 'run';
@@ -5583,6 +6017,12 @@ document.addEventListener('DOMContentLoaded', () => {
       GAME.eventLockUntil = Date.now() + 2500;
     }
 
+    // Edmonton weather leaks into the runner — visuals only, the
+    // physics department accepts no bribes from the sky
+    const wxKind = (typeof wxCurrent !== 'undefined' && wxCurrent) || null;
+    const wxRainy = wxKind === 'rain' || wxKind === 'thunder' || wxKind === 'sleet';
+    const wxSnowy = wxKind === 'snow' || wxKind === 'blizzard' || wxKind === 'hail';
+
     // parallax hearts drifting in the sky
     if (GAME.clouds.length < 4 && Math.random() < 0.02) {
       GAME.clouds.push({ x: G_W + 20, y: 14 + Math.random() * 60, c: Math.random() < 0.5 ? '♡' : '✦' });
@@ -5590,12 +6030,44 @@ document.addEventListener('DOMContentLoaded', () => {
     g2.font = "13px 'Jersey 25', 'VT323', monospace";
     GAME.clouds.forEach((cl) => {
       cl.x -= 0.6;
-      g2.fillStyle = cl.c === '♡' ? gTheme.pink : gTheme.blue;
+      g2.fillStyle = wxSnowy ? '#9fc4ea' : (cl.c === '♡' ? gTheme.pink : gTheme.blue); // snow days tint the sky icy blue
       g2.globalAlpha = 0.55;
       g2.fillText(cl.c, cl.x, cl.y);
       g2.globalAlpha = 1;
     });
     GAME.clouds = GAME.clouds.filter((cl) => cl.x > -20);
+
+    if (wxRainy) {
+      // pixel rain streaks + puddles glinting along the track
+      g2.fillStyle = 'rgba(108, 196, 245, 0.5)';
+      for (let i = 0; i < 14; i++) {
+        const rx = (i * 67 + GAME.frame * 5) % (G_W + 20) - 10;
+        const ry = (i * 41 + GAME.frame * 7) % G_GROUND;
+        g2.fillRect(rx, ry, 1, 6);
+      }
+      g2.fillStyle = 'rgba(108, 196, 245, 0.35)';
+      for (let i = 0; i < 3; i++) {
+        const scroll = GAME.state === 'run' && !GAME.nm ? (GAME.frame * GAME.speed) % (G_W + 60) : 0;
+        const px = ((i * 173 + 40 - scroll) % (G_W + 60) + (G_W + 60)) % (G_W + 60) - 30;
+        g2.fillRect(px, G_GROUND + G_SLIME_S - 2, 26, 2);
+      }
+    } else if (wxSnowy) {
+      // slow pixel snowfall
+      g2.fillStyle = 'rgba(207, 233, 255, 0.85)';
+      for (let i = 0; i < 12; i++) {
+        const sx = (i * 83 + Math.floor(GAME.frame / 2) + (i % 3) * 7) % G_W;
+        const sy = (i * 37 + Math.floor(GAME.frame / 3)) % G_GROUND;
+        g2.fillRect(sx, sy, 2, 2);
+      }
+    } else if (wxKind === 'clear') {
+      const wxHr = new Date().getHours();
+      if (wxHr >= 7 && wxHr < 19) { // a tiny sun clocks in for the day shift
+        g2.fillStyle = '#ffe98a';
+        g2.fillRect(G_W - 34, 10, 12, 12);
+        g2.fillRect(G_W - 38, 14, 20, 4);
+        g2.fillRect(G_W - 30, 6, 4, 20);
+      }
+    }
 
     // parallax pixel props — little smiles in the background
     if (GAME.props.length < 3 && Math.random() < 0.008) gSpawnProp();
@@ -5677,7 +6149,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // cards can never bury a "not enough coins" message again)
 
     // dashed pixel ground (the world stands STILL during the nightmare)
-    g2.fillStyle = gTheme.purple;
+    g2.fillStyle = wxSnowy ? '#9fc4ea' : gTheme.purple; // fresh powder on snow days
     const dashShift = (GAME.state === 'run' && !GAME.nm) ? (GAME.frame * GAME.speed) % 18 : 0;
     for (let x = -18; x < G_W + 18; x += 18) {
       g2.fillRect(x - dashShift, G_GROUND + G_SLIME_S - 4, 10, 3);
@@ -5968,7 +6440,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     } else if (GAME.state === 'ad') {
       gDrawAd(g2);
-    } else if (GAME.state === 'run' && GAME.itvPause) {
+    } else if (GAME.state === 'run' && (GAME.itvPause || GAME.escPause)) {
       // intermission: the run is frozen, the in-house ads carry the show
       GAME.adT = (GAME.adT || 0) + 1;
       if (GAME.adT >= AD_FRAMES) { GAME.adT = 0; GAME.adSkit = ((GAME.adSkit || 0) + 1) % AD_SKITS.length; }
@@ -5996,7 +6468,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function gMarkJoy() { GAME.joyAt = gPlaySecs(); }
   var gInterviewOffered = false; // once per visit — scarcity keeps it special
   var gDeviceGagDone = false;    // one device-aware gag per visit
-  function gLive() { return GAME.state === 'run' && !GAME.event && !GAME.nm && !GAME.itvPause; }
+  function gLive() { return GAME.state === 'run' && !GAME.event && !GAME.nm && !GAME.itvPause && !GAME.escPause; }
   function modVal(k) { const m = GAME.mods[k]; return (m && GAME.frame < m.until) ? m.v : 1; }
   function modActive(k) { const m = GAME.mods[k]; return !!(m && GAME.frame < m.until); }
   function setMod(k, v, secs) { GAME.mods[k] = { v, until: GAME.frame + Math.round(secs * 60) }; }
@@ -6867,17 +7339,21 @@ document.addEventListener('DOMContentLoaded', () => {
   function gAttachPiks(quiet) {
     let src = [];
     if (GARDEN.buddies.length) {
-      src = GARDEN.buddies.map((b) => ({ color: b.color, stage: b.stage, skill: b.skill }));
+      src = GARDEN.buddies.map((b) => ({ color: b.color, stage: b.stage, skill: b.skill, hat: b.sp ? b.sp.hat : null }));
     } else {
-      src = store.get('yos-pik-roster', []).map((r) => ({
-        color: (r.h != null && typeof hueColor === 'function') ? hueColor(r.h) : (PIK_COLORS[r.c] || PIK_COLORS[0]),
-        stage: r.s || 0,
-        skill: PIK_SKILLS.find((sk) => sk.id === r.k) || null
-      }));
+      src = store.get('yos-pik-roster', []).map((r) => {
+        const sp = (r.sp && typeof pikSpecies === 'function') ? pikSpecies(r.sp) : null;
+        return {
+          color: sp ? sp.body : ((r.h != null && typeof hueColor === 'function') ? hueColor(r.h) : (PIK_COLORS[r.c] || PIK_COLORS[0])),
+          stage: r.s || 0,
+          skill: PIK_SKILLS.find((sk) => sk.id === r.k) || null,
+          hat: sp ? sp.hat : null
+        };
+      });
     }
     if (!src.length) { GAME.piks = []; return; }
     GAME.piks = src.map((b, i) => ({
-      color: b.color.body, dark: b.color.dark, stage: b.stage,
+      color: b.color.body, dark: b.color.dark, stage: b.stage, hat: b.hat || null,
       phase: Math.random() * 6.28,
       shieldReadyAt: 0,
       zapAt: GAME.frame + 260 + i * 90,
@@ -6994,24 +7470,40 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function gDrawPiks(g2) {
-    (GAME.piks || []).forEach((p, i) => {
-      const bx = G_SLIME_X - 18 - i * 15;
-      if (bx < 2) return;
+    const piks = GAME.piks || [];
+    // full-squad escort: evens trail behind the slime, odds SCOUT AHEAD —
+    // and past 4 buddies everyone shrinks a notch so all six stay on screen
+    const small = piks.length >= 5;
+    const bw = small ? 8 : 10, bh = small ? 6 : 8;
+    const step = small ? 13 : 16;
+    piks.forEach((p, i) => {
+      const rank = Math.floor(i / 2);
+      const bx = (i % 2 === 0)
+        ? G_SLIME_X - (bw + 6) - rank * step               // rear guard
+        : G_SLIME_X + G_SLIME_S + 8 + rank * step;         // front scouts
+      if (bx < 2 || bx > G_W - bw - 2) return;
       const hop = Math.abs(Math.sin(GAME.frame * 0.18 + p.phase)) * (GAME.y > 0 ? 7 : 3);
-      const by = G_GROUND - 11 - hop;
+      const by = G_GROUND - (bh + 3) - hop;
+      const mx = bx + Math.round(bw / 2) - 1; // stem anchor
       g2.fillStyle = '#57c689'; // stem
-      g2.fillRect(bx + 4, by - 5, 2, 5);
-      if (p.stage === 0) { g2.fillStyle = '#7ddba4'; g2.fillRect(bx + 2, by - 7, 3, 2); }
-      else if (p.stage === 1) { g2.fillStyle = p.dark; g2.fillRect(bx + 2, by - 8, 4, 3); }
+      g2.fillRect(mx, by - 5, 2, 5);
+      if (p.stage === 0) { g2.fillStyle = '#7ddba4'; g2.fillRect(mx - 2, by - 7, 3, 2); }
+      else if (p.stage === 1) { g2.fillStyle = p.dark; g2.fillRect(mx - 2, by - 8, 4, 3); }
       else {
         g2.fillStyle = '#ffffff';
-        g2.fillRect(bx + 1, by - 8, 2, 2); g2.fillRect(bx + 6, by - 8, 2, 2); g2.fillRect(bx + 3, by - 10, 3, 2);
-        g2.fillStyle = '#ffd400'; g2.fillRect(bx + 3, by - 8, 3, 2);
+        g2.fillRect(mx - 3, by - 8, 2, 2); g2.fillRect(mx + 2, by - 8, 2, 2); g2.fillRect(mx - 1, by - 10, 3, 2);
+        g2.fillStyle = '#ffd400'; g2.fillRect(mx - 1, by - 8, 3, 2);
       }
       g2.fillStyle = p.color; // glowing jelly body
-      g2.fillRect(bx, by, 10, 8); g2.fillRect(bx + 1, by + 8, 8, 2);
+      g2.fillRect(bx, by, bw, bh); g2.fillRect(bx + 1, by + bh, bw - 2, 2);
       g2.fillStyle = 'rgba(255,255,255,0.7)'; g2.fillRect(bx + 1, by + 1, 2, 2);
-      g2.fillStyle = '#14020e'; g2.fillRect(bx + 2, by + 3, 2, 2); g2.fillRect(bx + 6, by + 3, 2, 2);
+      g2.fillStyle = '#14020e'; // eyes
+      g2.fillRect(bx + 2, by + Math.round(bh * 0.38), 2, 2);
+      g2.fillRect(bx + bw - 4, by + Math.round(bh * 0.38), 2, 2);
+      if (p.hat) { // hidden species wear their hats into battle, obviously
+        g2.font = '9px sans-serif';
+        g2.fillText(p.hat, bx - 1, by - 10);
+      }
     });
     gDrawPikFx(g2);
   }
@@ -7209,6 +7701,7 @@ document.addEventListener('DOMContentLoaded', () => {
             ? ["'good choice. I'm so proud.' — coach slime", "« bon choix. je suis si fier. » — coach slime"]
             : ["'…not my pick. but I respect the chaos.' — coach slime", "« …pas mon choix. mais je respecte le chaos. » — coach slime"], 210);
           GAME.decisions.push('coach:' + b.icon + (ev.sel === ev.rec ? ':obeyed' : ':rebelled'));
+          if (ev.sel !== ev.rec) coachRebelN++; // the coach keeps receipts across runs
           if (typeof showBubble === 'function') showBubble(trT('you got this!! I believe!!', 'tu vas y arriver !! j\'y crois !!'), 2400);
           playFanfare();
           return;
@@ -7368,6 +7861,7 @@ document.addEventListener('DOMContentLoaded', () => {
   /* ---------- COACH MODE: two sub-200 deaths in a row = intervention ---------- */
   var gLowStreak = 0;
   var coachFlying = false;
+  var coachRebelN = 0; // ignored recommendations — the coach remembers
 
   function gStartCoach() {
     const pool = [...REWARD_BUFFS];
@@ -7377,7 +7871,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const rational = gStateHash('why') % 100 < 30;
     GAME.event = {
       type: 'coach', opts, sel: rec, rec,
-      reason: rational ? COACH_RATIONAL : opts[rec].why
+      // rebelled twice already? the coach airs the grievance directly
+      reason: coachRebelN >= 2
+        ? ["third time ignoring me. I'm updating MY resume.", "troisième fois que tu m'ignores. c'est MON CV que je mets à jour."]
+        : (rational ? COACH_RATIONAL : opts[rec].why)
     };
     GAME.flash = 10;
     for (let i = 0; i < 26; i++) {
@@ -7697,13 +8194,35 @@ document.addEventListener('DOMContentLoaded', () => {
     return idx;
   }
 
+  // arcade telemetry: deaths aggregate locally and flush at most once
+  // per 30s — one /hit per tier per flush, the abacus gets to breathe
+  var lbHitQueue = {};
+  var lbHitTimer = null;
+  var lbHitLast = 0;
+  function lbQueueHit(tier) {
+    lbHitQueue[tier] = true;
+    if (lbHitTimer) return;
+    const wait = Math.max(0, 30000 - (Date.now() - lbHitLast));
+    lbHitTimer = setTimeout(() => {
+      lbHitTimer = null;
+      lbHitLast = Date.now();
+      const tiers = Object.keys(lbHitQueue);
+      lbHitQueue = {};
+      if (!navigator.onLine) return;
+      tiers.forEach((tt) => fetch(`${LIKE_API}/hit/${LIKE_NS}/lb-t${tt}`).catch(() => {}));
+    }, wait);
+  }
+
   function gFinalizeRun(score) {
     if (score < 10) return;
     if (navigator.onLine) {
-      fetch(`${LIKE_API}/hit/${LIKE_NS}/lb-t${lbTierIndex(score)}`).catch(() => {});
+      lbQueueHit(lbTierIndex(score));
       const board = store.get('yos-lb', []);
       if (board.length < 10 || score > board[board.length - 1].s) {
-        window.__lbPendingScore = score;
+        // an unsigned pending run survives BOTH a refresh and a better run
+        const prev = window.__lbPendingScore || store.get('yos-lb-pending', 0) || 0;
+        window.__lbPendingScore = Math.max(score, prev);
+        store.set('yos-lb-pending', window.__lbPendingScore);
         gToast(["🏆 TOP-10 RUN!! open hall_of_slime.exe to sign it", "🏆 RUN TOP 10 !! ouvre hall_of_slime.exe pour la signer"], 240);
       }
     } else {
@@ -7718,6 +8237,15 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function lbEsc(str) { return String(str).replace(/[^A-Za-z0-9♡]/g, '').slice(0, 3).toUpperCase() || 'YOU'; }
+
+  // the classic arcade-cabinet naughty list — three letters of shame
+  const LB_NAUGHTY = new Set(['ASS', 'FUK', 'FUC', 'FCK', 'FUX', 'CUM', 'TIT', 'SEX', 'DIK', 'DIC', 'DCK', 'COK', 'COC', 'CNT', 'TWT', 'NIG', 'NGR', 'FAG', 'KKK', 'PIS', 'PSS', 'VAG', 'JIZ', 'WTF']);
+  function lbSoap(initials) {
+    if (!LB_NAUGHTY.has(initials)) return initials;
+    showToast(trT("the slime pretends it didn't see that ♡", "le slime fait semblant de n'avoir rien vu ♡"));
+    achvUnlock('censored');
+    return '♡♡♡';
+  }
 
   function renderLeaderboard() {
     const listEl = document.getElementById('lb-local-list');
@@ -7735,24 +8263,39 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     board.forEach((e, i) => {
       const li = document.createElement('li');
-      li.innerHTML = `<span class="lb-rank">${i + 1}.</span> <strong>${e.n}</strong> <span class="lb-score">${e.s}</span>`;
+      // stored initials get textContent, never markup — no self-XSS via localStorage
+      const rank = document.createElement('span');
+      rank.className = 'lb-rank';
+      rank.textContent = `${i + 1}.`;
+      const name = document.createElement('strong');
+      name.textContent = String(e.n);
+      const score = document.createElement('span');
+      score.className = 'lb-score';
+      score.textContent = String(e.s);
+      li.append(rank, ' ', name, ' ', score);
       listEl.appendChild(li);
     });
 
     // signing a pending top-10 run
     if (signEl) {
-      const pending = window.__lbPendingScore;
+      // a refresh can't eat an unsigned run — it waits in localStorage
+      const pending = window.__lbPendingScore || store.get('yos-lb-pending', 0) || null;
+      if (pending) window.__lbPendingScore = pending;
       signEl.hidden = !pending;
       if (pending) {
         document.getElementById('lb-pending-score').textContent = pending;
         const btn = document.getElementById('lb-sign-btn');
+        btn.disabled = false;
         btn.onclick = () => {
-          const initials = lbEsc(document.getElementById('lb-initials').value);
+          if (!window.__lbPendingScore) return; // one signature per run, no triples
+          btn.disabled = true;
+          const initials = lbSoap(lbEsc(document.getElementById('lb-initials').value));
           const b = store.get('yos-lb', []);
           b.push({ n: initials, s: pending });
           b.sort((a, c) => c.s - a.s);
           store.set('yos-lb', b.slice(0, 10));
           window.__lbPendingScore = null;
+          store.set('yos-lb-pending', 0);
           playFanfare();
           achvUnlock('top10');
           renderLeaderboard();
@@ -7814,7 +8357,8 @@ document.addEventListener('DOMContentLoaded', () => {
         btn2.onclick = () => {
           fetch(`${LIKE_API}/hit/${LIKE_NS}/lb-t${lbTierIndex(offBest)}`).catch(() => {});
           if (offBest > store.get('yos-runner-hi', 0)) { store.set('yos-runner-hi', offBest); cloudQueueSync(); }
-          window.__lbPendingScore = offBest;
+          window.__lbPendingScore = Math.max(offBest, store.get('yos-lb-pending', 0) || 0);
+          store.set('yos-lb-pending', window.__lbPendingScore);
           store.set('yos-offline-best', 0);
           playFanfare();
           renderLeaderboard();
@@ -8192,18 +8736,23 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  function scheduleGameInvite() {
-    setTimeout(function tryShow() {
+  var gInviteRetryTimer = null;
+  function scheduleGameInvite(delay) {
+    if (gInviteShownThisVisit) return;
+    if (gInviteRetryTimer) clearTimeout(gInviteRetryTimer);
+    gInviteRetryTimer = setTimeout(function tryShow() {
+      gInviteRetryTimer = null;
       if (gInviteShownThisVisit) return;
+      // light mode only: in the dark, the SLEEPWALKER is the ad — and
+      // applyTheme re-arms this popup at dawn, so no 8s idle loop here
+      if (resolvedTheme() !== 'light') return;
       const gameOpen = !document.getElementById('win-game').classList.contains('window-closed');
-      // light mode only: in the dark, the SLEEPWALKER is the ad —
-      // it dives into the arcade personally. no popup competition.
-      if (document.hidden || gameOpen || pet.sleeping || resolvedTheme() !== 'light') {
-        setTimeout(tryShow, 8000); // wrong moment — lurk and retry
+      if (document.hidden || gameOpen || pet.sleeping) {
+        scheduleGameInvite(8000); // wrong moment — lurk and retry
         return;
       }
       showGameInvite();
-    }, 15000 + Math.random() * 5000);
+    }, delay || 15000 + Math.random() * 5000);
   }
   scheduleGameInvite();
 
@@ -8267,10 +8816,13 @@ document.addEventListener('DOMContentLoaded', () => {
     applySlimeTransform(1, 0, 400);
   }
 
+  var liveViewerTimer = null;
   function liveViewerTick() {
+    // clear-then-set: reopening the stream can't stack duplicate tickers
+    if (liveViewerTimer) { clearTimeout(liveViewerTimer); liveViewerTimer = null; }
     const el = document.getElementById('live-viewers');
     if (el) el.textContent = String(38 + Math.floor(Math.random() * 30) + pet.followers);
-    if (liveOpen) setTimeout(liveViewerTick, 4000);
+    if (liveOpen) liveViewerTimer = setTimeout(liveViewerTick, 4000);
   }
 
   // the room's ONE chat is the colourful mini-danmaku itself — it
@@ -8419,12 +8971,21 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function gardenSpawnSprout() {
-    if (!liveStage || GARDEN.sprouts.length + GARDEN.buddies.length >= PIK_MAX + 1) return;
+    if (!liveStage) return;
+    const squadFull = GARDEN.buddies.length >= PIK_MAX;
+    // pre-full: classic density · post-full: one polite sprout at a time (it waits in the deck)
+    if (!squadFull && GARDEN.sprouts.length + GARDEN.buddies.length >= PIK_MAX + 1) return;
+    if (squadFull && GARDEN.sprouts.length >= 1) return;
+    const roll = pikRollSprout(); // same gacha as the desktop meadow
+    if (!roll) return;            // deck complete — the garden rests ♡
+    const chameleon = roll.type === 'chameleon';
+    const species = roll.type === 'hidden' ? roll.sp : null;
+    const hue = roll.type === 'normal' ? roll.hue : 5 + Math.floor(Math.random() * 355);
+    const color = species ? species.body : hueColor(hue);
     const btn = document.createElement('button');
     btn.type = 'button';
-    btn.className = 'pik-sprout';
+    btn.className = 'pik-sprout' + (species ? ' pik-sprout-hidden' : '');
     btn.setAttribute('aria-label', t('live.pluck'));
-    const color = PIK_COLORS[Math.floor(Math.random() * PIK_COLORS.length)];
     const img = document.createElement('img');
     img.src = pikSprite(color, 0);
     img.alt = '';
@@ -8432,37 +8993,57 @@ document.addEventListener('DOMContentLoaded', () => {
     // only the sprout's head pokes out of the meadow
     img.style.clipPath = 'inset(0 0 58% 0)';
     btn.appendChild(img);
+    if (species) { // hidden sprouts glitter — pluck fast
+      const tease = document.createElement('span');
+      tease.className = 'pik-sprout-tease';
+      tease.textContent = '✨';
+      btn.appendChild(tease);
+    }
+    if (chameleon) { // even the sprout can't hold a colour
+      btn._hueTimer = setInterval(() => { img.src = pikSprite(hueColor(hue + Date.now() / 14 % 360), 0); }, 420);
+    }
     const stageW = liveStage.clientWidth || 500;
     const x = 30 + Math.random() * Math.max(60, stageW - 90);
     btn.style.left = x + 'px';
     btn.style.bottom = (2 + Math.random() * 12) + 'px';
-    btn.addEventListener('click', () => gardenPluck(btn, color));
+    btn.addEventListener('click', () => gardenPluck(btn, hue, chameleon, species));
     liveStage.appendChild(btn);
     GARDEN.sprouts.push(btn);
   }
 
-  // the squad roster outlives the tab: colours, stages, techniques
+  // the squad roster outlives the tab: hues, stages, techniques —
+  // wheel-born buddies keep their exact hue (and the chameleon its ✨identity✨)
   function pikSaveRoster() {
-    store.set('yos-pik-roster', GARDEN.buddies.map((b) => ({
-      c: Math.max(0, PIK_COLORS.findIndex((pc) => pc.body === b.color.body)),
-      s: b.stage,
-      k: b.skill ? b.skill.id : null
-    })));
+    store.set('yos-pik-roster', GARDEN.buddies.map((b) => (
+      b.h != null
+        ? { h: b.h, ch: b.ch ? 1 : 0, s: b.stage, k: b.skill ? b.skill.id : null, sp: b.sp ? b.sp.id : null }
+        : { c: Math.max(0, PIK_COLORS.findIndex((pc) => pc.body === b.color.body)), s: b.stage, k: b.skill ? b.skill.id : null }
+    )));
+    if (typeof pikdexAbsorbStages === 'function') pikdexAbsorbStages();
   }
 
-  function gardenMakeBuddy(color, stage, x, skillId) {
+  function gardenMakeBuddy(color, stage, x, skillId, hue, ch, spId) {
+    const species = spId ? pikSpecies(spId) : null;
+    if (species) color = species.body;
     const el = document.createElement('div');
-    el.className = 'pik-buddy';
+    el.className = 'pik-buddy' + (species && species.fx ? ' pikfx-' + species.fx : '');
     const img = document.createElement('img');
     img.src = pikSprite(color, stage);
     img.alt = '';
     img.style.width = '33px';
     el.appendChild(img);
+    if (species) { // the hat performs live, too
+      const hat = document.createElement('span');
+      hat.className = 'pik-hat';
+      hat.textContent = species.hat;
+      el.appendChild(hat);
+    }
     el.style.left = x + 'px';
     el.style.bottom = (4 + Math.random() * 10) + 'px';
     liveStage.appendChild(el);
     const b = {
       el, img, color, stage, x,
+      h: hue != null ? hue : null, ch: ch ? 1 : 0, hueAt: 0, sp: species || null,
       born: Date.now() - (stage === 2 ? 120000 : stage === 1 ? 60000 : 0),
       offset: (GARDEN.buddies.length % 2 ? 1 : -1) * (72 + GARDEN.buddies.length * 26),
       carry: null, carryEl: null,
@@ -8473,58 +9054,61 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // returning visitors find their whole squad waiting in the meadow
-  function gardenRestoreRoster() {
+  function gardenRestoreRoster(quiet) {
     if (GARDEN.buddies.length || GARDEN.restored) return;
     GARDEN.restored = true;
     const roster = store.get('yos-pik-roster', []);
     if (!roster.length) return;
     const stageW = liveStage.clientWidth || 500;
     roster.slice(0, PIK_MAX).forEach((r, i) => {
-      gardenMakeBuddy((r.h != null && typeof hueColor === 'function') ? hueColor(r.h) : (PIK_COLORS[r.c] || PIK_COLORS[0]), r.s || 0, 60 + (i * (stageW - 120)) / Math.max(1, roster.length - 1 || 1), r.k);
+      gardenMakeBuddy((r.h != null && typeof hueColor === 'function') ? hueColor(r.h) : (PIK_COLORS[r.c] || PIK_COLORS[0]), r.s || 0, 60 + (i * (stageW - 120)) / Math.max(1, roster.length - 1 || 1), r.k, r.h != null ? r.h : null, !!r.ch, r.sp || null);
     });
+    if (quiet) return; // squad swaps re-seat everyone without the reunion fanfare
     setTimeout(() => {
       GARDEN.buddies.forEach((b, i) => setTimeout(() => { pikChirp(); if (i === 0) pikSay(b, 'pik!! ♡', 1600); }, i * 140));
       if (!pet.sleeping && !pet.busy) showBubble(trT('the squad waited for you ALL this time ♡', "l'escouade t'a attendu TOUT ce temps ♡"), 2800);
     }, 900);
   }
 
-  function gardenPluck(btn, color) {
+  function gardenPluck(btn, hue, chameleon, species) {
+    if (btn._hueTimer) clearInterval(btn._hueTimer);
     GARDEN.sprouts = GARDEN.sprouts.filter((s) => s !== btn);
     const x = parseFloat(btn.style.left) || 60;
     const bottom = parseFloat(btn.style.bottom) || 8;
     btn.remove();
-    if (GARDEN.buddies.length >= PIK_MAX) {
-      showBubble(trT('the garden is full!! (what a flex)', 'le jardin est plein !! (quelle classe)'), 2200);
+    const color = species ? species.body : hueColor(hue);
+    const entry = { h: hue, ch: chameleon ? 1 : 0, s: 0, k: PIK_SKILLS[Math.floor(Math.random() * PIK_SKILLS.length)].id, sp: species ? species.id : null };
+    const verdict = pikdexAdd(entry); // deck first, stage second
+    if (verdict === 'full') {
+      showBubble(trT('the pikdex is FULL. 72 friends. a perfect shoebox ♡', 'le pikdex est PLEIN. 72 copains. une boîte à chaussures parfaite ♡'), 2600);
       return;
     }
-    const el = document.createElement('div');
-    el.className = 'pik-buddy';
-    const img = document.createElement('img');
-    img.src = pikSprite(color, 0);
-    img.alt = '';
-    img.style.width = '33px';
-    img.classList.add('pik-pluck');
-    el.appendChild(img);
-    el.style.left = x + 'px';
-    el.style.bottom = bottom + 'px';
-    liveStage.appendChild(el);
-    const b = {
-      el, img, color, stage: 0, x,
-      born: Date.now(),
-      // formation slots start beyond the slime's shoulders — nobody
-      // idles underneath the headliner
-      offset: (GARDEN.buddies.length % 2 ? 1 : -1) * (72 + GARDEN.buddies.length * 26),
-      carry: null, carryEl: null,
-      skill: PIK_SKILLS[Math.floor(Math.random() * PIK_SKILLS.length)] // its lifelong technique
-    };
-    GARDEN.buddies.push(b);
-    pikSaveRoster();
-    pikChirp(); pikChirp();
-    pikSay(b, 'pik!!', 1700); // first words, always
-    playSparkleSound();
-    gainFollowers(1);
     store.set('yos-pik-plucked', true);
     if (typeof updateLiveTab === 'function') updateLiveTab();
+    playSparkleSound();
+    if (chameleon) {
+      achvUnlock('chameleon');
+      chameleonCelebrate(); // 1% pull — rainbow blooms over the whole desktop
+      showBubble(trT('WAIT. that one keeps CHANGING COLOURS?! a hidden chameleon!! (1% pull!!)', 'ATTENDS. il n\'arrête pas de CHANGER DE COULEUR ?! un caméléon caché !! (tirage à 1 % !!)'), 3600);
+    } else if (species) {
+      pikHiddenCelebrate(species);
+    }
+    if (verdict === 'deck') {
+      pikChirp();
+      if (!chameleon && !species) showBubble(trT('squad\'s full — the new buddy is filed in pikdex.exe, awaiting promotion ♡', 'escouade pleine — le nouveau copain est classé dans pikdex.exe, en attente de promotion ♡'), 2800);
+      return;
+    }
+    const b = gardenMakeBuddy(color, 0, x, entry.k, hue, chameleon ? 1 : 0, species ? species.id : null);
+    b.born = Date.now();
+    b.el.style.bottom = bottom + 'px';
+    b.img.classList.add('pik-pluck');
+    // the desktop crew mirrors the squad: a stage recruit walks home too
+    // (the walker layer is hidden while the live room is open — it will
+    // simply be there, already strolling, when the curtain drops)
+    if (typeof deskPikResync === 'function') deskPikResync();
+    pikChirp(); pikChirp();
+    pikSay(b, 'pik!!', 1700); // first words, always
+    gainFollowers(1);
     if (GARDEN.buddies.length === 1) {
       showBubble(trT('a petal buddy!! welcome to the crew ♡', 'un copain pétale !! bienvenue dans la troupe ♡'), 2600);
     } else if (GARDEN.buddies.length === PIK_MAX) {
@@ -8560,6 +9144,13 @@ document.addEventListener('DOMContentLoaded', () => {
       // bloom: leaf → bud → flower, pikmin-style maturity
       if (b.stage === 0 && now - b.born > 45000) pikSetStage(b, 1);
       else if (b.stage === 1 && now - b.born > 105000) pikSetStage(b, 2);
+      // the chameleon cycles the wheel on stage too — commitment issues, adorable
+      if (b.ch && now > (b.hueAt || 0)) {
+        b.hueAt = now + 480;
+        b.h = ((b.h || 5) + 30) % 360 || 5;
+        b.color = hueColor(b.h);
+        b.img.src = pikSprite(b.color, b.stage);
+      }
       // SQUASHED?! the slime (re)appeared on top — wriggle out, loudly
       if (!b.carry && !gathering && slimeW > 40 && Math.abs(b.x + 16 - sx) < slimeW * 0.32 && now > (b.escapeCd || 0)) {
         b.escapeCd = now + 6000;
@@ -9168,11 +9759,81 @@ document.addEventListener('DOMContentLoaded', () => {
     ['{e} received. affection++ ♡', '{e} reçu. affection++ ♡']
   ];
 
+  /* ---------- MEGA SPELLBOOK: every blessed effect you witness gets
+     inked into yos-spellbook (idx → the emoji that cast it).
+     collect all 8 and the hall crowns you archmage 🔮 ---------- */
+  function spellbookMark(idx, e) {
+    if (idx < 0) return;
+    const book = store.get('yos-spellbook', {});
+    if (book[idx]) return;
+    book[idx] = e;
+    store.set('yos-spellbook', book);
+    if (Object.keys(book).length >= MEGA_FX.length) achvUnlock('archmage');
+    renderSpellbook();
+  }
+
+  function renderSpellbook() {
+    const grid = document.getElementById('lb-achv-grid');
+    if (!grid || !grid.parentNode) return;
+    let row = document.getElementById('lb-spellbook');
+    if (!row) {
+      row = document.createElement('div');
+      row.id = 'lb-spellbook';
+      row.className = 'lb-spellbook';
+      grid.parentNode.insertBefore(row, grid.nextSibling);
+    }
+    row.innerHTML = '';
+    const book = store.get('yos-spellbook', {});
+    const found = Object.keys(book).length;
+    const label = document.createElement('span');
+    label.className = 'lb-spellbook-label';
+    label.textContent = trT(`🔮 MEGA SPELLBOOK ${found}/${MEGA_FX.length}`, `🔮 GRIMOIRE MÉGA ${found}/${MEGA_FX.length}`);
+    const cells = document.createElement('span');
+    cells.className = 'lb-spellbook-cells';
+    for (let i = 0; i < MEGA_FX.length; i++) {
+      const c = document.createElement('span');
+      c.className = 'lb-spell' + (book[i] ? ' is-found' : '');
+      c.textContent = book[i] || '❓';
+      if (!book[i]) c.title = trT('an undiscovered MEGA blessing… gift more emojis', 'une bénédiction MÉGA à découvrir… offre plus d\'emojis');
+      cells.appendChild(c);
+    }
+    row.append(label, cells);
+  }
+
   function emojiBlessing(e) {
     if (e === '🚀') return { rocket: true };
     const h = emojiHash(e);
     if (h % 10 < 6) return { fx: MEGA_FX[h % MEGA_FX.length] }; // 60% of emojis are blessed
     return null;
+  }
+
+  /* ---------- GIFT STORM: 13+ gifts in 10s and the slime unionizes.
+     gifts still sparkle during a storm — they just stop paying fans
+     for 20s. lifetime generosity and storm counts feed achievements. */
+  var giftWindow = [];    // timestamps, 10s sliding window
+  var giftStormUntil = 0; // fan counter is on break until then
+  function giftPulse() {
+    const now = Date.now();
+    const total = store.get('yos-gift-total', 0) + 1;
+    store.set('yos-gift-total', total);
+    if (total >= 50) achvUnlock('whale');
+    giftWindow.push(now);
+    giftWindow = giftWindow.filter((ts) => now - ts <= 10000);
+    if (now < giftStormUntil) return;
+    if (giftWindow.length > 12) {
+      giftStormUntil = now + 20000;
+      giftWindow = [];
+      fxBanner(trT('⚠ GIFT STORM — the slime is now unionized', '⚠ TEMPÊTE DE CADEAUX — le slime est désormais syndiqué'));
+      playTone(330, 'square', 0.14, 0, 0.05);
+      if (!pet.sleeping) setTimeout(() => showBubble(trT('ok ok I GET IT ♡ (fan counter on break)', 'ok ok J\'AI COMPRIS ♡ (compteur de fans en pause)'), 3000), 300);
+      const storms = store.get('yos-storm-count', 0) + 1;
+      store.set('yos-storm-count', storms);
+      if (storms >= 3) achvUnlock('spamlord');
+    }
+  }
+  function giftGain(n) {
+    if (Date.now() < giftStormUntil) return; // union rules: no counting during a storm
+    gainFollowers(n);
   }
 
   function flyGiftToStage(icon, fromEl) {
@@ -9274,6 +9935,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     store.set('yos-live-gifted', true);
     updateLiveTab();
+    giftPulse();
     flyGiftToStage(e, document.getElementById('live-emoji-open'));
     const line = makeChatLine({ u: trT('you', 'toi'), c: '#f0509f', t: `${trT('sent', 'a envoyé')} ${e} !!` });
     liveMirror(line);
@@ -9281,7 +9943,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // gifts reach the slime even in dreams — softly
     if (pet.sleeping) {
-      gainFollowers(1);
+      giftGain(1);
       setTimeout(() => {
         showBubble(trT(`zzz... (dreaming of ${e}) zzz`, `zzz... (rêve de ${e}) zzz`), 2200);
         const { x, y } = slimeAnchor();
@@ -9292,8 +9954,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 🐿️ special guest protocol
     if (e === '🐿️') {
-      gainFollowers(3);
+      giftGain(3);
       setTimeout(squirrelShow, 500);
+      return true;
+    }
+
+    // 🪿 goose economics: the goose taketh (1 pending coin, if any),
+    // then the goose giveth (+2 pending coins, air-dropped 3s later)
+    if (e === '🪿') {
+      giftGain(2);
+      setTimeout(() => { if (liveOpen) spawnGeese(); }, 400);
+      const pending = store.get('yos-pending-coins', 0);
+      if (pending > 0) store.set('yos-pending-coins', pending - 1);
+      fxBanner(trT('the goose taketh, the goose giveth ♡', 'la bernache prend, la bernache donne ♡'),
+        pending > 0 ? trT('-1 pending coin… airdrop inbound', '-1 pièce en attente… largage imminent') : trT('airdrop inbound', 'largage imminent'));
+      setTimeout(() => {
+        store.set('yos-pending-coins', store.get('yos-pending-coins', 0) + 2);
+        playSparkleSound();
+        if (!pet.sleeping) showBubble(trT('the flock air-dropped 2 coins for your next run!!', 'le vol a largué 2 pièces pour ta prochaine run !!'), 2600);
+      }, 3000);
       return true;
     }
 
@@ -9301,7 +9980,7 @@ document.addEventListener('DOMContentLoaded', () => {
     playTone(980, 'triangle', 0.12, 0, 0.05);
 
     if (bless && bless.rocket) {
-      gainFollowers(15);
+      giftGain(15);
       setTimeout(() => {
         megaRocket();
         showBubble(trT('A ROCKET?!! TO THE MOON!! (I live there)', 'UNE FUSÉE ?!! TO THE MOON !! (j\'y habite)'), 2800);
@@ -9309,7 +9988,8 @@ document.addEventListener('DOMContentLoaded', () => {
         burstAtSlime(['🚀', '⭐', '✦'], 10);
       }, 450);
     } else if (bless) {
-      gainFollowers(6);
+      giftGain(6);
+      spellbookMark(MEGA_FX.indexOf(bless.fx), e); // grimoire bookkeeping
       setTimeout(() => {
         bless.fx.run(e);
         showBubble(trT(bless.fx.react[0], bless.fx.react[1]), 3000);
@@ -9324,7 +10004,7 @@ document.addEventListener('DOMContentLoaded', () => {
         playFanfare();
       }, 450);
     } else {
-      gainFollowers(2);
+      giftGain(2);
       setTimeout(() => {
         burstAtSlime([e, '♥'], 5);
         const r = GENERIC_EMOJI_REACT[emojiHash(e) % GENERIC_EMOJI_REACT.length];
@@ -9446,6 +10126,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!g || !liveOpen) return;
     store.set('yos-live-gifted', true);
     updateLiveTab();
+    giftPulse();
     // combo bookkeeping
     if (giftComboId === id) giftComboN++;
     else { giftComboId = id; giftComboN = 1; }
@@ -9483,7 +10164,7 @@ document.addEventListener('DOMContentLoaded', () => {
       pikChirp();
     }
 
-    gainFollowers(g.fans);
+    giftGain(g.fans);
     playTone(880 + g.fans * 40, 'triangle', 0.12, 0, 0.05);
     const line = makeChatLine({ u: trT('you', 'toi'), c: '#f0509f', t: `${g.icon} ${trT('sent a gift', 'a envoyé un cadeau')}${giftComboN > 1 ? ' ×' + giftComboN : ''}!!` });
     liveMirror(line);
@@ -10234,21 +10915,31 @@ document.addEventListener('DOMContentLoaded', () => {
      big cozy Pikmin playground — no fridge-magnet widgets needed. */
   var DESK_PIK = { layer: null, walkers: [], sproutAt: 0, timer: null };
   function deskRoster() { return store.get('yos-pik-roster', []); }
-  function deskPikSpawn(hueOrIdx, stage, chameleon) {
+  function deskPikSpawn(hueOrIdx, stage, chameleon, spId) {
+    if (DESK_PIK.walkers.length >= PIK_MAX) return DESK_PIK.walkers[0]; // hard cap: 6 on the desktop, same as the garden
     // hue number (new, full colour wheel) or legacy palette index
     const hue = (typeof hueOrIdx === 'number' && hueOrIdx > 4) ? hueOrIdx : null;
-    const color = hue !== null ? hueColor(hue) : (PIK_COLORS[hueOrIdx] || PIK_COLORS[0]);
+    const species = spId ? pikSpecies(spId) : null;
+    const color = species ? species.body : (hue !== null ? hueColor(hue) : (PIK_COLORS[hueOrIdx] || PIK_COLORS[0]));
     const el = document.createElement('div');
-    el.className = 'desk-pik';
+    el.className = 'desk-pik' + (species && species.fx ? ' pikfx-' + species.fx : '');
     el.setAttribute('aria-hidden', 'true');
     const img = document.createElement('img');
     img.src = pikSprite(color, stage || 0);
     img.alt = '';
     el.appendChild(img);
+    if (species) { // its hat IS its whole personality
+      const hat = document.createElement('span');
+      hat.className = 'pik-hat';
+      hat.textContent = species.hat;
+      el.appendChild(hat);
+      if (species.flip) img.classList.add('pik-flip'); // walks backwards. intended.
+    }
     DESK_PIK.layer.appendChild(el);
     const r = DESK_PIK.layer.getBoundingClientRect();
     const w = {
       el, img, hue: hue !== null ? hue : null, chameleon: !!chameleon, hueAt: 0, stage: stage || 0,
+      sp: species || null, spd: species && species.spd ? species.spd : 1, stepAt: 0,
       x: 40 + Math.random() * Math.max(120, r.width - 160),
       y: r.height * 0.35 + Math.random() * (r.height * 0.5),
       tx: 0, ty: 0, restUntil: 0, bubbleEl: null
@@ -10313,21 +11004,783 @@ document.addEventListener('DOMContentLoaded', () => {
     h = ((h % 360) + 360) % 360;
     return { body: `hsl(${h}, 74%, 74%)`, dark: `hsl(${h}, 62%, 54%)` };
   }
+
+  /* ==================================================================
+     PIKDEX — pikdex.exe, the collection deck ♡
+     every plucked buddy is archived here FOREVER: a unique tech name
+     (no genders, only vibes), a computer-science technique, and a
+     seat on the 24-segment HUE WHEEL. the squad (max 6) walks the
+     desktop + garden; everyone else lounges in the deck until you
+     promote them. travels with the SLIME cloud code. */
+  const PIKDEX_CAP = 72;   // a roomy shoebox — 50 wheel slots need breathing space
+  const WHEEL_SEGS = 50;   // 7.2° each = 2% per segment — the fifty shades of hue
+  const WHEEL_STEP = 360 / WHEEL_SEGS;
+  const PIK_NAMES = [
+    'Pixel', 'Cursor', 'Sprite', 'Voxel', 'Glyph', 'Chip', 'Bit', 'Nibble',
+    'Byte', 'Cache', 'Cookie', 'Token', 'Packet', 'Ping', 'Modem', 'Router',
+    'Widget', 'Kernel', 'Daemon', 'Cron', 'Bash', 'Grep', 'Regex', 'Lambda',
+    'Stack', 'Heap', 'Queue', 'Hash', 'Salt', 'Nonce', 'Blob', 'Node',
+    'Patch', 'Diff', 'Fork', 'Merge', 'Echo', 'Curl', 'Vim', 'Tarball',
+    'Floppy', 'Zipette', 'Socket', 'Proxy', 'Mutex', 'Async', 'Loopy', 'Segfault'
+  ]; // 48 names — the hue picks, the pluck order settles ties
+  const PIK_SUFFIX = ['', '++', ' v3', '.bak', '-turbo', ' (fork)', ' nightly', ' ×8'];
+  const PIK_CH_NAMES = ['Chroma', 'RGBaby', 'Hue Shift', 'Palette', 'Gradient', 'Dither'];
+  const PIK_SWATCH = [
+    'tomato.exe', 'peach.css', 'honey.js', 'butter.bat', 'lime.log', 'matcha.md',
+    'clover.sh', 'mint.ini', 'seafoam.css', 'aqua.cfg', 'cyan.sys', 'sky.png',
+    'azure.db', 'blueberry.zip', 'indigo.tmp', 'grape.svg', 'violet.dll', 'orchid.gif',
+    'magenta.exe', 'fuchsia.css', 'hotpink.js', 'bubblegum.bat', 'rose.txt', 'coral.jpg'
+  ];
+  const PIK_BIOS = [
+    'compiles hugs from source.',
+    'refuses to be garbage-collected.',
+    'passed the vibe check(sum).',
+    'runs on snacks and semicolons.',
+    'single-threaded but very devoted.',
+    'sleeps in low-power mode, dreams in RGB.',
+    'believes every bug is an undocumented friend.',
+    'will not rest until P = NP (or snack time).',
+    'backed up twice, loved thrice.',
+    'petal-to-metal performance.',
+    'thinks the cloud is just sky RAM.',
+    'has read the entire man page. of flowers.',
+    'its favourite key is the spacebar. so roomy.',
+    'deprecates nothing, ever. everything is loved.'
+  ];
+  const PIK_BIOS_FR = [
+    'compile des câlins depuis la source.',
+    'refuse d\'être ramassé par le garbage collector.',
+    'a réussi le vibe check(sum).',
+    'fonctionne aux collations et aux points-virgules.',
+    'mono-thread mais très dévoué.',
+    'dort en mode basse consommation, rêve en RGB.',
+    'croit que chaque bug est un ami non documenté.',
+    'ne se reposera pas avant P = NP (ou l\'heure du goûter).',
+    'sauvegardé deux fois, aimé trois fois.',
+    'performance pétale-au-plancher.',
+    'pense que le cloud est juste de la RAM céleste.',
+    'a lu toute la page man. des fleurs.',
+    'sa touche préférée est la barre d\'espace. tant de place.',
+    'ne déprécie rien, jamais. tout est aimé.'
+  ];
+  const PIK_SKILL_META = {
+    ctrl_z: { icon: '⌫', name: 'CTRL+Z', en: 'un-happens one bug per cooldown. regret not included.', fr: 'dé-produit un bug par recharge. regrets non inclus.' },
+    rm_rf: { icon: '🗑', name: 'RM -RF', en: 'deletes the problem. and the concept of backups.', fr: 'supprime le problème. et le concept de backup.' },
+    blame: { icon: '👉', name: 'GIT BLAME', en: 'finds whose fault it was. it was yours. with love.', fr: 'trouve le coupable. c\'était toi. avec amour.' },
+    four04: { icon: '🚫', name: '404', en: 'makes bugs unfindable. technically a fix.', fr: 'rend les bugs introuvables. techniquement un correctif.' },
+    zip: { icon: '🗜', name: 'ZIP', en: 'compresses a whole bug into 0 bytes of your business.', fr: 'compresse un bug entier en 0 octet de tes affaires.' },
+    duck: { icon: '🦆', name: 'RUBBER DUCK', en: 'listens until the bug explains itself and leaves in shame.', fr: 'écoute jusqu\'à ce que le bug s\'explique et parte, honteux.' },
+    lint: { icon: '🌸', name: 'LINT --FIX', en: 'refactors bugs into flowers. warnings into petals.', fr: 'refactore les bugs en fleurs. les warnings en pétales.' },
+    sudo: { icon: '👑', name: 'SUDO', en: 'asks the bug to stop. politely. with root.', fr: 'demande au bug d\'arrêter. poliment. avec root.' }
+  };
+  const PIK_LEGACY_HUES = [330, 268, 203, 45, 152]; // palette 0-4 → wheel homes
+
+  /* ------------------------------------------------------------------
+     HIDDEN SPECIES — the other 22 slots of the 72-slot deck.
+     roughly 1 sprout in 10 mutates into one of these: computer-born
+     creatures with their own hat, their own colours, their own walk
+     cycle. each species exists exactly ONCE — 50 hues + 22 species
+     = a perfect 72. (the chameleon lives in the wheel hub, capless.)
+     n/t/lore: [en, fr] — t is the riddle shown on the empty slot. */
+  const HIDDEN_SPECIES = [
+    { id: 'glitch', hat: '📼', body: { body: '#d38ef5', dark: '#8a4bd0' }, fx: 'glitch', n: ['Artifact', 'Artéfact'], t: ['the render made a mistake. keep it.', 'le rendu a fait une erreur. garde-la.'], lore: ['a compression artifact that gained sentience. do not re-encode.', 'un artéfact de compression devenu conscient. ne pas ré-encoder.'] },
+    { id: 'matrix', hat: '🖥️', body: { body: '#7ee787', dark: '#2ea043' }, fx: 'matrix', n: ['Neo Sprout', 'Néo Pousse'], t: ['follow the green rain.', 'suis la pluie verte.'], lore: ['sees the desktop as falling glyphs. chose the pink pill anyway.', 'voit le bureau en glyphes qui tombent. a choisi la pilule rose quand même.'] },
+    { id: 'pointer', hat: '🖱️', body: { body: '#f5f5fa', dark: '#9aa0b4' }, fx: 'dart', spd: 1.7, n: ['Pointer', 'Pointeur'], t: ['it moves exactly like something you own.', 'il bouge exactement comme un truc à toi.'], lore: ['sprints, stops dead, hovers. blames your wrist.', 'sprinte, pile net, plane. accuse ton poignet.'] },
+    { id: 'wifi', hat: '📶', body: { body: '#9fd8ff', dark: '#4f9edb' }, fx: 'ripple', n: ['Signal', 'Signal'], t: ['three bars in the meadow.', 'trois barres dans la prairie.'], lore: ['full bars everywhere. yes, even in the basement.', 'du réseau partout. oui, même à la cave.'] },
+    { id: 'lowbatt', hat: '🪫', body: { body: '#ff9d9d', dark: '#d64545' }, fx: 'blinkred', spd: 0.45, n: ['Low Batt', 'Batterie Faible'], t: ['it beeps, sadly, at 20%.', 'il bipe, tristement, à 20 %.'], lore: ['permanently at 15%. refuses every charger. lives anyway.', 'bloqué à 15 %. refuse tous les chargeurs. vit sa vie quand même.'] },
+    { id: 'post', hat: '⌨️', body: { body: '#ffd27a', dark: '#c98a2e' }, fx: 'crt', n: ['POST Beep', 'Bip POST'], t: ['one short beep = all is well.', 'un bip court = tout va bien.'], lore: ['boots in 0.2 seconds. spends the saved time napping.', 'démarre en 0,2 s. passe le temps gagné à faire la sieste.'] },
+    { id: 'cumulus', hat: '☁️', body: { body: '#eef7ff', dark: '#a5c9e8' }, fx: 'float', n: ['Cumulus', 'Cumulus'], t: ['local sky, 100% chance of cute.', 'ciel local, 100 % de chances de mignon.'], lore: ['your data is inside it somewhere. it will not say where.', 'tes données sont dedans, quelque part. il ne dira pas où.'] },
+    { id: 'feature', hat: '🐛', body: { body: '#c8f07e', dark: '#7fae35' }, fx: '', flip: true, n: ['Feature', 'Fonctionnalité'], t: ['it walks backwards. that is intended.', 'il marche à reculons. c\'est voulu.'], lore: ['filed as a bug, closed as WONTFIX, beloved as a feature.', 'signalé comme bug, fermé en WONTFIX, adoré comme fonctionnalité.'] },
+    { id: 'latency', hat: '⏳', body: { body: '#e8d9b8', dark: '#b09a62' }, fx: '', choppy: true, n: ['Latency', 'Latence'], t: ['it arrives… eventually.', 'il arrive… éventuellement.'], lore: ['walks at 300ms ping. emotionally, always 3 seconds behind.', 'marche à 300 ms de ping. émotionnellement, 3 secondes de retard.'] },
+    { id: 'aliased', hat: '🟪', body: { body: '#cbb1f2', dark: '#8e6cc9' }, fx: 'chunky', n: ['Aliased', 'Crénelé'], t: ['somebody turned the resolution down.', 'quelqu\'un a baissé la résolution.'], lore: ['renders at 8×8 out of principle. anti-aliasing is a scam.', 'se rend en 8×8 par principe. l\'anticrénelage est une arnaque.'] },
+    { id: 'darkmode', hat: '🌑', body: { body: '#4a3a5e', dark: '#241335' }, fx: 'stars', n: ['Dark Mode', 'Mode Sombre'], t: ['it only comes out for your retinas.', 'il ne sort que pour tes rétines.'], lore: ['claims it saves battery. actually just goth.', 'prétend économiser la batterie. en vrai, juste gothique.'] },
+    { id: 'gilded', hat: '🏆', body: { body: '#ffd873', dark: '#c9992e' }, fx: 'shine', n: ['Gold Master', 'Version Or'], t: ['the final build. shipped. golden.', 'le build final. livré. doré.'], lore: ['the release that never needed a hotfix. worship it.', 'la version qui n\'a jamais eu besoin de hotfix. vénère-la.'] },
+    { id: 'cacheghost', hat: '👻', body: { body: '#e8e6f5', dark: '#a9a4c9' }, fx: 'ghost', n: ['Cache Ghost', 'Fantôme du Cache'], t: ['you cleared it. it came back.', 'tu l\'as vidé. il est revenu.'], lore: ['404 in the heap, alive in your heart. clear-site-data can\'t touch it.', '404 dans le tas, vivant dans ton cœur. clear-site-data n\'y peut rien.'] },
+    { id: 'cronjob', hat: '⏰', body: { body: '#a8e8d8', dark: '#4fae8e' }, fx: 'tick', n: ['Cron Job', 'Tâche Cron'], t: ['every minute, on the minute.', 'chaque minute, à la minute.'], lore: ['runs * * * * *. never missed a beat. slightly smug about it.', 'tourne en * * * * *. n\'a jamais raté. légèrement fier de lui.'] },
+    { id: 'y2kbug', hat: '🎉', body: { body: '#ffb3dd', dark: '#f0509f' }, fx: 'confetti', n: ['Y2K Bug', 'Bug de l\'An 2000'], t: ['it partied like it\'s 19100.', 'il a fait la fête comme en 19100.'], lore: ['the apocalypse that RSVP\'d and never showed. still dressed for it.', 'l\'apocalypse qui avait confirmé et n\'est jamais venue. toujours sur son 31.'] },
+    { id: 'bitflip', hat: '🎲', body: { body: '#f2f2f2', dark: '#1a1a1a' }, fx: 'invert', n: ['Bit Flip', 'Bit Inversé'], t: ['a cosmic ray did this.', 'c\'est un rayon cosmique qui a fait ça.'], lore: ['one stray cosmic ray and now it can\'t decide if it\'s a 0 or a 1.', 'un rayon cosmique égaré, et il hésite entre 0 et 1 depuis.'] },
+    { id: 'turbo', hat: '🔥', body: { body: '#ff8a5c', dark: '#d1431f' }, fx: 'heat', spd: 1.9, n: ['Overclock', 'Overclock'], t: ['it voids its own warranty.', 'il annule sa propre garantie.'], lore: ['runs 30% faster, 300% warmer. the fan noise is purring, probably.', 'tourne 30 % plus vite, 300 % plus chaud. le ventilo ronronne, sans doute.'] },
+    { id: 'dotmatrix', hat: '🖨️', body: { body: '#c7d3e8', dark: '#7c8db0' }, fx: 'paper', n: ['Dot Matrix', 'Matricielle'], t: ['you can hear it from two rooms away.', 'tu l\'entends depuis deux pièces.'], lore: ['prints one pixel at a time. SCREEE. beautiful. archival quality.', 'imprime pixel par pixel. SCREEE. magnifique. qualité archive.'] },
+    { id: 'bsodjr', hat: '💙', body: { body: '#7cb1ff', dark: '#2f5fd0' }, fx: 'faint', n: ['BSOD Jr.', 'BSOD Jr.'], t: ['it collects your crash reports.', 'il collectionne tes rapports de plantage.'], lore: ['falls over :( then gets right back up. files a crash report about itself each time.', 'tombe :( puis se relève. s\'envoie un rapport de plantage à chaque fois.'] },
+    { id: 'rgbrig', hat: '🕹️', body: { body: '#ff8fc7', dark: '#d6539b' }, fx: 'rgbcycle', n: ['RGB Rig', 'Config RGB'], t: ['the frames per second are cosmetic.', 'les FPS sont cosmétiques.'], lore: ['+15 FPS from the lighting alone (self-reported).', '+15 FPS grâce à l\'éclairage seul (auto-déclaré).'] },
+    { id: 'captcha', hat: '✅', body: { body: '#d6f5c8', dark: '#7cba58' }, fx: 'verify', n: ['Not A Robot', 'Pas Un Robot'], t: ['click every square containing pikmin.', 'coche chaque case contenant des pikmin.'], lore: ['passes every CAPTCHA first try. suspiciously good at crosswalks.', 'réussit chaque CAPTCHA du premier coup. suspicieusement fort en passages piétons.'] },
+    { id: 'kernelpg', hat: '🐧', body: { body: '#bfe3f0', dark: '#3d7a94' }, fx: '', n: ['Penguin Core', 'Cœur Manchot'], t: ['it\'s free. it\'s open. it\'s here.', 'il est libre. il est ouvert. il est là.'], lore: ['monolithic, open-source, will explain itself unprompted.', 'monolithique, open-source, s\'explique sans qu\'on demande.'] }
+  ]; // exactly 22 — 50 hues + 22 species = the perfect 72. NEVER reorder (cloud wire format).
+  function pikSpecies(id) { return HIDDEN_SPECIES.find((h) => h.id === id) || null; }
+  function pikEntryColor(p) { const sp = p.sp && pikSpecies(p.sp); return sp ? sp.body : hueColor(pikHueOf(p)); }
+  function pikHiddenLeft(dex) { return HIDDEN_SPECIES.filter((h) => !(dex || pikdexGet()).some((p) => p.sp === h.id)); }
+
+  /* one gacha to rule every meadow: chameleon → hidden → missing hue.
+     normal sprouts ALWAYS fill a missing wheel segment now — no dupes,
+     so 50 hues + 22 species really can occupy all 72 slots. */
+  function pikRollSprout() {
+    const dex = pikdexGet();
+    const nonCh = dex.filter((p) => !p.ch).length;
+    const hasCh = dex.some((p) => p.ch);
+    const complete = nonCh >= PIKDEX_CAP;
+    // the chameleon lives outside the 72 — post-completion it gets generous
+    if (!hasCh && Math.random() < (complete ? 0.06 : 0.01)) return { type: 'chameleon' };
+    if (complete) return null; // the meadow rests, complete ♡
+    const hiddenLeft = pikHiddenLeft(dex);
+    const segs = pikdexWheelSegs(dex);
+    const missing = [];
+    for (let i = 0; i < WHEEL_SEGS; i++) if (!segs.has(i)) missing.push(i);
+    const hiddenChance = 0.08 + Math.random() * 0.05; // ~10%, drifting
+    if (hiddenLeft.length && (!missing.length || Math.random() < hiddenChance)) {
+      return { type: 'hidden', sp: hiddenLeft[Math.floor(Math.random() * hiddenLeft.length)] };
+    }
+    if (missing.length) {
+      const seg = missing[Math.floor(Math.random() * missing.length)];
+      return { type: 'normal', hue: Math.max(5, Math.round(seg * WHEEL_STEP + 1 + Math.random() * (WHEEL_STEP - 2))) };
+    }
+    return null;
+  }
+
+  function pikdexGet() { const d = store.get('yos-pikdex', []); return Array.isArray(d) ? d : []; }
+  function pikdexSave(d) { store.set('yos-pikdex', d); }
+  function pikHueOf(p) { return p.h != null ? ((p.h % 360) + 360) % 360 : (PIK_LEGACY_HUES[p.c] != null ? PIK_LEGACY_HUES[p.c] : 330); }
+  function pikdexActives(dex) { return (dex || pikdexGet()).filter((p) => p.a); }
+  function pikNameBaseOf(p) { return PIK_NAMES[Math.floor(pikHueOf(p) / (360 / PIK_NAMES.length)) % PIK_NAMES.length]; }
+  function pikNameOf(dex, ix) {
+    const p = dex[ix];
+    if (!p) return '???';
+    if (p.sp) { const sp = pikSpecies(p.sp); return sp ? trT(sp.n[0], sp.n[1]) : '???'; }
+    let base, dupes = 0;
+    if (p.ch) {
+      let ord = 0;
+      for (let i = 0; i < ix; i++) if (dex[i].ch) ord++;
+      base = PIK_CH_NAMES[ord % PIK_CH_NAMES.length];
+      dupes = Math.floor(ord / PIK_CH_NAMES.length);
+    } else {
+      base = pikNameBaseOf(p);
+      for (let i = 0; i < ix; i++) if (!dex[i].ch && pikNameBaseOf(dex[i]) === base) dupes++;
+    }
+    return base + (dupes ? (PIK_SUFFIX[Math.min(dupes, PIK_SUFFIX.length - 1)] || (' ×' + (dupes + 1))) : '');
+  }
+  // a Set, not a bitmask: 50 segments would overflow JS's 32-bit bitwise ops
+  // (chameleons refuse a segment; hidden species live off-wheel entirely)
+  function pikdexWheelSegs(dex) {
+    const segs = new Set();
+    (dex || pikdexGet()).forEach((p) => { if (!p.ch && p.sp == null) segs.add(Math.floor(pikHueOf(p) / WHEEL_STEP) % WHEEL_SEGS); });
+    return segs;
+  }
+  function pikdexWheelCount(dex) { return pikdexWheelSegs(dex).size; }
+  function pikdexWheelPct(dex) { return Math.round((pikdexWheelCount(dex) / WHEEL_SEGS) * 100); }
+  function pikdexWheelCheck(before) {
+    const pct = pikdexWheelPct();
+    if (pct >= 25) achvUnlock('colorpicker');
+    if (pct >= 50) achvUnlock('halftone');
+    if (pct >= 100) {
+      achvUnlock('truecolor');
+      if (before < 100) {
+        playFanfare();
+        showBubble(trT('TRUE COLOR. all 50 shades of hue. you actually did it ♡', 'TRUE COLOR. les 50 nuances de teinte. tu l\'as vraiment fait ♡'), 3400);
+      }
+    }
+  }
+  function pikdexRosterProject() {
+    const roster = pikdexActives().slice(0, PIK_MAX).map((p) => ({ h: pikHueOf(p), ch: p.ch ? 1 : 0, s: p.s || 0, k: p.k || null, sp: p.sp || null }));
+    store.set('yos-pik-roster', roster);
+    return roster;
+  }
+  function pikdexAbsorbStages() {
+    // stage-ups earned on stage/desktop flow back into the deck records
+    const dex = pikdexGet();
+    const actives = dex.filter((p) => p.a);
+    const roster = store.get('yos-pik-roster', []);
+    let changed = false;
+    roster.forEach((r, i) => {
+      if (actives[i] && (r.s || 0) > (actives[i].s || 0)) { actives[i].s = r.s || 0; changed = true; }
+    });
+    if (changed) { pikdexSave(dex); renderPikdexSoon(); }
+  }
+  var pikdexRenderT = null;
+  function renderPikdexSoon() {
+    if (pikdexRenderT) clearTimeout(pikdexRenderT);
+    pikdexRenderT = setTimeout(() => { if (typeof renderPikdex === 'function') renderPikdex(); }, 180);
+  }
+  function pikdexAdd(entry) {
+    const dex = pikdexGet();
+    // the chameleon is capless (it lives in the wheel hub, not a slot)
+    if (!entry.ch && dex.filter((p) => !p.ch).length >= PIKDEX_CAP) return 'full';
+    const before = pikdexWheelPct(dex);
+    entry.a = pikdexActives(dex).length < PIK_MAX ? 1 : 0;
+    entry.t = Date.now();
+    dex.push(entry);
+    pikdexSave(dex);
+    if (entry.a) pikdexRosterProject();
+    pikdexWheelCheck(before);
+    if (typeof cloudQueueSync === 'function') cloudQueueSync();
+    renderPikdexSoon();
+    return entry.a ? 'active' : 'deck';
+  }
+  // (pikSproutHue retired — pikRollSprout is the one gacha for every meadow)
+  function pikStatsOf(p) {
+    if (p.ch) return null; // benchmarks refuse to settle
+    // hidden species bench with a pseudo-hue hashed from their name
+    const h = p.sp ? (p.sp.split('').reduce((a, c) => a + c.charCodeAt(0) * 37, 7) % 360) : pikHueOf(p);
+    return {
+      cpu: 40 + ((h * 7) % 60),   // Cuteness Processing Unit
+      ram: 40 + ((h * 13) % 60),  // Remembers All Meals
+      fps: 40 + ((h * 11) % 60),  // Flowers Per Second
+      ping: 8 + ((h * 3) % 88)    // ms to answer a pet
+    };
+  }
+  function pikAgeOf(p) {
+    if (!p.t) return trT('restored from the cloud (a legend precedes it)', 'restauré du cloud (une légende le précède)');
+    const s = Math.max(1, Math.floor((Date.now() - p.t) / 1000));
+    const d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600), m = Math.floor((s % 3600) / 60);
+    const up = d ? `${d}d ${h}h` : (h ? `${h}h ${m}m` : `${m}m ${s % 60}s`);
+    return trT(`${up} (zero crashes)`, `${up} (zéro plantage)`);
+  }
+  function deskPikResync() {
+    if (!DESK_PIK.layer) return;
+    DESK_PIK.walkers.forEach((w) => {
+      try { if (w.bubbleEl) w.bubbleEl.remove(); w.el.remove(); } catch (e) { /* already gone */ }
+    });
+    DESK_PIK.walkers = [];
+    deskRoster().slice(0, PIK_MAX).forEach((rr) => deskPikSpawn(rr.h != null ? rr.h : rr.c, rr.s, !!rr.ch, rr.sp || null));
+  }
+  function gardenResync() {
+    if (typeof GARDEN === 'undefined' || !GARDEN) return;
+    if (!GARDEN.buddies.length && !GARDEN.restored) return;
+    GARDEN.buddies.forEach((b) => {
+      try { if (b.carryEl) b.carryEl.remove(); if (b.bubbleEl) b.bubbleEl.remove(); b.el.remove(); } catch (e) { /* already gone */ }
+    });
+    GARDEN.buddies = [];
+    GARDEN.restored = false;
+    if (typeof gardenRestoreRoster === 'function') gardenRestoreRoster(true);
+  }
+  /* ---------- FLOAT MODE: exactly how high the squad hovers ----------
+     'under' (default): z 50 — over the wallpaper, under every window
+     'top':             z 1990 — over ALL windows, never over the taskbar
+     'shy':             hides the moment any window is open
+     all modes: live room / game open → walkers vanish (the squad is
+     literally performing inside those windows — no ghost twins) */
+  function pikFloatMode() {
+    const m = store.get('yos-pik-float', 'under');
+    return (m === 'top' || m === 'shy') ? m : 'under';
+  }
+  function applyPikFloat() {
+    const layer = DESK_PIK.layer;
+    if (!layer) return;
+    const mode = pikFloatMode();
+    layer.classList.toggle('pik-float-top', mode === 'top');
+    // 'top' must TRACK the window z counter (focusWindow keeps raising it),
+    // otherwise a much-clicked window would eventually out-stack the squad.
+    // capped at 1999: the taskbar (2000) is sacred.
+    layer.style.zIndex = mode === 'top' ? String(Math.min(highestZ + 10, 1999)) : '';
+    const isUp = (id) => {
+      const w = document.getElementById(id);
+      return !!w && !w.classList.contains('window-closed') && !w.classList.contains('window-minimized');
+    };
+    // 'shy' = fully invisible, everywhere, always (they still perform inside
+    // the live room & the game — those are THEIR windows, not the desktop)
+    const hide = mode === 'shy' || isUp('win-live') || isUp('win-game');
+    layer.classList.toggle('pik-float-hidden', hide);
+  }
+  const PIK_FLOAT_OPTS = [
+    { id: 'top', icon: '🔝', name: ['on top', 'au-dessus'], d: ['spotlight hog — floats above every window (the taskbar is sacred)', 'accro au projecteur — flotte au-dessus de toutes les fenêtres (la barre des tâches est sacrée)'] },
+    { id: 'under', icon: '🪟', name: ['under windows', 'sous les fenêtres'], d: ['well-behaved — patrols the desktop, tucked under any open window', 'bien élevé — patrouille le bureau, glissé sous les fenêtres ouvertes'] },
+    { id: 'shy', icon: '🙈', name: ['shy', 'timide'], d: ['fully invisible on the desktop — they only appear in the live room & the game', 'totalement invisible sur le bureau — visibles seulement au salon live & en jeu'] }
+  ];
+
+  /* the 1% chameleon deserves a whole-desktop festival */
+  function chameleonCelebrate() {
+    playFanfare();
+    if (REDUCED_MOTION) return; // the fanfare + bubble carry the moment
+    const n = 46;
+    for (let i = 0; i < n; i++) {
+      const f = document.createElement('img');
+      f.className = 'cham-burst';
+      f.src = trailBloomSprite(i % 6);
+      f.alt = '';
+      f.style.left = (Math.random() * 100) + 'vw';
+      f.style.width = (13 + Math.random() * 19) + 'px';
+      f.style.animationDelay = (Math.random() * 1.3) + 's';
+      f.style.animationDuration = (2.3 + Math.random() * 1.9) + 's';
+      document.body.appendChild(f);
+      setTimeout(() => f.remove(), 5600);
+    }
+  }
+
+  /* ---------- the living boot screen ----------
+     dresses the loader from the visitor's save: their slime (boopable),
+     their exact squad (colours, species hats, growth stages) marching
+     underneath, and a subtext that reads THEIR stats. every visit the
+     boot screen is a tiny "previously on…" recap ♡ */
+  function loaderDecorate() {
+    const slimeBtn = document.getElementById('loader-slime');
+    if (slimeBtn && !slimeBtn._wired) {
+      slimeBtn._wired = true;
+      let stalls = 0;
+      slimeBtn.addEventListener('click', () => {
+        slimeBtn.classList.remove('is-booped');
+        void slimeBtn.offsetWidth;
+        slimeBtn.classList.add('is-booped');
+        playTone(880 + stalls * 70, 'square', 0.06, 0, 0.03);
+        if (stalls < 5) { stalls++; window.__loaderHideAt = Math.max(window.__loaderHideAt || 0, Date.now()) + 800; }
+        const heart = document.createElement('span');
+        heart.className = 'loader-boop-heart';
+        heart.textContent = '♥';
+        heart.style.left = (25 + Math.random() * 50) + '%';
+        slimeBtn.appendChild(heart);
+        setTimeout(() => heart.remove(), 950);
+      });
+    }
+    const row = document.getElementById('loader-squad');
+    const roster = store.get('yos-pik-roster', []);
+    if (row && Array.isArray(roster) && roster.length) {
+      row.innerHTML = ''; // rebuilt from the save, sprites only
+      roster.slice(0, PIK_MAX).forEach((r, i) => {
+        const sp = r.sp ? pikSpecies(r.sp) : null;
+        const holder = document.createElement('span');
+        holder.className = 'loader-pik';
+        holder.style.animationDelay = (i * 0.13) + 's';
+        const img = document.createElement('img');
+        img.src = pikSprite(sp ? sp.body : ((r.h != null) ? hueColor(r.h) : (PIK_COLORS[r.c] || PIK_COLORS[0])), r.s || 0);
+        img.alt = '';
+        holder.appendChild(img);
+        if (sp) {
+          const hat = document.createElement('span');
+          hat.className = 'loader-pik-hat';
+          hat.textContent = sp.hat;
+          holder.appendChild(hat);
+        }
+        holder.addEventListener('click', () => pikChirp());
+        row.appendChild(holder);
+      });
+      window.__loaderHideAt = Math.max(window.__loaderHideAt || 0, Date.now() + 2400); // a beat longer to admire the crew
+    }
+    // the subtext reads YOUR save, not a stock line
+    const sub = document.querySelector('#loader .loader-subtext');
+    if (sub) {
+      const dex = pikdexGet();
+      if (dex.length) {
+        const fans = store.get('yos-followers', 0);
+        const pct = pikdexWheelPct(dex);
+        const bits = [trT(`restoring squad ×${Math.min(roster.length, PIK_MAX)}`, `restauration de l'escouade ×${Math.min(roster.length, PIK_MAX)}`)];
+        if (pct > 0) bits.push(trT(`hue wheel ${pct}%`, `roue chromatique ${pct}%`));
+        if (fans > 0) bits.push(trT(`${fans} ${fans === 1 ? 'fan' : 'fans'}`, `${fans} fan${fans === 1 ? '' : 's'}`));
+        sub.textContent = bits.join(' · ') + '… ok ♡';
+        sub.removeAttribute('data-i18n'); // the personalised line outranks the dictionary
+      }
+    }
+  }
+
+  /* a hidden-species pull: rarer than candy, cheaper than a GPU */
+  function pikHiddenCelebrate(species) {
+    playFanfare();
+    showToast(trT(`${species.hat}✨ HIDDEN SPECIES!! ${species.n[0]} joined the deck!!`, `${species.hat}✨ ESPÈCE CACHÉE !! ${species.n[1]} rejoint le deck !!`));
+    if (!pet.sleeping) showBubble(trT(`${species.hat} a ${species.n[0]}?! check its file in pikdex.exe!!`, `${species.hat} un ${species.n[1]} ?! regarde sa fiche dans pikdex.exe !!`), 3400);
+    if (REDUCED_MOTION) return;
+    for (let i = 0; i < 18; i++) {
+      const f = document.createElement('span');
+      f.className = 'cham-burst pik-hidden-burst';
+      f.textContent = species.hat;
+      f.style.left = (Math.random() * 100) + 'vw';
+      f.style.fontSize = (14 + Math.random() * 14) + 'px';
+      f.style.animationDelay = (Math.random() * 0.9) + 's';
+      f.style.animationDuration = (2.2 + Math.random() * 1.6) + 's';
+      document.body.appendChild(f);
+      setTimeout(() => f.remove(), 5200);
+    }
+  }
+
+  function pikdexSetActive(ix, on) {
+    const dex = pikdexGet();
+    if (!dex[ix]) return;
+    if (on && pikdexActives(dex).length >= PIK_MAX) {
+      showToast(trT('squad is full (6) — rest someone first ♡', 'escouade pleine (6) — repose quelqu\'un d\'abord ♡'));
+      return;
+    }
+    dex[ix].a = on ? 1 : 0;
+    pikdexSave(dex);
+    pikdexRosterProject();
+    deskPikResync();
+    gardenResync();
+    applyPikFloat();
+    // a mid-run swap marches straight into slime_run.exe, no restart needed
+    try {
+      if (typeof GAME !== 'undefined' && GAME && GAME.state === 'run' && typeof gAttachPiks === 'function') gAttachPiks(true);
+    } catch (e) { /* game not booted yet */ }
+    pikChirp();
+    showToast(on
+      ? trT(`⭐ ${pikNameOf(dex, ix)} joins the squad!!`, `⭐ ${pikNameOf(dex, ix)} rejoint l'escouade !!`)
+      : trT(`💤 ${pikNameOf(dex, ix)} is resting in the deck`, `💤 ${pikNameOf(dex, ix)} se repose dans le deck`));
+    if (typeof cloudQueueSync === 'function') cloudQueueSync();
+    renderPikdex();
+  }
+
+  /* ---------- pikdex.exe rendering: hue wheel + deck grid + dossier ---------- */
+  function renderPikdex() {
+    const grid = document.getElementById('pikdex-grid');
+    if (!grid) return;
+    const dex = pikdexGet();
+    const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+    // hue wheel donut — 24 crisp wedges, collected ones glow in their hue
+    const cv = document.getElementById('pikdex-wheel');
+    if (cv && cv.getContext) {
+      const ctx = cv.getContext('2d');
+      const segsSet = pikdexWheelSegs(dex);
+      const cx = 60, cy = 60, R = 56, r0 = 27;
+      ctx.clearRect(0, 0, 120, 120);
+      for (let i = 0; i < WHEEL_SEGS; i++) {
+        const a0 = ((i * WHEEL_STEP) - 90) * Math.PI / 180;
+        const a1 = (((i + 1) * WHEEL_STEP) - 90) * Math.PI / 180;
+        ctx.beginPath();
+        ctx.arc(cx, cy, R, a0, a1);
+        ctx.arc(cx, cy, r0, a1, a0, true);
+        ctx.closePath();
+        ctx.fillStyle = segsSet.has(i) ? `hsl(${i * WHEEL_STEP + WHEEL_STEP / 2}, 78%, ${dark ? 60 : 68}%)` : (dark ? '#3a2452' : '#efe3f6');
+        ctx.fill();
+        ctx.strokeStyle = dark ? '#1c0f2e' : '#5a3d6e';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+      ctx.beginPath();
+      ctx.arc(cx, cy, r0 - 4, 0, 6.2832);
+      ctx.fillStyle = dark ? '#2a1440' : '#fff6fb';
+      ctx.fill();
+      ctx.strokeStyle = dark ? '#b79af0' : '#5a3d6e';
+      ctx.stroke();
+    }
+    const hasCh = dex.some((p) => p.ch);
+    const center = document.getElementById('pikdex-wheel-center');
+    if (center) {
+      center.textContent = hasCh ? '🦎' : '♡';
+      center.title = hasCh ? trT('the chameleon sits in the middle, above such choices', 'le caméléon trône au centre, au-dessus de ces choix') : '';
+    }
+    const segs = pikdexWheelCount(dex);
+    const pctEl = document.getElementById('pikdex-pct');
+    if (pctEl) pctEl.textContent = pikdexWheelPct(dex) + '%';
+    const note = document.getElementById('pikdex-wheel-note');
+    if (note) {
+      note.textContent = trT(
+        `${segs}/50 hue segments collected (2% each) — the full wheel = TRUE COLOR (all fifty shades of hue)`,
+        `${segs}/50 segments de teinte (2 % chacun) — la roue complète = TRUE COLOR (les cinquante nuances)`
+      );
+    }
+    const squad = document.getElementById('pikdex-squadline');
+    if (squad) {
+      const nonChN = dex.filter((p) => !p.ch).length;
+      const chTag = dex.some((p) => p.ch) ? ' · 🦎' : '';
+      squad.textContent = trT(
+        `⭐ on duty: ${pikdexActives(dex).length}/${PIK_MAX} · deck: ${nonChN}/${PIKDEX_CAP}${chTag}`,
+        `⭐ en service : ${pikdexActives(dex).length}/${PIK_MAX} · deck : ${nonChN}/${PIKDEX_CAP}${chTag}`
+      );
+    }
+    // float-mode picker: exactly how high the squad hovers over the OS
+    const floatBox = document.getElementById('pikdex-float');
+    if (floatBox) {
+      floatBox.innerHTML = ''; // rebuilt below, textContent only
+      const lab = document.createElement('span');
+      lab.className = 'pikdex-float-label';
+      lab.textContent = trT('FLOAT MODE', 'FLOTTAISON');
+      floatBox.appendChild(lab);
+      const current = pikFloatMode();
+      PIK_FLOAT_OPTS.forEach((o) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'pikdex-float-btn' + (current === o.id ? ' is-picked' : '');
+        b.textContent = `${o.icon} ${trT(o.name[0], o.name[1])}`;
+        b.title = trT(o.d[0], o.d[1]);
+        b.setAttribute('aria-pressed', current === o.id ? 'true' : 'false');
+        b.addEventListener('click', () => {
+          store.set('yos-pik-float', o.id);
+          applyPikFloat();
+          pikChirp();
+          renderPikdex();
+        });
+        floatBox.appendChild(b);
+      });
+      const desc = document.createElement('span');
+      desc.className = 'pikdex-float-desc';
+      const cur = PIK_FLOAT_OPTS.find((o) => o.id === current);
+      desc.textContent = trT(cur.d[0], cur.d[1]) + trT(' · (live room & game always tuck them away — the squad is in there)', ' · (le salon live & le jeu les rangent toujours — l\'escouade y est déjà)');
+      floatBox.appendChild(desc);
+    }
+    // the chameleon lives in the wheel hub — click it to open its dossier
+    if (center) {
+      const chIx = dex.findIndex((p) => p.ch);
+      center.classList.toggle('is-clickable', chIx >= 0);
+      center.onclick = chIx >= 0 ? () => pikProfileShow(chIx) : null;
+      center.style.pointerEvents = chIx >= 0 ? 'auto' : 'none';
+    }
+    /* THE 72 FIXED SLOTS — a real dex: 50 hue slots (sorted around the
+       wheel) + 22 hidden-species slots. empty slots tease what's coming. */
+    grid.innerHTML = ''; // rebuilt below — every string goes through textContent
+    function makeCell(dexIx, extraCls) {
+      const p = dex[dexIx];
+      const cell = document.createElement('button');
+      cell.type = 'button';
+      cell.className = 'pikdex-cell' + (p.a ? ' is-on-duty' : '') + (p.ch ? ' is-chameleon' : '') + (extraCls || '');
+      cell.setAttribute('role', 'listitem');
+      const name = pikNameOf(dex, dexIx);
+      cell.title = name;
+      const img = document.createElement('img');
+      img.src = pikSprite(p.sp ? pikEntryColor(p) : hueColor(pikHueOf(p)), p.s || 0);
+      img.alt = '';
+      const nm = document.createElement('span');
+      nm.className = 'pikdex-cell-name';
+      nm.textContent = name;
+      if (p.a) {
+        const star = document.createElement('span');
+        star.className = 'pikdex-cell-star';
+        star.textContent = '⭐';
+        star.setAttribute('aria-label', trT('on the squad', 'dans l\'escouade'));
+        cell.appendChild(star);
+      }
+      if (p.sp) {
+        const sp = pikSpecies(p.sp);
+        if (sp) {
+          const hat = document.createElement('span');
+          hat.className = 'pikdex-cell-hat';
+          hat.textContent = sp.hat;
+          cell.appendChild(hat);
+          if (sp.fx) cell.classList.add('pikfx-' + sp.fx);
+        }
+      }
+      cell.append(img, nm);
+      cell.addEventListener('click', () => pikProfileShow(dexIx));
+      return cell;
+    }
+    // slot owners: first catch of each wheel segment / each species
+    const segOwner = {}, spOwner = {};
+    dex.forEach((p, ix) => {
+      if (p.ch) return;
+      if (p.sp) { if (spOwner[p.sp] == null) spOwner[p.sp] = ix; return; }
+      const seg = Math.floor(pikHueOf(p) / WHEEL_STEP) % WHEEL_SEGS;
+      if (segOwner[seg] == null) segOwner[seg] = ix;
+    });
+    for (let seg = 0; seg < WHEEL_SEGS; seg++) {
+      if (segOwner[seg] != null) {
+        grid.appendChild(makeCell(segOwner[seg]));
+      } else {
+        const empty = document.createElement('div');
+        empty.className = 'pikdex-cell pikdex-cell-empty';
+        empty.title = trT(`a colour is missing here (hue ~${Math.round(seg * WHEEL_STEP + WHEEL_STEP / 2)}°) — the meadow is already growing it ♡`, `une couleur manque ici (teinte ~${Math.round(seg * WHEEL_STEP + WHEEL_STEP / 2)}°) — la prairie la fait déjà pousser ♡`);
+        empty.style.setProperty('--slot-hue', String(Math.round(seg * WHEEL_STEP + WHEEL_STEP / 2)));
+        empty.textContent = '?';
+        grid.appendChild(empty);
+      }
+    }
+    // hidden-species shelf: 22 slots, riddles included — know what to hope for
+    const hiddenHead = document.createElement('div');
+    hiddenHead.className = 'pikdex-hidden-head';
+    const gotSp = Object.keys(spOwner).length;
+    hiddenHead.textContent = trT(
+      `✨ HIDDEN SPECIES ${gotSp}/22 — about 1 sprout in 10 mutates into a computer-born creature: own hat, own colours, own walk cycle ♡`,
+      `✨ ESPÈCES CACHÉES ${gotSp}/22 — environ 1 pousse sur 10 mute en créature née de l'ordinateur : chapeau, couleurs et démarche à elle ♡`
+    );
+    grid.appendChild(hiddenHead);
+    HIDDEN_SPECIES.forEach((sp) => {
+      if (spOwner[sp.id] != null) {
+        grid.appendChild(makeCell(spOwner[sp.id], ' is-hidden-owned'));
+      } else {
+        const mys = document.createElement('div');
+        mys.className = 'pikdex-cell pikdex-cell-empty pikdex-cell-mystery';
+        mys.title = trT(sp.t[0], sp.t[1]); // the riddle — something to hope for
+        const shadow = document.createElement('img');
+        shadow.className = 'pikdex-shadow-pik'; // an unplucked silhouette, house-made
+        shadow.src = pikSprite({ body: '#8f81a8', dark: '#5c4f75' }, 0);
+        shadow.alt = '';
+        const nm = document.createElement('span');
+        nm.className = 'pikdex-cell-name';
+        nm.textContent = '???';
+        mys.append(shadow, nm);
+        grid.appendChild(mys);
+      }
+    });
+    const hint = document.getElementById('pikdex-hint');
+    if (hint) {
+      const nonCh = dex.filter((p) => !p.ch).length;
+      if (nonCh >= PIKDEX_CAP) {
+        hint.textContent = trT('PIKDEX COMPLETE — 72/72. the meadow rests. you are a legend ♡', 'PIKDEX COMPLET — 72/72. la prairie se repose. tu es une légende ♡');
+      } else if (dex.length) {
+        hint.textContent = trT('tap a cell for the personnel file ♡ — 50 hues + 22 hidden species = a perfect 72. hidden sprouts ✨glitter✨, pluck them fast!!', 'touche une case pour le dossier ♡ — 50 teintes + 22 espèces cachées = un 72 parfait. les pousses cachées ✨scintillent✨, cueille-les vite !!');
+      } else {
+        hint.textContent = trT('no pikmin yet!! sprouts pop out of the desktop wallpaper (and the live garden) — pluck one ♡', 'aucun pikmin !! des pousses sortent du fond d\'écran (et du jardin live) — cueilles-en une ♡');
+      }
+    }
+  }
+  var pikProfileTimer = null;
+  function pikProfileHide() {
+    const ov = document.getElementById('pikdex-profile');
+    if (ov) { ov.hidden = true; ov.innerHTML = ''; }
+    if (pikProfileTimer) { clearInterval(pikProfileTimer); pikProfileTimer = null; }
+  }
+  function pikProfileShow(ix) {
+    const ov = document.getElementById('pikdex-profile');
+    if (!ov) return;
+    const dex = pikdexGet();
+    const p = dex[ix];
+    if (!p) return;
+    pikProfileHide();
+    ov.hidden = false;
+    const card = document.createElement('div');
+    card.className = 'pik-card';
+    const head = document.createElement('div');
+    head.className = 'pik-card-head';
+    const title = document.createElement('strong');
+    title.textContent = pikNameOf(dex, ix) + '.pik';
+    const close = document.createElement('button');
+    close.type = 'button';
+    close.className = 'pik-card-close';
+    close.setAttribute('aria-label', trT('Close profile', 'Fermer le dossier'));
+    close.textContent = '♥';
+    close.addEventListener('click', pikProfileHide);
+    head.append(title, close);
+    const body = document.createElement('div');
+    body.className = 'pik-card-body';
+    const port = document.createElement('div');
+    port.className = 'pik-card-portrait';
+    const big = document.createElement('img');
+    big.alt = '';
+    big.src = pikSprite(pikEntryColor(p), p.s || 0);
+    port.appendChild(big);
+    const pSpecies = p.sp ? pikSpecies(p.sp) : null;
+    if (pSpecies) {
+      const bigHat = document.createElement('span');
+      bigHat.className = 'pik-card-hat';
+      bigHat.textContent = pSpecies.hat;
+      port.appendChild(bigHat);
+      if (pSpecies.fx) port.classList.add('pikfx-' + pSpecies.fx);
+    }
+    if (p.ch) {
+      let hh = pikHueOf(p);
+      pikProfileTimer = setInterval(() => { hh = (hh + 24) % 360; big.src = pikSprite(hueColor(hh), p.s || 0); }, 300);
+    }
+    const info = document.createElement('div');
+    info.className = 'pik-card-info';
+    function line(label, value) {
+      const el = document.createElement('div');
+      el.className = 'pik-card-line';
+      const b = document.createElement('span');
+      b.className = 'pik-card-label';
+      b.textContent = label;
+      const v = document.createElement('span');
+      v.textContent = value;
+      el.append(b, v);
+      info.appendChild(el);
+    }
+    const h = pikHueOf(p);
+    line(trT('HUE', 'TEINTE'), p.ch
+      ? trT('ALL OF THEM (it refuses to choose)', 'TOUTES (il refuse de choisir)')
+      : (pSpecies
+        ? trT('CLASSIFIED — hidden species ✨', 'CLASSIFIÉ — espèce cachée ✨')
+        : `${h}° · ${PIK_SWATCH[Math.floor(h / 15) % PIK_SWATCH.length]}`));
+    if (pSpecies) line(trT('ORIGIN', 'ORIGINE'), trT(pSpecies.lore[0], pSpecies.lore[1]));
+    const stages = [trT('🌱 sprout', '🌱 pousse'), trT('🌿 bud', '🌿 bourgeon'), trT('🌸 bloom', '🌸 floraison')];
+    line(trT('STAGE', 'STADE'), stages[Math.min(p.s || 0, 2)]);
+    line('UPTIME', pikAgeOf(p));
+    line(trT('DUTY', 'SERVICE'), p.a
+      ? trT('⭐ on the squad — desktop patrol + slime_run.exe combat', '⭐ dans l\'escouade — patrouille bureau + combat slime_run.exe')
+      : trT('💤 resting in the deck', '💤 au repos dans le deck'));
+    const meta = PIK_SKILL_META[p.k] || { icon: '✨', name: '???', en: 'undocumented technique. scholars are looking into it.', fr: 'technique non documentée. les chercheurs enquêtent.' };
+    const sk = document.createElement('div');
+    sk.className = 'pik-card-skill';
+    const skName = document.createElement('div');
+    skName.className = 'pik-card-skill-name';
+    skName.textContent = `${meta.icon} ${meta.name}`;
+    const skDesc = document.createElement('div');
+    skDesc.className = 'pik-card-skill-desc';
+    skDesc.textContent = trT(meta.en, meta.fr);
+    const skHint = document.createElement('div');
+    skHint.className = 'pik-card-skill-hint';
+    skHint.textContent = (p.s || 0) === 2
+      ? trT('equipped — fires automatically in slime_run.exe', 'équipée — se déclenche automatiquement dans slime_run.exe')
+      : trT('activates in-game at 🌸 bloom stage (it\'s still studying)', 's\'active en jeu au stade 🌸 (il révise encore)');
+    sk.append(skName, skDesc, skHint);
+    const stats = document.createElement('div');
+    stats.className = 'pik-card-stats';
+    function statRow(label, val, hintText) {
+      const row = document.createElement('div');
+      row.className = 'stat-row';
+      const name = document.createElement('span');
+      name.className = 'stat-name';
+      name.textContent = label;
+      if (hintText) name.title = hintText;
+      const barEl = document.createElement('div');
+      barEl.className = 'stat-bar';
+      const fill = document.createElement('div');
+      fill.className = 'stat-fill' + (val == null ? ' pik-stat-mystery' : '');
+      fill.style.setProperty('--v', (val == null ? 100 : val) + '%');
+      barEl.appendChild(fill);
+      const num = document.createElement('span');
+      num.className = 'stat-num';
+      num.textContent = val == null ? '??' : val;
+      row.append(name, barEl, num);
+      stats.appendChild(row);
+    }
+    const st = pikStatsOf(p);
+    if (st) {
+      statRow('CPU', st.cpu, trT('cuteness processing unit', 'unité de traitement de mignonnerie'));
+      statRow('RAM', st.ram, trT('remembers all meals', 'retient tous les repas'));
+      statRow('FPS', st.fps, trT('flowers per second', 'fleurs par seconde'));
+      statRow('PING', st.ping, trT('ms to answer a pet', 'ms pour répondre à une caresse'));
+    } else {
+      statRow('CPU', null); statRow('RAM', null); statRow('FPS', null); statRow('PING', null);
+      const chNote = document.createElement('div');
+      chNote.className = 'pik-card-chnote';
+      chNote.textContent = trT('benchmarks refuse to settle. the chameleon is beyond measurement ♡', 'les benchmarks refusent de se stabiliser. le caméléon dépasse la mesure ♡');
+      stats.appendChild(chNote);
+    }
+    const bio = document.createElement('div');
+    bio.className = 'pik-card-bio';
+    const bx = (h * 31 + ix) % PIK_BIOS.length;
+    bio.textContent = '“' + trT(PIK_BIOS[bx], PIK_BIOS_FR[bx]) + '”';
+    const actions = document.createElement('div');
+    actions.className = 'pik-card-actions';
+    const swap = document.createElement('button');
+    swap.type = 'button';
+    swap.className = 'pik-card-btn';
+    if (p.a) {
+      swap.textContent = trT('💤 send to rest', '💤 mettre au repos');
+      swap.addEventListener('click', () => { pikdexSetActive(ix, false); pikProfileHide(); });
+    } else {
+      const room = pikdexActives(dex).length < PIK_MAX;
+      swap.textContent = room
+        ? trT('⭐ join the squad', '⭐ rejoindre l\'escouade')
+        : trT('⭐ squad full (6) — rest someone first', '⭐ escouade pleine (6) — repose quelqu\'un');
+      swap.disabled = !room;
+      if (room) swap.addEventListener('click', () => { pikdexSetActive(ix, true); pikProfileHide(); });
+    }
+    actions.appendChild(swap);
+    body.append(port, info);
+    card.append(head, body, sk, stats, bio, actions);
+    ov.appendChild(card);
+    ov.addEventListener('click', function bg(e) {
+      if (e.target === ov) { pikProfileHide(); ov.removeEventListener('click', bg); }
+    });
+    playTone(980, 'square', 0.05, 0, 0.02);
+  }
+
   function deskSprout() {
-    if (!DESK_PIK.layer || deskRoster().length >= PIK_MAX) return;
+    if (!DESK_PIK.layer) return;
     if (DESK_PIK.layer.querySelector('.desk-sprout')) return;
+    const roll = pikRollSprout(); // chameleon → hidden species → missing hue
+    if (!roll) return;            // deck complete — the meadow rests ♡
+    const chameleon = roll.type === 'chameleon';
+    const species = roll.type === 'hidden' ? roll.sp : null;
+    const hue = roll.type === 'normal' ? roll.hue : 5 + Math.floor(Math.random() * 355);
+    const color = species ? species.body : hueColor(hue);
     const btn = document.createElement('button');
     btn.type = 'button';
-    btn.className = 'pik-sprout desk-sprout';
+    btn.className = 'pik-sprout desk-sprout' + (species ? ' pik-sprout-hidden' : '');
     btn.setAttribute('aria-label', t('live.pluck'));
-    const hue = 5 + Math.floor(Math.random() * 355); // 5-359 (0-4 is reserved for legacy palette indexes)
-    const chameleon = Math.random() < 0.10; // the hidden one
     const img = document.createElement('img');
-    img.src = pikSprite(hueColor(hue), 0);
+    img.src = pikSprite(color, 0);
     img.alt = '';
     img.style.width = '33px';
     img.style.clipPath = 'inset(0 0 58% 0)';
     btn.appendChild(img);
+    if (species) { // a hidden sprout glitters — you can tell something is up
+      const tease = document.createElement('span');
+      tease.className = 'pik-sprout-tease';
+      tease.textContent = '✨';
+      btn.appendChild(tease);
+    }
     const r = DESK_PIK.layer.getBoundingClientRect();
     btn.style.left = (60 + Math.random() * Math.max(100, r.width - 200)) + 'px';
     btn.style.top = (r.height * 0.4 + Math.random() * (r.height * 0.45)) + 'px';
@@ -10336,23 +11789,33 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     btn.addEventListener('click', () => {
       if (btn._hueTimer) clearInterval(btn._hueTimer);
-      const roster = deskRoster();
-      roster.push({ h: hue, ch: chameleon ? 1 : 0, s: 0, k: PIK_SKILLS[Math.floor(Math.random() * PIK_SKILLS.length)].id });
-      store.set('yos-pik-roster', roster);
+      const entry = { h: hue, ch: chameleon ? 1 : 0, s: 0, k: PIK_SKILLS[Math.floor(Math.random() * PIK_SKILLS.length)].id, sp: species ? species.id : null };
+      const verdict = pikdexAdd(entry); // archived forever, squad if there's room
+      if (verdict === 'full') {
+        btn.remove();
+        showBubble(trT('the pikdex is FULL. 72 friends. a perfect shoebox ♡', 'le pikdex est PLEIN. 72 copains. une boîte à chaussures parfaite ♡'), 2600);
+        return;
+      }
       store.set('yos-pik-plucked', true);
       if (typeof updateLiveTab === 'function') updateLiveTab();
-      const w = deskPikSpawn(hue, 0, chameleon);
-      w.x = parseFloat(btn.style.left); w.y = parseFloat(btn.style.top);
-      w.tx = w.x; w.ty = w.y;
-      w.el.style.left = w.x + 'px'; w.el.style.top = w.y + 'px';
-      btn.remove();
       playSparkleSound(); pikChirp(); pikChirp();
-      deskPikSay(w, chameleon ? 'p̷i̷k̷?̷!̷ ♡' : 'pik!!');
+      if (verdict === 'active') {
+        const w = deskPikSpawn(species ? 5 : hue, 0, chameleon, species ? species.id : null);
+        w.x = parseFloat(btn.style.left); w.y = parseFloat(btn.style.top);
+        w.tx = w.x; w.ty = w.y;
+        w.el.style.left = w.x + 'px'; w.el.style.top = w.y + 'px';
+        deskPikSay(w, chameleon ? 'p̷i̷k̷?̷!̷ ♡' : (species ? 'p1k?!' : 'pik!!'));
+      }
+      btn.remove();
       achvBump('plucks');
       if (chameleon) {
         achvUnlock('chameleon');
-        playFanfare();
-        if (!pet.sleeping) showBubble(trT('WAIT. that one keeps CHANGING COLOURS?! a hidden chameleon!!', 'ATTENDS. il n\'arrête pas de CHANGER DE COULEUR ?! un caméléon caché !!'), 3200);
+        chameleonCelebrate(); // 1% pull — the whole desktop rains rainbow blooms
+        if (!pet.sleeping) showBubble(trT('WAIT. that one keeps CHANGING COLOURS?! a hidden chameleon!! (1% pull!!)', 'ATTENDS. il n\'arrête pas de CHANGER DE COULEUR ?! un caméléon caché !! (tirage à 1 % !!)'), 3600);
+      } else if (species) {
+        pikHiddenCelebrate(species);
+      } else if (verdict === 'deck' && !pet.sleeping) {
+        showBubble(trT('squad\'s full — the new buddy is filed in pikdex.exe, awaiting promotion ♡', 'escouade pleine — le nouveau copain est classé dans pikdex.exe, en attente de promotion ♡'), 3000);
       } else if (!pet.sleeping) {
         showBubble(trT('a wild buddy joined the DESKTOP crew ♡', 'un copain sauvage rejoint l\'équipe du BUREAU ♡'), 2400);
       }
@@ -10388,11 +11851,22 @@ document.addEventListener('DOMContentLoaded', () => {
         w.tx = Math.max(6, p.x);
         w.ty = Math.max(60, p.y);
       } else {
-        const sp = 1.6;
-        w.x += (dx / d) * sp;
-        w.y += (dy / d) * sp;
+        // Latency walks in 300ms packets; everyone else walks in realtime
+        if (w.sp && w.sp.choppy) {
+          if (now < w.stepAt) return;
+          w.stepAt = now + 320;
+          const hopLen = Math.min(d, 14);
+          w.x += (dx / d) * hopLen;
+          w.y += (dy / d) * hopLen;
+        } else {
+          const sp = 1.6 * (w.spd || 1);
+          w.x += (dx / d) * sp;
+          w.y += (dy / d) * sp;
+        }
         w.el.classList.add('walking');
-        w.img.style.transform = dx < 0 ? 'scaleX(-1)' : '';
+        const facingLeft = dx < 0;
+        // 'Feature' walks backwards on purpose — sprite faces away from travel
+        w.img.style.transform = ((w.sp && w.sp.flip) ? !facingLeft : facingLeft) ? 'scaleX(-1)' : '';
         w.el.style.left = w.x + 'px';
         w.el.style.top = w.y + 'px';
         // footprint blooms: RAINBOW confetti-flowers, 1-10 per step —
@@ -10531,9 +12005,10 @@ document.addEventListener('DOMContentLoaded', () => {
     layer.setAttribute('aria-hidden', 'true');
     area.appendChild(layer);
     DESK_PIK.layer = layer;
-    deskRoster().slice(0, PIK_MAX).forEach((rr) => deskPikSpawn(rr.h != null ? rr.h : rr.c, rr.s, !!rr.ch));
+    deskRoster().slice(0, PIK_MAX).forEach((rr) => deskPikSpawn(rr.h != null ? rr.h : rr.c, rr.s, !!rr.ch, rr.sp || null));
     DESK_PIK.sproutAt = Date.now() + (deskRoster().length ? 10000 : 5000); // sprouts waste no time
     DESK_PIK.timer = setInterval(deskPikTick, 90);
+    applyPikFloat(); // honour the saved float mode from the first frame
   }
 
   /* retired fridge-magnet decor (superseded by the meadow) */
@@ -10676,7 +12151,24 @@ document.addEventListener('DOMContentLoaded', () => {
   bootSafe('sb-tabs', () => sidebarTabsInit()); // sidebar drawers before anything measures it
   // every visit starts with a FRESH meadow: the roster clears so new
   // sprouts always have room — plucking is this session's little joy
-  bootSafe('pik-fresh', () => store.set('yos-pik-roster', []));
+  bootSafe('pik-fresh', () => {
+    // the deck is FOREVER — nobody gets wiped between visits anymore.
+    // new sprouts keep growing even with a full squad: recruits simply
+    // wait in pikdex.exe until you promote them ♡
+    if (!Array.isArray(store.get('yos-pikdex', []))) store.set('yos-pikdex', []);
+    if (!Array.isArray(store.get('yos-pik-roster', []))) store.set('yos-pik-roster', []);
+    // one-time adoption: squads plucked before the deck existed move in as actives
+    if (!pikdexGet().length) {
+      const old = store.get('yos-pik-roster', []);
+      const dex = old.slice(0, PIK_MAX).map((r) => ({
+        h: r.h != null ? r.h : (PIK_LEGACY_HUES[r.c] != null ? PIK_LEGACY_HUES[r.c] : 330),
+        ch: r.ch ? 1 : 0, s: r.s || 0, k: r.k || null, a: 1, t: Date.now()
+      }));
+      if (dex.length) pikdexSave(dex);
+    }
+    pikdexRosterProject(); // the walking squad = the deck's on-duty members
+    pikdexWheelCheck(pikdexWheelPct()); // wheel milestones re-checked every boot (cloud restores included)
+  });
   bootSafe('desk-piks', () => deskPikInit()); // the desktop IS the meadow now
   bootSafe('mobile-start-max', () => {
     // phones: the welcome note opens FULL SCREEN, no fiddly window

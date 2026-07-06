@@ -5,16 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>YongshanOS ♡</title>
   <meta name="description" content="Personal portfolio of Yongshan Yu, AI/LMS Systems & Full-Stack Lead. A hand-built Y2K pixel desktop OS with a playable slime pet.">
-  <meta name="theme-color" content="#ff8fc7">
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ff8fc7">
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#2a1440">
+  <link rel="canonical" href="https://yyswhsccc.github.io/personal-website/">
 
   <!-- Social sharing cards -->
   <meta property="og:title" content="YongshanOS ♡ — Yongshan Yu Portfolio">
   <meta property="og:description" content="A hand-built Y2K pixel desktop OS with a playable slime pet, a window manager, an offline runner game and zero frameworks.">
   <meta property="og:type" content="website">
-  <meta property="og:image" content="apple-touch-icon.png">
+  <meta property="og:url" content="https://yyswhsccc.github.io/personal-website/">
+  <meta property="og:image" content="https://yyswhsccc.github.io/personal-website/apple-touch-icon.png">
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="YongshanOS ♡ — Yongshan Yu Portfolio">
   <meta name="twitter:description" content="Y2K pixel desktop portfolio — pet the slime, search the yongshan-web, play the offline runner.">
+  <meta name="twitter:image" content="https://yyswhsccc.github.io/personal-website/apple-touch-icon.png">
 
   <!-- Pixel slime favicon set -->
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
@@ -80,9 +84,28 @@
     })();
   </script>
 
-  <link rel="stylesheet" href="style.css?v=36">
+  <link rel="stylesheet" href="style.css?v=41">
 </head>
 <body>
+
+  <!-- screen readers + crawlers get the headline; sighted folks get the whole OS -->
+  <h1 class="sr-only">YongshanOS — Yongshan Yu · AI/LMS Systems &amp; Full-Stack Lead ♡</h1>
+
+  <!-- no JS? the slime leaves a sticky note -->
+  <noscript>
+    <style>.loading-screen{display:none}</style>
+    <div style="max-width:430px;margin:60px auto 0;background:#fff0fa;border:4px solid #5a3d6e;box-shadow:6px 6px 0 #c9a7f5;padding:22px 18px;color:#3d2350;font-family:'Courier New',monospace;text-align:center;">
+      <div style="font-size:26px;letter-spacing:8px;color:#f0509f;">&hearts; &hearts; &hearts;</div>
+      <div style="font-weight:bold;font-size:17px;margin:10px 0 8px;">YongshanOS ♡ — Yongshan Yu</div>
+      <p style="font-size:13px;line-height:1.6;margin:0 0 10px;">AI/LMS Systems &amp; Full-Stack Lead. I build learning platforms, AI tooling and hand-pixelled things like this desktop.</p>
+      <p style="font-size:13px;line-height:1.6;margin:0 0 10px;">
+        ✉ <a href="mailto:yuyongshan573@gmail.com" style="color:#f0509f;">yuyongshan573@gmail.com</a><br>
+        🔗 <a href="http://www.linkedin.com/in/yongshan-yu-b9a713227" style="color:#f0509f;">LinkedIn</a> &middot;
+        🐙 <a href="https://github.com/yyswhsccc" style="color:#f0509f;">GitHub</a>
+      </p>
+      <p style="font-size:13px;line-height:1.6;margin:0;color:#f0509f;">this OS needs JavaScript — the slime is JS-powered ♡</p>
+    </div>
+  </noscript>
 
   <!-- keyboard users: jump straight past the chrome -->
   <a class="skip-link" href="#main-desktop" data-i18n="a11y.skip">Skip to desktop content</a>
@@ -93,8 +116,11 @@
       <div class="loader-heart" aria-hidden="true">
         <span class="loader-heart-px">♥</span>
       </div>
-      <div class="planet-logo-wrapper">
-        <img src="assets/loading_e_icon.jpg" alt="Y2K Internet Explorer icon with pink bow" class="planet-logo-img">
+      <div class="planet-logo-wrapper loader-stage">
+        <button class="loader-slime" id="loader-slime" type="button" aria-label="Boop the slime — it stalls the boot a little ♡">
+          <img src="assets/slime_pet_cutout.png" alt="" draggable="false">
+        </button>
+        <div class="loader-squad" id="loader-squad" aria-hidden="true"></div>
       </div>
       <div class="loader-text"><span data-i18n="loader.boot">BOOTING YONGSHAN_OS </span><span class="loader-caret">▌</span></div>
       <div class="loader-subtext" data-i18n="loader.sub">loading cuteness drivers... ok ♡</div>
@@ -187,6 +213,29 @@
         <path d="M 16 24 C 12 21, 14 17.6, 16 19.6 C 18 17.6, 20 21, 16 24 Z" fill="#ff5fb0" />
       </g>
 
+      <!-- pikdex.exe — one big happy hue-flower. nothing else.
+           (v3: bow/sparkle/hearts/frame retired — the bloom finally breathes) -->
+      <g id="y2k-pikdex-icon">
+        <!-- 8 pastel petals = the colour wheel, filling the whole tile -->
+        <g stroke="#5a3d6e" stroke-width="1.5">
+          <ellipse cx="16" cy="6" rx="3.6" ry="5.2" fill="#ff8fc7" />
+          <ellipse cx="23.1" cy="8.9" rx="3.6" ry="5.2" transform="rotate(45 23.1 8.9)" fill="#ffb37a" />
+          <ellipse cx="26" cy="16" rx="5.2" ry="3.6" fill="#ffe98a" />
+          <ellipse cx="23.1" cy="23.1" rx="3.6" ry="5.2" transform="rotate(-45 23.1 23.1)" fill="#9fe8c0" />
+          <ellipse cx="16" cy="26" rx="3.6" ry="5.2" fill="#8fd4fa" />
+          <ellipse cx="8.9" cy="23.1" rx="3.6" ry="5.2" transform="rotate(45 8.9 23.1)" fill="#a8b6ff" />
+          <ellipse cx="6" cy="16" rx="5.2" ry="3.6" fill="#c9a7f5" />
+          <ellipse cx="8.9" cy="8.9" rx="3.6" ry="5.2" transform="rotate(-45 8.9 8.9)" fill="#ffc2e2" />
+        </g>
+        <!-- happy core -->
+        <circle cx="16" cy="16" r="6.4" fill="#fffdfb" stroke="#5a3d6e" stroke-width="1.8" />
+        <circle cx="13.8" cy="15" r="1" fill="#5a3d6e" />
+        <circle cx="18.2" cy="15" r="1" fill="#5a3d6e" />
+        <path d="M 13.6 18 Q 16 20.2, 18.4 18" fill="none" stroke="#5a3d6e" stroke-width="1.3" stroke-linecap="round" />
+        <circle cx="11.9" cy="17.2" r="1" fill="#ffc2e2" opacity="0.9" />
+        <circle cx="20.1" cy="17.2" r="1" fill="#ffc2e2" opacity="0.9" />
+      </g>
+
       <!-- Pixel handheld console (slime_run.exe) -->
       <g id="y2k-game-icon">
         <rect x="4" y="2" width="24" height="28" rx="3" fill="url(#purple-folder-grad)" stroke="#5a3d6e" stroke-width="2" />
@@ -240,9 +289,9 @@
     <!-- Browser Top Bar -->
     <header class="browser-header">
       <div class="browser-dots">
-        <span class="dot red" aria-label="Close window"></span>
-        <span class="dot yellow" aria-label="Minimize window"></span>
-        <span class="dot green" aria-label="Maximize window"></span>
+        <button type="button" class="dot red" aria-label="pink screen of death (harmless easter egg)" title="pink screen of death (harmless easter egg)"></button>
+        <button type="button" class="dot yellow" aria-label="tuck all windows away" title="tuck all windows away"></button>
+        <button type="button" class="dot green" aria-label="toggle fullscreen" title="toggle fullscreen"></button>
       </div>
 
       <div class="browser-tabs">
@@ -325,6 +374,12 @@
           <button class="desktop-icon-btn" data-window="win-education" aria-haspopup="dialog">
             <svg class="icon-visual" viewBox="0 0 32 32" width="46" height="46"><use href="#y2k-txt-icon" /></svg>
             <div class="icon-label" data-i18n="file.edu">education_awards.txt</div>
+          </button>
+
+          <!-- Pikdex: the pikmin collection deck -->
+          <button class="desktop-icon-btn" data-window="win-pikdex" aria-haspopup="dialog">
+            <svg class="icon-visual" viewBox="0 0 32 32" width="46" height="46"><use href="#y2k-pikdex-icon" /></svg>
+            <div class="icon-label" data-i18n="file.pikdex">pikdex.exe</div>
           </button>
 
         </div>
@@ -915,7 +970,7 @@
               <button class="game-lb-btn" type="button" data-window="win-leaderboard" data-i18n="game.lb">🏆 hall of slime</button>
               <span class="game-hud-hi">★ <span data-i18n="game.hi">best</span> <strong id="game-hi">0</strong></span>
             </div>
-            <canvas class="game-canvas" id="game-canvas" width="480" height="160" tabindex="0" role="img" aria-label="Slime runner mini game — press Space or Enter to jump, tap on touch screens"></canvas>
+            <canvas class="game-canvas" id="game-canvas" width="480" height="160" tabindex="0" role="application" aria-label="Slime runner mini game — press Space or Enter to jump, tap on touch screens — playable game"></canvas>
             <div class="game-hint" data-i18n="game.hint">SPACE / tap to jump · avoid the bugs, catch nothing, just survive</div>
           </div>
         </div>
@@ -959,6 +1014,47 @@
         <div class="window-footer">
           <span data-i18n="lb.footer.l">arcade rules: 3 letters, no shame</span>
           <span data-i18n="lb.footer.r">global census via shared counters</span>
+        </div>
+      </section>
+
+      <!-- 3f2. PIKDEX — the pikmin collection deck -->
+      <section class="window window-closed window-pikdex" id="win-pikdex" aria-labelledby="title-pikdex" role="dialog">
+        <div class="window-header drag-handle">
+          <div class="window-title-container">
+            <span class="window-icon">🌷</span>
+            <span class="window-title" id="title-pikdex" data-i18n="file.pikdex">pikdex.exe</span>
+          </div>
+          <div class="window-controls">
+            <button class="win-btn win-btn-minimize" aria-label="Minimize window">_</button>
+            <button class="win-btn win-btn-maximize" aria-label="Maximize window">⛶</button>
+            <button class="win-btn win-btn-close" aria-label="Close window">♥</button>
+          </div>
+        </div>
+        <div class="window-body">
+          <div class="pikdex-shell" id="pikdex-shell">
+            <!-- hue wheel + census (rendered by JS) -->
+            <div class="pikdex-top">
+              <div class="pikdex-wheel-wrap">
+                <canvas class="pikdex-wheel" id="pikdex-wheel" width="120" height="120" role="img" aria-label="Hue wheel collection progress"></canvas>
+                <div class="pikdex-wheel-center" id="pikdex-wheel-center" aria-hidden="true"></div>
+              </div>
+              <div class="pikdex-wheel-info">
+                <h3 class="panel-heading pikdex-heading">🎨 HUE_WHEEL.SYS</h3>
+                <div class="pikdex-pct" id="pikdex-pct">0%</div>
+                <div class="pikdex-wheel-note" id="pikdex-wheel-note"></div>
+              </div>
+            </div>
+            <div class="pikdex-squadline" id="pikdex-squadline"></div>
+            <div class="pikdex-float" id="pikdex-float" role="group" aria-label="Pikmin float mode — how high the desktop squad hovers over windows"></div>
+            <div class="pikdex-grid" id="pikdex-grid" role="list" aria-label="Collected pikmin"></div>
+            <div class="pikdex-hint" id="pikdex-hint"></div>
+          </div>
+          <!-- profile card overlay (rendered by JS) -->
+          <div class="pikdex-profile" id="pikdex-profile" hidden></div>
+        </div>
+        <div class="window-footer">
+          <span data-i18n="pikdex.footer.l">hue_wheel.sys — 50 segments, 0 trackers</span>
+          <span data-i18n="pikdex.footer.r">gotta pluck 'em all ♡</span>
         </div>
       </section>
 
@@ -1132,6 +1228,7 @@
                 <li data-i18n="start.t6">🔍 type anything in the address bar — this browser searches!</li>
                 <li data-i18n="start.t8">🌙 in dark mode the slime sometimes goes to bed — knock to wake it</li>
                 <li data-i18n="start.t7">⚠️ petting it 30+ times may cause a love overflow…</li>
+                <li data-i18n="start.t9">🔴 the red dot? press it. trust me.</li>
               </ul>
             </div>
           </div>
@@ -1184,6 +1281,9 @@
           </button>
           <button role="menuitem" class="start-menu-item" data-target="win-leaderboard">
             <span class="item-icon">🏆</span> <span data-i18n="file.leaderboard">hall_of_slime.exe</span>
+          </button>
+          <button role="menuitem" class="start-menu-item" data-target="win-pikdex">
+            <span class="item-icon">🌷</span> <span data-i18n="file.pikdex">pikdex.exe</span>
           </button>
           <button role="menuitem" class="start-menu-item" data-target="win-interview">
             <span class="item-icon">📅</span> <span data-i18n="file.interview">interview_scheduler.exe</span>
@@ -1240,7 +1340,7 @@
   <!-- Toast Notification -->
   <div id="email-toast" class="toast-hidden" role="status" aria-live="polite">Email copied to clipboard! ♡</div>
 
-  <script src="i18n.js?v=36"></script>
-  <script src="script.js?v=36"></script>
+  <script src="i18n.js?v=41"></script>
+  <script src="script.js?v=41"></script>
 </body>
 </html>
