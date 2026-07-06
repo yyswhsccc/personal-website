@@ -710,13 +710,20 @@ document.addEventListener('DOMContentLoaded', () => {
       const rows = style[Math.floor(seed * 331) % 3];
       const tint = hueColor(5 + Math.floor(seed * 355));
       const pal = { S: '#57c689', L: '#7ddba4', Y: '#ffd400', P: '#ff8fc7', w: '#ffffff', D: tint.dark, B: tint.body, W: 'rgba(255,255,255,0.6)', e: INK, u: '#ffb3dd' };
-      // 1:1 pixel scale, perched ON the crown (rows 0-4) — exactly like a
-      // pikmin's: a small topknot, never a mid-forehead flag pole
+      // the same soft halo the pikmin wear, baked in behind the plant
+      const glow = ctx.createRadialGradient(253, 38, 8, 253, 38, 96);
+      glow.addColorStop(0, 'rgba(255,255,255,0.85)');
+      glow.addColorStop(0.45, 'rgba(255,255,255,0.32)');
+      glow.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = glow;
+      ctx.fillRect(155, 0, 196, 136);
+      // 2× pixel scale, perched ON the crown — pikmin-proud, visible from
+      // across the room, stem rooted right in the head apex
       rows.forEach((row, ty) => {
         for (let tx = 0; tx < row.length; tx++) {
           const ch = row[tx];
           if (ch === '.') continue;
-          oR(ctx, 17 + tx, ty, 1, 1, pal[ch] || pal.S);
+          oR(ctx, 11.5 + tx * 2, ty * 2, 2, 2, pal[ch] || pal.S);
         }
       });
     },
@@ -3623,7 +3630,8 @@ document.addEventListener('DOMContentLoaded', () => {
     { id: 'nihao', icon: '🀄', n: ['Nǐ Hǎo, World', 'Nǐ Hǎo, World'], d: ['said hello in Chinese. the meadow understood perfectly.', 'a dit bonjour en chinois. la prairie a parfaitement compris.'], t: ['greet the OS like home.', 'salue l\'OS comme à la maison.'] },
     { id: 'vimescape', icon: '🚪', n: ['Vim Escapee', 'Évadé·e de Vim'], d: ['entered vim. LEFT vim. statistically a legend.', 'est entré·e dans vim. en est SORTI·E. statistiquement une légende.'], t: ['some editors are one-way doors.', 'certains éditeurs sont des portes sans retour.'] },
     { id: 'handtalk', icon: '🖐', n: ['Signed, Understood', 'Signé, Compris'], d: ['spoke to the slime in GESTURES. the hand-cam read every word.', 'a parlé au slime en GESTES. la main-cam a tout lu.'], t: ['the camera reads more than faces.', 'la caméra lit plus que les visages.'] },
-    { id: 'hearthands', icon: '🫶', n: ['Certified Hand Heart', 'Cœur de Mains Certifié'], d: ['made the two-handed heart. the slime is legally yours now.', 'a fait le cœur à deux mains. le slime est légalement à toi.'], t: ['some gestures need both hands.', 'certains gestes demandent les deux mains.'] }
+    { id: 'hearthands', icon: '🫶', n: ['Certified Hand Heart', 'Cœur de Mains Certifié'], d: ['made the two-handed heart. the slime is legally yours now.', 'a fait le cœur à deux mains. le slime est légalement à toi.'], t: ['some gestures need both hands.', 'certains gestes demandent les deux mains.'] },
+    { id: 'hotfix', icon: '🧯', n: ['Merge Conflict Medic', 'Médecin des Conflits de Merge'], d: ['hot-patched a melting production site in under 15 seconds. inside a dream.', 'a réparé à chaud un site en fusion en moins de 15 secondes. dans un rêve.'], t: ['when the nightmare breaks the site, someone has to ship the fix.', 'quand le cauchemar casse le site, quelqu\'un doit livrer le correctif.'] }
   ];
 
   // ---- metric engine: count things, achievements pop themselves ----
@@ -4233,6 +4241,43 @@ document.addEventListener('DOMContentLoaded', () => {
         if (typeof pikParade === 'function') pikParade();
         return;
       }
+    }
+
+    // ---- nightmare MELTDOWN: the shell is a triage desk. all input is a fix attempt ----
+    if (GAME && GAME.nm && GAME.nm.attack && GAME.nm.attack.kind === 'melt' && GAME.nm.attack.melt) {
+      const mAtk = GAME.nm.attack;
+      const flat = lower.replace(/[\s;`'"]+/g, '');
+      if (mAtk.melt.answers.indexOf(flat) !== -1) {
+        nmMeltHeal(mAtk);
+        termLine(trT('✔ HOTFIX MERGED. the site snaps back like nothing happened. CI is crying (happy).', '✔ CORRECTIF FUSIONNÉ. le site se remet d\'un coup. la CI pleure (de joie).'), 't-ok');
+        nmResolveAttack(3, '🧯 15-second hotfix!!', '🧯 correctif en 15 secondes !!');
+        achvUnlock('hotfix');
+        return;
+      }
+      if (lower === 'yongshan') {
+        nmMeltHeal(mAtk);
+        termLine(trT('⚡ THE SKELETON KEY force-merges reality. the linter looks away, out of respect.', '⚡ LE PASSE-PARTOUT force-merge la réalité. le linter détourne le regard, par respect.'), 't-ok');
+        nmResolveAttack(2, '⚡ force-merged!!', '⚡ fusion forcée !!');
+        if (typeof pikParade === 'function') pikParade();
+        return;
+      }
+      const secsLeft = Math.max(0, (mAtk.deadline - GAME.frame) / 60).toFixed(1);
+      if (lower === 'hint' || lower === 'help' || lower === 'man' || lower === 'sos') {
+        termLine('   ' + mAtk.melt.dream, 't-err');
+        (mAtk.melt.art || []).forEach((l) => termLine('   ' + l, 't-dim'));
+        termLine('⛑ ' + mAtk.melt.task + '  (' + secsLeft + 's)', 't-accent');
+        return;
+      }
+      mAtk.tries = (mAtk.tries || 0) + 1;
+      const NOPE = [
+        trT('✗ prod is still (adorably) on fire. ' + secsLeft + 's.', '✗ la prod brûle toujours (adorablement). ' + secsLeft + ' s.'),
+        trT('✗ the linter frowns, but believes in you. ' + secsLeft + 's.', '✗ le linter fronce les sourcils, mais croit en toi. ' + secsLeft + ' s.'),
+        trT('✗ nope!! somewhere, a CI pipeline giggles. ' + secsLeft + 's.', '✗ non !! quelque part, une CI pouffe. ' + secsLeft + ' s.'),
+        trT('✗ close, maybe? the smoke says no. ' + secsLeft + 's.', '✗ presque, peut-être ? la fumée dit non. ' + secsLeft + ' s.')
+      ];
+      termLine(NOPE[Math.floor(Math.random() * NOPE.length)], 't-err');
+      if (mAtk.tries === 2) termLine(trT('   (stuck? `hint` reprints the ticket. `yongshan` force-merges — the dev\'s privilege.)', '   (bloqué·e ? `hint` réaffiche le ticket. `yongshan` force-merge — privilège de la dev.)'), 't-dim');
+      return;
     }
 
     // ---- the 100 secret codes check in before everything else ----
@@ -6185,7 +6230,7 @@ document.addEventListener('DOMContentLoaded', () => {
     GAME.decisions = [];
     GAME.runSeed = Math.floor(Math.random() * 1e9);
     GAME.event = null;
-    GAME.nextEventSec = 24 + Math.random() * 8;
+    GAME.nextEventSec = 18 + Math.random() * 6;
     GAME.invUntil = 0;
     GAME.adUsed = false; // one ad-revive per run
     GAME.nm = null; GAME.nmPx = null; // nightmares don't survive a reboot
@@ -6448,10 +6493,11 @@ document.addEventListener('DOMContentLoaded', () => {
       GAME.adT++;
       if (GAME.adT >= AD_FRAMES) gAdFinish();
     }
-    // every fresh encounter arms a 2.5s shield against held-down space
+    // every fresh encounter arms a 1.6s shield against held-down space —
+    // long enough to stop a buffered jump, short enough to never feel broken
     if (GAME.event && !GAME.event._born) {
       GAME.event._born = 1;
-      GAME.eventLockUntil = Date.now() + 2500;
+      GAME.eventLockUntil = Date.now() + 1600;
     }
 
     // Edmonton weather leaks into the runner — visuals only, the
@@ -7425,7 +7471,8 @@ document.addEventListener('DOMContentLoaded', () => {
     { id: 'resume', t: ['zzz… your résumé… has… gaps…', 'zzz… ton CV… a… des trous…'], e: '📄' },
     { id: 'term', t: ['zzz… I locked… your shell… in the dream…', 'zzz… j\'ai enfermé… ton shell… dans le rêve…'], e: '🖥️' },
     { id: 'bsod', t: ['zzz… everything… goes… PINK…', 'zzz… tout… devient… ROSE…'], e: '💗' },
-    { id: 'pik', t: ['zzz… your little friends… look… delicious…', 'zzz… tes petits copains… ont l\'air… délicieux…'], e: '🥡' }
+    { id: 'pik', t: ['zzz… your little friends… look… delicious…', 'zzz… tes petits copains… ont l\'air… délicieux…'], e: '🥡' },
+    { id: 'melt', t: ['zzz… I dreamt… the whole site… un-compiled…', 'zzz… j\'ai rêvé… que tout le site… se dé-compilait…'], e: '🧯' }
   ];
   function nmOverlayRoot() {
     let root = document.getElementById('nm-summon-root');
@@ -7442,6 +7489,12 @@ document.addEventListener('DOMContentLoaded', () => {
     playGlitchSound();
   }
   function nmClearAttack() {
+    const a = GAME && GAME.nm && GAME.nm.attack;
+    if (a) {
+      (a._timers || []).forEach((t) => clearInterval(t));
+      a._timers = [];
+      if (a.kind === 'melt') nmMeltHeal(a); // never strand a corrupted site
+    }
     const root = document.getElementById('nm-summon-root');
     if (root) root.innerHTML = '';
     if (GAME.nm) GAME.nm.attack = null;
@@ -7473,90 +7526,132 @@ document.addEventListener('DOMContentLoaded', () => {
   /* — summon 1: slimeCAPTCHA. pixel Y2K robot check, pikmin edition — */
   function nmSummonCaptcha() {
     nmAttackBegin('captcha');
-    const mode = Math.abs(gStateHash('captcha' + GAME.frame)) % 3;
+    const a = GAME.nm.attack;
+    a._timers = a._timers || [];
+    const mode = Math.abs(gStateHash('captcha' + GAME.frame)) % 2;
     if (mode === 0) {
-      // click every square containing a PIKMIN (decoys: meadow blooms)
-      const panel = nmPanel(trT('🤖 slimeCAPTCHA — select every square with a PIKMIN', '🤖 slimeCAPTCHA — cochez chaque case avec un PIKMIN'));
+      // — THE LOOKALIKES: an infuriatingly plausible clone lineup. decoys
+      // share the target's exact body (hue+8/+16 keeps (h*7)%8 fixed) or its
+      // exact plant at the wrong growth stage. squint. squint HARDER. —
+      const cast = (typeof pikEnsureCast === 'function') ? pikEnsureCast() : [];
+      const base = cast.length ? cast[Math.abs(gStateHash('capbase')) % cast.length] : null;
+      const hue = base ? pikEntryColor(base) : Math.abs(gStateHash('caphue')) % 360;
+      const stage = 2;
+      const mk = (h, s) => pikSprite(((h % 360) + 360) % 360, s, null);
+      const panel = nmPanel(trT('🤖 slimeCAPTCHA — select EVERY exact clone. no lookalikes.', '🤖 slimeCAPTCHA — cochez CHAQUE clone exact. pas de sosies.'));
+      const ref = document.createElement('div');
+      ref.className = 'nm-cap-ref';
+      const refImg = document.createElement('img');
+      refImg.src = mk(hue, stage);
+      refImg.alt = '';
+      const refTxt = document.createElement('span');
+      refTxt.textContent = trT('this exact pikmin. the others are FAKES wearing its face.', 'ce pikmin exact. les autres sont des FAUX avec son visage.');
+      ref.append(refImg, refTxt);
+      panel.appendChild(ref);
       const grid = document.createElement('div');
       grid.className = 'nm-cap-grid';
-      const cast = (typeof pikEnsureCast === 'function') ? pikEnsureCast() : [];
-      const cells = [];
-      let pikCount = 0;
-      for (let i = 0; i < 9; i++) {
-        const isPik = Math.random() < 0.45 || (i === 8 && pikCount === 0);
+      const nReal = 3 + (Math.abs(gStateHash('capr')) % 2); // 3-4 true clones
+      const kinds = [];
+      for (let i = 0; i < 9; i++) kinds.push(i < nReal ? 'real' : ['stage', 'hue8', 'hue16'][i % 3]);
+      kinds.sort(() => Math.random() - 0.5);
+      kinds.forEach((k) => {
         const cell = document.createElement('button');
         cell.type = 'button';
         cell.className = 'nm-cap-cell';
         const img = document.createElement('img');
-        if (isPik && cast.length) {
-          const p = cast[i % cast.length];
-          img.src = pikSprite(pikEntryColor(p), p.s || 0, p.sp || null);
-          cell.dataset.pik = '1';
-          pikCount++;
-        } else {
-          img.src = (typeof trailBloomSprite === 'function') ? trailBloomSprite(i % 6) : '';
-        }
+        if (k === 'real') { img.src = mk(hue, stage); cell.dataset.pik = '1'; }
+        else if (k === 'stage') img.src = mk(hue, Math.random() < 0.4 ? 0 : 1);
+        else img.src = mk(hue + (k === 'hue8' ? 8 : 16), stage);
         img.alt = '';
         cell.appendChild(img);
-        cell.addEventListener('click', () => {
-          cell.classList.toggle('is-picked');
-          const picked = [...grid.querySelectorAll('.is-picked')];
-          const right = picked.every((c) => c.dataset.pik) && picked.length === grid.querySelectorAll('[data-pik]').length;
-          if (right && picked.length) nmResolveAttack(2, '🤖 HUMAN (and pikmin-literate)!!', '🤖 HUMAIN (et pikminophile) !!');
-        });
+        cell.addEventListener('click', () => cell.classList.toggle('is-picked'));
+        grid.appendChild(cell);
+      });
+      panel.appendChild(grid);
+      const hint = document.createElement('div');
+      hint.className = 'nm-panel-hint';
+      hint.textContent = trT('(the fakes are 92% identical. the head-plant and the shade betray them.)', '(les faux sont identiques à 92 %. la plante et la teinte les trahissent.)');
+      const verify = document.createElement('button');
+      verify.type = 'button';
+      verify.className = 'nm-cap-verify';
+      verify.textContent = trT('VERIFY ♡', 'VÉRIFIER ♡');
+      verify.addEventListener('click', () => {
+        const picked = [...grid.querySelectorAll('.is-picked')];
+        const right = picked.length && picked.every((c) => c.dataset.pik) && picked.length === grid.querySelectorAll('[data-pik]').length;
+        if (right) { nmResolveAttack(2, '🤖 CLONE-PROOF EYES!!', '🤖 DES YEUX ANTI-CLONES !!'); return; }
+        panel.classList.remove('nm-shake');
+        void panel.offsetWidth; // restart the shake animation
+        panel.classList.add('nm-shake');
+        picked.forEach((c) => c.classList.remove('is-picked'));
+        hint.textContent = trT('(WRONG. stare at the head-plant — fakes grow it differently.)', '(FAUX. fixe la plante — les faux la font pousser autrement.)');
+        playTone(180, 'sawtooth', 0.1, 0, 0.05);
+      });
+      panel.appendChild(verify);
+      panel.appendChild(hint);
+    } else {
+      // — THE RUNAWAYS: they scatter mid-click and hide in other squares.
+      // your hand speed IS the captcha. —
+      const panel = nmPanel(trT('🤖 slimeCAPTCHA — tag all 4 pikmin. they know. they RUN.', '🤖 slimeCAPTCHA — attrapez les 4 pikmin. ils savent. ils COURENT.'));
+      const grid = document.createElement('div');
+      grid.className = 'nm-cap-grid nm-cap-grid--4';
+      const cells = [];
+      for (let i = 0; i < 16; i++) {
+        const cell = document.createElement('button');
+        cell.type = 'button';
+        cell.className = 'nm-cap-cell';
         cells.push(cell);
         grid.appendChild(cell);
       }
       panel.appendChild(grid);
-      const hint = document.createElement('div');
-      hint.className = 'nm-panel-hint';
-      hint.textContent = trT('(the flowers are DECOYS. classic robot trap.)', '(les fleurs sont des LEURRES. piège à robot classique.)');
-      panel.appendChild(hint);
-    } else if (mode === 1) {
-      // the checkbox that dodges — twice — then surrenders
-      const panel = nmPanel(trT('🤖 slimeCAPTCHA — just tick the box. easy. right?', '🤖 slimeCAPTCHA — cochez la case. facile. non ?'));
-      const row = document.createElement('button');
-      row.type = 'button';
-      row.className = 'nm-cap-checkrow';
-      row.textContent = trT('☐ I am not a robot', '☐ Je ne suis pas un robot');
-      let dodges = 0;
-      row.addEventListener('mouseenter', () => {
-        if (dodges < 2) { dodges++; row.style.transform = `translate(${(Math.random() * 120 - 60) | 0}px, ${(Math.random() * 60 - 20) | 0}px)`; playTone(300, 'square', 0.05, 0, 0.03); }
-        else row.style.transform = '';
-      });
-      row.addEventListener('click', () => {
-        if (dodges < 2) { dodges++; row.style.transform = `translate(${(Math.random() * 120 - 60) | 0}px, 20px)`; return; }
-        row.textContent = trT('☑ I am not a robot (verified by vibes)', '☑ Je ne suis pas un robot (vérifié aux vibes)');
-        setTimeout(() => nmResolveAttack(2, '🤖 the box surrendered!!', '🤖 la case a capitulé !!'), 350);
-      });
-      panel.appendChild(row);
-      const hint = document.createElement('div');
-      hint.className = 'nm-panel-hint';
-      hint.textContent = trT('(it dodges twice. everyone has limits.)', '(elle esquive deux fois. chacun ses limites.)');
-      panel.appendChild(hint);
-    } else {
-      // one precise computer cold-joke question
-      const QS = [
-        { q: ['how many kinds of visitors read binary?', 'combien de types de visiteurs lisent le binaire ?'], opts: ['2', '10', '♡'], ok: 1 },
-        { q: ['a bug that ships anyway is called…', 'un bug livré quand même s\'appelle…'], opts: [trT('a mistake', 'une erreur'), trT('a FEATURE', 'une FONCTIONNALITÉ'), trT('art', 'de l\'art')], ok: 1 },
-        { q: ['where do pikmin store their memories?', 'où les pikmin stockent-ils leurs souvenirs ?'], opts: ['RAM', trT('the cloud ☁️ (it\'s a species)', 'le nuage ☁️ (c\'est une espèce)'), 'floppy'], ok: 1 }
-      ];
-      const pick = QS[Math.abs(gStateHash('capq' + GAME.frame)) % QS.length];
-      const panel = nmPanel('🤖 slimeCAPTCHA — ' + trT(pick.q[0], pick.q[1]));
-      const row = document.createElement('div');
-      row.className = 'nm-cap-opts';
-      pick.opts.forEach((o, i) => {
-        const b = document.createElement('button');
-        b.type = 'button';
-        b.className = 'nm-cap-opt';
-        b.textContent = String(o);
-        b.addEventListener('click', () => {
-          if (i === pick.ok) nmResolveAttack(2, '🤖 correct!!', '🤖 correct !!');
-          else { b.classList.add('is-wrong'); playTone(180, 'sawtooth', 0.1, 0, 0.05); }
+      const cast = (typeof pikEnsureCast === 'function') ? pikEnsureCast() : [];
+      const piks = [];
+      const takenCells = new Set();
+      for (let i = 0; i < 4; i++) {
+        let c;
+        do { c = Math.floor(Math.random() * 16); } while (takenCells.has(c));
+        takenCells.add(c);
+        const p = cast.length ? cast[i % cast.length] : null;
+        piks.push({ cell: c, caught: false, src: p ? pikSprite(pikEntryColor(p), p.s || 0, p.sp || null) : pikSprite(Math.floor(Math.random() * 360), 1, null) });
+      }
+      const draw = () => {
+        cells.forEach((cell, ci) => {
+          if (cell.classList.contains('is-caught')) return;
+          cell.innerHTML = '';
+          const pk = piks.find((p) => !p.caught && p.cell === ci);
+          if (pk) { const img = document.createElement('img'); img.src = pk.src; img.alt = ''; cell.appendChild(img); }
         });
-        row.appendChild(b);
+      };
+      draw();
+      cells.forEach((cell, ci) => {
+        cell.addEventListener('click', () => {
+          const pk = piks.find((p) => !p.caught && p.cell === ci);
+          if (pk) {
+            pk.caught = true;
+            cell.classList.add('is-caught');
+            playTone(1046, 'triangle', 0.08, 0, 0.04);
+            if (piks.every((p) => p.caught)) nmResolveAttack(2, '🤖 FASTER THAN THE SCATTER!!', '🤖 PLUS RAPIDE QUE LA DÉBANDADE !!');
+          } else {
+            cell.textContent = '💨';
+            playTone(200, 'square', 0.06, 0, 0.03);
+            setTimeout(() => { if (!cell.classList.contains('is-caught')) cell.textContent = ''; }, 350);
+          }
+        });
       });
-      panel.appendChild(row);
+      const hop = setInterval(() => {
+        if (!GAME.nm || GAME.nm.attack !== a) { clearInterval(hop); return; }
+        piks.forEach((pk) => {
+          if (pk.caught || Math.random() < 0.25) return; // sometimes they freeze. tactics.
+          const free = [];
+          for (let i = 0; i < 16; i++) if (!piks.some((q) => !q.caught && q.cell === i) && !cells[i].classList.contains('is-caught')) free.push(i);
+          if (free.length) pk.cell = free[Math.floor(Math.random() * free.length)];
+        });
+        draw();
+      }, 760);
+      a._timers.push(hop);
+      const hint = document.createElement('div');
+      hint.className = 'nm-panel-hint';
+      hint.textContent = trT('(they hop to a new square every ¾s. tagged ones stay tagged.)', '(ils changent de case toutes les ¾ s. les attrapés restent attrapés.)');
+      panel.appendChild(hint);
     }
   }
   /* — summon 2: the résumé attack. stamp it HIRED to stop the guilt — */
@@ -7591,6 +7686,183 @@ document.addEventListener('DOMContentLoaded', () => {
     termLine(trT('🌙 THE NIGHTMARE LOCKED THIS SHELL IN A DREAM LOOP', '🌙 LE CAUCHEMAR A ENFERMÉ CE SHELL DANS UNE BOUCLE DE RÊVE'), 't-err');
     termLine(trT('type `wake up` to break the loop and stagger the boss', 'tapez `wake up` pour briser la boucle et étourdir le boss'), 't-accent');
     termLine(trT('(psst — the dev left her own skeleton key in here: typing `yongshan` hits the boss REALLY hard. her privilege, your gain ♡)', '(psst — la dev a laissé son passe-partout ici : taper `yongshan` frappe le boss TRÈS fort. son privilège, votre gain ♡)'), 't-dim');
+  }
+  /* — summon 3.5: SITE MELTDOWN. the boss dreams a bug and the WHOLE
+       SITE breaks for real. a 15-second terminal hotfix — five rotating
+       disasters, fresh randomized answers every single time. miss the
+       window and the dream takes HALF your hearts. — */
+  function nmMeltHeal(a) {
+    if (!a || a._healed) return;
+    a._healed = 1;
+    (a._timers || []).forEach((t) => clearInterval(t));
+    a._timers = [];
+    try {
+      document.body.classList.remove('nm-melt-tilt', 'nm-melt-hue', 'nm-melt-invert', 'nm-melt-naked', 'nm-melt-static');
+      document.body.style.removeProperty('--nm-tilt');
+      document.body.style.removeProperty('--nm-hue');
+      const fx = document.getElementById('nm-melt-fx');
+      if (fx) fx.remove();
+      // un-typo every window title we vandalized
+      (a._titles || []).forEach(([el, txt]) => { try { el.textContent = txt; } catch (e) { /* window may be gone */ } });
+    } catch (e) { /* healing must never throw mid-boss */ }
+  }
+  function nmMeltFail() {
+    const a = GAME.nm && GAME.nm.attack;
+    if (!a || a.kind !== 'melt') return;
+    const dmg = Math.max(1, Math.ceil(GAME.lives / 2));
+    nmClearAttack(); // heals the site too — losing the drill never bricks the desktop
+    termLine(trT('⏱ TOO SLOW. the dream force-merges its own broken PR. code review is HALF YOUR HEARTS.', '⏱ TROP LENT. le rêve force-merge sa PR cassée. la revue de code coûte LA MOITIÉ DE TES CŒURS.'), 't-err');
+    gToast([`🧯 hotfix window MISSED!! the meltdown bites: -${dmg} ♥`, `🧯 fenêtre de correctif RATÉE !! la fusion mord : -${dmg} ♥`], 220);
+    playGlitchSound();
+    fxLife(-dmg);
+  }
+  function nmMeltFxRoot() {
+    let fx = document.getElementById('nm-melt-fx');
+    if (!fx) { fx = document.createElement('div'); fx.id = 'nm-melt-fx'; document.body.appendChild(fx); }
+    return fx;
+  }
+  function nmSummonMelt() {
+    nmAttackBegin('melt');
+    const a = GAME.nm.attack;
+    a.deadline = GAME.frame + 900; // 15s, counted in game frames (pausing pauses the fire)
+    a._timers = [];
+    a._titles = [];
+    a.tries = 0;
+    const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+    const scen = pick(['css', 'typo', 'ghost', 'brackets', 'cache']);
+    let dream, art, task, answers = [];
+
+    if (scen === 'css') {
+      const kind = pick(['rotate', 'hue', 'invert']);
+      if (kind === 'rotate') {
+        const n = 2 + Math.floor(Math.random() * 5); // 2..6°
+        document.body.style.setProperty('--nm-tilt', n + 'deg');
+        document.body.classList.add('nm-melt-tilt');
+        dream = trT('it dreamt the stylesheet fell down the stairs. THE WORLD IS TILTED.', 'il a rêvé que la feuille de style tombait dans l\'escalier. LE MONDE PENCHE.');
+        art = ['☠ body { transform: rotate(' + n + 'deg); }   /* "looks fine on my pillow" — the boss */'];
+        task = trT('type the counter-rotation that levels the world (like `-Xdeg`):', 'tape la contre-rotation qui remet le monde droit (genre `-Xdeg`) :');
+        answers = ['-' + n + 'deg', '-' + n, 'rotate(-' + n + 'deg)'];
+      } else if (kind === 'hue') {
+        const h = pick([60, 90, 120, 150, 200, 240, 300]);
+        document.body.style.setProperty('--nm-hue', h + 'deg');
+        document.body.classList.add('nm-melt-hue');
+        dream = trT('it dreamt in the WRONG COLORS. so now you get them too.', 'il a rêvé dans les MAUVAISES COULEURS. maintenant tu y as droit aussi.');
+        art = ['☠ body { filter: hue-rotate(' + h + 'deg); }   /* the dream\'s "aesthetic" */'];
+        task = trT('the color wheel must come full circle (360°). type the missing degrees:', 'la roue des couleurs doit boucler (360°). tape les degrés manquants :');
+        answers = [(360 - h) + 'deg', String(360 - h), 'hue-rotate(' + (360 - h) + 'deg)'];
+      } else {
+        document.body.classList.add('nm-melt-invert');
+        dream = trT('it dreamt it was a dark mode enthusiast. EVERYTHING is inverted.', 'il a rêvé qu\'il adorait le mode sombre. TOUT est inversé.');
+        art = ['☠ body { filter: invert(1); }   /* "self-care" — the boss, upside down */'];
+        task = trT('type the value that un-inverts the universe:', 'tape la valeur qui dé-inverse l\'univers :');
+        answers = ['invert(0)', '0', 'none'];
+      }
+    } else if (scen === 'typo') {
+      const TYPOS = [
+        ['console.lgo("hug")', 'log'], ['docmuent.querySelector(".slime")', 'document'],
+        ['windwo.location.reload()', 'window'], ['pikmin.lenght', 'length'],
+        ['fucntion hug() {}', 'function'], ['retrun love;', 'return'],
+        ['if (flase) { cry(); }', 'false'], ['while (treu) { boop(); }', 'true'],
+        ['awiat nap();', 'await'], ['improt slime from "heart";', 'import']
+      ];
+      const t = pick(TYPOS);
+      // the typos go LIVE: every open window title catches one
+      try {
+        document.querySelectorAll('.window:not(.window-closed) .window-title').forEach((el) => {
+          const txt = el.textContent || '';
+          if (txt.length < 4) return;
+          a._titles.push([el, txt]);
+          const i = 1 + Math.floor(Math.random() * (txt.length - 3));
+          el.textContent = txt.slice(0, i) + txt[i + 1] + txt[i] + txt.slice(i + 2);
+        });
+      } catch (e) { /* cosmetic only */ }
+      dream = trT('it dreamt it pushed to prod on a FRIDAY. the typos are LIVE (check your window titles).', 'il a rêvé qu\'il poussait en prod un VENDREDI. les typos sont EN LIGNE (regarde les titres des fenêtres).');
+      art = ['☠ deployed to production:   ' + t[0] + '   ▸ undefined'];
+      task = trT('type the one word, spelled CORRECTLY, that fixes the line:', 'tape le mot, écrit CORRECTEMENT, qui répare la ligne :');
+      answers = [t[1]];
+    } else if (scen === 'ghost') {
+      const n = 4 + Math.floor(Math.random() * 18); // 4..21
+      const form = pick(['idx', 'count']);
+      const fx = nmMeltFxRoot();
+      const spawn = setInterval(() => {
+        if (!GAME.nm || fx.childElementCount > 21 || (typeof REDUCED_MOTION !== 'undefined' && REDUCED_MOTION)) return;
+        try {
+          const g = document.createElement('img');
+          g.className = 'nm-ghost';
+          g.src = pikSprite(Math.floor(Math.random() * 360), 0, null);
+          g.style.left = (4 + Math.random() * 88) + 'vw';
+          g.style.top = (6 + Math.random() * 80) + 'vh';
+          g.alt = '';
+          fx.appendChild(g);
+        } catch (e) { /* ghost failed to manifest. spooky. */ }
+      }, 520);
+      a._timers.push(spawn);
+      dream = trT('it dreamt an OFF-BY-ONE. there is a hug with no pikmin in it, and the ghosts keep coming.', 'il a rêvé d\'un OFF-BY-ONE. un câlin n\'a pas de pikmin, et les fantômes affluent.');
+      art = ['☠ const piks = new Array(' + n + ');           // ' + n + ' very real pikmin',
+             '☠ for (let i = 0; i <= piks.length; i++) hug(piks[i]);   // piks[' + n + '] is a GHOST'];
+      task = form === 'idx'
+        ? trT('type the index of the LAST real pikmin:', 'tape l\'index du DERNIER vrai pikmin :')
+        : trT('type how many hugs should ACTUALLY happen:', 'tape combien de câlins devraient VRAIMENT avoir lieu :');
+      answers = [String(form === 'idx' ? n - 1 : n)];
+    } else if (scen === 'brackets') {
+      const CLOSER = { '(': ')', '[': ']', '{': '}' };
+      const depth = 3 + Math.floor(Math.random() * 2); // 3..4
+      const words = ['hug', 'nap', 'boop', 'pat', 'snug', 'pik'].sort(() => Math.random() - 0.5);
+      const opens = Array.from({ length: depth }, () => pick(['(', '[', '{']));
+      const expr = opens.map((b, i) => words[i] + b).join('') + pick(['cozy:true', 'soft:1', 'love:9001', 'dreams:∞']);
+      const ans = opens.slice().reverse().map((b) => CLOSER[b]).join('');
+      document.body.classList.add('nm-melt-naked');
+      if (!(typeof REDUCED_MOTION !== 'undefined' && REDUCED_MOTION)) {
+        const fx = nmMeltFxRoot();
+        for (let i = 0; i < 14; i++) {
+          const s = document.createElement('span');
+          s.className = 'nm-bracket';
+          s.textContent = pick([')', ']', '}']);
+          s.style.left = (3 + Math.random() * 92) + 'vw';
+          s.style.animationDuration = (2.4 + Math.random() * 3) + 's';
+          s.style.animationDelay = (Math.random() * 2) + 's';
+          fx.appendChild(s);
+        }
+      }
+      dream = trT('it dreamt it deleted node_modules… and every CLOSING BRACKET went with it. the windows came undone.', 'il a rêvé qu\'il supprimait node_modules… et toutes les FERMETURES sont parties avec. les fenêtres se défont.');
+      art = ['☠ git status: ' + depth + ' closing brackets have LEFT the repository', '☠ ' + expr];
+      task = trT('type ONLY the missing closers, in exact order:', 'tape UNIQUEMENT les fermetures manquantes, dans l\'ordre exact :');
+      answers = [ans];
+    } else {
+      const ABC = 'ACDEF23456789';
+      let code = '';
+      for (let i = 0; i < 4; i++) code += ABC[Math.floor(Math.random() * ABC.length)];
+      document.body.classList.add('nm-melt-static');
+      const noise = ['░', '▒', '▓'];
+      const glitchy = code.split('').map((c) => pick(noise) + ' ' + c + ' ').join('') + pick(noise);
+      dream = trT('it dreamt of EXPIRED COOKIES. the cache is poisoned — everything you see is stale.', 'il a rêvé de COOKIES PÉRIMÉS. le cache est empoisonné — tout ce que tu vois est rassis.');
+      art = ['☠ cache integrity: FAILED (0 fresh bytes)', '☠ checksum, through the static:   ' + glitchy];
+      task = trT('read the 4 characters through the noise, then type: flush <checksum>', 'lis les 4 caractères à travers le bruit, puis tape : flush <somme>');
+      answers = ['flush' + code.toLowerCase(), code.toLowerCase()];
+    }
+
+    a.melt = { scen, answers: answers.map((s) => s.toLowerCase().replace(/[\s;`'"]+/g, '')), art, task, dream };
+    openWindow('win-terminal');
+    termLine('', '');
+    termLine(trT('🚨 SITE MELTDOWN — the boss dreamt it and it CAME TRUE:', '🚨 EFFONDREMENT DU SITE — le boss l\'a rêvé et c\'est ARRIVÉ :'), 't-err');
+    termLine('   ' + dream, 't-err');
+    art.forEach((l) => termLine('   ' + l, 't-dim'));
+    termLine('⛑ ' + task, 't-accent');
+    termLine(trT('   15 seconds. miss the window and the dream takes HALF your hearts. (`hint` reprints the ticket)', '   15 secondes. rate la fenêtre et le rêve prend LA MOITIÉ de tes cœurs. (`hint` réaffiche le ticket)'), 't-dim');
+    // the countdown pill — panics under 5s
+    const root = nmOverlayRoot();
+    root.innerHTML = '';
+    const pill = document.createElement('div');
+    pill.className = 'nm-melt-timer';
+    root.appendChild(pill);
+    const tick = setInterval(() => {
+      if (!GAME.nm || GAME.nm.attack !== a || a._healed) { clearInterval(tick); return; }
+      const s = Math.max(0, (a.deadline - GAME.frame) / 60);
+      pill.textContent = '🧯 ' + s.toFixed(1) + 's — ' + trT('EMERGENCY HOTFIX', 'CORRECTIF D\'URGENCE');
+      pill.classList.toggle('is-panic', s < 5);
+    }, 120);
+    a._timers.push(tick);
+    gToast(['🧯 THE SITE IS MELTING!! the terminal holds the hotfix — 15s!!', '🧯 LE SITE FOND !! le correctif est dans le terminal — 15 s !!'], 240);
   }
   /* — summon 4: the pink screen of dreams. any key banishes it — */
   function nmSummonBsod() {
@@ -7644,7 +7916,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     panel.appendChild(cage);
   }
-  const NM_SUMMON_FX = { captcha: nmSummonCaptcha, resume: nmSummonResume, term: nmSummonTerminal, bsod: nmSummonBsod, pik: nmSummonPikRescue };
+  const NM_SUMMON_FX = { captcha: nmSummonCaptcha, resume: nmSummonResume, term: nmSummonTerminal, bsod: nmSummonBsod, pik: nmSummonPikRescue, melt: nmSummonMelt };
   // dev/testing backdoor (read-mostly) — also a fun console toy ♡
   try {
     window.__yosNM = {
@@ -7661,7 +7933,8 @@ document.addEventListener('DOMContentLoaded', () => {
       tick(n) { // manual frame-stepping: rAF sleeps in hidden tabs, tests don't
         for (let i = 0; i < (n || 1); i++) { try { gTick(true); } catch (e) { return String(e); } }
         return true;
-      }
+      },
+      game() { return GAME; } // raw state, for scripted playtests only
     };
   } catch (e) { /* no window, no toys */ }
 
@@ -7685,7 +7958,7 @@ document.addEventListener('DOMContentLoaded', () => {
       sayAt: GAME.frame + 380, say: null, said: [],
       attack: null,
       summonQueue: NM_SUMMONS.map((s) => s.id).sort(() => Math.random() - 0.5),
-      nextSummonAt: GAME.frame + 700,
+      nextSummonAt: GAME.frame + 560,
       disk: null, diskAt: GAME.frame + 900 + Math.random() * 600
     };
     // a caught checkpoint disk brings you right back where you left off
@@ -7740,7 +8013,9 @@ document.addEventListener('DOMContentLoaded', () => {
   function gNmSpeak() {
     const nm = GAME.nm;
     if (!nm) return;
-    // a due SUMMON outranks ordinary dream-talk (one at a time, queued)
+    // a due SUMMON outranks ordinary dream-talk (one at a time, queued);
+    // an empty deck reshuffles, so long fights never run out of tricks
+    if (nm.summonQueue && !nm.summonQueue.length) nm.summonQueue = NM_SUMMONS.map((s) => s.id).sort(() => Math.random() - 0.5);
     if (!nm.attack && nm.summonQueue && nm.summonQueue.length && GAME.frame >= nm.nextSummonAt) {
       const sid = nm.summonQueue.shift();
       const sum = NM_SUMMONS.find((s) => s.id === sid);
@@ -7749,7 +8024,7 @@ document.addEventListener('DOMContentLoaded', () => {
         playTone(340, 'sine', 0.2, 0, 0.04);
         playTone(200, 'sine', 0.3, 0.14, 0.05);
         setTimeout(() => { if (GAME.nm) NM_SUMMON_FX[sid](); }, 1500);
-        nm.nextSummonAt = GAME.frame + 1150; // next summon well after this one resolves
+        nm.nextSummonAt = GAME.frame + 950; // next summon soon after this one resolves
         nm.sayAt = GAME.frame + 520;
         return;
       }
@@ -7792,8 +8067,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // dream-talk: its one and only attack
     if (nm.intro <= 0 && GAME.frame >= nm.sayAt) gNmSpeak();
     if (nm.say && GAME.frame > nm.say.until) nm.say = null;
-    // an unresolved SUMMON drains you: coins first, then hearts
-    if (nm.attack && GAME.frame >= nm.attack.drainAt) {
+    // the MELTDOWN is a 15s all-or-nothing: no drip, one deadline
+    if (nm.attack && nm.attack.kind === 'melt' && nm.attack.deadline && GAME.frame >= nm.attack.deadline) {
+      nmMeltFail();
+      if (GAME.state !== 'run') return;
+    }
+    // any other unresolved SUMMON drains you: coins first, then hearts
+    if (nm.attack && nm.attack.kind !== 'melt' && GAME.frame >= nm.attack.drainAt) {
       nm.attack.drainAt = GAME.frame + 110;
       if (GAME.coins > 0) { fxCoins(-3); playTone(220, 'sawtooth', 0.06, 0, 0.03); }
       else { fxLife(-1); gToast(['⚠ the summon is DRAINING you — resolve it!!', '⚠ l\'invocation vous VIDE — résolvez-la !!'], 120); if (GAME.state !== 'run') return; }
@@ -8360,7 +8640,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (egg) { GAME.toast = { text: trT(egg[0], egg[1]), ttl: 150 }; playTone(1174, 'triangle', 0.1, 0, 0.04); }
       }
 
-      // encounters follow a calm clock: first at ~24-32s, then every 38-60s
+      // encounters keep a brisk clock: first at ~18-24s, then every 27-41s
       if (!GAME.event && !GAME.boss && !GAME.nm && gPlaySecs() > GAME.nextEventSec) gStartEvent();
       // the HR fairy strikes while the iron is warm: 45s+ of play AND the
       // player just got something delicious (joy stamped < 9s ago)
@@ -8414,7 +8694,11 @@ document.addEventListener('DOMContentLoaded', () => {
       for (let i = 0; i < 3; i++) items.push(pool.splice(gStateHash('shop' + i) % pool.length, 1)[0]);
       // dark-mode exclusive: the dream muffler, so the roommate sleeps through your run
       if (resolvedTheme() === 'dark' && !GAME.muffled) items[0] = MUFFLER_ITEM;
-      GAME.event = { type: 'shop', items, sold: [false, false, false], sel: 0 };
+      // the boba cat is an ADORABLE scalper: the fatter your wallet, the
+      // higher the stickers — policy posted right on the stall, zero shame
+      const mark = Math.min(4, Math.round((1 + 0.35 * Math.floor(GAME.coins / 25)) * 100) / 100);
+      const prices = items.map((it) => Math.round(it.price * mark));
+      GAME.event = { type: 'shop', items, prices, mark, sold: [false, false, false], sel: 0 };
     } else {
       const cursed = gStateHash('ofr') % 100 < 55;
       const w = cursed ? gPick(CURSED_WEAPONS, 'cw') : WEAPONS[gPick(['bubble_blaster', 'baguette', 'meow_cannon'], 'ow')];
@@ -8426,7 +8710,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (decision) GAME.decisions.push(decision);
     if (outcomePair) gToast(outcomePair, 200);
     GAME.event = null;
-    GAME.nextEventSec = gPlaySecs() + 38 + (gStateHash('nxt') % 22);
+    GAME.nextEventSec = gPlaySecs() + 27 + (gStateHash('nxt') % 15);
     GAME.hitRects = [];
   }
 
@@ -8504,10 +8788,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (ev.sel === 3) { gEndEvent(["the boba cat waves you goodbye ♡", "le chat-boba te fait coucou de la patte ♡"], 'shop:leave'); return; }
         if (ev.sold[ev.sel]) return;
         const item = ev.items[ev.sel];
-        if (GAME.coins < item.price) {
+        const cost = (ev.prices && ev.prices[ev.sel] != null) ? ev.prices[ev.sel] : item.price;
+        if (GAME.coins < cost) {
           // broke, but make it fashion
           const BROKE = [
-            [`error 402: payment required. you have ${GAME.coins}, it costs ${item.price}. math is cruel`, `erreur 402 : paiement requis. tu as ${GAME.coins}, ça coûte ${item.price}. les maths sont cruelles`],
+            [`error 402: payment required. you have ${GAME.coins}, it costs ${cost}. math is cruel`, `erreur 402 : paiement requis. tu as ${GAME.coins}, ça coûte ${cost}. les maths sont cruelles`],
             ["your wallet returned `null`. the cat respects the honesty", "ton portefeuille a renvoyé `null`. le chat respecte la franchise"],
             ["insufficient funds!! the cat shows you its own empty wallet in solidarity", "fonds insuffisants !! le chat te montre son portefeuille vide, par solidarité"],
             ["the cat suggests: jump on more coins. groundbreaking strategy", "le chat suggère : saute sur plus de pièces. stratégie révolutionnaire"]
@@ -8516,7 +8801,7 @@ document.addEventListener('DOMContentLoaded', () => {
           playTone(180, 'sawtooth', 0.12, 0, 0.05);
           return;
         }
-        GAME.coins -= item.price;
+        GAME.coins -= cost;
         ev.sold[ev.sel] = true;
         GAME.decisions.push('buy:' + item.icon);
         achvBump('buys');
@@ -8876,13 +9161,18 @@ document.addEventListener('DOMContentLoaded', () => {
         g2.strokeRect(bx + 1, 33, 126, 54);
         g2.fillStyle = '#ffe6f4';
         g2.font = "11px 'Jersey 25', 'VT323', monospace";
-        g2.fillText(`${it.icon} ${ev.sold[i] ? L(["SOLD", "VENDU"]) : '⛁' + it.price}`, bx + 8, 48);
+        g2.fillText(`${it.icon} ${ev.sold[i] ? L(["SOLD", "VENDU"]) : '⛁' + ((ev.prices && ev.prices[i] != null) ? ev.prices[i] : it.price)}`, bx + 8, 48);
         g2.font = "9px 'Jersey 25', 'VT323', monospace";
         g2.fillStyle = ev.sold[i] ? '#8a7a9a' : '#ffc2e2';
         g2.fillText(L(it.name).slice(0, 22), bx + 8, 64);
         GAME.hitRects.push({ x: bx, y: 32, w: 128, h: 56, sel: i });
       }
       gOption(g2, 150, 96, 180, 24, L(["👋 leave shop [N]", "👋 quitter [N]"]), ev.sel === 3, 3);
+      if (ev.mark && ev.mark > 1) {
+        g2.font = "9px 'Jersey 25', 'VT323', monospace";
+        g2.fillStyle = '#ffc2e2';
+        g2.fillText(L([`📈 wealth tax ×${ev.mark}: the cat saw your wallet. adorable scalper, fully transparent ♡`, `📈 taxe fortune ×${ev.mark} : le chat a vu ton portefeuille. arnaqueur adorable et transparent ♡`]), 20, 138);
+      }
     }
   }
 
@@ -11352,7 +11642,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const lbl = document.createElement('span');
     lbl.className = 'console-screen-label';
     lbl.textContent = 'LIVE'; // the blinking dot is CSS's job now
-    screen.appendChild(lbl);
+    side.appendChild(lbl); // pinned OUTSIDE the screen bezel — never over the slime's lines
     const mkBtn = (icon, label, extraClass) => {
       const b = document.createElement('button');
       b.type = 'button';
