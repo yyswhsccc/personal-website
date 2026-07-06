@@ -10,14 +10,29 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!audioCtx) {
       audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     }
-    if (audioCtx.state === 'suspended') {
+    if (audioCtx.state === 'suspended' && !document.hidden && document.hasFocus()) {
       audioCtx.resume();
     }
     return audioCtx;
   }
 
+  // tab away → the whole OS goes silent. tab back → sound returns.
+  // nobody gets serenaded by a hidden window.
+  function yosAutoMute() {
+    const away = document.hidden || !document.hasFocus();
+    try {
+      if (!audioCtx) return;
+      if (away && audioCtx.state === 'running') audioCtx.suspend();
+      else if (!away && audioCtx.state === 'suspended') audioCtx.resume();
+    } catch (e) { /* audio is a luxury, not a right */ }
+  }
+  document.addEventListener('visibilitychange', yosAutoMute);
+  window.addEventListener('blur', () => setTimeout(yosAutoMute, 40));
+  window.addEventListener('focus', () => setTimeout(yosAutoMute, 40));
+
   function playTone(freq, type, duration, delay = 0, volume = 0.08) {
     if (!soundEnabled) return;
+    if (document.hidden || !document.hasFocus()) return; // muted while away
     try {
       const ctx = getAudioContext();
       const osc = ctx.createOscillator();
@@ -243,12 +258,33 @@ document.addEventListener('DOMContentLoaded', () => {
       const liveWin = document.getElementById('win-live');
       if (liveWin && !liveWin.classList.contains('window-closed')) closeWindow(liveWin);
       if (typeof gameFitBig === 'function') gameFitBig();
+      if (typeof gameMaybeRotate === 'function') gameMaybeRotate(win);
       if (typeof gameCamEnter === 'function') gameCamEnter();
       setTimeout(() => { if (typeof gFitCanvas === 'function') gFitCanvas(); }, 120);
       if (typeof showGameHint === 'function') showGameHint();
       if (typeof dismissGameInvite === 'function') dismissGameInvite();
     }
-    if (winId === 'win-interview' && typeof setupInterviewWindow === 'function') setupInterviewWindow();
+    if (winId === 'win-interview' && typeof setupInterviewWindow === 'function') {
+      setupInterviewWindow();
+      // the scheduler is a proper standalone modal: centered, on top
+      // of EVERYTHING, with a dimming veil — no more ad soup behind it
+      win.classList.add('window-itv-modal');
+      if (!document.getElementById('itv-backdrop')) {
+        const veil = document.createElement('div');
+        veil.id = 'itv-backdrop';
+        veil.className = 'itv-backdrop';
+        document.body.appendChild(veil);
+      }
+      // booking time = sacred time: the run pauses itself and rolls
+      // in-house ads so nobody dies mid-calendar
+      try {
+        if (GAME && GAME.state === 'run') {
+          GAME.itvPause = true;
+          GAME.adT = 0;
+          GAME.adSkit = Math.floor(Math.random() * 4);
+        }
+      } catch (e) { /* game not booted yet */ }
+    }
     if (winId === 'win-live' && typeof liveEnter === 'function') {
       win.classList.add('window-maximized'); // the live room opens big, front and centre
       setTimeout(liveEnter, 120);
@@ -282,7 +318,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function closeWindow(win) {
     if (win.id === 'win-live' && typeof liveExit === 'function') liveExit();
+    if (win.id === 'win-interview') {
+      win.classList.remove('window-itv-modal');
+      const veil = document.getElementById('itv-backdrop');
+      if (veil) veil.remove();
+      try {
+        if (GAME && GAME.itvPause) {
+          GAME.itvPause = false;
+          if (typeof fxInvincible === 'function') fxInvincible(2.5); // gentle re-entry
+          if (typeof gToast === 'function') gToast(['▶ resumed!! good luck with the interview ♡', '▶ reprise !! bonne chance pour l\'entretien ♡'], 170);
+        }
+      } catch (e) { /* game not booted */ }
+    }
     if (win.id === 'win-game' && typeof gameCamExit === 'function') gameCamExit();
+    if (win.id === 'win-game' && typeof gameUnrotate === 'function') gameUnrotate();
     playCloseSound();
     win.classList.add('window-closed');
     win.classList.remove('window-active');
@@ -301,6 +350,12 @@ document.addEventListener('DOMContentLoaded', () => {
   function minimizeWindow(win) {
     if (win.id === 'win-live' && typeof liveExit === 'function') liveExit();
     if (win.id === 'win-game' && typeof gameCamExit === 'function') gameCamExit();
+    if (win.id === 'win-game' && typeof gameUnrotate === 'function') gameUnrotate();
+    if (win.id === 'win-interview') {
+      win.classList.remove('window-itv-modal');
+      const veil = document.getElementById('itv-backdrop');
+      if (veil) veil.remove();
+    }
     playCloseSound();
     win.classList.add('window-minimized');
     win.classList.remove('window-active');
@@ -2230,6 +2285,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let amaBusy = false;
 
   function amaAsk(question) {
+    try { achvBump('asks'); } catch (e) { /* pre-achv boot */ }
     const q = question.trim();
     if (!q || amaBusy || !amaFeed) return;
     amaBusy = true;
@@ -2669,17 +2725,25 @@ document.addEventListener('DOMContentLoaded', () => {
   function cheatFx(key) {
     const pend = (k) => { store.set('yos-cheat-next', k); termLine(trT('…armed for your NEXT run of slime_run.exe ♡', '…armé pour ta PROCHAINE run de slime_run.exe ♡'), 't-dim'); };
     switch (key) {
-      case 'god': case 'fast': case 'fever': case 'big': case 'tiny':
-      case 'float': case 'luck': case 'boss': case 'life': pend(key); break;
-      case 'rich5': pend('rich5'); break;
-      case 'rich20': pend('rich20'); break;
-      case 'rich50': pend('rich50'); break;
+      // pending run-buffs still throw a party RIGHT NOW
+      case 'god': pend('god'); cheatFall(['😇', '✨', '♡'], 30); if (!pet.sleeping) showBubble(trT('divine i-frames queued ♡', 'i-frames divines en file ♡'), 2400); break;
+      case 'fast': pend('fast'); cheatFall(['💨', '⚡'], 24); break;
+      case 'fever': pend('fever'); cheatFall(['🌈', '⭐', '♥'], 34); break;
+      case 'big': pend('big'); cheatFall(['🍰', '🧁'], 20); if (!pet.sleeping) showBubble(trT('CHONK loading…', 'CHONK en chargement…'), 2200); break;
+      case 'tiny': pend('tiny'); cheatFall(['🫧'], 18); break;
+      case 'float': pend('float'); cheatFall(['🎈', '☁️'], 22); break;
+      case 'luck': pend('luck'); cheatFall(['🍀', '⭐'], 26); break;
+      case 'boss': pend('boss'); playGlitchSound(); cheatFall(['💀', '⚠️'], 20); break;
+      case 'life': pend('life'); cheatFall(['💖', '♥'], 26); break;
+      case 'rich5': pend('rich5'); cheatFall(['🪙'], 26); break;
+      case 'rich20': pend('rich20'); cheatFall(['🪙', '💰'], 50); break;
+      case 'rich50': pend('rich50'); cheatFall(['🪙', '💰', '💎'], 84); if (!pet.sleeping) showBubble(trT("*muffled, from under the coins* I'm RICH!!", '*étouffé, sous les pièces* je suis RICHE !!'), 2600); break;
       case 'muffin': gPendingBoost = true; termLine(trT('…a hype bonus waits at the start line ♡', '…un bonus hype attend sur la ligne de départ ♡'), 't-dim'); break;
       case 'hearts': cheatFall(['♥', '♡', '✦'], 22); break;
       case 'konami': cheatFall(['♥', '🌈', '⭐'], 26); gainFollowers(10); playFanfare(); break;
       case 'barrel': cheatBarrel(); achvUnlock('barrel'); break;
-      case 'zerg': cheatZerg(); break;
-      case 'matrix': cheatMatrix(); break;
+      case 'zerg': cheatZerg(); achvUnlock('zergling'); break;
+      case 'matrix': cheatMatrix(); achvUnlock('neo'); break;
       case 'wxsnow': cheatWx('snow'); break;
       case 'wxrain': cheatWx('rain'); break;
       case 'wxsun': cheatWx('clear'); break;
@@ -2697,10 +2761,18 @@ document.addEventListener('DOMContentLoaded', () => {
       case 'fans5': gainFollowers(5); break;
       case 'fans25': gainFollowers(25); playFanfare(); break;
       case 'fanfare': playFanfare(); break;
-      case 'honk': [0, 240, 520].forEach((d) => setTimeout(() => playTone(430 + Math.random() * 90, 'square', 0.1, 0, 0.03), d)); break;
+      case 'honk': {
+        // the `honk` spell is a purist: ALWAYS jasonlee's honk. no lottery.
+        if (soundEnabled && !document.hidden && document.hasFocus()) {
+          const hk = new Audio('assets/goose_c.mp3');
+          hk.volume = (resolvedTheme() === 'dark') ? 0.18 : 0.55;
+          hk.play().catch(() => {});
+        }
+        break;
+      }
       case 'meow': playTone(880, 'sine', 0.12, 0, 0.04); playTone(660, 'sine', 0.16, 0.1, 0.04); break;
       case 'loop': for (let i = 0; i < 3; i++) termLine(trT('while (cute) { keep_running(); }', 'while (mignon) { continue_de_courir(); }'), 't-dim'); break;
-      case 'credits': ['YONGSHAN OS — a hand-built production', 'starring: one (1) slime', 'pikmin wrangling: the garden dept.', 'weather: Edmonton, unpaid intern', 'frameworks used: zero. as always.'].forEach((l, i) => setTimeout(() => termLine(l, i ? 't-dim' : 't-accent'), i * 260)); break;
+      case 'credits': ['YONGSHAN OS — a hand-built production', 'starring: one (1) slime', 'pikmin wrangling: the garden dept.', 'weather: Edmonton, unpaid intern', 'goose vocals: SoundBible, the Pixabay community & xeno-canto XC388771/XC62259/XC178135 (CC BY-SA 3.0). honks are real.', 'frameworks used: zero. as always.'].forEach((l, i) => setTimeout(() => termLine(l, i ? 't-dim' : 't-accent'), i * 260)); break;
       default: playTone(990, 'triangle', 0.08, 0, 0.03);
     }
   }
@@ -2830,7 +2902,13 @@ document.addEventListener('DOMContentLoaded', () => {
     termLine(trT(c[0], c[1]), 't-accent');
     cheatFx(c[2]);
     const found = store.get('yos-cheats-found', []);
-    if (found.indexOf(canonical) === -1) { found.push(canonical); store.set('yos-cheats-found', found); cloudQueueSync(); }
+    if (found.indexOf(canonical) === -1) {
+      found.push(canonical);
+      store.set('yos-cheats-found', found);
+      cloudQueueSync();
+      [[5, 'c5'], [10, 'c10'], [25, 'c25'], [50, 'c50'], [75, 'c75'], [100, 'c100']]
+        .forEach(([v, id]) => { if (found.length >= v) achvUnlock(id); });
+    }
     playSparkleSound();
     achvUnlock('spellcaster');
     if (isCustom) {
@@ -2877,10 +2955,11 @@ document.addEventListener('DOMContentLoaded', () => {
   function spellNorm(s) { return String(s).toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim(); }
   function spellToks(s) { return spellNorm(s).split(' ').filter((w) => w && !SPELL_STOPWORDS.has(w)); }
 
+  // fuzzy has BOUNDARIES now: a guess must genuinely share the spell's
+  // key words (or be a near-typo of the whole thing). Nothing else.
   function fuzzyCheatMatch(rawInput) {
     const input = spellNorm(rawInput);
     if (!input || input.length < 3) return null;
-    if (CHEAT_SYNONYMS[input] && TERM_CHEATS[CHEAT_SYNONYMS[input]]) return CHEAT_SYNONYMS[input];
 
     const it = spellToks(input);
     const squishedIn = input.replace(/\s/g, '');
@@ -2890,10 +2969,12 @@ document.addEventListener('DOMContentLoaded', () => {
     Object.keys(TERM_CHEATS).forEach((key) => {
       const kt = spellToks(key);
       if (!kt.length) return;
+      if (it.length > kt.length + 2) return; // rambling ≠ guessing
       let shared = 0;
       let sharedLong = false;
       kt.forEach((k) => {
-        if (it.some((w) => w === k || (k.length >= 4 && w.length >= 4 && levDist(w, k) <= 1))) {
+        // exact word, or a 1-letter typo on a word of 5+ letters
+        if (it.some((w) => w === k || (k.length >= 5 && w.length >= 5 && levDist(w, k) <= 1))) {
           shared++;
           if (k.length >= 4) sharedLong = true;
         }
@@ -2901,8 +2982,10 @@ document.addEventListener('DOMContentLoaded', () => {
       let score = shared / kt.length;
       // squished / typo'd whole-spell compare: "moterload", "doabarrelroll"…
       const squishedKey = key.replace(/[^a-z0-9]/g, '');
-      if (squishedKey.length >= 5 && levDist(squishedIn, squishedKey) <= 2) { score = 1; sharedLong = true; }
-      if (score >= 0.55 && sharedLong && score > bestScore) { bestScore = score; best = key; }
+      if (squishedKey.length >= 6 && Math.abs(squishedIn.length - squishedKey.length) <= 2 && levDist(squishedIn, squishedKey) <= 2) {
+        score = 1; sharedLong = true;
+      }
+      if (score >= 0.6 && sharedLong && score > bestScore) { bestScore = score; best = key; }
     });
     return best;
   }
@@ -2910,6 +2993,14 @@ document.addEventListener('DOMContentLoaded', () => {
   function tryFuzzyCheat(rawInput) {
     if (spellBusy) return false;
     const phrase = spellNorm(rawInput);
+    // classic codes from OTHER games are honored as-is: recognized
+    // dialect, full effect, NO rewrite (iddqd stays iddqd, thanks)
+    if (CHEAT_SYNONYMS[phrase] && TERM_CHEATS[CHEAT_SYNONYMS[phrase]]) {
+      const canon = CHEAT_SYNONYMS[phrase];
+      termLine(trT(`🗝️ ancient dialect recognized. translating to \`${canon}\` — the spellbook honors the classics as-is.`, `🗝️ dialecte ancien reconnu. traduction : \`${canon}\` — le grimoire honore les classiques tels quels.`), 't-ok');
+      fireCheat(canon, false);
+      return true;
+    }
     const canonical = fuzzyCheatMatch(rawInput);
     if (!canonical || phrase === spellNorm(canonical)) return false;
     if (TERM_CHEATS[phrase]) return false; // that IS another spell — no stealing
@@ -2936,6 +3027,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const renames = store.get('yos-cheat-renames', {});
       renames[canonical] = phrase;
       store.set('yos-cheat-renames', renames);
+      cloudQueueSync(); // renamed spells travel to the cloud too
       termLine(trT(`✔ SPELLBOOK REWRITTEN: \`${phrase}\` is now a real command on this OS. the old words have been deleted from reality.`, `✔ GRIMOIRE RÉÉCRIT : \`${phrase}\` est désormais une vraie commande de cet OS. les anciens mots ont été effacés de la réalité.`), 't-ok');
       termLine(trT(already[canonical] ? '(the slime god sighs and updates it AGAIN. you\'re lucky you\'re cute.)' : 'type it again — personalized spells come with a buff ♡', already[canonical] ? '(le dieu slime soupire et met à jour ENCORE. heureusement que tu es mignon·ne.)' : 'retape-le — les sorts personnalisés ont un buff ♡'), 't-dim');
       achvUnlock('spellsmith');
@@ -3024,8 +3116,129 @@ document.addEventListener('DOMContentLoaded', () => {
     { id: 'frenchie', icon: '🥐', n: ['Honorary Baguette', 'Baguette Honoraire'], d: ['switched the OS to French. immediate +10 elegance.', 'a mis l\'OS en français. +10 d\'élégance immédiate.'], t: ['this OS speaks two languages.', 'cet OS parle deux langues.'] },
     { id: 'nightowl', icon: '🌙', n: ['Midnight Shift', 'Équipe de Nuit'], d: ['turned on midnight mode. your retinas wrote a thank-you note.', 'a activé le mode minuit. tes rétines ont envoyé un mot de remerciement.'], t: ['the moon button does something.', 'le bouton lune fait quelque chose.'] },
     { id: 'hired', icon: '💼', n: ['HR Speedrun Any%', 'Speedrun RH Any%'], d: ['ran `sudo hire yongshan`. somewhere, a recruiter felt a disturbance.', 'a lancé `sudo hire yongshan`. quelque part, un recruteur a senti une perturbation.'], t: ['sudo can do more than you think.', 'sudo peut plus que tu ne crois.'] },
-    { id: 'liked', icon: '💖', n: ['Wall Material', 'Digne du Mur'], d: ['joined the fan wall. your 100 pixels are famous worldwide now.', 'a rejoint le mur des fans. tes 100 pixels sont mondialement célèbres.'], t: ['the little heart button is real. and shared.', 'le petit bouton cœur est réel. et partagé.'] }
+    { id: 'liked', icon: '💖', n: ['Wall Material', 'Digne du Mur'], d: ['joined the fan wall. your 100 pixels are famous worldwide now.', 'a rejoint le mur des fans. tes 100 pixels sont mondialement célèbres.'], t: ['the little heart button is real. and shared.', 'le petit bouton cœur est réel. et partagé.'] },
+    // ---- the 110 little ones: metric-driven, all pop on their own ----
+    { id: 'pet10', icon: '🐾', m: 'pets', v: 10, n: ['Certified Hand', 'Main Certifiée'], d: ['10 pets delivered. the slime memorized your cursor.', '10 caresses livrées. le slime a mémorisé ton curseur.'], t: ['pet. just pet.', 'caresse. c\'est tout.'] },
+    { id: 'pet50', icon: '🖐️', m: 'pets', v: 50, n: ['Emotional Support Human', 'Humain de Soutien Émotionnel'], d: ['50 pets. legally, you work here now.', '50 caresses. légalement, tu travailles ici maintenant.'], t: ['keep petting.', 'continue de caresser.'] },
+    { id: 'pet200', icon: '💆', m: 'pets', v: 200, n: ['Slime Spa Director', 'Directeur·rice du Spa à Slime'], d: ['200 pets. the slime opened a loyalty account in your name.', '200 caresses. le slime t\'a ouvert un compte fidélité.'], t: ['200 is a lifestyle.', '200, c\'est un mode de vie.'] },
+    { id: 'pet1000', icon: '🫶', m: 'pets', v: 1000, n: ['The Thousand-Pet Prophecy', 'La Prophétie des Mille Caresses'], d: ['1000 pets. ancient slime scrolls foretold your wrist.', '1000 caresses. les anciens parchemins slime avaient prédit ton poignet.'], t: ['there is a prophecy.', 'il existe une prophétie.'] },
+    { id: 'feed50', icon: '🍭', m: 'feeds', v: 50, n: ['Snack Infrastructure', 'Infrastructure à Snacks'], d: ['50 candies. you are now a supply chain.', '50 bonbons. tu es devenu·e une chaîne logistique.'], t: ['the slime is hungry. often.', 'le slime a faim. souvent.'] },
+    { id: 'feed200', icon: '🍰', m: 'feeds', v: 200, n: ['Michelin Star (Candy Category)', 'Étoile Michelin (Catégorie Bonbons)'], d: ['200 feeds. critics call your candy "reliable".', '200 repas. la critique dit de tes bonbons : « fiables ».'], t: ['cook. serve. repeat.', 'cuisine. sers. répète.'] },
+    { id: 'nap5', icon: '🛏️', m: 'naps', v: 5, n: ['Bedtime Enforcer', 'Agent du Coucher'], d: ['tucked the slime in 5 times. it pretends to resist.', 'a bordé le slime 5 fois. il fait semblant de résister.'], t: ['the nap button exists.', 'le bouton sieste existe.'] },
+    { id: 'nap25', icon: '😴', m: 'naps', v: 25, n: ['Sandman\'s Intern', 'Stagiaire du Marchand de Sable'], d: ['25 naps scheduled. HR approved all of them.', '25 siestes planifiées. les RH ont tout validé.'], t: ['sleep is a feature.', 'dormir est une feature.'] },
+    { id: 'nap100', icon: '🌛', m: 'naps', v: 100, n: ['Chief Sleep Officer', 'Directeur·rice Général·e du Dodo'], d: ['100 naps. the pillow signed a sponsorship deal.', '100 siestes. l\'oreiller a signé un contrat de sponsoring.'], t: ['one hundred bedtimes.', 'cent couchers.'] },
+    { id: 'play10', icon: '⭐', m: 'plays', v: 10, n: ['Zoomies Technician', 'Technicien·ne des Zoomies'], d: ['triggered 10 zoomies. all systems: wheee.', 'a déclenché 10 zoomies. tous les systèmes : wiiii.'], t: ['play with it.', 'joue avec.'] },
+    { id: 'play50', icon: '🎪', m: 'plays', v: 50, n: ['Recess Committee Chair', 'Président·e du Comité Récré'], d: ['50 play sessions. the slime lists you as "cardio".', '50 récrés. le slime te classe comme « cardio ».'], t: ['more zoomies.', 'plus de zoomies.'] },
+    { id: 'play200', icon: '🎡', m: 'plays', v: 200, n: ['Perpetual Motion License', 'Permis de Mouvement Perpétuel'], d: ['200 zoomies. physicists want to study your slime.', '200 zoomies. des physiciens veulent étudier ton slime.'], t: ['zoomies, industrialized.', 'zoomies, industrialisés.'] },
+    { id: 'die1', icon: '🪦', m: 'deaths', v: 1, n: ['First Blood (Yours)', 'Premier Sang (Le Tien)'], d: ['died once. the bug wrote it in its diary.', 'mort·e une fois. le bug l\'a noté dans son journal.'], t: ['run. trip. learn.', 'cours. trébuche. apprends.'] },
+    { id: 'die10', icon: '💀', m: 'deaths', v: 10, n: ['Frequent Flyer (Downward)', 'Grand Voyageur (Vers le Bas)'], d: ['10 deaths. the respawn button knows you by name.', '10 morts. le bouton respawn te tutoie.'], t: ['persistence is cute.', 'la persévérance, c\'est mignon.'] },
+    { id: 'die50', icon: '⚰️', m: 'deaths', v: 50, n: ['Punch Card: Afterlife', 'Carte de Fidélité : Au-delà'], d: ['50 deaths. the 51st comes with a free stamp.', '50 morts. la 51e offre un tampon gratuit.'], t: ['keep dying. gorgeously.', 'continue de mourir. avec panache.'] },
+    { id: 'die250', icon: '👻', m: 'deaths', v: 250, n: ['Local Ghost, Beloved', 'Fantôme Local, Adoré'], d: ['250 deaths. the bugs held a vigil. it was moving.', '250 morts. les bugs ont fait une veillée. c\'était émouvant.'], t: ['two hundred fifty.', 'deux cent cinquante.'] },
+    { id: 's100', icon: '🥉', n: ['Three Digits Club', 'Club des Trois Chiffres'], d: ['scored 100. HR noticed you (it\'s in the game, literally).', 'a marqué 100. les RH t\'ont repéré·e (littéralement, c\'est dans le jeu).'], t: ['reach 100. survive.', 'atteins 100. survis.'] },
+    { id: 's300', icon: '🥈', n: ['Senior Jumper', 'Sauteur·se Senior'], d: ['scored 300. promoted mid-air.', 'a marqué 300. promu·e en plein saut.'], t: ['300 needs legs.', '300 demande des jambes.'] },
+    { id: 's500', icon: '🥇', n: ['The Bugs Fear You', 'Les Bugs Te Craignent'], d: ['scored 500. bug forums call you "the incident".', 'a marqué 500. les forums de bugs t\'appellent « l\'incident ».'], t: ['half a thousand.', 'un demi-millier.'] },
+    { id: 's1000', icon: '🏅', n: ['Four Digits!!', 'Quatre Chiffres !!'], d: ['scored 1000. the offer letter is basically typing itself.', 'a marqué 1000. la lettre d\'embauche s\'écrit toute seule.'], t: ['one. thousand.', 'mille. tout rond.'] },
+    { id: 's2000', icon: '👑', n: ['Overqualified', 'Surqualifié·e'], d: ['scored 2000. the game asked YOU for tips.', 'a marqué 2000. le jeu T\'A demandé des conseils.'], t: ['2000, no mercy.', '2000, sans pitié.'] },
+    { id: 's5000', icon: '🚀', n: ['Escape Velocity', 'Vitesse de Libération'], d: ['scored 5000. NASA left a voicemail.', 'a marqué 5000. la NASA a laissé un message vocal.'], t: ['5000. yes, really.', '5000. oui, vraiment.'] },
+    { id: 's10000', icon: '🌌', n: ['Beyond The Leaderboard', 'Au-delà du Classement'], d: ['scored 10000. the hall of slime is building you a wing.', 'a marqué 10000. le hall of slime te construit une aile.'], t: ['five digits exist.', 'les cinq chiffres existent.'] },
+    { id: 'jump500', icon: '🦘', m: 'jumps', v: 500, n: ['Spring-Loaded', 'À Ressorts'], d: ['500 jumps. your spacebar filed for overtime.', '500 sauts. ta barre espace a demandé des heures sup.'], t: ['jump a lot.', 'saute beaucoup.'] },
+    { id: 'jump5000', icon: '🛸', m: 'jumps', v: 5000, n: ['Gravity\'s Ex', 'L\'Ex de la Gravité'], d: ['5000 jumps. gravity says it "needs space".', '5000 sauts. la gravité dit qu\'elle « a besoin d\'espace ».'], t: ['jump. five thousand times.', 'saute. cinq mille fois.'] },
+    { id: 'jump20000', icon: '🌠', m: 'jumps', v: 20000, n: ['Orbital Resident', 'Résident·e Orbital·e'], d: ['20000 jumps. you receive mail at apogee now.', '20000 sauts. ton courrier arrive à l\'apogée.'], t: ['twenty thousand.', 'vingt mille.'] },
+    { id: 'rich60', icon: '🐉', n: ['Dragon Hoard (Pocket Size)', 'Trésor de Dragon (Format Poche)'], d: ['held 60 coins in one run. a tiny dragon applied to guard them.', 'a détenu 60 pièces en une run. un mini-dragon a postulé pour les garder.'], t: ['hoard. carefully.', 'amasse. prudemment.'] },
+    { id: 'buys3', icon: '🛍️', m: 'buys', v: 3, n: ['Valued Customer', 'Client·e Estimé·e'], d: ['3 purchases. the boba cat drew a heart on your receipt.', '3 achats. le chat-boba a dessiné un cœur sur ton ticket.'], t: ['the cat sells things.', 'le chat vend des choses.'] },
+    { id: 'buys20', icon: '💳', m: 'buys', v: 20, n: ['Preferred Shareholder', 'Actionnaire Privilégié·e'], d: ['20 purchases. the cat named a smoothie after you.', '20 achats. le chat a baptisé un smoothie en ton honneur.'], t: ['keep the cat rich.', 'enrichis le chat.'] },
+    { id: 'buys50', icon: '🏦', m: 'buys', v: 50, n: ['The Cat\'s Retirement Plan', 'Le Plan Retraite du Chat'], d: ['50 purchases. the cat retired to a boba farm. it came back — for you.', '50 achats. le chat a pris sa retraite dans une ferme à boba. il est revenu — pour toi.'], t: ['fifty receipts.', 'cinquante tickets.'] },
+    { id: 'trap1', icon: '🪤', m: 'traps', v: 1, n: ['Marketing Victim', 'Victime du Marketing'], d: ['bought a shop trap. the label WAS gorgeous.', 'a acheté un piège de boutique. l\'étiquette ÉTAIT magnifique.'], t: ['if it sparkles too hard…', 'si ça brille trop fort…'] },
+    { id: 'trap5', icon: '🤡', m: 'traps', v: 5, n: ['Five-Time Believer', 'Croyant·e Quintuple'], d: ['bought 5 traps. at this point it\'s a donation.', 'a acheté 5 pièges. à ce stade, c\'est un don.'], t: ['fool me five times.', 'trompe-moi cinq fois.'] },
+    { id: 'godyes1', icon: '🙏', m: 'godyes', v: 1, n: ['Leap of Faith', 'Acte de Foi'], d: ['believed in a code god. bold. moist. inspiring.', 'a cru en un dieu du code. audacieux. humide. inspirant.'], t: ['a god will ask.', 'un dieu demandera.'] },
+    { id: 'godno1', icon: '🚫', m: 'godno', v: 1, n: ['Immune to Marketing', 'Immunisé·e au Marketing'], d: ['refused a god to its face. it respected that. probably.', 'a refusé un dieu en face. il a respecté. probablement.'], t: ['you can say no to gods.', 'on peut dire non aux dieux.'] },
+    { id: 'gods10', icon: '⛪', m: 'gods', v: 10, n: ['Comparative Theology Minor', 'Mineure en Théologie Comparée'], d: ['met 10 code gods. your thesis: "they\'re all a bit much".', 'a rencontré 10 dieux du code. ta thèse : « ils en font tous trop ».'], t: ['meet more gods.', 'rencontre plus de dieux.'] },
+    { id: 'gods25', icon: '🏛️', m: 'gods', v: 25, n: ['Pantheon Regular', 'Habitué·e du Panthéon'], d: ['25 divine encounters. they saved you a seat.', '25 rencontres divines. ils te gardent une place.'], t: ['the pantheon has a lobby.', 'le panthéon a un hall.'] },
+    { id: 'tarot1', icon: '🃏', m: 'tarots', v: 1, n: ['One Card Curious', 'Curieux·se d\'une Carte'], d: ['drew from the wizard. the card judged you gently.', 'a tiré chez le mage. la carte t\'a jugé·e avec douceur.'], t: ['the wizard shuffles.', 'le mage mélange.'] },
+    { id: 'tarot10', icon: '🔮', m: 'tarots', v: 10, n: ['Fate\'s Frequent Customer', 'Client·e Fidèle du Destin'], d: ['10 draws. the wizard started a punch card too.', '10 tirages. le mage a lancé une carte de fidélité aussi.'], t: ['ten spreads deep.', 'dix tirages plus loin.'] },
+    { id: 'tarot30', icon: '🌟', m: 'tarots', v: 30, n: ['Arcana Sommelier', 'Sommelier·ère des Arcanes'], d: ['30 draws. you can smell a reversed card from two events away.', '30 tirages. tu flaires une carte renversée à deux événements.'], t: ['thirty cards later…', 'trente cartes plus tard…'] },
+    { id: 'c5', icon: '🗝️', n: ['Keyring Started', 'Trousseau Entamé'], d: ['found 5 cheat codes. 95 still hiding. they giggle.', 'a trouvé 5 codes. 95 se cachent encore. ils gloussent.'], t: ['find five secrets.', 'trouve cinq secrets.'] },
+    { id: 'c10', icon: '🕵️', n: ['Spellbook: Chapter One', 'Grimoire : Chapitre Un'], d: ['10 codes found. the terminal is mildly impressed.', '10 codes trouvés. le terminal est modérément impressionné.'], t: ['double digits of secrets.', 'des secrets à deux chiffres.'] },
+    { id: 'c25', icon: '📖', n: ['Forbidden Librarian', 'Bibliothécaire de l\'Interdit'], d: ['25 codes. you shelve secrets by smell now.', '25 codes. tu ranges les secrets à l\'odeur.'], t: ['a quarter of the truth.', 'un quart de la vérité.'] },
+    { id: 'c50', icon: '🧙', n: ['Half the Grimoire', 'La Moitié du Grimoire'], d: ['50 codes. the slime god follows YOU for updates.', '50 codes. le dieu slime TE suit pour les mises à jour.'], t: ['fifty whispers down.', 'cinquante murmures percés.'] },
+    { id: 'c75', icon: '⚗️', n: ['Three Quarters Mad', 'Fou·folle aux Trois Quarts'], d: ['75 codes. you type in tongues.', '75 codes. tu tapes en langues anciennes.'], t: ['past the point of return.', 'passé le point de non-retour.'] },
+    { id: 'c100', icon: '🏆', n: ['The Whole Grimoire', 'Le Grimoire Entier'], d: ['ALL 100 codes. the terminal bows. we\'re not worthy.', 'les 100 codes. le terminal s\'incline. on n\'est pas dignes.'], t: ['all of them. all.', 'tous. absolument tous.'] },
+    { id: 'gift10', icon: '🎁', m: 'gifts', v: 10, n: ['Reliable Patron', 'Mécène Fiable'], d: ['sent 10 stream gifts. the slime practices its surprised face.', 'a envoyé 10 cadeaux. le slime répète sa tête surprise.'], t: ['the gift row exists.', 'la rangée de cadeaux existe.'] },
+    { id: 'gift50', icon: '💝', m: 'gifts', v: 50, n: ['Whale (Affectionate)', 'Baleine (Affectueuse)'], d: ['50 gifts. the stream economy is 80% you.', '50 cadeaux. l\'économie du stream, c\'est 80 % toi.'], t: ['fifty deliveries.', 'cinquante livraisons.'] },
+    { id: 'gift200', icon: '🐋', m: 'gifts', v: 200, n: ['Central Bank of Cute', 'Banque Centrale du Mignon'], d: ['200 gifts. economists study your generosity curve.', '200 cadeaux. des économistes étudient ta courbe de générosité.'], t: ['two hundred parcels.', 'deux cents colis.'] },
+    { id: 'fans100', icon: '📈', n: ['Triple Digit Famous', 'Célèbre à Trois Chiffres'], d: ['100 fans. paparazzi pixels spotted outside the habitat.', '100 fans. des pixels paparazzis rôdent devant l\'habitat.'], t: ['grow the fanbase.', 'fais grandir la fanbase.'] },
+    { id: 'fans341', icon: '🌟', n: ['The 341 Club', 'Le Club des 341'], d: ['341 fans — the sacred number on the wall. coincidence? never.', '341 fans — le chiffre sacré du mur. coïncidence ? jamais.'], t: ['a very specific number.', 'un chiffre très précis.'] },
+    { id: 'search5', icon: '🔍', m: 'searches', v: 5, n: ['Yongle Novice', 'Novice de Yongle'], d: ['5 searches. the engine blushed at your queries.', '5 recherches. le moteur a rougi devant tes requêtes.'], t: ['the browser searches.', 'le navigateur cherche.'] },
+    { id: 'search25', icon: '🔎', m: 'searches', v: 25, n: ['Chief Query Officer', 'Directeur·rice des Requêtes'], d: ['25 searches. yongle IPO\'d on your curiosity.', '25 recherches. yongle est entré en bourse grâce à ta curiosité.'], t: ['ask the bar things.', 'pose des questions à la barre.'] },
+    { id: 'search100', icon: '🛰️', m: 'searches', v: 100, n: ['Index Whisperer', 'Chuchoteur·se d\'Index'], d: ['100 searches. the index dreams about you.', '100 recherches. l\'index rêve de toi.'], t: ['one hundred questions.', 'cent questions.'] },
+    { id: 'cmd10', icon: '⌨️', m: 'cmds', v: 10, n: ['Shell Comfortable', 'À l\'Aise dans le Shell'], d: ['ran 10 terminal commands. bash-adjacent behaviour.', 'a lancé 10 commandes. comportement bash-compatible.'], t: ['the terminal counts.', 'le terminal compte.'] },
+    { id: 'cmd77', icon: '🖥️', m: 'cmds', v: 77, n: ['Prompt Poet', 'Poète du Prompt'], d: ['77 commands. your history reads like literature.', '77 commandes. ton historique se lit comme de la littérature.'], t: ['seventy-seven lines.', 'soixante-dix-sept lignes.'] },
+    { id: 'cmd200', icon: '🧑‍💻', m: 'cmds', v: 200, n: ['Terminal Velocity', 'Vélocité Terminale'], d: ['200 commands. the prompt purrs when you focus it.', '200 commandes. le prompt ronronne quand tu le sélectionnes.'], t: ['two hundred enters.', 'deux cents entrées.'] },
+    { id: 'win25', icon: '🪟', m: 'wins', v: 25, n: ['Window Shopper', 'Lèche-Fenêtres'], d: ['opened 25 windows. the window manager sent a fruit basket.', 'a ouvert 25 fenêtres. le gestionnaire a envoyé une corbeille de fruits.'], t: ['open things.', 'ouvre des choses.'] },
+    { id: 'win100', icon: '🏢', m: 'wins', v: 100, n: ['Desktop Landlord', 'Proprio du Bureau'], d: ['100 windows opened. you charge them rent now.', '100 fenêtres ouvertes. tu leur factures un loyer.'], t: ['keep opening.', 'continue d\'ouvrir.'] },
+    { id: 'win300', icon: '🌆', m: 'wins', v: 300, n: ['Skyline Architect', 'Architecte de la Skyline'], d: ['300 windows. urban planners cite your desktop.', '300 fenêtres. les urbanistes citent ton bureau.'], t: ['three hundred frames.', 'trois cents cadres.'] },
+    { id: 'fits10', icon: '👒', m: 'fits', v: 10, n: ['Front Row at Fashion Week', 'Premier Rang à la Fashion Week'], d: ['witnessed 10 outfits. the slime never repeats a look. neither do you.', 'a vu 10 tenues. le slime ne répète jamais un look. toi non plus.'], t: ['the wardrobe rotates.', 'la garde-robe tourne.'] },
+    { id: 'fits35', icon: '👗', m: 'fits', v: 35, n: ['Wardrobe Historian', 'Historien·ne de la Garde-robe'], d: ['35 outfits seen — one full rack. archived respectfully.', '35 tenues vues — un portant complet. archivé avec respect.'], t: ['a full collection.', 'une collection entière.'] },
+    { id: 'fits150', icon: '🪞', m: 'fits', v: 150, n: ['Met Gala Correspondent', 'Correspondant·e du Met Gala'], d: ['150 fits reviewed. vogue.exe wants your column.', '150 tenues chroniquées. vogue.exe veut ta rubrique.'], t: ['watch. every. look.', 'observe. chaque. look.'] },
+    { id: 'asks3', icon: '💬', m: 'asks', v: 3, n: ['Gentle Interrogator', 'Interrogateur·rice en Douceur'], d: ['asked the bot 3 things. it told its diary about you.', 'a posé 3 questions au bot. il a parlé de toi à son journal.'], t: ['the bot answers.', 'le bot répond.'] },
+    { id: 'asks15', icon: '🎤', m: 'asks', v: 15, n: ['Press Conference Mode', 'Mode Conférence de Presse'], d: ['15 questions. the bot hired a publicist.', '15 questions. le bot a engagé un attaché de presse.'], t: ['keep asking.', 'continue de demander.'] },
+    { id: 'asks50', icon: '🗞️', m: 'asks', v: 50, n: ['Investigative Journalist', 'Journaliste d\'Investigation'], d: ['50 questions. the exposé drops never (it\'s all wholesome).', '50 questions. le scandale ne sortira jamais (tout est adorable).'], t: ['fifty scoops.', 'cinquante scoops.'] },
+    { id: 'wx_clear', icon: '☀️', n: ['Certified Sunbeam', 'Rayon de Soleil Certifié'], d: ['caught the stage in full sunshine. vitamin D: simulated.', 'a vu le plateau en plein soleil. vitamine D : simulée.'], t: ['Edmonton, on a good day.', 'Edmonton, un bon jour.'] },
+    { id: 'wx_cloud', icon: '☁️', n: ['Cloud Inspector', 'Inspecteur·rice des Nuages'], d: ['watched the pixel clouds drift by. all of them passed inspection.', 'a regardé passer les nuages pixel. tous conformes.'], t: ['grey days count too.', 'les jours gris comptent aussi.'] },
+    { id: 'wx_rain', icon: '🌧️', n: ['Drizzle Enjoyer', 'Amateur·rice de Bruine'], d: ['streamed through the rain. cozy levels: illegal.', 'a streamé sous la pluie. niveau cocon : illégal.'], t: ['it rains in the room.', 'il pleut dans la pièce.'] },
+    { id: 'wx_snow', icon: '❄️', n: ['Blizzard Witness', 'Témoin du Blizzard'], d: ['saw Edmonton snow reach the stage. shovel not included.', 'a vu la neige d\'Edmonton atteindre le plateau. pelle non incluse.'], t: ['it snows indoors here.', 'ici, il neige en intérieur.'] },
+    { id: 'wx_fog', icon: '🌫️', n: ['Mysterious Era Attendee', 'Présent·e à l\'Ère Mystérieuse'], d: ['attended a fog stream. saw nothing. loved everything.', 'a assisté à un stream de brouillard. n\'a rien vu. a tout adoré.'], t: ['some days are blurry.', 'certains jours sont flous.'] },
+    { id: 'wx_thunder', icon: '⛈️', n: ['Free Drama Enjoyer', 'Amateur·rice de Drame Gratuit'], d: ['caught the thunder show. lighting design: nature.', 'a vu le spectacle de tonnerre. éclairage : la nature.'], t: ['storms visit the stage.', 'l\'orage visite le plateau.'] },
+    { id: 'stormchaser', icon: '🌈', n: ['Full Forecast Bingo', 'Bingo Météo Complet'], d: ['witnessed all 6 weathers. Edmonton says: "that\'s just Tuesday".', 'a vu les 6 météos. Edmonton répond : « c\'est juste mardi ».'], t: ['collect every sky.', 'collectionne chaque ciel.'] },
+    { id: 'w_heart_wand', icon: '💘', n: ['Wand Wielder', 'Porteur·se de Baguette'], d: ['equipped the heart wand. love at O(1).', 'a équipé la baguette-cœur. l\'amour en O(1).'], t: ['a weapon of love exists.', 'une arme d\'amour existe.'] },
+    { id: 'w_bubble_blaster', icon: '🫧', n: ['Containerized', 'Conteneurisé·e'], d: ['equipped the bubble blaster. very docker of you.', 'a équipé le canon à bulles. très docker de ta part.'], t: ['bubbles are containers.', 'les bulles sont des conteneurs.'] },
+    { id: 'w_baguette', icon: '🥖', n: ['Gluten-Driven Developer', 'Dev Piloté·e par le Gluten'], d: ['equipped the baguette launcher. très dangereuse.', 'a équipé le lance-baguette. très dangereuse.'], t: ['bread can be a weapon.', 'le pain peut être une arme.'] },
+    { id: 'w_meow_cannon', icon: '🐱', n: ['Judgmental Artillery', 'Artillerie Réprobatrice'], d: ['equipped the keyboard-cat cannon. every shot is a code review.', 'a équipé le canon à chat-clavier. chaque tir est une code review.'], t: ['the cat fires opinions.', 'le chat tire des avis.'] },
+    { id: 'w_rgb_sword', icon: '🌈', n: ['+9999 To Regret', '+9999 en Regret'], d: ['took the RGB Gamer Sword. it screamed UWU. you screamed too.', 'a pris l\'Épée Gamer RGB. elle a hurlé UWU. toi aussi.'], t: ['units unspecified…', 'unités non précisées…'] },
+    { id: 'w_gold_hammer', icon: '🔨', n: ['Everything Is A Nail', 'Tout Est Un Clou'], d: ['took the Framework Hammer. bug spawns agreed enthusiastically.', 'a pris le Marteau à Frameworks. les bugs ont applaudi.'], t: ['hammers solve everything.', 'les marteaux résolvent tout.'] },
+    { id: 'w_boba_straw', icon: '🧋', n: ['Terms & Conditions Sipped', 'Conditions Générales Sirotées'], d: ['took the Infinity Boba Straw. it was thirstier than you.', 'a pris la Paille de l\'Infini. elle avait plus soif que toi.'], t: ['zero fees. asterisk.', 'zéro frais. astérisque.'] },
+    { id: 'w_legacy_blade', icon: '⚔️', n: ['Refactor? Never.', 'Refactorer ? Jamais.'], d: ['took the Legacy Codebase Blade. it fires comments. CHONK.', 'a pris la Lame du Code Légataire. elle tire des commentaires. CHONK.'], t: ['stability since 2009.', 'stable depuis 2009.'] },
+    { id: 'w_ai_wand', icon: '🤖', n: ['Hallucination Handler', 'Gestionnaire d\'Hallucinations'], d: ['took the AI Wand. it aimed at your wallet. confidently.', 'a pris la Baguette IA. elle a visé ton portefeuille. avec assurance.'], t: ['it aims itself.', 'elle vise toute seule.'] },
+    { id: 'w_css_staff', icon: '🎨', n: ['!important Person', 'Personne !important'], d: ['took the Staff of !important. physics got overridden.', 'a pris le Bâton de !important. la physique a été override.'], t: ['one flick overrides all.', 'un geste override tout.'] },
+    { id: 'w_vim_katana', icon: '🗡️', n: ['Cannot Exit', 'Sortie Impossible'], d: ['took the Vim Katana. you are still holding it. forever.', 'a pris le Katana Vim. tu le tiens encore. pour toujours.'], t: [':q! does nothing here.', ':q! ne fait rien ici.'] },
+    { id: 'w_crypto_pickaxe', icon: '⛏️', n: ['To The Moon (Alone)', 'Vers la Lune (Sans Toi)'], d: ['took the Web3 Pickaxe. it mined YOUR coins. visionary.', 'a pris la Pioche Web3. elle a miné TES pièces. visionnaire.'], t: ['passive income (whose?)', 'revenu passif (pour qui ?)'] },
+    { id: 'armory', icon: '🛡️', n: ['Gotta Wield Them All', 'Attrapez-les Toutes'], d: ['wielded 4+ different weapons. the armory sends holiday cards.', 'a manié 4+ armes différentes. l\'armurerie envoie des cartes de vœux.'], t: ['collect the arsenal.', 'collectionne l\'arsenal.'] },
+    { id: 'geese5', icon: '🪿', m: 'geese', v: 5, n: ['Flock Acquaintance', 'Connaissance du Vol'], d: ['5 goose flotillas witnessed. they nod at you now.', '5 flottilles de bernaches vues. elles te saluent maintenant.'], t: ['they keep coming.', 'elles reviennent sans cesse.'] },
+    { id: 'geese20', icon: '🦢', m: 'geese', v: 20, n: ['Honorary Gosling', 'Oison Honoraire'], d: ['20 flocks. the parents let you swim in formation.', '20 vols. les parents te laissent nager en formation.'], t: ['twenty parades.', 'vingt parades.'] },
+    { id: 'geese100', icon: '👑', m: 'geese', v: 100, n: ['Goose Sovereign', 'Souverain·e des Bernaches'], d: ['100 flocks. Edmonton\'s true landlords pay YOU rent now.', '100 vols. les vrais proprios d\'Edmonton TE paient un loyer.'], t: ['one hundred honks.', 'cent honks.'] },
+    { id: 'plucks1', icon: '🌱', m: 'plucks', v: 1, n: ['Petal Parent', 'Parent Pétale'], d: ['plucked your first pikmin. it said "pik". you cried a little.', 'a cueilli ton premier pikmin. il a dit « pik ». tu as un peu pleuré.'], t: ['the meadow sprouts.', 'la prairie bourgeonne.'] },
+    { id: 'plucks20', icon: '🌷', m: 'plucks', v: 20, n: ['Nursery Operator', 'Exploitant·e de Pépinière'], d: ['20 plucks. the garden considers you weather.', '20 cueillettes. le jardin te considère comme une météo.'], t: ['keep pulling sprouts.', 'continue de cueillir.'] },
+    { id: 'plucks50', icon: '🌻', m: 'plucks', v: 50, n: ['Agricultural Legend', 'Légende Agricole'], d: ['50 plucks. the meadow named a harvest festival after you.', '50 cueillettes. la prairie a créé une fête des récoltes à ton nom.'], t: ['fifty little pik!s.', 'cinquante petits pik !'] },
+    { id: 'blooms3', icon: '🌸', m: 'blooms', v: 3, n: ['Bloom Coordinator', 'Coordinateur·rice de Floraison'], d: ['3 buddies bloomed. proudest scrollbar moment of your life.', '3 copains ont fleuri. le moment le plus fier de ta barre de défilement.'], t: ['they grow up so fast.', 'ils grandissent si vite.'] },
+    { id: 'blooms6', icon: '💐', m: 'blooms', v: 6, n: ['Full Bouquet', 'Bouquet Complet'], d: ['6 blooms raised. the garden filed you under "sunlight".', '6 floraisons élevées. le jardin te classe sous « lumière du soleil ».'], t: ['bloom the whole squad.', 'fais fleurir toute l\'escouade.'] },
+    { id: 'blooms12', icon: '🏵️', m: 'blooms', v: 12, n: ['Generational Gardener', 'Jardinier·ère Générationnel·le'], d: ['12 blooms across generations. flowers tell stories about you.', '12 floraisons sur plusieurs générations. les fleurs racontent tes exploits.'], t: ['a dozen flowerings.', 'une douzaine de floraisons.'] },
+    { id: 'live5', icon: '📺', m: 'lives', v: 5, n: ['Season Ticket Holder', 'Abonné·e de la Saison'], d: ['attended 5 live streams. front row. always.', 'a assisté à 5 directs. premier rang. toujours.'], t: ['the show goes on.', 'le show continue.'] },
+    { id: 'ad1', icon: '📼', m: 'ads', v: 1, n: ['Capitalism Enjoyer', 'Amateur·rice de Capitalisme'], d: ['watched the fake ad to revive. the sponsor (nobody) thanks you.', 'a regardé la fausse pub pour ressusciter. le sponsor (personne) te remercie.'], t: ['death has a loophole.', 'la mort a une faille.'] },
+    { id: 'ad3', icon: '🍿', m: 'ads', v: 3, n: ['Ad Break Connoisseur', 'Connaisseur·se de Coupures Pub'], d: ['3 ads watched. you quote the boba jingle at parties.', '3 pubs regardées. tu cites le jingle boba en soirée.'], t: ['the skits rotate.', 'les sketchs tournent.'] },
+    { id: 'nmwins2', icon: '🎖️', m: 'nmwins', v: 2, n: ['Recurring Dream Therapist', 'Thérapeute des Rêves Récurrents'], d: ['debugged 2 nightmares. the sleepwalker books you monthly now.', 'a débogué 2 cauchemars. le somnambule te consulte chaque mois.'], t: ['nightmares repeat.', 'les cauchemars récidivent.'] },
+    { id: 'visits3', icon: '🚪', n: ['Return Customer', 'Client·e qui Revient'], d: ['3 visits. the desktop leaves the porch light on for you.', '3 visites. le bureau laisse la lumière du porche allumée pour toi.'], t: ['come back twice more.', 'reviens encore deux fois.'] },
+    { id: 'visits10', icon: '🏠', n: ['Basically A Roommate', 'Quasiment Coloc'], d: ['10 visits. your name is on the pixel mailbox.', '10 visites. ton nom est sur la boîte aux lettres pixel.'], t: ['ten doorbells.', 'dix sonnettes.'] },
+    { id: 'visits30', icon: '🔑', n: ['Keys To The OS', 'Les Clés de l\'OS'], d: ['30 visits. you know where the spare key is (under the taskbar).', '30 visites. tu sais où est le double des clés (sous la barre des tâches).'], t: ['thirty homecomings.', 'trente retours.'] },
+    { id: 'afterhours', icon: '🌃', n: ['After Hours Visitor', 'Visiteur·se d\'Après Minuit'], d: ['visited between midnight and 5am. the slime pretended to be asleep.', 'a visité entre minuit et 5 h. le slime a fait semblant de dormir.'], t: ['some hours are secret.', 'certaines heures sont secrètes.'] },
+    { id: 'earlybird', icon: '🌅', n: ['Dawn Patrol', 'Patrouille de l\'Aube'], d: ['visited before 8am. the geese were still stretching.', 'a visité avant 8 h. les bernaches s\'étiraient encore.'], t: ['dawn counts double.', 'l\'aube compte double.'] },
+    { id: 'zergling', icon: '🐛', n: ['Rush Hour', 'Heure de Pointe'], d: ['summoned the zerg rush. the desktop survived. barely.', 'a invoqué le zerg rush. le bureau a survécu. de justesse.'], t: ['a classic RTS panic.', 'une panique RTS classique.'] },
+    { id: 'neo', icon: '🕶️', n: ['There Is No Slime', 'Il N\'y A Pas de Slime'], d: ['entered the matrix. the falling glyphs were pink. of course.', 'est entré·e dans la matrice. les glyphes étaient roses. évidemment.'], t: ['follow the pink rabbit.', 'suis le lapin rose.'] },
+    { id: 'search250', icon: '🌐', m: 'searches', v: 250, n: ['The Algorithm Itself', 'L\'Algorithme Incarné'], d: ['250 searches. yongle asks YOU for autocomplete.', '250 recherches. yongle TE demande l\'autocomplétion.'], t: ['become the index.', 'deviens l\'index.'] },
+    { id: 'cmd500', icon: '🧠', m: 'cmds', v: 500, n: ['Shell of Theseus', 'Shell de Thésée'], d: ['500 commands. at what point did you become the terminal?', '500 commandes. à quel moment es-tu devenu·e le terminal ?'], t: ['five hundred prompts.', 'cinq cents prompts.'] },
+    { id: 'gift500', icon: '🎆', m: 'gifts', v: 500, n: ['GDP Contributor', 'Contributeur·rice au PIB'], d: ['500 gifts. the stream economy issued you a passport.', '500 cadeaux. l\'économie du stream t\'a délivré un passeport.'], t: ['five hundred parcels.', 'cinq cents colis.'] },
+    { id: 'nap300', icon: '🌌', m: 'naps', v: 300, n: ['Curator of Dreams', 'Conservateur·rice des Rêves'], d: ['300 naps curated. the dream museum has a you-shaped statue.', '300 siestes organisées. le musée du rêve a une statue à ton effigie.'], t: ['three hundred lullabies.', 'trois cents berceuses.'] },
+    { id: 'jump100', icon: '🐇', m: 'jumps', v: 100, n: ['Bunny Apprentice', 'Apprenti·e Lapin'], d: ['100 jumps. the rabbits accepted your application.', '100 sauts. les lapins ont accepté ta candidature.'], t: ['the first hundred hops.', 'les cent premiers bonds.'] }
   ];
+
+  // ---- metric engine: count things, achievements pop themselves ----
+  function achvBump(metric, n) {
+    const m = store.get('yos-metrics', {});
+    m[metric] = (m[metric] || 0) + (n || 1);
+    store.set('yos-metrics', m);
+    ACHV.forEach((a) => { if (a.m === metric && m[metric] >= (a.v || 1)) achvUnlock(a.id); });
+    return m[metric];
+  }
+  function achvMetric(metric) { return store.get('yos-metrics', {})[metric] || 0; }
 
   var achvCounts = null;
   var achvCountsAt = 0;
@@ -3211,7 +3424,7 @@ document.addEventListener('DOMContentLoaded', () => {
     cloudEnsure().then((cs) => {
       if (!cs) { cloudRenderPanel(); return; }
       const v = packSave();
-      if (v === cloudLastPacked) { cloudState = 'synced'; cloudRenderPanel(); return; }
+      if (v === cloudLastPacked) { cloudState = 'synced'; cloudExtraSync(); cloudRenderPanel(); return; }
       fetch(`${ACHV_API}/set/${ACHV_NS}/sv2-${cs.uid}?value=${v}`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${cs.key}` }
@@ -3220,6 +3433,7 @@ document.addEventListener('DOMContentLoaded', () => {
           if (!r.ok) throw new Error('set failed');
           cloudLastPacked = v;
           cloudState = 'synced';
+          cloudExtraSync(); // bits 18-127 + the spell-rename strings
         })
         .catch(() => { cloudState = 'error'; })
         .then(() => cloudRenderPanel());
@@ -3242,6 +3456,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (s.ch > cheatCensus()) store.set('yos-cheats-cloudn', s.ch);
     if (s.fn > (pet.followers || 0)) { pet.followers = s.fn; updateSlimeHud(); }
+    setTimeout(() => { try { cloudExtraPull(); } catch (e) { /* annex optional */ } }, 400);
   }
 
   function cloudRestore(rawCode) {
@@ -3262,6 +3477,112 @@ document.addEventListener('DOMContentLoaded', () => {
         return 'ok';
       })
       .catch(() => 'notfound');
+  }
+
+  /* ---------- cloud annex: 128 achievement bits + the spell-rename
+     table (strings!), all on the same Abacus backend. Extra counters
+     live beside the main slot; write keys are created lazily and
+     cached; reads are public, so any device can restore. ---------- */
+  const CLOUD_ALPHA = ' abcdefghijklmnopqrstuvwxyz0123456789|~';
+  function cloudKeyFor(name) {
+    const keys = store.get('yos-cloud-keys', {});
+    if (keys[name]) return Promise.resolve(keys[name]);
+    return fetch(`${ACHV_API}/create/${ACHV_NS}/${name}`, { method: 'POST' })
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then((d) => {
+        if (!d || !d.admin_key) throw new Error('no key');
+        keys[name] = d.admin_key;
+        store.set('yos-cloud-keys', keys);
+        return d.admin_key;
+      });
+  }
+  function cloudSet(name, v) {
+    return cloudKeyFor(name).then((key) =>
+      fetch(`${ACHV_API}/set/${ACHV_NS}/${name}?value=${v}`, { method: 'POST', headers: { Authorization: `Bearer ${key}` } }));
+  }
+  function cloudGet(name) {
+    return fetch(`${ACHV_API}/get/${ACHV_NS}/${name}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => (d && typeof d.value === 'number' ? d.value : 0))
+      .catch(() => 0);
+  }
+  function achvBitsRange(from, to) {
+    const got = store.get('yos-achv', {});
+    let bits = 0;
+    for (let i = from; i < Math.min(to, ACHV.length); i++) {
+      if (got[ACHV[i].id]) bits += Math.pow(2, i - from);
+    }
+    return bits;
+  }
+  function spellEncodeChunks() {
+    const renames = store.get('yos-cheat-renames', {});
+    const s = Object.keys(renames).slice(0, 6).map((k) => (k + '|' + renames[k]).toLowerCase()).join('~').slice(0, 120);
+    const chunks = [];
+    for (let i = 0; i < s.length; i += 10) {
+      let v = 0;
+      const part = s.slice(i, i + 10);
+      for (let j = 0; j < part.length; j++) {
+        const ix = Math.max(0, CLOUD_ALPHA.indexOf(part[j]));
+        v = v * 40 + ix + 1; // +1 so leading spaces survive
+      }
+      chunks.push(v);
+    }
+    return chunks;
+  }
+  function spellDecode(vals) {
+    let s = '';
+    vals.forEach((v) => {
+      let part = '';
+      while (v > 0) {
+        part = (CLOUD_ALPHA[(v - 1) % 40] || '') + part;
+        v = Math.floor((v - 1) / 40);
+      }
+      s += part;
+    });
+    const out = {};
+    s.split('~').forEach((pair) => {
+      const ix = pair.indexOf('|');
+      if (ix > 0) out[pair.slice(0, ix)] = pair.slice(ix + 1);
+    });
+    return out;
+  }
+  var cloudExtraLast = '';
+  function cloudExtraSync() {
+    if (!cloudSlot || !navigator.onLine) return;
+    const u = cloudSlot.uid;
+    const spells = spellEncodeChunks();
+    const payload = [achvBitsRange(18, 68), achvBitsRange(68, 118), achvBitsRange(118, 128), spells.length].concat(spells);
+    const sig = payload.join(',');
+    if (sig === cloudExtraLast) return;
+    let p = cloudSet(`sv2-${u}-b2`, payload[0])
+      .then(() => cloudSet(`sv2-${u}-b3`, payload[1]))
+      .then(() => cloudSet(`sv2-${u}-b4`, payload[2]))
+      .then(() => cloudSet(`sv2-${u}-spn`, spells.length));
+    spells.forEach((v, j) => { p = p.then(() => cloudSet(`sv2-${u}-sp${j}`, v)); });
+    p.then(() => { cloudExtraLast = sig; }).catch(() => { /* retried on next sync */ });
+  }
+  function cloudExtraPull() {
+    if (!cloudSlot) return;
+    const u = cloudSlot.uid;
+    Promise.all([cloudGet(`sv2-${u}-b2`), cloudGet(`sv2-${u}-b3`), cloudGet(`sv2-${u}-b4`), cloudGet(`sv2-${u}-spn`)])
+      .then(([b2, b3, b4, spn]) => {
+        [[b2, 18], [b3, 68], [b4, 118]].forEach(([bits, off]) => {
+          for (let i = 0; bits > 0 && i < 50; i++) {
+            if (Math.floor(bits / Math.pow(2, i)) % 2 === 1 && ACHV[off + i]) achvUnlock(ACHV[off + i].id, true, true);
+          }
+        });
+        if (spn > 0) {
+          return Promise.all(Array.from({ length: Math.min(spn, 12) }, (_, j) => cloudGet(`sv2-${u}-sp${j}`)))
+            .then((vals) => {
+              const remote = spellDecode(vals);
+              const local = store.get('yos-cheat-renames', {});
+              let changed = false;
+              Object.keys(remote).forEach((k) => { if (!local[k]) { local[k] = remote[k]; changed = true; } });
+              if (changed) store.set('yos-cheat-renames', local);
+            });
+        }
+      })
+      .catch(() => { /* the annex can wait */ });
   }
 
   function cloudStatusLine() {
@@ -3495,6 +3816,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const value = termInput.value;
       termInput.value = '';
       if (value.trim()) {
+        try { achvBump('cmds'); } catch (err) { /* metrics are optional */ }
         termHistory.push(value);
         termHistoryIdx = termHistory.length;
       }
@@ -3530,7 +3852,7 @@ document.addEventListener('DOMContentLoaded', () => {
     termLine(trT('YongshanOS terminal — hand-rolled, no libraries.', 'terminal YongshanOS — fait main, sans bibliothèques.'), 't-accent');
     termLine(trT('this shell drives the whole OS: windows, themes, the pet, even the fan wall.', 'ce shell pilote tout l\'OS : fenêtres, thèmes, le familier, même le mur de fans.'), 't-dim');
     termLine(trT('type `help` to see everything · `neofetch` to vibe · `ask <question>` to talk.', 'tapez `help` pour tout voir · `neofetch` pour l\'ambiance · `ask <question>` pour discuter.'), 't-dim');
-    termLine(trT('…oh and there are 100 hidden cheat codes. type `cheats` — wrong guesses are graded VERY generously ♡', '…oh et il y a 100 codes secrets. tapez `cheats` — les mauvaises réponses sont notées TRÈS généreusement ♡'), 't-accent');
+    termLine(trT('…oh, and this OS hides 100 cheat codes. type `cheats`. that\'s all I\'m saying ♡', '…oh, et cet OS cache 100 codes secrets. tapez `cheats`. je n\'en dirai pas plus ♡'), 't-accent');
     termLine('');
   }
 
@@ -3694,8 +4016,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (resolvedTheme() !== 'dark') return;
     if (pet.busy || pet.sleeping || isGrabbing) return;
     if (slimeBody) slimeBody.classList.add('is-ghost-hidden');
-    // 70% of sleeps turn into a sleepwalking tour
-    if (Math.random() < 0.7) {
+    // 85% of sleeps turn into a sleepwalking tour
+    if (Math.random() < 0.85) {
       if (sleepwalkTimer) clearTimeout(sleepwalkTimer);
       sleepwalkTimer = setTimeout(() => startSleepwalk(), 5000 + Math.random() * 6000);
     }
@@ -3864,13 +4186,23 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function startSleepwalk() {
-    if (sleepwalkActive || resolvedTheme() !== 'dark' || !ghostHidden()) return;
+    // sleepwalks also launch from a maximized live room: a sleeping
+    // streamer on stage is still a sleeping streamer
+    const asleepOnStage = typeof liveOpen !== 'undefined' && liveOpen && pet.sleeping;
+    if (sleepwalkActive || resolvedTheme() !== 'dark' || !(ghostHidden() || asleepOnStage)) return;
     // choose destination: 85% the arcade, else a random visible feature —
     // and if a run is already underway, it's the arcade, PERIOD (dark-mode
     // sleepwalks must never yank the player out of their game)
     const gwOpen = (() => { const w = document.getElementById('win-game'); return w && !w.classList.contains('window-closed'); })();
-    let target, line, isGame = false;
-    if (gwOpen || Math.random() < 0.85) {
+    let target, line, isGame = false, directDive = false;
+    if (gwOpen) {
+      // the game is ALREADY running: no button detours — the dreamer
+      // waddles straight to the canvas and dives in as a game entity
+      target = document.getElementById('game-canvas');
+      line = SW_GAME_LINE;
+      isGame = true;
+      directDive = true;
+    } else if (Math.random() < 0.85) {
       target = document.getElementById('chip-game');
       line = SW_GAME_LINE;
       isGame = true;
@@ -3883,7 +4215,9 @@ document.addEventListener('DOMContentLoaded', () => {
     sleepwalkActive = true;
     achvUnlock('dreamwatcher');
 
-    const habitatRect = slimeHabitat.getBoundingClientRect();
+    const habitatRect = (typeof liveOpen !== 'undefined' && liveOpen && slimeBody)
+      ? slimeBody.getBoundingClientRect()
+      : slimeHabitat.getBoundingClientRect();
     swEl = document.createElement('div');
     swEl.className = 'sleepwalker';
     swEl.setAttribute('aria-hidden', 'true');
@@ -3916,14 +4250,15 @@ document.addEventListener('DOMContentLoaded', () => {
       swEl.style.top = (from.y + (to.y - from.y) * ease + Math.sin(p * 14) * 5) + 'px';
       if (p >= 1) {
         clearInterval(glide);
-        swArrive(target, isGame);
+        swArrive(target, isGame, directDive);
       }
     }, 40);
   }
 
-  function swArrive(target, isGame) {
-    // the sleepwalker "clicks" the feature open, still fast asleep
-    try { target.click(); } catch { /* dream logic */ }
+  function swArrive(target, isGame, directDive) {
+    // the sleepwalker "clicks" the feature open, still fast asleep —
+    // unless it's already open (direct dives skip the doorbell)
+    if (!directDive) { try { target.click(); } catch { /* dream logic */ } }
     playTone(392, 'sine', 0.25, 0, 0.04);
 
     if (isGame) {
@@ -4810,6 +5145,8 @@ document.addEventListener('DOMContentLoaded', () => {
     GAME.invUntil = 0;
     GAME.adUsed = false; // one ad-revive per run
     GAME.nm = null; GAME.nmPx = null; // nightmares don't survive a reboot
+    const rcam = document.getElementById('game-reaction-cam');
+    if (rcam) rcam.classList.remove('cam-ad-dock');
     // terminal secret codes cash in here, one per armed run
     const cheat = store.get('yos-cheat-next', null);
     if (cheat) {
@@ -4852,6 +5189,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function gJump() {
     if (GAME.event) return; // world is frozen mid-encounter
     if (GAME.state === 'ad') return; // the sponsor bought these 15 seconds
+    if (GAME.itvPause) return; // paused for interview booking — relax ♡
     if (GAME.state === 'idle' || GAME.state === 'over') {
       if (GAME.state === 'over' && Date.now() < (GAME.overLockUntil || 0)) return; // read the offer first ♡
       GAME.state = 'run';
@@ -4862,6 +5200,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (GAME.y <= 0) {
       GAME.vy = 9.6 * modVal('jump');
+      GAME.jumpsThisRun = (GAME.jumpsThisRun || 0) + 1;
       playTone(880 * (modActive('uwu') ? 1.5 : 1), 'square', 0.09, 0, 0.05);
       if (modActive('uwu')) playTone(1568, 'sine', 0.12, 0.06, 0.05); // embarrassing squeak
     }
@@ -4870,7 +5209,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function gGameOver() {
     GAME.state = 'over';
     // a held-down space bar must not insta-restart past the ad offer
-    GAME.overLockUntil = Date.now() + 1600;
+    GAME.overLockUntil = Date.now() + 2500;
     playGlitchSound();
     maybeWakeSleeper();
     const finalScore = Math.floor(GAME.score);
@@ -5051,6 +5390,11 @@ document.addEventListener('DOMContentLoaded', () => {
       GAME.adT++;
       if (GAME.adT >= AD_FRAMES) gAdFinish();
     }
+    // every fresh encounter arms a 2.5s shield against held-down space
+    if (GAME.event && !GAME.event._born) {
+      GAME.event._born = 1;
+      GAME.eventLockUntil = Date.now() + 2500;
+    }
 
     // parallax hearts drifting in the sky
     if (GAME.clouds.length < 4 && Math.random() < 0.02) {
@@ -5151,9 +5495,9 @@ document.addEventListener('DOMContentLoaded', () => {
       if (--GAME.toast.ttl <= 0) GAME.toast = null;
     }
 
-    // dashed pixel ground
+    // dashed pixel ground (the world stands STILL during the nightmare)
     g2.fillStyle = gTheme.purple;
-    const dashShift = GAME.state === 'run' ? (GAME.frame * GAME.speed) % 18 : 0;
+    const dashShift = (GAME.state === 'run' && !GAME.nm) ? (GAME.frame * GAME.speed) % 18 : 0;
     for (let x = -18; x < G_W + 18; x += 18) {
       g2.fillRect(x - dashShift, G_GROUND + G_SLIME_S - 4, 10, 3);
     }
@@ -5206,7 +5550,15 @@ document.addEventListener('DOMContentLoaded', () => {
       GAME.score += 0.16 * gSpeed() * (GAME.fever > 0 ? 2 : 1) * modVal('luck');
       GAME.speed = Math.min(9.5, GAME.speed + 0.0016);
       gPiksTick();
-      if (GAME.nm) gNmTick();
+    } else if (GAME.state === 'run' && GAME.nm && !GAME.event) {
+      // nightmare arena: scroll, spawns and score hold their breath —
+      // only jump physics and the boss itself keep moving
+      if (GAME.y > 0 || GAME.vy > 0) {
+        GAME.y += GAME.vy;
+        GAME.vy -= 0.52;
+        if (GAME.y <= 0) { GAME.y = 0; GAME.vy = 0; }
+      }
+      gNmTick();
     }
 
     // ---- BOSS WAVE: a 404 kaiju + a heart-wand power-up ----
@@ -5400,6 +5752,11 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     } else if (GAME.state === 'ad') {
       gDrawAd(g2);
+    } else if (GAME.state === 'run' && GAME.itvPause) {
+      // intermission: the run is frozen, the in-house ads carry the show
+      GAME.adT = (GAME.adT || 0) + 1;
+      if (GAME.adT >= AD_FRAMES) { GAME.adT = 0; GAME.adSkit = ((GAME.adSkit || 0) + 1) % AD_SKITS.length; }
+      gDrawAd(g2, true);
     }
     g2.textAlign = 'left';
 
@@ -5423,7 +5780,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function gMarkJoy() { GAME.joyAt = gPlaySecs(); }
   var gInterviewOffered = false; // once per visit — scarcity keeps it special
   var gDeviceGagDone = false;    // one device-aware gag per visit
-  function gLive() { return GAME.state === 'run' && !GAME.event; }
+  function gLive() { return GAME.state === 'run' && !GAME.event && !GAME.nm && !GAME.itvPause; }
   function modVal(k) { const m = GAME.mods[k]; return (m && GAME.frame < m.until) ? m.v : 1; }
   function modActive(k) { const m = GAME.mods[k]; return !!(m && GAME.frame < m.until); }
   function setMod(k, v, secs) { GAME.mods[k] = { v, until: GAME.frame + Math.round(secs * 60) }; }
@@ -5800,7 +6157,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  function gDrawAd(g2) {
+  function gDrawAd(g2, loopMode) {
     const skit = AD_SKITS[GAME.adSkit || 0];
     const tLeft = Math.ceil((AD_FRAMES - GAME.adT) / 60);
     const scene = GAME.adT < 300 ? 0 : GAME.adT < 600 ? 1 : 2;
@@ -5815,11 +6172,26 @@ document.addEventListener('DOMContentLoaded', () => {
     g2.textAlign = 'left';
     const shift = (GAME.adT * 0.8) % 46;
     for (let x = -shift; x < G_W; x += 46) g2.fillText('AD ♡', x, 10);
-    g2.textAlign = 'right';
-    g2.fillStyle = '#14020e';
-    g2.font = "12px 'Jersey 25', 'VT323', monospace";
-    g2.fillText(`⏳ ${tLeft}s`, G_W - 6, 26);
+    if (!loopMode) {
+      g2.textAlign = 'right';
+      g2.fillStyle = '#14020e';
+      g2.font = "12px 'Jersey 25', 'VT323', monospace";
+      g2.fillText(`⏳ ${tLeft}s`, G_W - 6, 26);
+    }
     g2.textAlign = 'center';
+    if (loopMode) {
+      // the "everything is fine" banner rides the TOP edge — the ad
+      // stays fully watchable underneath
+      const msg = trT('⏸ GAME PAUSED — book that interview!! your run is 100% safe ♡', '⏸ JEU EN PAUSE — réserve cet entretien !! ta run est 100 % en sécurité ♡');
+      g2.font = "13px 'Jersey 25', 'VT323', monospace";
+      const tw2 = g2.measureText(msg).width;
+      g2.fillStyle = '#14020e';
+      g2.fillRect(G_W / 2 - tw2 / 2 - 10, 15, tw2 + 20, 24);
+      g2.fillStyle = '#f0509f';
+      g2.fillRect(G_W / 2 - tw2 / 2 - 8, 17, tw2 + 16, 20);
+      g2.fillStyle = '#ffffff';
+      g2.fillText(msg, G_W / 2, 31);
+    }
     if (scene < 2) {
       g2.fillStyle = '#14020e';
       g2.font = "22px 'Jersey 25', 'VT323', monospace";
@@ -5850,9 +6222,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // the pikmin cast dances through every scene
     const cast = (GAME.piks && GAME.piks.length) ? GAME.piks.map((p) => p.color) : ['#ff8fc7', '#c9a7f5', '#a8e0ff'];
     cast.slice(0, 6).forEach((col, i) => gAdPik(g2, G_W / 2 - 60 + i * 22, G_H - 16, col, GAME.adT * 0.16 + i));
-    g2.font = "9px 'Jersey 25', 'VT323', monospace";
-    g2.fillStyle = 'rgba(20, 2, 14, 0.55)';
-    g2.fillText(trT('ESC = give up the revive', 'ÉCHAP = renoncer à la résurrection'), G_W / 2, G_H - 4);
+    if (!loopMode) {
+      g2.font = "9px 'Jersey 25', 'VT323', monospace";
+      g2.fillStyle = 'rgba(20, 2, 14, 0.55)';
+      g2.fillText(trT('ESC = give up the revive', 'ÉCHAP = renoncer à la résurrection'), G_W / 2, G_H - 4);
+    }
     g2.textAlign = 'left';
   }
 
@@ -5860,34 +6234,149 @@ document.addEventListener('DOMContentLoaded', () => {
      Sometimes the dreamer dives in mid-run and wakes up as the biggest
      bug ever compiled. The runner freezes into a WASD arena fight:
      ram its glowing heart, dodge the falling exceptions. */
+  // the boss's only attack: computer-pun dream-talk. Every line COMES
+  // TRUE — resolved against the pun's meaning + your coins + lives +
+  // pikmin count + every decision you've made. Buffs included. That's
+  // the whole charm of this game.
+  const NM_DREAMS = [
+    { id: 'gc', t: ['zzz… garbage collector… sweeping…', 'zzz… ramasse-miettes… il balaie…'],
+      outs: [
+        { t: ['it swept 20% of your coins into the void', 'il a balayé 20 % de tes pièces dans le vide'], fx: () => fxCoins(-Math.ceil(GAME.coins * 0.2)) },
+        { t: ['it swept your DEBUFFS away instead!! spotless', 'il a balayé tes DÉBUFFS !! impeccable'], fx: () => { GAME.mods = {}; fxInvincible(2); } }
+      ] },
+    { id: 'cache', t: ['zzz… everything is… a cache…', 'zzz… tout est… un cache…'],
+      outs: [
+        { t: ['CACHE HIT!! +9 coins from nowhere', 'CACHE HIT !! +9 pièces venues de nulle part'], fx: () => fxCoins(9) },
+        { t: ['cache miss. your speed pays the latency', 'cache miss. ta vitesse paie la latence'], fx: () => setMod('speed', 0.85, 10) }
+      ] },
+    { id: 'offby1', t: ['zzz… off by one… always… off by one…', 'zzz… décalé de un… toujours… de un…'],
+      outs: [
+        { t: ['+1 ♥. the good kind of off-by-one', '+1 ♥. le bon genre de décalage'], fx: () => fxLife(1) },
+        { t: ['-1 coin. ×10. arrays start at zero, pain starts at ten', '-1 pièce. ×10. les tableaux commencent à zéro, la douleur à dix'], fx: () => fxCoins(-10) }
+      ] },
+    { id: 'segv', t: ['zzz… segmentation fault… core dumped…', 'zzz… erreur de segmentation… core dumped…'],
+      outs: [
+        { t: ['the sky dumps exceptions!! DODGE', 'le ciel vide ses exceptions !! ESQUIVE'], fx: () => { for (let i = 0; i < 7; i++) GAME.nm && GAME.nm.shots.push({ x: 30 + Math.random() * (G_W - 90), y: -10 - i * 26 }); } },
+        { t: ['it dumped ITS core: +12 coins spill out', 'il a vidé SON core : +12 pièces déversées'], fx: () => fxCoins(12) }
+      ] },
+    { id: 'loop', t: ['zzz… while(true)… forever… together…', 'zzz… while(true)… pour toujours… ensemble…'],
+      outs: [
+        { t: ['time loops: your jump doubles for 12s', 'le temps boucle : ton saut double pendant 12 s'], fx: () => setMod('jump', 1.5, 12) },
+        { t: ["the loop won't break. neither will its heart (for a while)", 'la boucle ne casse pas. son cœur non plus (un moment)'], fx: () => { if (GAME.nm) GAME.nm.weakAt = GAME.frame + 300; } }
+      ] },
+    { id: 'mymachine', t: ['zzz… works on my machine…', 'zzz… ça marche sur MA machine…'],
+      outs: [
+        { t: ['your machine agrees: 4s of invincibility shipped', 'ta machine confirme : 4 s d\'invincibilité livrées'], fx: () => fxInvincible(4) },
+        { t: ['well it does not work on YOURS: -6 coins in support fees', 'ben pas sur la TIENNE : -6 pièces de frais de support'], fx: () => fxCoins(-6) }
+      ] },
+    { id: 'merge', t: ['zzz… merge conflict… both of us… kept…', 'zzz… conflit de merge… tous les deux… gardés…'],
+      outs: [
+        { t: ['both branches merged: coins +8 AND jump +25%', 'les deux branches fusionnées : +8 pièces ET +25 % de saut'], fx: () => { fxCoins(8); setMod('jump', 1.25, 15); } },
+        { t: ['your pikmin got stashed for 12s (uncommitted changes)', 'tes pikmin sont stash pendant 12 s (changements non commités)'], fx: () => { (GAME.piks || []).forEach((p) => { p.zapAt = GAME.frame + 720; p.nextCoinAt = GAME.frame + 720; }); } }
+      ] },
+    { id: 'reboot', t: ['zzz… have you tried… turning yourself off and on…', 'zzz… t\'as essayé… de t\'éteindre et te rallumer…'],
+      outs: [
+        { t: ['you rebooted: fresh i-frames + position reset', 'redémarrage : i-frames toutes neuves + position réinitialisée'], fx: () => { GAME.nmPx = G_SLIME_X; fxInvincible(3); } },
+        { t: ['forced update: everything is 15% slower while it installs', 'mise à jour forcée : tout est 15 % plus lent pendant l\'installation'], fx: () => setMod('speed', 0.85, 12) }
+      ] },
+    { id: 'bugs99', t: ['zzz… 99 little bugs in the code… take one down…', 'zzz… 99 petits bugs dans le code… corriges-en un…'],
+      outs: [
+        { t: ['…127 little bugs in the code. RAIN INCOMING', '…127 petits bugs dans le code. PLUIE IMMINENTE'], fx: () => { for (let i = 0; i < 9; i++) GAME.nm && GAME.nm.shots.push({ x: 20 + Math.random() * (G_W - 70), y: -8 - i * 20 }); } },
+        { t: ['one was a feature: +14 coins bounty', 'l\'un était une feature : prime de +14 pièces'], fx: () => fxCoins(14) }
+      ] },
+    { id: 'sudo', t: ['zzz… sudo make me… a sandwich…', 'zzz… sudo fais-moi… un sandwich…'],
+      outs: [
+        { t: ['permission granted: a snack heals +1 ♥', 'permission accordée : un snack rend +1 ♥'], fx: () => fxLife(1) },
+        { t: ['you are not in the sudoers file. this incident cost 5 coins', 't\'es pas dans le fichier sudoers. cet incident coûte 5 pièces'], fx: () => fxCoins(-5) }
+      ] }
+  ];
+
   function gNightmareStart() {
-    GAME.nm = { hp: 12, x: G_W - 120, t: 0, weak: null, weakAt: GAME.frame + 130, hurtCd: 0, shots: [], hitFlash: 0 };
+    GAME.nm = {
+      hp: 12, x: G_W + 60, t: 0, intro: 150,
+      weak: null, weakAt: GAME.frame + 260, hurtCd: 0,
+      shots: [], hitFlash: 0,
+      sayAt: GAME.frame + 380, say: null, said: []
+    };
     GAME.nmPx = G_SLIME_X;
     GAME.obs = [];
     GAME.boss = null;
     GAME.pickup = null;
+    // ⚡ GRAND ENTRANCE: rumble, alarm arpeggio, the works
     playGlitchSound();
-    gToast(['💀 the sleepwalker had a NIGHTMARE… and became the BIGGEST BUG EVER', '💀 le somnambule a fait un CAUCHEMAR… et est devenu le PLUS GROS BUG DE TOUS LES TEMPS'], 240);
+    playTone(65, 'sawtooth', 0.5, 0, 0.12);
+    playTone(49, 'sawtooth', 0.6, 0.25, 0.12);
+    [523, 415, 523, 415, 622].forEach((f, i) => setTimeout(() => playTone(f, 'square', 0.14, 0, 0.05), 200 + i * 170));
+    // the reaction cam dives to the corner — the hp bar owns the top
+    const cam = document.getElementById('game-reaction-cam');
+    if (cam) cam.classList.add('cam-ad-dock');
+    gToast(['💤 THE SLEEPWALKER ARRIVES — and it is ENORMOUS', '💤 LE SOMNAMBULE ARRIVE — et il est ÉNORME'], 200);
     achvUnlock('nightmare');
-    setTimeout(() => gToast(['tutorial: WASD moves you!! W = up. A = left. the rest… you\'ll figure it out ♡', 'tuto : WASD pour bouger !! W = haut. A = gauche. le reste… tu trouveras ♡'], 250), 2800);
-    setTimeout(() => { if (GAME.nm) gToast(['RAM ITS GLOWING HEART!! (ram = touch. with love.)', 'FONCE DANS SON CŒUR QUI BRILLE !! (foncer = toucher. avec amour.)'], 240); }, 6200);
+    // an unarmed challenger gets armed — by faith or by fate
+    if (!GAME.weapon) {
+      setTimeout(() => {
+        if (!GAME.nm || GAME.weapon) return;
+        const ids = Object.keys(WEAPONS);
+        const wid = ids[Math.abs(gStateHash('bossgift')) % ids.length];
+        const godDec = (GAME.decisions || []).find((d) => typeof d === 'string' && d.indexOf('god:') === 0 && d.indexOf(':yes') > 0);
+        if (godDec) {
+          gGiveWeapon(wid, true);
+          gToast([`⚡ your god remembers your faith!! ${WEAPONS[wid].name[0]} falls from the ceiling`, `⚡ ton dieu se souvient de ta foi !! ${WEAPONS[wid].name[1]} tombe du plafond`], 230);
+        } else {
+          const card = TAROT[Math.abs(gStateHash('bosscard')) % TAROT.length];
+          gGiveWeapon(wid, true);
+          gToast([`🧙 the wizard bursts in, flips ${card.n[0]}: "${WEAPONS[wid].name[0]}. don't ask."`, `🧙 le mage débarque, retourne ${card.n[1]} : « ${WEAPONS[wid].name[1]}. ne demande pas. »`], 240);
+        }
+      }, 2400);
+    }
+    setTimeout(() => { if (GAME.nm) gToast(['tutorial: WASD to move!! W = up, A = left… the rest is homework ♡', 'tuto : WASD pour bouger !! W = haut, A = gauche… le reste, c\'est tes devoirs ♡'], 230); }, 4600);
+    setTimeout(() => { if (GAME.nm) gToast(['RAM ITS GLOWING HEART. beware: its sleep-talk COMES TRUE', 'FONCE DANS SON CŒUR QUI BRILLE. attention : ses paroles de sommeil SE RÉALISENT'], 230); }, 7400);
   }
 
+  function gNmSpeak() {
+    const nm = GAME.nm;
+    if (!nm) return;
+    let pool = NM_DREAMS.filter((d) => nm.said.indexOf(d.id) === -1);
+    if (!pool.length) { nm.said = []; pool = NM_DREAMS; }
+    const joke = pool[Math.abs(gStateHash('dream' + nm.t)) % pool.length];
+    nm.said.push(joke.id);
+    // the pun comes true — seeded by your ENTIRE story
+    const seed = Math.abs(hashStr(joke.id + '|' + GAME.coins + '|' + GAME.lives + '|' + (GAME.piks || []).length + '|' + GAME.decisions.join(',') + '|' + GAME.runSeed));
+    const out = joke.outs[seed % joke.outs.length];
+    nm.say = { text: trT(joke.t[0], joke.t[1]), until: GAME.frame + 220 };
+    playTone(340, 'sine', 0.2, 0, 0.04);
+    playTone(255, 'sine', 0.24, 0.14, 0.04);
+    setTimeout(() => {
+      if (!GAME.nm) return;
+      out.fx();
+      gToast(out.t, 170);
+    }, 1500);
+    nm.sayAt = GAME.frame + 380 + (seed % 140);
+  }
+
+  const NM_W = 128, NM_H = 110; // the boss is a BIG sleeper
   function gNmTick() {
     const nm = GAME.nm;
     if (!nm) return;
     nm.t++;
-    GAME.obs = []; // the nightmare eats every lesser bug
-    nm.x = G_W - 120 + Math.sin(nm.t * 0.017) * 34;
-    const nmY = 18 + Math.sin(nm.t * 0.05) * 9;
+    GAME.obs = []; // the nightmare ate every lesser bug on arrival
+    // grand entrance: it drifts in from off-screen, then hovers
+    if (nm.intro > 0) {
+      nm.intro--;
+      nm.x = Math.max(G_W - NM_W - 24, nm.x - 2.2);
+    } else {
+      nm.x = G_W - NM_W - 24 + Math.sin(nm.t * 0.015) * 26;
+    }
+    const nmY = 8 + Math.sin(nm.t * 0.05) * 7;
+    // dream-talk: its one and only attack
+    if (nm.intro <= 0 && GAME.frame >= nm.sayAt) gNmSpeak();
+    if (nm.say && GAME.frame > nm.say.until) nm.say = null;
     // a glowing weak heart surfaces every few seconds
-    if (!nm.weak && GAME.frame >= nm.weakAt) {
-      // spawn the heart on the boss's lower half — always jumpable
-      nm.weak = { ox: 12 + Math.random() * 56, oy: 30 + Math.random() * 24, until: GAME.frame + 105 };
+    if (nm.intro <= 0 && !nm.weak && GAME.frame >= nm.weakAt) {
+      nm.weak = { ox: 18 + Math.random() * (NM_W - 44), oy: NM_H * 0.45 + Math.random() * (NM_H * 0.4), until: GAME.frame + 115 };
     }
     if (nm.weak && GAME.frame > nm.weak.until) { nm.weak = null; nm.weakAt = GAME.frame + 90 + Math.random() * 80; }
-    // falling exception glyphs
-    if (nm.t % 95 === 0) nm.shots.push({ x: 30 + Math.random() * (G_W - 90), y: -8 });
+    // exception glyphs fall only when a dream decrees it
     nm.shots.forEach((s) => { s.y += 2.6; });
     nm.shots = nm.shots.filter((s) => s.y < G_H + 10);
     // player rect
@@ -5903,11 +6392,10 @@ document.addEventListener('DOMContentLoaded', () => {
       return true;
     });
     // ramming the boss
-    const bw = 88, bh = 64;
-    const overlap = px < nm.x + bw && px + pw > nm.x && py < nmY + bh && py + ph > nmY;
+    const overlap = px < nm.x + NM_W && px + pw > nm.x && py < nmY + NM_H && py + ph > nmY;
     if (overlap) {
       const wk = nm.weak;
-      const hitWeak = wk && px + pw > nm.x + wk.ox - 8 && px < nm.x + wk.ox + 10 && py < nmY + wk.oy + 10 && py + ph > nmY + wk.oy - 8;
+      const hitWeak = wk && px + pw > nm.x + wk.ox - 9 && px < nm.x + wk.ox + 11 && py < nmY + wk.oy + 11 && py + ph > nmY + wk.oy - 9;
       if (hitWeak) {
         nm.hp -= 1;
         nm.weak = null;
@@ -5931,6 +6419,8 @@ document.addEventListener('DOMContentLoaded', () => {
   function gNmWin() {
     GAME.nm = null;
     GAME.nmPx = null;
+    const nmCam = document.getElementById('game-reaction-cam');
+    if (nmCam && GAME.state !== 'ad') nmCam.classList.remove('cam-ad-dock');
     GAME.score += 40;
     fxFever(8);
     fxCoinRain(14);
@@ -5942,36 +6432,87 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // the boss IS the sleepwalking pet: its current outfit, eyes shut,
+  // blown up to kaiju size. No stand-in art — the real deal.
+  var nmSpriteImg = null;
+  function nmSprite() {
+    const f = (typeof OUTFIT_FRAMES !== 'undefined' && OUTFIT_FRAMES && OUTFIT_FRAMES.sleep) || null;
+    if (f && typeof f !== 'string') return f; // live canvas (file:// mode)
+    if (typeof f === 'string') {
+      if (!nmSpriteImg || nmSpriteImg._src !== f) {
+        nmSpriteImg = new Image();
+        nmSpriteImg.src = f;
+        nmSpriteImg._src = f;
+      }
+      if (nmSpriteImg.complete && nmSpriteImg.naturalWidth) return nmSpriteImg;
+    }
+    const base = SLIME_IMGS.sleep;
+    return (base && base.complete && base.naturalWidth) ? base : null;
+  }
+
   function gDrawNm(g2) {
     const nm = GAME.nm;
     if (!nm) return;
-    const nmY = 18 + Math.sin(nm.t * 0.05) * 9;
+    const nmY = 8 + Math.sin(nm.t * 0.05) * 7;
     const jx = nm.hitFlash > 0 ? (Math.random() * 4 - 2) : 0; // glitch shudder
     if (nm.hitFlash > 0) nm.hitFlash--;
-    // colossal dream-bug: dark jelly, crooked antennae, sleepy-angry eyes
-    g2.fillStyle = '#241536';
-    g2.fillRect(nm.x + jx - 2, nmY - 2, 92, 68);
-    g2.fillStyle = nm.hitFlash > 0 ? '#6d2c74' : '#3d2350';
-    g2.fillRect(nm.x + jx, nmY, 88, 64);
-    g2.fillStyle = '#241536';
-    g2.fillRect(nm.x + jx + 6, nmY + 8, 76, 6);
-    g2.fillRect(nm.x + jx + 14, nmY - 12, 4, 12); g2.fillRect(nm.x + jx + 66, nmY - 12, 4, 12); // antennae
-    g2.fillStyle = '#ff5f7e';
-    g2.fillRect(nm.x + jx + 12, nmY - 16, 8, 5); g2.fillRect(nm.x + jx + 64, nmY - 16, 8, 5);
-    g2.fillStyle = '#ff8fa8'; // cranky eyes
-    g2.fillRect(nm.x + jx + 18, nmY + 22, 12, 7); g2.fillRect(nm.x + jx + 58, nmY + 22, 12, 7);
-    g2.fillStyle = '#14020e';
-    g2.fillRect(nm.x + jx + 22, nmY + 24, 5, 5); g2.fillRect(nm.x + jx + 62, nmY + 24, 5, 5);
+    // entrance veil: the arena dims while the giant drifts in (soft, steady)
+    if (nm.intro > 0) {
+      g2.globalAlpha = Math.min(0.42, nm.intro / 150 * 0.42);
+      g2.fillStyle = '#1d1135';
+      g2.fillRect(0, 0, G_W, G_H);
+      g2.globalAlpha = 1;
+      g2.textAlign = 'center';
+      g2.fillStyle = '#ffd400';
+      g2.font = "20px 'Jersey 25', 'VT323', monospace";
+      g2.fillText(trT('⚠ NIGHTMARE BOSS ⚠', '⚠ BOSS CAUCHEMAR ⚠'), G_W / 2, 40);
+      g2.fillStyle = '#ffb7e2';
+      g2.font = "12px 'Jersey 25', 'VT323', monospace";
+      g2.fillText(trT('the sleepwalker grew. a lot.', 'le somnambule a grandi. beaucoup.'), G_W / 2, 58);
+      g2.textAlign = 'left';
+    }
+    // dream aura: soft violet halo breathing behind the giant
+    const aura = 0.16 + Math.sin(nm.t * 0.04) * 0.08;
+    g2.globalAlpha = aura;
+    g2.fillStyle = '#b388ff';
+    g2.fillRect(nm.x + jx - 12, nmY - 12, NM_W + 24, NM_H + 24);
+    g2.globalAlpha = 1;
+    // the giant sleeper itself — current outfit, baked and enlarged
+    const spr = nmSprite();
+    if (spr) {
+      if (nm.hitFlash > 0) g2.globalAlpha = 0.75;
+      g2.drawImage(spr, nm.x + jx, nmY, NM_W, NM_H);
+      g2.globalAlpha = 1;
+    } else { // sprite still loading: a big soft silhouette holds the spot
+      g2.fillStyle = '#3d2350';
+      g2.fillRect(nm.x + jx + 8, nmY + 14, NM_W - 16, NM_H - 20);
+    }
+    // drifting zzz — it IS asleep, after all
     g2.fillStyle = '#c3aee0';
-    g2.font = "10px 'Jersey 25', 'VT323', monospace";
-    g2.fillText('z', nm.x + jx + 84, nmY - 6);
-    g2.fillText('Z', nm.x + jx + 92, nmY - 14);
-    // the glowing weak heart — a slow, steady breathing pulse (no strobing)
+    g2.font = "12px 'Jersey 25', 'VT323', monospace";
+    const zf = (nm.t % 120) / 120;
+    g2.globalAlpha = 1 - zf;
+    g2.fillText('z', nm.x + NM_W - 6, nmY + 6 - zf * 10);
+    g2.fillText('Z', nm.x + NM_W + 4, nmY - 2 - zf * 16);
+    g2.globalAlpha = 1;
+    // its dream-talk, in a pixel bubble above (the attack you can read)
+    if (nm.say) {
+      g2.font = "11px 'Jersey 25', 'VT323', monospace";
+      const tw = g2.measureText(nm.say.text).width;
+      const bx = Math.max(6, Math.min(G_W - tw - 22, nm.x + NM_W / 2 - tw / 2 - 8));
+      g2.fillStyle = '#14020e';
+      g2.fillRect(bx - 2, 4, tw + 20, 20);
+      g2.fillStyle = '#fff4fb';
+      g2.fillRect(bx, 6, tw + 16, 16);
+      g2.fillStyle = '#5a3d6e';
+      g2.fillText(nm.say.text, bx + 8, 18);
+    }
+    // the glowing weak heart — slow breathing pulse (no strobing)
     if (nm.weak) {
       const pulse = 0.6 + Math.sin(GAME.frame * 0.09) * 0.25;
       g2.globalAlpha = pulse;
       g2.fillStyle = '#ffd400';
-      g2.fillRect(nm.x + nm.weak.ox - 4, nmY + nm.weak.oy - 4, 12, 12);
+      g2.fillRect(nm.x + nm.weak.ox - 5, nmY + nm.weak.oy - 5, 14, 14);
       g2.fillStyle = '#ff5f9e';
       g2.fillRect(nm.x + nm.weak.ox - 2, nmY + nm.weak.oy - 2, 8, 8);
       g2.globalAlpha = 1;
@@ -5980,9 +6521,17 @@ document.addEventListener('DOMContentLoaded', () => {
     g2.fillStyle = '#ffe98a';
     g2.font = "12px 'Jersey 25', 'VT323', monospace";
     nm.shots.forEach((s) => g2.fillText('!', s.x, s.y));
-    // hp pips
+    // proper boss hp bar, top-left — big and readable
+    const hpw = 150;
+    g2.fillStyle = '#14020e';
+    g2.fillRect(8, 26, hpw + 4, 12);
+    g2.fillStyle = '#3d2350';
+    g2.fillRect(10, 28, hpw, 8);
     g2.fillStyle = '#ff5f9e';
-    for (let i = 0; i < nm.hp; i++) g2.fillRect(nm.x + 4 + i * 7, nmY + 58, 5, 4);
+    g2.fillRect(10, 28, hpw * (nm.hp / 12), 8);
+    g2.fillStyle = '#ffb7e2';
+    g2.font = "10px 'Jersey 25', 'VT323', monospace";
+    g2.fillText(trT('sleepwalker.exe', 'somnambule.exe'), 10, 24);
   }
 
   /* ---------- pikmin followers: the garden squad, in-game ----------
@@ -6309,23 +6858,30 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!ev) return;
     const left = code === 'ArrowLeft';
     const right = code === 'ArrowRight';
-    const confirm = code === 'Space' || code === 'Enter';
+    // held-down space must never blow through a fresh encounter
+    let confirm = code === 'Space' || code === 'Enter';
+    if (confirm && Date.now() < (GAME.eventLockUntil || 0)) return;
     const no = code === 'KeyN' || code === 'Escape';
     const yes = code === 'KeyY';
-    if (code === 'Digit1') ev.sel = 0;
-    if (code === 'Digit2') ev.sel = 1;
-    if (code === 'Digit3') ev.sel = 2;
+    // number keys are deliberate: they pick AND confirm in one press
+    let digitPick = false;
+    if (code === 'Digit1') { ev.sel = 0; digitPick = true; }
+    if (code === 'Digit2') { ev.sel = 1; digitPick = true; }
+    if (code === 'Digit3') { ev.sel = 2; digitPick = true; }
+    if (code === 'Digit4') { ev.sel = 3; digitPick = true; }
 
     if (ev.type === 'god' || ev.type === 'offer' || ev.type === 'interview') {
       if (left) ev.sel = 0;
       if (right) ev.sel = 1;
       if (yes) ev.sel = 0;
       if (no) ev.sel = 1;
-      if (confirm || yes || no) {
+      if (digitPick && ev.sel > 1) { ev.sel = 1; }
+      if (confirm || yes || no || digitPick) {
         if (ev.type === 'interview') gResolveInterview(ev);
         else gResolveTwoChoice(ev);
       }
     } else if (ev.type === 'reward' || ev.type === 'coach') {
+      if (digitPick && ev.sel <= 2) confirm = true;
       if (left) ev.sel = (ev.sel + 2) % 3;
       if (right) ev.sel = (ev.sel + 1) % 3;
       if (confirm || yes) {
@@ -6366,21 +6922,36 @@ document.addEventListener('DOMContentLoaded', () => {
       if (left) ev.sel = (ev.sel + 3) % 4;
       if (right) ev.sel = (ev.sel + 1) % 4;
       if (no) { gEndEvent(["the boba cat waves you goodbye ♡", "le chat-boba te fait coucou de la patte ♡"], 'shop:leave'); return; }
-      if (confirm) {
+      if (confirm || digitPick) {
         if (ev.sel === 3) { gEndEvent(["the boba cat waves you goodbye ♡", "le chat-boba te fait coucou de la patte ♡"], 'shop:leave'); return; }
         if (ev.sold[ev.sel]) return;
         const item = ev.items[ev.sel];
         if (GAME.coins < item.price) {
-          gToast(["not enough coins!! the cat pretends not to judge", "pas assez de pièces !! le chat fait semblant de ne pas juger"], 90);
+          // broke, but make it fashion
+          const BROKE = [
+            [`error 402: payment required. you have ${GAME.coins}, it costs ${item.price}. math is cruel`, `erreur 402 : paiement requis. tu as ${GAME.coins}, ça coûte ${item.price}. les maths sont cruelles`],
+            ["your wallet returned `null`. the cat respects the honesty", "ton portefeuille a renvoyé `null`. le chat respecte la franchise"],
+            ["insufficient funds!! the cat shows you its own empty wallet in solidarity", "fonds insuffisants !! le chat te montre son portefeuille vide, par solidarité"],
+            ["the cat suggests: jump on more coins. groundbreaking strategy", "le chat suggère : saute sur plus de pièces. stratégie révolutionnaire"]
+          ];
+          gToast(BROKE[Math.abs(gStateHash('broke' + GAME.frame)) % BROKE.length], 110);
           playTone(180, 'sawtooth', 0.12, 0, 0.05);
           return;
         }
         GAME.coins -= item.price;
         ev.sold[ev.sel] = true;
         GAME.decisions.push('buy:' + item.icon);
+        achvBump('buys');
+        if (item.trap) achvBump('traps');
         item.out.fx();
         gToast(item.out.t, 190);
         playTone(item.trap ? 233 : 1318, item.trap ? 'sawtooth' : 'triangle', 0.16, 0, 0.05);
+        // shelves empty? the cat closes up on its own
+        if (ev.sold[0] && ev.sold[1] && ev.sold[2]) {
+          setTimeout(() => {
+            if (GAME.event === ev) gEndEvent(["SOLD OUT!! the cat bows, flips the sign, and dissolves into pearls ♡", "TOUT VENDU !! le chat s'incline, retourne la pancarte et se dissout en perles ♡"], 'shop:soldout');
+          }, 1400);
+        }
       }
     }
   }
@@ -6389,6 +6960,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (ev.type === 'god') {
       const believe = ev.sel === 0;
       GAME.decisions.push('god:' + ev.god.icon + (believe ? ':yes' : ':no'));
+      achvBump('gods');
+      achvBump(believe ? 'godyes' : 'godno');
       const tier = gStateHash('tier') % 100;
       let pool;
       if (believe) pool = tier < 45 ? P_BLESS : tier < 80 ? P_PRANK : P_CURSE;
@@ -7327,6 +7900,7 @@ document.addEventListener('DOMContentLoaded', () => {
     camStop();
     gardenStop();
     if (gooseTimer) { clearTimeout(gooseTimer); gooseTimer = null; }
+    gooseCallStop(); // the honks leave with the audience
     slimeHabitat.appendChild(slimeBody);
     slimeHabitat.appendChild(speechBubble);
     slimeHabitat.classList.remove('on-air');
@@ -7640,8 +8214,16 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       const escaping = b.escapeUntil && now < b.escapeUntil;
       let target = sx + b.offset;
-      if (b.carry || gathering) target = sx + (b.carry ? 8 : b.offset * 0.2);
+      if (b.carry) {
+        // deliver to the slime's SIDE, never underneath — the courier
+        // must stay visible for its big moment
+        const side = (b.x + 16 < sx) ? -1 : 1;
+        target = sx + side * Math.max(46, slimeW * 0.55 + 6);
+      } else if (gathering) {
+        target = sx + b.offset * 0.2;
+      }
       if (escaping) target = b.escapeTo;
+      b.el.classList.toggle('gift-run', !!b.carry);
       const speed = escaping ? 7 : (b.stage === 2 ? 3.4 : b.stage === 1 ? 2.6 : 2.0) * (b.carry ? 1.4 : 1);
       const dx = target - b.x;
       if (Math.abs(dx) > 6) {
@@ -7662,6 +8244,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
     });
+    // a sleeping streamer may wander off mid-broadcast (dark mode)
+    if (pet.sleeping && resolvedTheme() === 'dark' && !sleepwalkActive && Math.random() < 0.0011) {
+      startSleepwalk();
+    }
     if (GARDEN.buddies.length >= 3 && Math.random() < 0.0012 && !pet.busy) {
       showBubble(trT('look at my little petal army ♡', 'regarde ma petite armée de pétales ♡'), 2400);
     }
@@ -7823,27 +8409,96 @@ document.addEventListener('DOMContentLoaded', () => {
      commute across the pixel sky. This is not decoration; this
      is meteorological realism. */
   var gooseTimer = null;
+
+  /* real Canada goose calls — an 8-track honk library: Yongshan's
+     five picks (SoundBible + Pixabay community; b trimmed to 20s
+     with fades) PLUS the three xeno-canto field recordings
+     (XC388771 / XC62259 / XC178135 via Wikimedia, CC BY-SA 3.0).
+     One random track per flock, volume enveloped to the crossing.
+     Short clips loop under the envelope; long ones contribute a
+     random segment, never the whole file. */
+  const GOOSE_CALLS = [
+    { src: 'assets/goose_a.mp3', dur: 1.6 },
+    { src: 'assets/goose_b.mp3', dur: 20 },
+    { src: 'assets/goose_c.mp3', dur: 5.4 },
+    { src: 'assets/goose_d.mp3', dur: 30 },
+    { src: 'assets/goose_e.mp3', dur: 30 },
+    { src: 'assets/goose_f.mp3', dur: 15 },
+    { src: 'assets/goose_g.mp3', dur: 37 },
+    { src: 'assets/goose_h.mp3', dur: 22 }
+  ];
+  var gooseAudioEl = null, gooseFadeTimer = null;
+  function gooseCallPlay() {
+    if (!soundEnabled || document.hidden || !document.hasFocus()) return;
+    const pick = GOOSE_CALLS[Math.floor(Math.random() * GOOSE_CALLS.length)];
+    if (!gooseAudioEl) { gooseAudioEl = new Audio(); gooseAudioEl.preload = 'auto'; }
+    const a = gooseAudioEl;
+    try { a.pause(); } catch (e) { /* fresh start */ }
+    if (gooseFadeTimer) clearInterval(gooseFadeTimer);
+    a.src = pick.src;
+    // long files: random segment, never the whole thing.
+    // short honks: loop quietly under the envelope instead.
+    const looping = pick.dur < 14;
+    a.loop = looping;
+    const seg = looping ? 24 : Math.min(pick.dur, 27);
+    const startAt = (!looping && pick.dur > seg) ? Math.random() * (pick.dur - seg) : 0;
+    const peak = (resolvedTheme() === 'dark') ? 0.16 : 0.55;
+    try { a.currentTime = startAt; } catch (e) { /* not seekable yet */ }
+    a.volume = 0;
+    a.play().catch(() => { /* autoplay gate — geese stay polite */ });
+    const t0 = Date.now();
+    const FADE_IN = 4500;
+    const TOTAL = seg * 1000;
+    const HOLD_END = Math.max(FADE_IN + 2000, TOTAL - 8000);
+    gooseFadeTimer = setInterval(() => {
+      const el = Date.now() - t0;
+      if (document.hidden || !document.hasFocus()) a.volume = 0; // away = silent
+      else if (el < FADE_IN) a.volume = peak * (el / FADE_IN);
+      else if (el < HOLD_END) a.volume = peak;
+      else a.volume = Math.max(0, peak * (1 - (el - HOLD_END) / (TOTAL - HOLD_END)));
+      if (el >= TOTAL) {
+        clearInterval(gooseFadeTimer);
+        gooseFadeTimer = null;
+        try { a.pause(); } catch (e) { /* done anyway */ }
+      }
+    }, 120);
+  }
+  function gooseCallStop() {
+    if (gooseFadeTimer) { clearInterval(gooseFadeTimer); gooseFadeTimer = null; }
+    if (gooseAudioEl) { try { gooseAudioEl.pause(); } catch (e) { /* already */ } }
+  }
+
   function gooseSprite() {
-    if (wxSpriteCache.goose) return wxSpriteCache.goose;
+    const night = resolvedTheme() === 'dark';
+    const key = night ? 'goose-night' : 'goose';
+    if (wxSpriteCache[key]) return wxSpriteCache[key];
     const c = document.createElement('canvas');
-    c.width = 14; c.height = 9;
+    c.width = 14; c.height = night ? 12 : 9;
     const x = c.getContext('2d');
-    x.fillStyle = '#7a6a55'; // body
-    x.fillRect(2, 4, 7, 3);
-    x.fillStyle = '#5d5040'; // folded wing
-    x.fillRect(3, 3, 5, 2);
-    x.fillStyle = '#f4efe6'; // belly
-    x.fillRect(3, 7, 5, 1);
+    const oy = night ? 3 : 0; // room for the nightcap
+    x.fillStyle = night ? '#4a4066' : '#7a6a55'; // body (moonlit at night)
+    x.fillRect(2, 4 + oy, 7, 3);
+    x.fillStyle = night ? '#3a3154' : '#5d5040'; // folded wing
+    x.fillRect(3, 3 + oy, 5, 2);
+    x.fillStyle = night ? '#c9c2e8' : '#f4efe6'; // belly
+    x.fillRect(3, 7 + oy, 5, 1);
     x.fillStyle = '#14020e'; // tail, neck, head
-    x.fillRect(0, 4, 2, 2);
-    x.fillRect(9, 2, 2, 4);
-    x.fillRect(10, 0, 3, 3);
+    x.fillRect(0, 4 + oy, 2, 2);
+    x.fillRect(9, 2 + oy, 2, 4);
+    x.fillRect(10, 0 + oy, 3, 3);
     x.fillStyle = '#ffffff'; // the famous chin strap
-    x.fillRect(10, 2, 2, 1);
+    x.fillRect(10, 2 + oy, 2, 1);
     x.fillStyle = '#c9a44a'; // beak
-    x.fillRect(13, 1, 1, 1);
-    wxSpriteCache.goose = c.toDataURL();
-    return wxSpriteCache.goose;
+    x.fillRect(13, 1 + oy, 1, 1);
+    if (night) { // off-duty geese wear tiny nightcaps. obviously.
+      x.fillStyle = '#f0509f';
+      x.fillRect(10, 1, 3, 2);
+      x.fillRect(9, 0, 2, 2);
+      x.fillStyle = '#ffffff';
+      x.fillRect(8, 0, 1, 1); // pompom
+    }
+    wxSpriteCache[key] = c.toDataURL();
+    return wxSpriteCache[key];
   }
 
   function spawnGeese() {
@@ -7886,10 +8541,14 @@ document.addEventListener('DOMContentLoaded', () => {
     liveStage.appendChild(flock);
     void flock.offsetWidth; // commit the start position before gliding
     flock.style.transform = `translateX(${rightward ? w + 220 : -(w + 220)}px)`;
-    setTimeout(() => flock.remove(), 19000);
-    // distant honks + the slime's civic pride
-    [0, 300, 700].forEach((d) => setTimeout(() => playTone(430 + Math.random() * 80, 'square', 0.09, 0, 0.02), d));
-    if (Math.random() < 0.25 && !pet.sleeping && !pet.busy) {
+    setTimeout(() => flock.remove(), 38000);
+    // REAL honks: a field recording swells in as the flock arrives
+    // and fades as they paddle off (quiet at night, proud by day)
+    gooseCallPlay();
+    const dark = resolvedTheme() === 'dark';
+    if (dark && Math.random() < 0.5 && !pet.sleeping && !pet.busy) {
+      showBubble(trT('night geese… they only honk in lowercase. very polite ♡', 'bernaches de nuit… elles ne klaxonnent qu\'en minuscules. très polies ♡'), 2800);
+    } else if (Math.random() < 0.25 && !pet.sleeping && !pet.busy) {
       showBubble(trT('CANADA GEESE!! the true landlords of Edmonton ♡', 'des BERNACHES !! les vraies proprios d\'Edmonton ♡'), 2600);
     }
   }
@@ -8122,7 +8781,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     store.set('yos-live-gifted', true);
     updateLiveTab();
-    flyGiftToStage(e, document.getElementById('live-emoji-input'));
+    flyGiftToStage(e, document.getElementById('live-emoji-open'));
     const line = makeChatLine({ u: trT('you', 'toi'), c: '#f0509f', t: `${trT('sent', 'a envoyé')} ${e} !!` });
     liveMirror(line);
     appendChatMessage(line);
@@ -8176,17 +8835,110 @@ document.addEventListener('DOMContentLoaded', () => {
     return true;
   }
 
-  const emojiForm = document.getElementById('live-emoji-form');
-  const emojiInput = document.getElementById('live-emoji-input');
-  if (emojiForm && emojiInput) {
-    emojiForm.addEventListener('submit', (ev) => {
-      ev.preventDefault();
-      const v = emojiInput.value.trim();
-      if (!v) return;
-      if (sendEmojiGift(v) !== false) emojiInput.value = '';
-      emojiInput.focus();
+  // Discord-grade picker: type-to-search, scrollable, categorized —
+  // wearing its best Y2K NSO outfit. One tap = gift sent.
+  const emojiOpenBtn = document.getElementById('live-emoji-open');
+  const emojiPicker = document.getElementById('emoji-picker');
+  const emojiBody = document.getElementById('emoji-picker-body');
+  const emojiSearch = document.getElementById('emoji-search');
+  const EMOJI_CATS = [
+    { n: ['🍩 snacks & sips', '🍩 snacks & boissons'], list: [
+      ['🧋', 'boba bubble tea milk 奶茶'], ['🍩', 'donut sweet 甜甜圈'], ['🍰', 'cake gateau 蛋糕'], ['🧁', 'cupcake'],
+      ['🍬', 'candy bonbon 糖'], ['🍭', 'lollipop sucette'], ['🍪', 'cookie biscuit 饼干'], ['🍓', 'strawberry fraise 草莓'],
+      ['🍡', 'dango mochi 团子'], ['🥟', 'dumpling ravioli 饺子'], ['🍙', 'onigiri rice 饭团'], ['🍜', 'ramen noodles nouilles 面'],
+      ['☕', 'coffee cafe 咖啡'], ['🍵', 'matcha tea the 抹茶'], ['🥐', 'croissant'], ['🍦', 'ice cream glace 冰淇淋']
+    ] },
+    { n: ['💖 hearts & sparkle', '💖 cœurs & éclats'], list: [
+      ['💖', 'sparkle heart coeur 爱心'], ['💘', 'heart arrow cupid'], ['💐', 'bouquet flowers fleurs 花'], ['🌸', 'sakura blossom 樱花'],
+      ['🌷', 'tulip tulipe'], ['🎀', 'ribbon bow noeud 蝴蝶结'], ['🌈', 'rainbow arc 彩虹'], ['⭐', 'star etoile 星'],
+      ['✨', 'sparkles shiny brillant'], ['👑', 'crown couronne 皇冠'], ['🫧', 'bubbles bulles 泡泡'], ['🌙', 'moon lune 月亮'],
+      ['🪩', 'disco ball boule y2k'], ['💎', 'gem diamond diamant 钻石'], ['🍀', 'clover luck chance 幸运'], ['🎆', 'fireworks feu 烟花']
+    ] },
+    { n: ['🦆 lil friends', '🦆 petits amis'], list: [
+      ['🦆', 'duck canard 鸭'], ['🪿', 'goose honk bernache 鹅'], ['🐛', 'bug worm insecte 虫'], ['🐱', 'cat chat 猫'],
+      ['🐶', 'dog puppy chien 狗'], ['🦄', 'unicorn licorne 独角兽'], ['🐸', 'frog grenouille 蛙'], ['🐢', 'turtle tortue 龟'],
+      ['🐰', 'bunny rabbit lapin 兔'], ['🐝', 'bee abeille 蜂'], ['🦋', 'butterfly papillon 蝴蝶'], ['🐙', 'octopus pieuvre 章鱼'],
+      ['🐹', 'hamster 仓鼠'], ['🐧', 'penguin pingouin 企鹅'], ['🦩', 'flamingo flamant'], ['🐌', 'snail escargot 蜗牛']
+    ] },
+    { n: ['💻 dev corner', '💻 coin dev'], list: [
+      ['🎮', 'game controller manette 游戏'], ['💻', 'laptop code ordi 电脑'], ['⌨️', 'keyboard clavier 键盘'], ['🎧', 'headphones casque 耳机'],
+      ['📷', 'camera photo appareil 相机'], ['⚡', 'zap lightning eclair 闪电'], ['🔥', 'fire lit feu 火'], ['❄️', 'snow cold neige 雪'],
+      ['🚀', 'rocket moon fusee 火箭'], ['💀', 'skull dead lol mort'], ['😭', 'crying sob pleure 哭'], ['🥺', 'pleading puppy eyes'],
+      ['🤖', 'robot bot ai 机器人'], ['🐞', 'ladybug debug coccinelle'], ['📦', 'box package paquet 快递'], ['☁️', 'cloud aws nuage 云']
+    ] }
+  ];
+  function emojiCellFor(e) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'emoji-cell';
+    b.textContent = e;
+    b.addEventListener('click', () => {
+      if (sendEmojiGift(e) !== false) {
+        const rec = [e].concat(store.get('yos-emoji-recent', []).filter((x) => x !== e)).slice(0, 12);
+        store.set('yos-emoji-recent', rec);
+      }
+      toggleEmojiPicker(false);
     });
+    return b;
   }
+  function buildEmojiPicker(query) {
+    if (!emojiBody) return;
+    emojiBody.innerHTML = '';
+    const q = (query || '').trim().toLowerCase();
+    const addSection = (label, pairs) => {
+      if (!pairs.length) return;
+      const h = document.createElement('div');
+      h.className = 'emoji-cat-label';
+      h.textContent = label;
+      const g = document.createElement('div');
+      g.className = 'emoji-picker-grid';
+      pairs.forEach(([e]) => g.appendChild(emojiCellFor(e)));
+      emojiBody.appendChild(h);
+      emojiBody.appendChild(g);
+    };
+    if (q) {
+      // flat search results across every category (emoji or keywords)
+      const hits = [];
+      EMOJI_CATS.forEach((c) => c.list.forEach(([e, kw]) => {
+        if (e === q || kw.toLowerCase().indexOf(q) !== -1) hits.push([e, kw]);
+      }));
+      if (hits.length) addSection(trT(`🔎 ${hits.length} found`, `🔎 ${hits.length} trouvés`), hits);
+      else {
+        const none = document.createElement('div');
+        none.className = 'emoji-cat-label';
+        none.textContent = trT('nothing… the slime accepts ANY emoji via chat tho ♡', 'rien… le slime accepte TOUT emoji par le chat ♡');
+        emojiBody.appendChild(none);
+      }
+      return;
+    }
+    const recent = store.get('yos-emoji-recent', []);
+    if (recent.length) addSection(trT('♡ recent', '♡ récents'), recent.map((e) => [e, '']));
+    EMOJI_CATS.forEach((c) => addSection(trT(c.n[0], c.n[1]), c.list));
+  }
+  function toggleEmojiPicker(show) {
+    if (!emojiPicker) return;
+    const s = (typeof show === 'boolean') ? show : emojiPicker.hidden;
+    if (s) {
+      if (emojiSearch) emojiSearch.value = '';
+      buildEmojiPicker('');
+    }
+    emojiPicker.hidden = !s;
+    if (emojiOpenBtn) emojiOpenBtn.setAttribute('aria-expanded', String(s));
+    if (s) {
+      playTone(880, 'triangle', 0.07, 0, 0.03);
+      if (emojiSearch) setTimeout(() => emojiSearch.focus(), 40);
+    }
+  }
+  if (emojiSearch) emojiSearch.addEventListener('input', () => buildEmojiPicker(emojiSearch.value));
+  if (emojiOpenBtn) emojiOpenBtn.addEventListener('click', () => toggleEmojiPicker());
+  document.addEventListener('click', (ev2) => {
+    if (emojiPicker && !emojiPicker.hidden && ev2.target instanceof Element && !ev2.target.closest('#live-emoji-form')) {
+      toggleEmojiPicker(false);
+    }
+  });
+  document.addEventListener('keydown', (ev2) => {
+    if (ev2.key === 'Escape' && emojiPicker && !emojiPicker.hidden) toggleEmojiPicker(false);
+  });
 
   function sendGift(id, btn) {
     const g = GIFTS[id];
@@ -8298,6 +9050,63 @@ document.addEventListener('DOMContentLoaded', () => {
     win.style.transform = 'none'; // defuse the window manager's centering translate
     win.style.margin = '0';
   }
+
+  /* ---------- pocket arcade: auto-landscape on phones ----------
+     Portrait phones get a Y2K 3-2-1 countdown, then the whole game
+     window rotates 90° (pure CSS transform — no permissions needed). */
+  var gameRotated = false;
+  function gameNeedsRotate() {
+    return window.innerHeight > window.innerWidth && window.innerWidth < 820;
+  }
+  function gameMaybeRotate(win) {
+    if (!gameNeedsRotate() || gameRotated || document.getElementById('rotate-cd')) return;
+    const ov = document.createElement('div');
+    ov.className = 'rotate-cd';
+    ov.id = 'rotate-cd';
+    const phone = document.createElement('div');
+    phone.className = 'rotate-cd-phone';
+    phone.textContent = '📱';
+    const num = document.createElement('div');
+    num.className = 'rotate-cd-num';
+    const label = document.createElement('div');
+    label.className = 'rotate-cd-label';
+    label.textContent = trT('tiny screen detected!! going landscape in…', 'petit écran détecté !! passage en paysage dans…');
+    ov.appendChild(phone); ov.appendChild(num); ov.appendChild(label);
+    document.body.appendChild(ov);
+    let n = 3;
+    const step = () => {
+      if (!document.body.contains(ov)) return;
+      num.textContent = String(n);
+      playTone(700 + (3 - n) * 160, 'square', 0.1, 0, 0.04);
+      if (n-- > 1) { setTimeout(step, 800); return; }
+      setTimeout(() => {
+        ov.remove();
+        gameRotated = true;
+        win.classList.add('game-rotated');
+        playSparkleSound();
+        setTimeout(() => { if (typeof gFitCanvas === 'function') gFitCanvas(); }, 160);
+      }, 800);
+    };
+    step();
+  }
+  function gameUnrotate() {
+    gameRotated = false;
+    const ov = document.getElementById('rotate-cd');
+    if (ov) ov.remove();
+    const win = document.getElementById('win-game');
+    if (win) win.classList.remove('game-rotated');
+  }
+  window.addEventListener('resize', () => {
+    // the user physically rotated the phone: undo our fake landscape
+    if (gameRotated && !gameNeedsRotate()) {
+      gameUnrotate();
+      const w = document.getElementById('win-game');
+      if (w && !w.classList.contains('window-closed')) {
+        gameFitBig();
+        setTimeout(() => { if (typeof gFitCanvas === 'function') gFitCanvas(); }, 120);
+      }
+    }
+  });
 
   // the habitat (slime included) relocates to a picture-in-picture
   // reaction cam pinned to the game's top-right — every spectator
@@ -8789,7 +9598,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.code === 'KeyS' || e.code === 'ArrowDown') { e.preventDefault(); if (GAME.y > 0) GAME.vy = -6; return; }
       }
       if (GAME.event) {
-        const eventKeys = ['Space', 'Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'KeyY', 'KeyN', 'Digit1', 'Digit2', 'Digit3', 'Escape'];
+        const eventKeys = ['Space', 'Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'KeyY', 'KeyN', 'Digit1', 'Digit2', 'Digit3', 'Digit4', 'Escape'];
         if (eventKeys.includes(e.code)) {
           e.preventDefault();
           gEventKey(e.code);
@@ -8862,6 +9671,74 @@ document.addEventListener('DOMContentLoaded', () => {
   function bootSafe(label, fn) {
     try { fn(); } catch (e) { console.warn('[yos boot] step "' + label + '" skipped:', e); }
   }
+
+  // one hook to count them all: wrap the interesting verbs so the
+  // achievement metrics tick without littering every function
+  function hookAchievements() {
+    const wrap = (fn, after) => function () {
+      const r = fn.apply(this, arguments);
+      try { after.apply(this, arguments); } catch (e) { /* metrics never break features */ }
+      return r;
+    };
+    try { petSlime = wrap(petSlime, () => achvBump('pets')); } catch (e) {}
+    try { feedSlime = wrap(feedSlime, () => achvBump('feeds')); } catch (e) {}
+    try { sleepSlime = wrap(sleepSlime, () => achvBump('naps')); } catch (e) {}
+    try { playWithSlime = wrap(playWithSlime, () => achvBump('plays')); } catch (e) {}
+    try { performSearch = wrap(performSearch, () => achvBump('searches')); } catch (e) {}
+    try { openWindow = wrap(openWindow, () => achvBump('wins')); } catch (e) {}
+    try { wearOutfit = wrap(wearOutfit, () => achvBump('fits')); } catch (e) {}
+    try { gardenPluck = wrap(gardenPluck, () => achvBump('plucks')); } catch (e) {}
+    try { pikSetStage = wrap(pikSetStage, (b, st) => { if (st === 2) achvBump('blooms'); }); } catch (e) {}
+    try { spawnGeese = wrap(spawnGeese, () => achvBump('geese')); } catch (e) {}
+    try { liveEnter = wrap(liveEnter, () => achvBump('lives')); } catch (e) {}
+    try { sendGift = wrap(sendGift, () => achvBump('gifts')); } catch (e) {}
+    try { gResolveTarot = wrap(gResolveTarot, () => achvBump('tarots')); } catch (e) {}
+    try { gAdStart = wrap(gAdStart, () => achvBump('ads')); } catch (e) {}
+    try { gNmWin = wrap(gNmWin, () => achvBump('nmwins')); } catch (e) {}
+    try {
+      gGiveWeapon = wrap(gGiveWeapon, (id) => {
+        achvUnlock('w_' + id);
+        const w = store.get('yos-wpn-seen', {});
+        w[id] = 1;
+        store.set('yos-wpn-seen', w);
+        if (Object.keys(w).length >= 4) achvUnlock('armory');
+      });
+    } catch (e) {}
+    try {
+      applyWx = wrap(applyWx, (kind) => {
+        achvUnlock('wx_' + kind);
+        const seen = store.get('yos-wx-seen', {});
+        seen[kind] = 1;
+        store.set('yos-wx-seen', seen);
+        if (Object.keys(seen).length >= 6) achvUnlock('stormchaser');
+      });
+    } catch (e) {}
+    try {
+      gainFollowers = wrap(gainFollowers, () => {
+        if ((pet.followers || 0) >= 100) achvUnlock('fans100');
+        if ((pet.followers || 0) >= 341) achvUnlock('fans341');
+      });
+    } catch (e) {}
+    try {
+      gGameOver = wrap(gGameOver, () => {
+        achvBump('deaths');
+        achvBump('jumps', GAME.jumpsThisRun || 0);
+        GAME.jumpsThisRun = 0;
+        const s = Math.floor(GAME.score);
+        [[100, 's100'], [300, 's300'], [500, 's500'], [1000, 's1000'], [2000, 's2000'], [5000, 's5000'], [10000, 's10000']]
+          .forEach(([v, id]) => { if (s >= v) achvUnlock(id); });
+        if (GAME.coins >= 60) achvUnlock('rich60');
+      });
+    } catch (e) {}
+    // visit census + odd hours
+    const v = achvBump('visits');
+    const hr = new Date().getHours();
+    if (hr >= 0 && hr < 5) achvUnlock('afterhours');
+    if (hr >= 5 && hr < 8) achvUnlock('earlybird');
+    if (v >= 3) achvUnlock('visits3');
+    if (v >= 10) achvUnlock('visits10');
+    if (v >= 30) achvUnlock('visits30');
+  }
   const storedLang = store.get('yos-lang', null);
   bootSafe('lang', () => applyLang(storedLang === 'fr' || storedLang === 'en' ? storedLang : detectBrowserLang(), false));
   bootSafe('theme', () => applyTheme());
@@ -8873,6 +9750,7 @@ document.addEventListener('DOMContentLoaded', () => {
   bootSafe('chat', () => chatBootLine());
   bootSafe('search', () => renderSearch(''));
   bootSafe('addr', () => updateAddressBar());
+  bootSafe('achv-hooks', () => hookAchievements());
 
   // equipped-item names: marquee instead of "AWS S3/…" truncation
   function initEquipMarquee() {

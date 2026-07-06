@@ -80,7 +80,7 @@
     })();
   </script>
 
-  <link rel="stylesheet" href="style.css?v=14">
+  <link rel="stylesheet" href="style.css?v=18">
 </head>
 <body>
 
@@ -1025,12 +1025,17 @@
                 <button class="live-quick-btn" id="live-whistle" type="button" data-i18n="live.whistle">📣 whistle</button>
                 <button class="live-quick-btn live-cam-btn" id="live-cam" type="button" aria-pressed="false" data-i18n="live.cam">📷 hello-cam: off</button>
               </div>
-              <form class="live-emoji-form" id="live-emoji-form" autocomplete="off">
-                <label class="live-emoji-label" for="live-emoji-input" data-i18n-aria="live.emoji.hint" aria-label="Gift an emoji — some emojis hide MEGA effects">🎁</label>
-                <input class="live-emoji-input" id="live-emoji-input" type="text" maxlength="12" data-i18n-ph="live.emoji.ph" placeholder="gift an emoji… 🍩 🎀 ✨" aria-describedby="live-emoji-hint">
-                <button class="live-emoji-send" type="submit" data-i18n-aria="live.emoji.send.aria" aria-label="Send the emoji gift">♡</button>
+              <div class="live-emoji-form" id="live-emoji-form">
+                <button type="button" class="live-emoji-big" id="live-emoji-open" aria-expanded="false" aria-controls="emoji-picker" aria-describedby="live-emoji-hint" data-i18n="live.emoji.btn">🎁 gift an emoji ♡</button>
+                <div class="emoji-picker" id="emoji-picker" hidden>
+                  <div class="emoji-picker-top">
+                    <span class="emoji-picker-title" data-i18n="live.emoji.pick">gift shop ♡ tap = send</span>
+                    <input class="emoji-search" id="emoji-search" type="text" data-i18n-ph="live.emoji.search" placeholder="search… boba? goose? 💀" aria-label="Search emoji gifts">
+                  </div>
+                  <div class="emoji-picker-body" id="emoji-picker-body"></div>
+                </div>
                 <span class="live-emoji-hint sr-only" id="live-emoji-hint" data-i18n="live.emoji.hint">psst — some emojis hide MEGA effects… try your luck ♡</span>
-              </form>
+              </div>
               <p class="live-cam-note" id="live-cam-note" hidden data-i18n="live.camnote">camera runs 100% locally — it spots waves, nods, peek-a-boo, guests arriving… and even compliments your drink by its colour. nothing is recorded or uploaded, ever.</p>
               <video id="live-video" playsinline muted hidden aria-hidden="true"></video>
             </div>
@@ -1235,7 +1240,7 @@
   <!-- Toast Notification -->
   <div id="email-toast" class="toast-hidden" role="status" aria-live="polite">Email copied to clipboard! ♡</div>
 
-  <script src="i18n.js?v=14"></script>
-  <script src="script.js?v=14"></script>
+  <script src="i18n.js?v=18"></script>
+  <script src="script.js?v=18"></script>
 </body>
 </html>
