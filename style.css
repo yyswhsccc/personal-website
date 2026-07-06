@@ -7469,3 +7469,14 @@ body.nm-melt-static::after {
   animation: window-pop-in 0.25s steps(3, end);
 }
 .watch-hint-banner.is-leaving { opacity: 0; transition: opacity 0.6s; }
+
+.wp-url { flex: 1; margin: 0; cursor: copy; }
+.wp-copy { padding: 6px 10px; font-size: 1.1rem; line-height: 1; }
+.wp-note {
+  font-size: 0.78rem;
+  line-height: 1.55;
+  background: rgba(255, 233, 138, 0.35);
+  border: 2px dashed var(--pink-deep);
+  padding: 7px 9px;
+  color: var(--text);
+}

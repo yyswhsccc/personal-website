@@ -9437,9 +9437,9 @@ document.addEventListener('DOMContentLoaded', () => {
       const board = store.get('yos-lb', []);
       if (board.length < 10 || score > board[board.length - 1].s) {
         // an unsigned pending run survives BOTH a refresh and a better run
-        const prev = window.__lbPendingScore || store.get('yos-lb-pending', 0) || 0;
+        const prev = window.__lbPendingScore || lbPendingGet() || 0;
         window.__lbPendingScore = Math.max(score, prev);
-        store.set('yos-lb-pending', window.__lbPendingScore);
+        store.set('yos-lb-pending', { s: window.__lbPendingScore, t: Date.now() });
         gToast(["🏆 TOP-10 RUN!! open hall_of_slime.exe to sign it", "🏆 RUN TOP 10 !! ouvre hall_of_slime.exe pour la signer"], 240);
       }
     } else {
@@ -9454,6 +9454,16 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function lbEsc(str) { return String(str).replace(/[^A-Za-z0-9♡]/g, '').slice(0, 3).toUpperCase() || 'YOU'; }
+  function lbPendingGet() {
+    const raw = store.get('yos-lb-pending', 0);
+    // a pending top-10 score may be signed for 30 minutes: long enough to
+    // survive an accidental refresh, far too short to sign a run you never
+    // ran today. legacy plain numbers can't prove WHEN they were earned —
+    // they retire on sight (this closes the sign-without-playing hole).
+    if (raw && typeof raw === 'object' && raw.s > 0 && Date.now() - (raw.t || 0) < 1800000) return raw.s;
+    if (raw) store.set('yos-lb-pending', 0);
+    return 0;
+  }
 
   // the classic arcade-cabinet naughty list — three letters of shame
   const LB_NAUGHTY = new Set(['ASS', 'FUK', 'FUC', 'FCK', 'FUX', 'CUM', 'TIT', 'SEX', 'DIK', 'DIC', 'DCK', 'COK', 'COC', 'CNT', 'TWT', 'NIG', 'NGR', 'FAG', 'KKK', 'PIS', 'PSS', 'VAG', 'JIZ', 'WTF']);
@@ -9496,7 +9506,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // signing a pending top-10 run
     if (signEl) {
       // a refresh can't eat an unsigned run — it waits in localStorage
-      const pending = window.__lbPendingScore || store.get('yos-lb-pending', 0) || null;
+      const pending = window.__lbPendingScore || lbPendingGet() || null;
       if (pending) window.__lbPendingScore = pending;
       signEl.hidden = !pending;
       if (pending) {
@@ -9574,8 +9584,8 @@ document.addEventListener('DOMContentLoaded', () => {
         btn2.onclick = () => {
           fetch(`${LIKE_API}/hit/${LIKE_NS}/lb-t${lbTierIndex(offBest)}`).catch(() => {});
           if (offBest > store.get('yos-runner-hi', 0)) { store.set('yos-runner-hi', offBest); cloudQueueSync(); }
-          window.__lbPendingScore = Math.max(offBest, store.get('yos-lb-pending', 0) || 0);
-          store.set('yos-lb-pending', window.__lbPendingScore);
+          window.__lbPendingScore = Math.max(offBest, lbPendingGet() || 0);
+          store.set('yos-lb-pending', { s: window.__lbPendingScore, t: Date.now() });
           store.set('yos-offline-best', 0);
           playFanfare();
           renderLeaderboard();
@@ -10011,7 +10021,7 @@ document.addEventListener('DOMContentLoaded', () => {
     gardenStart();
     liveWeather();
     if (wxRefreshTimer) clearInterval(wxRefreshTimer);
-    wxRefreshTimer = setInterval(liveWeather, 270000); // fresh sky every ~4.5min on air
+    wxRefreshTimer = setInterval(liveWeather, 60000); // fresh sky every minute on air
     gooseLoop();
     setTimeout(() => { if (liveOpen) spawnGeese(); }, 4500); // welcome flock
   }
@@ -11074,7 +11084,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function liveWeather() {
     const cached = store.get('yos-wx', null);
-    if (cached && Date.now() - cached.t < 240000) { applyWx(cached.k); return; } // 4min: live-feeling sky
+    if (cached && Date.now() - cached.t < 55000) { applyWx(cached.k); return; } // <1min: the sky is basically live
     fetch('https://api.open-meteo.com/v1/forecast?latitude=53.55&longitude=-113.49&current=weather_code,wind_speed_10m,temperature_2m')
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
@@ -12967,11 +12977,23 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   function deskPikResync() {
     if (!DESK_PIK.layer) return;
+    // remember where everyone stood — a resync must NOT teleport the squad.
+    // their bloom trails stay on the desk, and a pikmin standing away from
+    // its own footprints reads as a glitch, not a homecoming.
+    const seats = DESK_PIK.walkers.map((w) => ({ x: w.x, y: w.y, tx: w.tx, ty: w.ty }));
     DESK_PIK.walkers.forEach((w) => {
       try { if (w.bubbleEl) w.bubbleEl.remove(); w.el.remove(); } catch (e) { /* already gone */ }
     });
     DESK_PIK.walkers = [];
-    deskRoster().slice(0, PIK_MAX).forEach((rr) => deskPikSpawn(rr.h != null ? rr.h : rr.c, rr.s, !!rr.ch, rr.sp || null));
+    deskRoster().slice(0, PIK_MAX).forEach((rr, i) => {
+      const w = deskPikSpawn(rr.h != null ? rr.h : rr.c, rr.s, !!rr.ch, rr.sp || null);
+      const seat = seats[i];
+      if (w && seat) {
+        w.x = seat.x; w.y = seat.y; w.tx = seat.tx; w.ty = seat.ty;
+        w.el.style.left = w.x + 'px';
+        w.el.style.top = w.y + 'px';
+      }
+    });
   }
   function gardenResync() {
     if (typeof GARDEN === 'undefined' || !GARDEN) return;
@@ -13742,6 +13764,10 @@ document.addEventListener('DOMContentLoaded', () => {
     DESK_PIK.layer.appendChild(btn);
   }
   function deskPikTick() {
+    // while the desktop twins are curtained off (live room / game open /
+    // shy mode), time FREEZES for them: no walking, no sprouting, no trails —
+    // the curtain lifts on the exact scene it fell on
+    if (DESK_PIK.layer && DESK_PIK.layer.classList.contains('pik-float-hidden')) return;
     const now = Date.now();
     if (now > DESK_PIK.sproutAt) {
       DESK_PIK.sproutAt = now + 16000 + Math.random() * 16000; // brisk regrowth (16-32s)
@@ -14138,9 +14164,28 @@ document.addEventListener('DOMContentLoaded', () => {
     const body = document.createElement('div');
     body.className = 'wp-panel-body';
     const mk = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt) e.textContent = txt; return e; };
-    body.appendChild(mk('p', '', trT('1 · open this on the watch browser:', '1 · ouvre ceci dans le navigateur de la montre :')));
+    body.appendChild(mk('p', '', trT('1 · open this on the watch:', '1 · ouvre ceci sur la montre :')));
+    const urlRow = mk('div', 'wp-row');
+    const WATCH_URL = 'https://yyswhsccc.github.io/personal-website/watch.html';
     const url = mk('p', 'wp-url', 'yyswhsccc.github.io/personal-website/watch.html');
-    body.appendChild(url);
+    url.title = trT('click to copy', 'clic : copier');
+    const copyBtn = mk('button', 'wp-btn wp-copy', '📋');
+    copyBtn.type = 'button';
+    copyBtn.setAttribute('aria-label', trT('copy the watch link', 'copier le lien montre'));
+    const doCopy = () => {
+      const done = () => { status.textContent = trT('📋 link copied — paste it into a message to yourself ♡', '📋 lien copié — colle-le dans un message pour toi ♡'); };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(WATCH_URL).then(done).catch(done);
+      else { try { const ta = document.createElement('textarea'); ta.value = WATCH_URL; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); done(); } catch (e) { /* selection stays, user can ⌘C */ } }
+    };
+    url.addEventListener('click', doCopy);
+    copyBtn.addEventListener('click', doCopy);
+    urlRow.append(url, copyBtn);
+    body.appendChild(urlRow);
+    const noBrowser = mk('p', 'wp-note', '');
+    noBrowser.textContent = trT(
+      '⌚ no browser on the watch? Apple Watch doesn\'t ship one — copy the link and TEXT IT TO YOURSELF: tapping it inside Messages/Mail opens the page right on the watch ♡. Wear OS: any browser from the on-watch Play Store works.',
+      '⌚ pas de navigateur sur la montre ? l\'Apple Watch n\'en a pas — copie le lien et ENVOIE-LE-TOI PAR MESSAGE : le toucher dans Messages/Mail ouvre la page directement sur la montre ♡. Wear OS : n\'importe quel navigateur du Play Store de la montre.');
+    body.appendChild(noBrowser);
     body.appendChild(mk('p', '', trT('2 · the watch shows a 4-digit code. type it here (all the typing happens on the BIG screen ♡):', '2 · la montre affiche un code à 4 chiffres. tape-le ici (tout le clavier reste sur le GRAND écran ♡) :')));
     const row = mk('div', 'wp-row');
     const inp = document.createElement('input');
