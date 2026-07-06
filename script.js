@@ -254,6 +254,7 @@ document.addEventListener('DOMContentLoaded', () => {
       setTimeout(liveEnter, 120);
     }
     if (winId === 'win-leaderboard' && typeof renderLeaderboard === 'function') renderLeaderboard();
+    if (winId === 'win-leaderboard' && typeof renderAchievements === 'function') renderAchievements();
 
     // Fresh opens always land inside the CURRENT viewport, sized to fit the
     // space above the sticky taskbar — never guillotined by the bottom bar.
@@ -988,6 +989,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const crossed = MILESTONES.find(m => before < m && pet.followers >= m);
     if (crossed) celebrateMilestone(crossed);
     updateSlimeHud();
+    cloudQueueSync();
   }
 
   function celebrateMilestone(milestone) {
@@ -1259,6 +1261,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function triggerGlitchMode() {
     playGlitchSound();
+    achvUnlock('loveoverflow');
     slimeHabitat.classList.add('glitch-mode');
     setSlimeAction('is-glitch');
     pet.mood = 'l0v3_0v3rfl0w';
@@ -1315,6 +1318,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (comboCount >= 9) {
       comboCount = 0;
       pet.dizzy = true;
+      achvUnlock('overstim');
       moveSlime({ action: 'dizzy', mood: 'overstimulated', phrase: trT('T-TOO MUCH ATTENTION!!', 'T-TROP D\'ATTENTION !!'), duration: 1800, scheduleNext: false });
       setTimeout(() => {
         pet.dizzy = false;
@@ -1454,6 +1458,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     playClickSound();
     pet.busy = true;
+
+    const fedCount = store.get('yos-fed-count', 0) + 1;
+    store.set('yos-fed-count', fedCount);
+    if (fedCount >= 10) achvUnlock('sugarparent');
 
     const bounds = getSlimeBounds();
     const targetX = Math.round((Math.random() - 0.5) * 2 * bounds.x * 0.8);
@@ -2669,7 +2677,7 @@ document.addEventListener('DOMContentLoaded', () => {
       case 'muffin': gPendingBoost = true; termLine(trT('…a hype bonus waits at the start line ♡', '…un bonus hype attend sur la ligne de départ ♡'), 't-dim'); break;
       case 'hearts': cheatFall(['♥', '♡', '✦'], 22); break;
       case 'konami': cheatFall(['♥', '🌈', '⭐'], 26); gainFollowers(10); playFanfare(); break;
-      case 'barrel': cheatBarrel(); break;
+      case 'barrel': cheatBarrel(); achvUnlock('barrel'); break;
       case 'zerg': cheatZerg(); break;
       case 'matrix': cheatMatrix(); break;
       case 'wxsnow': cheatWx('snow'); break;
@@ -2678,7 +2686,7 @@ document.addEventListener('DOMContentLoaded', () => {
       case 'wxthunder': cheatWx('thunder'); break;
       case 'wxfog': cheatWx('fog'); break;
       case 'rainmoney': cheatWx('rain'); pend('rich5'); break;
-      case 'geese': openWindow('win-live'); setTimeout(() => { if (typeof spawnGeese === 'function') spawnGeese(); }, 1300); break;
+      case 'geese': openWindow('win-live'); achvUnlock('goose'); setTimeout(() => { if (typeof spawnGeese === 'function') spawnGeese(); }, 1300); break;
       case 'pikmin': openWindow('win-live'); setTimeout(() => { for (let i = 0; i < 3; i++) gardenSpawnSprout(); }, 1100); break;
       case 'boba': feedSlime(); break;
       case 'nap': sleepSlime(); break;
@@ -2809,6 +2817,546 @@ document.addEventListener('DOMContentLoaded', () => {
     'roll credits':       ['🎬 rolling…', '🎬 ça tourne…', 'credits']
   };
 
+  /* =====================================================
+     FUZZY SPELLCASTING — close guesses count. The slime god
+     then REWRITES the spellbook so your wording becomes the
+     real command (persisted, old words stop working).
+     ===================================================== */
+  var spellBusy = false;
+
+  function fireCheat(canonical, isCustom) {
+    const c = TERM_CHEATS[canonical];
+    if (!c) return;
+    termLine(trT(c[0], c[1]), 't-accent');
+    cheatFx(c[2]);
+    const found = store.get('yos-cheats-found', []);
+    if (found.indexOf(canonical) === -1) { found.push(canonical); store.set('yos-cheats-found', found); cloudQueueSync(); }
+    playSparkleSound();
+    achvUnlock('spellcaster');
+    if (isCustom) {
+      // personalized spells always land with a little extra glitter
+      cheatFall(['✨', '♥', '⭐'], 12);
+      gainFollowers(2);
+      termLine(trT('✨ personal-spell buff: +2 fans, +100% style, +1 smug', '✨ buff de sort personnel : +2 fans, +100 % de style, +1 fierté'), 't-ok');
+    }
+  }
+
+  function levDist(a, b) {
+    if (Math.abs(a.length - b.length) > 3) return 99;
+    const m = Array.from({ length: a.length + 1 }, (_, i) => [i]);
+    for (let j = 1; j <= b.length; j++) m[0][j] = j;
+    for (let i = 1; i <= a.length; i++) {
+      for (let j = 1; j <= b.length; j++) {
+        m[i][j] = Math.min(m[i - 1][j] + 1, m[i][j - 1] + 1, m[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      }
+    }
+    return m[a.length][b.length];
+  }
+
+  // famous spells from OTHER games are honoured as near-guesses too
+  const CHEAT_SYNONYMS = {
+    'greedisgood': 'show me the money',
+    'greed is good': 'show me the money',
+    'whosyourdaddy': 'iddqd',
+    'who is your daddy': 'iddqd',
+    'god mode': 'iddqd',
+    'godmode': 'iddqd',
+    'kaching': 'motherlode',
+    'ka ching': 'motherlode',
+    'big money': 'motherlode',
+    'canada goose': 'goose',
+    'honk honk': 'honk',
+    'allyourbase': 'all your base are belong to us',
+    'itshappening': 'to the moon',
+    'hodl': 'to the moon'
+  };
+
+  const SPELL_STOPWORDS = new Set(['the', 'a', 'an', 'of', 'to', 'is', 'it', 'for', 'in', 'on', 'at', 'me', 'my', 'are', 'and', 'do', 'this', 'that', 'there', 'no', 'us', 'be', 'le', 'la', 'les', 'de', 'du', 'un', 'une', 'et']);
+  const SPELL_RESERVED = ['open', 'kill', 'theme', 'lang', 'cat', 'man', 'ask', 'search', 'echo', 'sudo', 'pet', 'rm', 'exit', 'hint', 'cheats', 'secrets', 'help', 'clear', 'ls', 'whoami', 'neofetch', 'repos', 'contact', 'like', 'ps', 'top', 'hall', 'sleepwalk'];
+
+  function spellNorm(s) { return String(s).toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim(); }
+  function spellToks(s) { return spellNorm(s).split(' ').filter((w) => w && !SPELL_STOPWORDS.has(w)); }
+
+  function fuzzyCheatMatch(rawInput) {
+    const input = spellNorm(rawInput);
+    if (!input || input.length < 3) return null;
+    if (CHEAT_SYNONYMS[input] && TERM_CHEATS[CHEAT_SYNONYMS[input]]) return CHEAT_SYNONYMS[input];
+
+    const it = spellToks(input);
+    const squishedIn = input.replace(/\s/g, '');
+    let best = null;
+    let bestScore = 0;
+
+    Object.keys(TERM_CHEATS).forEach((key) => {
+      const kt = spellToks(key);
+      if (!kt.length) return;
+      let shared = 0;
+      let sharedLong = false;
+      kt.forEach((k) => {
+        if (it.some((w) => w === k || (k.length >= 4 && w.length >= 4 && levDist(w, k) <= 1))) {
+          shared++;
+          if (k.length >= 4) sharedLong = true;
+        }
+      });
+      let score = shared / kt.length;
+      // squished / typo'd whole-spell compare: "moterload", "doabarrelroll"…
+      const squishedKey = key.replace(/[^a-z0-9]/g, '');
+      if (squishedKey.length >= 5 && levDist(squishedIn, squishedKey) <= 2) { score = 1; sharedLong = true; }
+      if (score >= 0.55 && sharedLong && score > bestScore) { bestScore = score; best = key; }
+    });
+    return best;
+  }
+
+  function tryFuzzyCheat(rawInput) {
+    if (spellBusy) return false;
+    const phrase = spellNorm(rawInput);
+    const canonical = fuzzyCheatMatch(rawInput);
+    if (!canonical || phrase === spellNorm(canonical)) return false;
+    if (TERM_CHEATS[phrase]) return false; // that IS another spell — no stealing
+
+    // sacred words can't be overwritten — fire the spell, skip the rename
+    if (SPELL_RESERVED.indexOf(phrase.split(' ')[0]) !== -1 || SPELL_RESERVED.indexOf(phrase) !== -1) {
+      termLine(trT(`🎉 close enough — the true incantation is \`${canonical}\`. (yours starts with a sacred word, so the spellbook stays.)`, `🎉 presque — la vraie incantation est \`${canonical}\`. (la tienne commence par un mot sacré, le grimoire reste intact.)`), 't-ok');
+      fireCheat(canonical, false);
+      return true;
+    }
+
+    spellRenameCeremony(canonical, phrase);
+    return true;
+  }
+
+  function spellRenameCeremony(canonical, phrase) {
+    spellBusy = true;
+    const already = store.get('yos-cheat-renames', {});
+    termLine(trT(`🎉 CLOSE ENOUGH!! the true incantation was \`${canonical}\`…`, `🎉 PRESQUE !! la vraie incantation était \`${canonical}\`…`), 't-ok');
+    termLine(trT('…but the slime god likes YOUR version better. hold still—', '…mais le dieu slime préfère TA version. bouge pas—'), 't-accent');
+    playSparkleSound();
+
+    slimeSpellCast(() => {
+      const renames = store.get('yos-cheat-renames', {});
+      renames[canonical] = phrase;
+      store.set('yos-cheat-renames', renames);
+      termLine(trT(`✔ SPELLBOOK REWRITTEN: \`${phrase}\` is now a real command on this OS. the old words have been deleted from reality.`, `✔ GRIMOIRE RÉÉCRIT : \`${phrase}\` est désormais une vraie commande de cet OS. les anciens mots ont été effacés de la réalité.`), 't-ok');
+      termLine(trT(already[canonical] ? '(the slime god sighs and updates it AGAIN. you\'re lucky you\'re cute.)' : 'type it again — personalized spells come with a buff ♡', already[canonical] ? '(le dieu slime soupire et met à jour ENCORE. heureusement que tu es mignon·ne.)' : 'retape-le — les sorts personnalisés ont un buff ♡'), 't-dim');
+      achvUnlock('spellsmith');
+      playFanfare();
+      spellBusy = false;
+    });
+  }
+
+  // the slime hops out of the sidebar and casts, Y2K fireworks included
+  function slimeSpellCast(onDone) {
+    const habitatRect = slimeHabitat ? slimeHabitat.getBoundingClientRect() : { left: 40, top: 120, width: 80, height: 80 };
+    const termWinEl = document.getElementById('win-terminal');
+    const tRect = termWinEl && !termWinEl.classList.contains('window-closed')
+      ? termWinEl.getBoundingClientRect()
+      : { left: window.innerWidth / 2 - 120, top: window.innerHeight / 2, width: 240 };
+
+    const caster = document.createElement('div');
+    caster.className = 'spellcaster';
+    caster.setAttribute('aria-hidden', 'true');
+    const img = document.createElement('img');
+    img.src = (typeof OUTFIT_FRAMES === 'object' && OUTFIT_FRAMES && typeof OUTFIT_FRAMES.base === 'string' && OUTFIT_FRAMES.base) || 'assets/slime_pet_cutout.png';
+    img.alt = '';
+    const circle = document.createElement('div');
+    circle.className = 'spell-circle';
+    circle.innerHTML = '<span>♥</span><span>✦</span><span>★</span><span>🎀</span><span>♡</span><span>✧</span>';
+    const bub = document.createElement('div');
+    bub.className = 'spell-bubble';
+    bub.textContent = trT('✨ rewriting the spellbook…', '✨ réécriture du grimoire…');
+    caster.append(circle, img, bub);
+    document.body.appendChild(caster);
+
+    const from = { x: habitatRect.left + habitatRect.width / 2 - 40, y: habitatRect.top + habitatRect.height / 2 - 36 };
+    const to = { x: Math.min(window.innerWidth - 96, Math.max(12, tRect.left + tRect.width / 2 - 40)), y: Math.max(64, tRect.top - 28) };
+    caster.style.left = from.x + 'px';
+    caster.style.top = from.y + 'px';
+    playTone(523.25, 'triangle', 0.14, 0, 0.05);
+    playTone(659.25, 'triangle', 0.14, 0.12, 0.05);
+
+    const t0 = Date.now();
+    const walkMs = REDUCED_MOTION ? 60 : 1400;
+    const glide = setInterval(() => {
+      const p = Math.min(1, (Date.now() - t0) / walkMs);
+      const e = p * p * (3 - 2 * p);
+      caster.style.left = (from.x + (to.x - from.x) * e) + 'px';
+      caster.style.top = (from.y + (to.y - from.y) * e - Math.sin(p * Math.PI) * 46) + 'px';
+      if (p >= 1) { clearInterval(glide); castNow(); }
+    }, 30);
+
+    function castNow() {
+      caster.classList.add('is-casting');
+      document.body.classList.add('spell-flash');
+      cheatFall(['✨', '♥', '⭐', '🎀', '✦'], 30);
+      [659.25, 783.99, 987.77, 1318.51, 1567.98].forEach((f, i) => playTone(f, 'triangle', 0.2, i * 0.09, 0.06));
+      setTimeout(() => {
+        document.body.classList.remove('spell-flash');
+        caster.classList.add('sw-fading');
+        setTimeout(() => caster.remove(), 700);
+        onDone();
+      }, REDUCED_MOTION ? 300 : 1900);
+    }
+  }
+
+  /* =====================================================
+     ACHIEVEMENTS — the hall_of_slime trophy shelf.
+     Unlocks persist locally; each unlock also bumps a shared
+     Abacus counter so everyone sees worldwide unlock counts.
+     ===================================================== */
+  const ACHV_API = 'https://abacus.jasoncameron.dev';
+  const ACHV_NS = 'yongshanos-yyswhsccc';
+
+  var ACHV = [
+    { id: 'spellcaster', icon: '🔮', n: ['First Words of Power', 'Premiers Mots de Pouvoir'], d: ['cast a hidden cheat code. totally didn\'t google it.', 'a lancé un code secret. sans googler, évidemment.'], t: ['the terminal keeps 100 secrets.', 'le terminal garde 100 secrets.'] },
+    { id: 'spellsmith', icon: '✍️', n: ['The Slime God\'s Co-Author', 'Co-auteur·rice du Dieu Slime'], d: ['guessed a cheat SO wrong it became the official spelling.', 'a si mal deviné un code qu\'il est devenu l\'orthographe officielle.'], t: ['guess a cheat badly. with confidence.', 'devine un code mal. avec assurance.'] },
+    { id: 'dreamwatcher', icon: '👀', n: ['Do Not Wake', 'Ne Pas Réveiller'], d: ['watched the slime sleepwalk across the desktop. said nothing.', 'a regardé le slime traverser le bureau en dormant. sans rien dire.'], t: ['midnight. the habitat empties…', 'minuit. l\'habitat se vide…'] },
+    { id: 'nightmare', icon: '💀', n: ['It Got Worse', 'C\'est Devenu Pire'], d: ['met the sleepwalker\'s nightmare form: the biggest bug ever recorded.', 'a rencontré la forme cauchemar du somnambule : le plus gros bug jamais vu.'], t: ['sometimes a dream dives into the arcade… and curdles.', 'parfois un rêve plonge dans l\'arcade… et tourne mal.'] },
+    { id: 'nightmareslain', icon: '🌸', n: ['Certified Dream Debugger', 'Débogue-Rêves Certifié·e'], d: ['patched the nightmare with critical hugs. it purred.', 'a corrigé le cauchemar à coups de câlins critiques. il a ronronné.'], t: ['nightmares have exactly one weakness.', 'les cauchemars ont exactement une faiblesse.'] },
+    { id: 'bosskill', icon: '⚔️', n: ['Kaiju Exterminator', 'Exterminateur·rice de Kaijus'], d: ['deleted a 404 kaiju. the page was never found again.', 'a supprimé un kaiju 404. la page n\'a plus jamais été retrouvée.'], t: ['something enormous eventually blocks the road.', 'quelque chose d\'énorme finit par bloquer la route.'] },
+    { id: 'speedran', icon: '💨', n: ['Speedrun to Zero', 'Speedrun Vers Zéro'], d: ['perished within 3 seconds of the start line. the bugs sent a thank-you card.', 'a péri moins de 3 secondes après le départ. les bugs ont envoyé une carte de remerciement.'], t: ['fail fast. no — FASTER.', 'échoue vite. non — PLUS VITE.'] },
+    { id: 'top10', icon: '🏆', n: ['Three Letters, No Shame', 'Trois Lettres, Zéro Honte'], d: ['signed the arcade top-10. the initials definitely spell something.', 'a signé le top 10 de l\'arcade. les initiales veulent SÛREMENT dire quelque chose.'], t: ['great runs deserve a signature.', 'les grandes runs méritent une signature.'] },
+    { id: 'nowifi', icon: '📡', n: ['Airplane Mode Athlete', 'Athlète du Mode Avion'], d: ['played the runner with zero internet. offline, but never alone.', 'a joué au runner sans internet. hors-ligne, mais jamais seul·e.'], t: ['what does this OS do when the wifi dies?', 'que fait cet OS quand le wifi meurt ?'] },
+    { id: 'sugarparent', icon: '🍬', n: ['Registered Snack Sponsor', 'Sponsor Officiel de Snacks'], d: ['fed the slime 10 times. it lists you as next of kin now.', 'a nourri le slime 10 fois. il t\'a inscrit·e comme famille proche.'], t: ['the way to a slime\'s heart is documented.', 'le chemin vers le cœur d\'un slime est documenté.'] },
+    { id: 'overstim', icon: '🐙', n: ['Personal Space: Denied', 'Espace Vital : Refusé'], d: ['clicked the slime so fast it filed a complaint (cutely).', 'a cliqué le slime si vite qu\'il a porté plainte (mignonnement).'], t: ['pet. faster. no, faster.', 'caresse. plus vite. non, PLUS vite.'] },
+    { id: 'loveoverflow', icon: '💗', n: ['ERR0R: L0VE_0VERFL0W', 'ERR0R : DÉB0RDEMENT_D\'AM0UR'], d: ['crashed the slime with pure affection. it rated the crash 5 stars.', 'a fait planter le slime à l\'affection pure. il a mis 5 étoiles au crash.'], t: ['30 pets is a warning, not a limit.', '30 caresses : un avertissement, pas une limite.'] },
+    { id: 'goose', icon: '🪿', n: ['Canadian Air Force', 'Force Aérienne Canadienne'], d: ['summoned the geese. HONK. (this cannot be undone.)', 'a invoqué les bernaches. HONK. (irréversible.)'], t: ['this is Canada. something honks.', 'on est au Canada. quelque chose klaxonne.'] },
+    { id: 'barrel', icon: '🛩', n: ['Aileron Certified', 'Brevet de Tonneau'], d: ['made the entire website do a barrel roll. peppy would be proud.', 'a fait faire un tonneau au site entier. peppy serait fier.'], t: ['a very famous manoeuvre works on whole websites.', 'une très célèbre manœuvre marche sur les sites entiers.'] },
+    { id: 'frenchie', icon: '🥐', n: ['Honorary Baguette', 'Baguette Honoraire'], d: ['switched the OS to French. immediate +10 elegance.', 'a mis l\'OS en français. +10 d\'élégance immédiate.'], t: ['this OS speaks two languages.', 'cet OS parle deux langues.'] },
+    { id: 'nightowl', icon: '🌙', n: ['Midnight Shift', 'Équipe de Nuit'], d: ['turned on midnight mode. your retinas wrote a thank-you note.', 'a activé le mode minuit. tes rétines ont envoyé un mot de remerciement.'], t: ['the moon button does something.', 'le bouton lune fait quelque chose.'] },
+    { id: 'hired', icon: '💼', n: ['HR Speedrun Any%', 'Speedrun RH Any%'], d: ['ran `sudo hire yongshan`. somewhere, a recruiter felt a disturbance.', 'a lancé `sudo hire yongshan`. quelque part, un recruteur a senti une perturbation.'], t: ['sudo can do more than you think.', 'sudo peut plus que tu ne crois.'] },
+    { id: 'liked', icon: '💖', n: ['Wall Material', 'Digne du Mur'], d: ['joined the fan wall. your 100 pixels are famous worldwide now.', 'a rejoint le mur des fans. tes 100 pixels sont mondialement célèbres.'], t: ['the little heart button is real. and shared.', 'le petit bouton cœur est réel. et partagé.'] }
+  ];
+
+  var achvCounts = null;
+  var achvCountsAt = 0;
+  var achvToastTimer = null;
+
+  function achvToastShow(a) {
+    let el = document.getElementById('achv-toast');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'achv-toast';
+      el.className = 'achv-toast';
+      document.body.appendChild(el);
+    }
+    el.innerHTML = '';
+    const top = document.createElement('span');
+    top.className = 'achv-toast-top';
+    top.textContent = trT('🏅 ACHIEVEMENT UNLOCKED', '🏅 SUCCÈS DÉBLOQUÉ');
+    const name = document.createElement('span');
+    name.className = 'achv-toast-name';
+    name.textContent = `${a.icon} ${L(a.n)}`;
+    el.append(top, name);
+    el.classList.remove('achv-show');
+    void el.offsetWidth;
+    el.classList.add('achv-show');
+    playTone(1046.5, 'triangle', 0.14, 0, 0.05);
+    playTone(1318.51, 'triangle', 0.2, 0.12, 0.05);
+    if (achvToastTimer) clearTimeout(achvToastTimer);
+    achvToastTimer = setTimeout(() => el.classList.remove('achv-show'), 4200);
+  }
+
+  function achvUnlock(id, quiet, skipRemote) {
+    if (!ACHV) return;
+    const a = ACHV.find((x) => x.id === id);
+    if (!a) return;
+    const got = store.get('yos-achv', {});
+    if (got[id]) return;
+    got[id] = Date.now();
+    store.set('yos-achv', got);
+    if (!quiet) achvToastShow(a);
+    if (achvCounts && typeof achvCounts[id] === 'number') achvCounts[id]++;
+    // skipRemote: cloud-restored unlocks were already counted on the original device
+    if (navigator.onLine && !skipRemote) fetch(`${ACHV_API}/hit/${ACHV_NS}/achv-${id}`).catch(() => {});
+    cloudQueueSync();
+    const lb = document.getElementById('win-leaderboard');
+    if (lb && !lb.classList.contains('window-closed')) renderAchievements();
+  }
+
+  function achvFetchCounts() {
+    if (!navigator.onLine) return Promise.resolve(null);
+    if (achvCounts && Date.now() - achvCountsAt < 120000) return Promise.resolve(achvCounts);
+    return Promise.all(
+      ACHV.map((a) => fetch(`${ACHV_API}/get/${ACHV_NS}/achv-${a.id}`)
+        .then((r) => (r.ok ? r.json() : { value: 0 }))
+        .then((d) => Math.max(0, Number(d.value) || 0))
+        .catch(() => 0))
+    ).then((vals) => {
+      achvCounts = {};
+      ACHV.forEach((a, i) => { achvCounts[a.id] = vals[i]; });
+      achvCountsAt = Date.now();
+      return achvCounts;
+    }).catch(() => null);
+  }
+
+  function renderAchievements() {
+    const grid = document.getElementById('lb-achv-grid');
+    const note = document.getElementById('lb-achv-note');
+    if (!grid) return;
+    const got = store.get('yos-achv', {});
+    const n = ACHV.filter((a) => got[a.id]).length;
+    if (note) note.textContent = trT(`${n}/${ACHV.length} unlocked — the rest are the slime's little secrets`, `${n}/${ACHV.length} débloqués — le reste, ce sont les petits secrets du slime`);
+    grid.innerHTML = '';
+    ACHV.forEach((a) => {
+      const has = !!got[a.id];
+      const card = document.createElement('div');
+      card.className = 'achv-card' + (has ? ' is-got' : ' is-locked');
+      const ic = document.createElement('span');
+      ic.className = 'achv-icon';
+      ic.textContent = has ? a.icon : '❓';
+      const body = document.createElement('div');
+      body.className = 'achv-body';
+      const nm = document.createElement('div');
+      nm.className = 'achv-name';
+      nm.textContent = has ? L(a.n) : '??????';
+      const ds = document.createElement('div');
+      ds.className = 'achv-desc';
+      ds.textContent = has ? L(a.d) : L(a.t);
+      body.append(nm, ds);
+      if (has) {
+        const gl = document.createElement('div');
+        gl.className = 'achv-global';
+        const c = achvCounts && achvCounts[a.id];
+        gl.textContent = (typeof c === 'number' && c > 0)
+          ? trT(`🌍 ${c} slimer${c === 1 ? '' : 's'} worldwide ${c === 1 ? 'has' : 'have'} this`, `🌍 ${c} slimer${c > 1 ? 's' : ''} dans le monde ${c > 1 ? "l'ont" : "l'a"}`)
+          : trT('🌍 counting fellow slimers…', '🌍 recensement des slimers…');
+        body.appendChild(gl);
+      }
+      card.append(ic, body);
+      grid.appendChild(card);
+    });
+    if (!achvCounts) achvFetchCounts().then((c) => { if (c) renderAchievements(); });
+    cloudRenderPanel();
+  }
+
+  // retro-credit past deeds (quietly — no toast storm at boot)
+  (function achvBackfill() {
+    if (store.get('yos-cheats-found', []).length) achvUnlock('spellcaster', true);
+    if (Object.keys(store.get('yos-cheat-renames', {})).length) achvUnlock('spellsmith', true);
+    if (store.get('yos-liked', false)) achvUnlock('liked', true);
+    if (store.get('yos-lb', []).length) achvUnlock('top10', true);
+    if (store.get('yos-fed-count', 0) >= 10) achvUnlock('sugarparent', true);
+  })();
+
+  /* =====================================================
+     CLOUD SAVE — arcade password edition.
+     Every player gets a permanent save slot in the backend
+     (one Abacus counter, writable only with the player's own
+     admin key). Achievements bitmask + hi-score + cheat census
+     + fan count are packed into a single 53-bit-safe integer.
+     The save code `SLIME-{uid}-{key}` restores everything on
+     any browser or device — localStorage is only a cache.
+     ===================================================== */
+  const SAVE_B_HI = 262144;         // 2^18 — bits 0-17: achievements
+  const SAVE_B_CH = 34359738368;    // 2^35 — bits 18-34: hi-score
+  const SAVE_B_FN = 4398046511104;  // 2^42 — bits 35-41: cheats found
+  const SAVE_CAP = { hi: 131000, ch: 100, fn: 2000 };
+
+  var cloudSlot = store.get('yos-cloud', null); // { uid, key }
+  var cloudState = 'idle'; // idle | creating | synced | offline | error
+  var cloudTimer = null;
+  var cloudLastPacked = -1;
+
+  function achvBits() {
+    const got = store.get('yos-achv', {});
+    let bits = 0;
+    ACHV.forEach((a, i) => { if (got[a.id]) bits += Math.pow(2, i); });
+    return bits;
+  }
+
+  function cheatCensus() {
+    return Math.max(store.get('yos-cheats-found', []).length, store.get('yos-cheats-cloudn', 0));
+  }
+
+  function packSave() {
+    const hi = Math.min(store.get('yos-runner-hi', 0), SAVE_CAP.hi);
+    const ch = Math.min(cheatCensus(), SAVE_CAP.ch);
+    const fn = Math.min(Math.max(pet.followers || 0, 0), SAVE_CAP.fn);
+    return achvBits() + hi * SAVE_B_HI + ch * SAVE_B_CH + fn * SAVE_B_FN;
+  }
+
+  function unpackSave(v) {
+    v = Math.max(0, Math.floor(Number(v) || 0));
+    const fn = Math.floor(v / SAVE_B_FN); v -= fn * SAVE_B_FN;
+    const ch = Math.floor(v / SAVE_B_CH); v -= ch * SAVE_B_CH;
+    const hi = Math.floor(v / SAVE_B_HI);
+    const bits = v % SAVE_B_HI;
+    return { bits, hi, ch, fn };
+  }
+
+  function cloudCode() {
+    return cloudSlot ? `SLIME-${cloudSlot.uid}-${cloudSlot.key}` : null;
+  }
+
+  function cloudEnsure() {
+    if (cloudSlot) return Promise.resolve(cloudSlot);
+    if (cloudState === 'creating' || !navigator.onLine) return Promise.resolve(null);
+    cloudState = 'creating';
+    const ABC = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+    const uid = Array.from({ length: 6 }, () => ABC[Math.floor(Math.random() * ABC.length)]).join('');
+    return fetch(`${ACHV_API}/create/${ACHV_NS}/sv2-${uid}`, { method: 'POST' })
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then((d) => {
+        if (!d || !d.admin_key) throw new Error('no key');
+        cloudSlot = { uid, key: d.admin_key };
+        store.set('yos-cloud', cloudSlot);
+        cloudState = 'idle';
+        return cloudSlot;
+      })
+      .catch(() => { cloudState = 'error'; return null; });
+  }
+
+  function cloudSyncNow() {
+    if (!navigator.onLine) { cloudState = 'offline'; cloudRenderPanel(); return; }
+    cloudEnsure().then((cs) => {
+      if (!cs) { cloudRenderPanel(); return; }
+      const v = packSave();
+      if (v === cloudLastPacked) { cloudState = 'synced'; cloudRenderPanel(); return; }
+      fetch(`${ACHV_API}/set/${ACHV_NS}/sv2-${cs.uid}?value=${v}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${cs.key}` }
+      })
+        .then((r) => {
+          if (!r.ok) throw new Error('set failed');
+          cloudLastPacked = v;
+          cloudState = 'synced';
+        })
+        .catch(() => { cloudState = 'error'; })
+        .then(() => cloudRenderPanel());
+    });
+  }
+
+  function cloudQueueSync() {
+    if (cloudTimer) clearTimeout(cloudTimer);
+    cloudTimer = setTimeout(cloudSyncNow, 4000);
+  }
+
+  function cloudApplyRemote(v) {
+    const s = unpackSave(v);
+    ACHV.forEach((a, i) => {
+      if (Math.floor(s.bits / Math.pow(2, i)) % 2 === 1) achvUnlock(a.id, true, true);
+    });
+    if (s.hi > store.get('yos-runner-hi', 0)) {
+      store.set('yos-runner-hi', s.hi);
+      try { if (GAME) GAME.hi = s.hi; } catch (e) { /* pre-boot */ }
+    }
+    if (s.ch > cheatCensus()) store.set('yos-cheats-cloudn', s.ch);
+    if (s.fn > (pet.followers || 0)) { pet.followers = s.fn; updateSlimeHud(); }
+  }
+
+  function cloudRestore(rawCode) {
+    const code = String(rawCode || '').trim().replace(/\s+/g, '');
+    const m = code.match(/^slime-([a-z0-9]{6})-([a-z0-9-]{10,})$/i);
+    if (!m) return Promise.resolve('badcode');
+    const uid = m[1].toUpperCase();
+    const key = m[2].toLowerCase();
+    return fetch(`${ACHV_API}/get/${ACHV_NS}/sv2-${uid}`)
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then((d) => {
+        if (!d || typeof d.value !== 'number') throw new Error('no slot');
+        cloudSlot = { uid, key };
+        store.set('yos-cloud', cloudSlot);
+        cloudApplyRemote(d.value);
+        cloudLastPacked = -1;
+        cloudSyncNow(); // push the merged state straight back
+        return 'ok';
+      })
+      .catch(() => 'notfound');
+  }
+
+  function cloudStatusLine() {
+    if (!navigator.onLine || cloudState === 'offline') return trT('📡 offline — will sync when the internet returns', '📡 hors-ligne — synchro au retour d\'internet');
+    if (cloudState === 'synced') return trT('☁ saved to the backend ♡ (achievements · hi-score · cheat census · fans)', '☁ sauvegardé côté serveur ♡ (succès · record · codes · fans)');
+    if (cloudState === 'creating') return trT('☁ reserving your save slot…', '☁ réservation de ton emplacement…');
+    if (cloudState === 'error') return trT('☁ backend unreachable — retrying on the next change', '☁ serveur injoignable — nouvel essai au prochain changement');
+    return trT('☁ cloud save armed', '☁ sauvegarde cloud armée');
+  }
+
+  function cloudRenderPanel() {
+    const panel = document.getElementById('cloud-save-panel');
+    if (!panel) return;
+    panel.innerHTML = '';
+
+    const status = document.createElement('div');
+    status.className = 'cloud-status';
+    status.textContent = cloudStatusLine();
+    panel.appendChild(status);
+
+    if (cloudSlot) {
+      const row = document.createElement('div');
+      row.className = 'cloud-code-row';
+      const codeEl = document.createElement('code');
+      codeEl.className = 'cloud-code';
+      codeEl.textContent = cloudCode();
+      const copyBtn = document.createElement('button');
+      copyBtn.type = 'button';
+      copyBtn.className = 'cloud-btn';
+      copyBtn.textContent = trT('📋 copy save code', '📋 copier le code');
+      copyBtn.onclick = () => {
+        const done = () => { playSparkleSound(); showToast(trT('save code copied — keep it somewhere cute ♡', 'code copié — garde-le en lieu mignon ♡')); };
+        if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(cloudCode()).then(done).catch(done);
+        else done();
+      };
+      row.append(codeEl, copyBtn);
+      panel.appendChild(row);
+    }
+
+    const hint = document.createElement('div');
+    hint.className = 'cloud-hint';
+    hint.textContent = trT('this code IS your save file — paste it on any browser/device and everything comes home. clearing browser data can\'t touch it.', 'ce code EST ta sauvegarde — colle-le sur n\'importe quel navigateur/appareil et tout revient. vider le navigateur n\'y peut rien.');
+    panel.appendChild(hint);
+
+    const form = document.createElement('form');
+    form.className = 'cloud-restore-row';
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'cloud-input';
+    input.placeholder = 'SLIME-XXXXXX-…';
+    input.setAttribute('aria-label', trT('Paste a save code to restore', 'Colle un code de sauvegarde à restaurer'));
+    const loadBtn = document.createElement('button');
+    loadBtn.type = 'submit';
+    loadBtn.className = 'cloud-btn';
+    loadBtn.textContent = trT('⬇ load', '⬇ charger');
+    form.append(input, loadBtn);
+    form.onsubmit = (e) => {
+      e.preventDefault();
+      if (!input.value.trim()) return;
+      loadBtn.disabled = true;
+      cloudRestore(input.value).then((res) => {
+        loadBtn.disabled = false;
+        if (res === 'ok') {
+          playFanfare();
+          showToast(trT('save restored!! welcome back, legend ♡', 'sauvegarde restaurée !! re-bienvenue, légende ♡'));
+          renderAchievements();
+          if (typeof renderLeaderboard === 'function') renderLeaderboard();
+        } else if (res === 'badcode') {
+          showToast(trT('that doesn\'t look like a SLIME code 🥺', 'ça ne ressemble pas à un code SLIME 🥺'));
+        } else {
+          showToast(trT('no save found for that code — typo?', 'aucune sauvegarde pour ce code — coquille ?'));
+        }
+      });
+    };
+    panel.appendChild(form);
+  }
+
+  // boot: pull the remote save (if any), merge, then push the union back
+  setTimeout(function cloudBoot() {
+    if (!navigator.onLine) return;
+    if (cloudSlot) {
+      fetch(`${ACHV_API}/get/${ACHV_NS}/sv2-${cloudSlot.uid}`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => {
+          if (d && typeof d.value === 'number') cloudApplyRemote(d.value);
+          cloudQueueSync();
+        })
+        .catch(() => {});
+    } else {
+      cloudQueueSync(); // reserves a slot + first sync
+    }
+  }, 3000);
+
+  window.addEventListener('online', () => cloudQueueSync());
+
   function runTermCommand(raw) {
     const input = raw.trim();
     if (!input) return;
@@ -2821,19 +3369,28 @@ document.addEventListener('DOMContentLoaded', () => {
     const args = lower.split(/\s+/).slice(1);
 
     // ---- the 100 secret codes check in before everything else ----
+    const spellRenames = store.get('yos-cheat-renames', {});
+    const customCanonical = Object.keys(spellRenames).find((c) => spellRenames[c] === spellNorm(lower));
+    if (customCanonical && TERM_CHEATS[customCanonical]) {
+      fireCheat(customCanonical, true);
+      return;
+    }
     if (TERM_CHEATS[lower]) {
-      const c = TERM_CHEATS[lower];
-      termLine(trT(c[0], c[1]), 't-accent');
-      cheatFx(c[2]);
-      const found = store.get('yos-cheats-found', []);
-      if (found.indexOf(lower) === -1) { found.push(lower); store.set('yos-cheats-found', found); }
-      playSparkleSound();
+      if (spellRenames[lower]) {
+        termLine(trT(`⚠ those words are dust. the slime god renamed this spell to \`${spellRenames[lower]}\` — at your request, remember?`, `⚠ ces mots sont poussière. le dieu slime a renommé ce sort en \`${spellRenames[lower]}\` — à ta demande, souviens-toi ?`), 't-err');
+        return;
+      }
+      fireCheat(lower, false);
       return;
     }
     if (lower === 'cheats' || lower === 'secrets') {
-      const found = store.get('yos-cheats-found', []).length;
+      const found = Math.max(store.get('yos-cheats-found', []).length, store.get('yos-cheats-cloudn', 0));
+      const renamed = Object.keys(store.get('yos-cheat-renames', {})).length;
       termLine(trT(`there are 100 secret codes hidden in this OS. you have found ${found}.`, `il y a 100 codes secrets cachés dans cet OS. tu en as trouvé ${found}.`), 't-accent');
       termLine(trT('I will never list them. try `hint` if you must.', 'je ne les listerai jamais. essaie `hint` en désespoir de cause.'), 't-dim');
+      termLine(trT('close guesses count — the slime god grades fan fiction as canon.', 'les réponses approximatives comptent — le dieu slime accepte la fanfiction comme canon.'), 't-dim');
+      if (renamed) termLine(trT(`(${renamed} spell${renamed === 1 ? '' : 's'} in the book now bear YOUR handwriting)`, `(${renamed} sort${renamed === 1 ? '' : 's'} du grimoire porte${renamed === 1 ? '' : 'nt'} désormais TON écriture)`), 't-ok');
+      termLine(trT('achievements moved in next door: open hall_of_slime.exe 🏅', 'les succès ont emménagé à côté : ouvre hall_of_slime.exe 🏅'), 't-dim');
       return;
     }
     if (lower === 'hint') {
@@ -2858,6 +3415,7 @@ document.addEventListener('DOMContentLoaded', () => {
       termLine(trT('→ email: yuyongshan573@gmail.com (copied to your heart)', '→ courriel : yuyongshan573@gmail.com (copié dans votre cœur)'), 't-accent');
       playFanfare();
       gainFollowers(3);
+      achvUnlock('hired');
       return;
     }
     if (cmd === 'sudo') { termLine(trT('nice try. this slime respects the principle of least privilege.', 'bien tenté. ce slime respecte le principe du moindre privilège.'), 't-err'); return; }
@@ -2927,6 +3485,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const handler = TERM_COMMANDS[cmd];
     if (handler) handler();
+    else if (tryFuzzyCheat(lower)) { /* the slime god heard a near-spell and took over */ }
     else termLine(trT(`${cmd}: command not found — try \`help\``, `${cmd} : commande introuvable — essayez \`help\``), 't-err');
   }
 
@@ -2971,6 +3530,7 @@ document.addEventListener('DOMContentLoaded', () => {
     termLine(trT('YongshanOS terminal — hand-rolled, no libraries.', 'terminal YongshanOS — fait main, sans bibliothèques.'), 't-accent');
     termLine(trT('this shell drives the whole OS: windows, themes, the pet, even the fan wall.', 'ce shell pilote tout l\'OS : fenêtres, thèmes, le familier, même le mur de fans.'), 't-dim');
     termLine(trT('type `help` to see everything · `neofetch` to vibe · `ask <question>` to talk.', 'tapez `help` pour tout voir · `neofetch` pour l\'ambiance · `ask <question>` pour discuter.'), 't-dim');
+    termLine(trT('…oh and there are 100 hidden cheat codes. type `cheats` — wrong guesses are graded VERY generously ♡', '…oh et il y a 100 codes secrets. tapez `cheats` — les mauvaises réponses sont notées TRÈS généreusement ♡'), 't-accent');
     termLine('');
   }
 
@@ -3017,6 +3577,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function applyLang(lang, persist) {
     yosLang = lang === 'fr' ? 'fr' : 'en';
     if (persist) store.set('yos-lang', yosLang);
+    if (persist && yosLang === 'fr') achvUnlock('frenchie');
     document.documentElement.lang = yosLang;
 
     document.querySelectorAll('[data-i18n]').forEach((el) => { el.textContent = t(el.dataset.i18n); });
@@ -3098,6 +3659,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (themeBtn) themeBtn.textContent = th === 'dark' ? '🌞' : '🌙';
 
     if (th === 'dark') buildNightSky();
+    if (th === 'dark') achvUnlock('nightowl');
     applyThemeChrome();
     gRefreshTheme();
     setSlimeSkin(th);
@@ -3319,6 +3881,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (!swVisible(target)) return;
     sleepwalkActive = true;
+    achvUnlock('dreamwatcher');
 
     const habitatRect = slimeHabitat.getBoundingClientRect();
     swEl = document.createElement('div');
@@ -4103,6 +4666,7 @@ document.addEventListener('DOMContentLoaded', () => {
       playFanfare();
       gainFollowers(5);
       showToast(t('toast.liked'));
+      achvUnlock('liked');
       if (!pet.sleeping && !pet.busy) {
         showBubble(yosLang === 'fr' ? 'un nouveau fan !! je t\'aime aussi ♡' : 'a new fan!! I love you too ♡', 2600);
         moveSlime({ action: 'happy', mood: 'adored', duration: 800, distance: 0.3 });
@@ -4293,6 +4857,7 @@ document.addEventListener('DOMContentLoaded', () => {
       GAME.state = 'run';
       gReset();
       playClickSound();
+      if (!navigator.onLine) achvUnlock('nowifi');
       return;
     }
     if (GAME.y <= 0) {
@@ -4309,10 +4874,12 @@ document.addEventListener('DOMContentLoaded', () => {
     playGlitchSound();
     maybeWakeSleeper();
     const finalScore = Math.floor(GAME.score);
+    if (gPlaySecs() < 3) achvUnlock('speedran');
     const isRecord = finalScore > GAME.hi;
     if (isRecord) {
       GAME.hi = finalScore;
       store.set('yos-runner-hi', GAME.hi);
+      cloudQueueSync();
       playFanfare();
       chatShout(`NEW HIGH SCORE: ${finalScore}!! the slime is unstoppable`, `NOUVEAU RECORD : ${finalScore} !! le slime est inarrêtable`);
     }
@@ -4736,6 +5303,7 @@ document.addEventListener('DOMContentLoaded', () => {
             playFanfare();
             gMarkJoy();
             gSpectate('bosskill');
+            achvUnlock('bosskill');
             maybeWakeSleeper();
           }
           return false;
@@ -5161,6 +5729,9 @@ document.addEventListener('DOMContentLoaded', () => {
     GAME.state = 'ad';
     GAME.adT = 0;
     GAME.adSkit = Math.floor(Math.random() * AD_SKITS.length);
+    // the reaction cam ducks to the bottom-right so the ⏳ countdown stays visible
+    const adCam = document.getElementById('game-reaction-cam');
+    if (adCam) adCam.classList.add('cam-ad-dock');
     playClickSound();
     if (!pet.sleeping) showBubble(trT('rolling the ad!! I star in this one ♡', 'la pub tourne !! je joue dedans ♡'), 2400);
   }
@@ -5171,6 +5742,8 @@ document.addEventListener('DOMContentLoaded', () => {
     GAME.obs = [];
     GAME.boss = null;
     GAME.pickup = null;
+    const adCam = document.getElementById('game-reaction-cam');
+    if (adCam) adCam.classList.remove('cam-ad-dock');
     fxInvincible(2.6);
     playFanfare();
     gToast(['📺 revived!! sponsored by: absolutely nobody ♡', '📺 ressuscité !! sponsorisé par : absolument personne ♡'], 200);
@@ -5295,6 +5868,7 @@ document.addEventListener('DOMContentLoaded', () => {
     GAME.pickup = null;
     playGlitchSound();
     gToast(['💀 the sleepwalker had a NIGHTMARE… and became the BIGGEST BUG EVER', '💀 le somnambule a fait un CAUCHEMAR… et est devenu le PLUS GROS BUG DE TOUS LES TEMPS'], 240);
+    achvUnlock('nightmare');
     setTimeout(() => gToast(['tutorial: WASD moves you!! W = up. A = left. the rest… you\'ll figure it out ♡', 'tuto : WASD pour bouger !! W = haut. A = gauche. le reste… tu trouveras ♡'], 250), 2800);
     setTimeout(() => { if (GAME.nm) gToast(['RAM ITS GLOWING HEART!! (ram = touch. with love.)', 'FONCE DANS SON CŒUR QUI BRILLE !! (foncer = toucher. avec amour.)'], 240); }, 6200);
   }
@@ -5362,6 +5936,7 @@ document.addEventListener('DOMContentLoaded', () => {
     fxCoinRain(14);
     playFanfare();
     gToast(['🌸 NIGHTMARE DEBUGGED!! +40 · the sleepwalker purrs and fades…', '🌸 CAUCHEMAR DÉBUGUÉ !! +40 · le somnambule ronronne et s\'efface…'], 260);
+    achvUnlock('nightmareslain');
     if (!pet.sleeping && typeof showBubble === 'function') {
       setTimeout(() => showBubble(trT('…I had the WEIRDEST dream ♡', "…j'ai fait le rêve le plus BIZARRE ♡"), 2600), 900);
     }
@@ -6293,6 +6868,7 @@ document.addEventListener('DOMContentLoaded', () => {
           store.set('yos-lb', b.slice(0, 10));
           window.__lbPendingScore = null;
           playFanfare();
+          achvUnlock('top10');
           renderLeaderboard();
         };
       }
@@ -6351,7 +6927,7 @@ document.addEventListener('DOMContentLoaded', () => {
         btn2.textContent = trT(`📡 sync offline best (${offBest}) to the global hall`, `📡 publier le record hors-ligne (${offBest}) au panthéon`);
         btn2.onclick = () => {
           fetch(`${LIKE_API}/hit/${LIKE_NS}/lb-t${lbTierIndex(offBest)}`).catch(() => {});
-          if (offBest > store.get('yos-runner-hi', 0)) store.set('yos-runner-hi', offBest);
+          if (offBest > store.get('yos-runner-hi', 0)) { store.set('yos-runner-hi', offBest); cloudQueueSync(); }
           window.__lbPendingScore = offBest;
           store.set('yos-offline-best', 0);
           playFanfare();
