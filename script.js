@@ -701,14 +701,14 @@ document.addEventListener('DOMContentLoaded', () => {
     sideBow(ctx, c) { oR(ctx,30,3,4,3,c); oR(ctx,35,3,4,3,c); oR(ctx,34,4,1,1,INK); },
     flower(ctx, c) { oR(ctx,31,1,3,3,c); oR(ctx,28,2,3,3,c); oR(ctx,34,2,3,3,c); oR(ctx,31,4,3,3,c); oR(ctx,31.5,2.5,2,2,'#ffe98a'); },
     sprout(ctx) {
-      // v2: a REAL pikmin head-plant — every wear rolls a random style,
-      // stage and tint from the same nursery the buddies grow from
-      // (drawn fully below y=0: the old leaves used to get decapitated
-      // by the canvas edge and read as a lonely green rectangle)
+      // v3: THE head-plant — hats are retired, every look grows one of
+      // the 35 nursery styles instead. seeded once per outfit so all
+      // three frames (base/sleep/eat) wear the exact same bloom.
       if (typeof PIK_PLANT_TPLS === 'undefined') { oR(ctx,22,1,2,4,'#4ea564'); oR(ctx,19,0,4,3,'#7ee0a3'); return; }
-      const style = PIK_PLANT_TPLS[Math.floor(Math.random() * PIK_PLANT_TPLS.length)];
-      const rows = style[Math.floor(Math.random() * 3)];
-      const tint = hueColor(5 + Math.floor(Math.random() * 355));
+      const seed = PARTS._plantSeed != null ? PARTS._plantSeed : Math.random();
+      const style = PIK_PLANT_TPLS[Math.floor(seed * 9973) % PIK_PLANT_TPLS.length];
+      const rows = style[Math.floor(seed * 331) % 3];
+      const tint = hueColor(5 + Math.floor(seed * 355));
       const pal = { S: '#57c689', L: '#7ddba4', Y: '#ffd400', P: '#ff8fc7', w: '#ffffff', D: tint.dark, B: tint.body, W: 'rgba(255,255,255,0.6)', e: INK, u: '#ffb3dd' };
       rows.forEach((row, ty) => {
         for (let tx = 0; tx < row.length; tx++) {
@@ -902,12 +902,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const ctx = outfitCanvas.getContext('2d');
     const frames = {};
     let ok = true;
+    PARTS._plantSeed = Math.random(); // one plant per look — no flicker across frames
     ['base', 'sleep', 'eat'].forEach((k) => {
       const im = SLIME_IMGS[k];
       if (!im.complete || !im.naturalWidth) { ok = false; return; }
       ctx.clearRect(0, 0, 535, 466);
       ctx.drawImage(im, 0, 0);
-      outfit.parts.forEach(([fn, ...args]) => { try { drawOutfitPart(ctx, fn, args); } catch (e) { /* a hat refused to fit */ } });
+      // hats retired by decree: every look keeps its body accessories but
+      // wears a pikmin head-plant instead — one random pick per outfit,
+      // shared across all three frames so the plant doesn't flicker
+      outfit.parts.filter(([fn]) => !HEAD_PARTS.has(fn))
+        .forEach(([fn, ...args]) => { try { drawOutfitPart(ctx, fn, args); } catch (e) { /* an accessory refused to fit */ } });
+      try { drawOutfitPart(ctx, 'sprout', []); } catch (e) { /* the nursery was closed */ }
       frames[k] = frameCapture();
       if (k === 'base') {
         drawGrumpy(ctx);
@@ -1145,13 +1151,38 @@ document.addEventListener('DOMContentLoaded', () => {
     // while the slime is in bed (dark mode), only sleep-talk may surface
     if (typeof ghostHidden === 'function' && ghostHidden() && !allowWhileAway) return;
     if (speechTimeout) clearTimeout(speechTimeout);
+    if (speechBubble._marquee) { clearInterval(speechBubble._marquee); speechBubble._marquee = null; }
 
     speechBubble.textContent = text;
+    speechBubble.scrollLeft = 0;
     speechBubble.classList.add('show-bubble');
+
+    // long lines read THEMSELVES: the bubble auto-pans to the end and
+    // back, and stays up long enough for an actual human to follow
+    requestAnimationFrame(() => {
+      if (speechBubble.textContent !== text) return; // a newer line took the mic
+      const over = speechBubble.scrollWidth - speechBubble.clientWidth;
+      if (over > 8) {
+        duration = Math.max(duration, 2600 + over * 18);
+        let dir = 1;
+        let pauseUntil = Date.now() + 900;
+        speechBubble._marquee = setInterval(() => {
+          if (Date.now() < pauseUntil) return;
+          speechBubble.scrollLeft += dir * 1.5;
+          if (dir > 0 && speechBubble.scrollLeft >= over - 1) { dir = -1; pauseUntil = Date.now() + 700; }
+          else if (dir < 0 && speechBubble.scrollLeft <= 0) { dir = 1; pauseUntil = Date.now() + 700; }
+        }, 24);
+      }
+      if (speechTimeout) clearTimeout(speechTimeout);
+      speechTimeout = setTimeout(() => {
+        speechBubble.classList.remove('show-bubble');
+        if (speechBubble._marquee) { clearInterval(speechBubble._marquee); speechBubble._marquee = null; }
+      }, duration);
+    });
 
     speechTimeout = setTimeout(() => {
       speechBubble.classList.remove('show-bubble');
-    }, duration);
+    }, duration + 4000); // hidden-tab fallback; the rAF path replaces it
   }
 
   function randomPhrase(list = dynD().idle) {
@@ -4183,6 +4214,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const rest = input.slice(parts[0].length).trim();
     const args = lower.split(/\s+/).slice(1);
 
+    // ---- nightmare dream-lock: the shell answers to `wake up` first ----
+    if (GAME && GAME.nm && GAME.nm.attack && GAME.nm.attack.kind === 'term') {
+      if (lower === 'wake up' || lower === 'wakeup') {
+        termLine(trT('☀ the loop SHATTERS. the shell is yours again.', '☀ la boucle SE BRISE. le shell est de nouveau à vous.'), 't-ok');
+        nmResolveAttack(2, '🖥️ dream-lock broken!!', '🖥️ verrou de rêve brisé !!');
+        return;
+      }
+      if (lower === 'yongshan') {
+        termLine(trT('⚡ THE SKELETON KEY. the boss recognizes the handwriting and PANICS.', '⚡ LE PASSE-PARTOUT. le boss reconnaît l\'écriture et PANIQUE.'), 't-ok');
+        nmResolveAttack(4, '⚡ DEV\'S PET CHEAT!!', '⚡ TRICHE PERSO DE LA DEV !!');
+        if (typeof pikParade === 'function') pikParade();
+        return;
+      }
+    }
+
     // ---- the 100 secret codes check in before everything else ----
     const spellRenames = store.get('yos-cheat-renames', {});
     const customCanonical = Object.keys(spellRenames).find((c) => spellRenames[c] === spellNorm(lower));
@@ -6194,6 +6240,11 @@ document.addEventListener('DOMContentLoaded', () => {
       gReset();
       playClickSound();
       if (!navigator.onLine) achvUnlock('nowifi');
+      // a saved nightmare stirs: in the dark, it comes back for you
+      if (resolvedTheme() === 'dark' && store.get('yos-nm-save', null)) {
+        gToast(['💾 a saved NIGHTMARE stirs… it returns in a few seconds', '💾 un CAUCHEMAR sauvegardé s\'agite… il revient dans quelques secondes'], 220);
+        setTimeout(() => { if (GAME.state === 'run' && !GAME.nm) gNightmareStart(); }, 6000);
+      }
       return;
     }
     if (GAME.y <= 0) {
@@ -6206,6 +6257,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function gGameOver() {
     GAME.state = 'over';
+    if (typeof nmClearAttack === 'function') nmClearAttack(); // no orphan summon overlays
+    const stamp = document.getElementById('nm-hire-stamp');
+    if (stamp) stamp.remove();
     // a held-down space bar must not insta-restart past the ad offer
     GAME.overLockUntil = Date.now() + 2500;
     playGlitchSound();
@@ -6371,8 +6425,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  function gTick() {
-    requestAnimationFrame(gTick);
+  function gTick(manual) {
+    if (manual !== true) requestAnimationFrame(gTick); // manual test-steps must not fork the loop
     if (!gCanvas || !gWin) return;
     if (gWin.classList.contains('window-closed') || gWin.classList.contains('window-minimized')) return;
 
@@ -7356,17 +7410,294 @@ document.addEventListener('DOMContentLoaded', () => {
       ] }
   ];
 
+  /* ---------- NIGHTMARE SUMMONS: its dream-talk now drags the WHOLE
+     SITE into the arena. each summoned attack drains you until you
+     resolve it — and every resolution staggers the boss. ---------- */
+  const NM_SUMMONS = [
+    { id: 'captcha', t: ['zzz… are you… even… human…?', 'zzz… es-tu… seulement… humain… ?'], e: '🤖' },
+    { id: 'resume', t: ['zzz… your résumé… has… gaps…', 'zzz… ton CV… a… des trous…'], e: '📄' },
+    { id: 'term', t: ['zzz… I locked… your shell… in the dream…', 'zzz… j\'ai enfermé… ton shell… dans le rêve…'], e: '🖥️' },
+    { id: 'bsod', t: ['zzz… everything… goes… PINK…', 'zzz… tout… devient… ROSE…'], e: '💗' },
+    { id: 'pik', t: ['zzz… your little friends… look… delicious…', 'zzz… tes petits copains… ont l\'air… délicieux…'], e: '🥡' }
+  ];
+  function nmOverlayRoot() {
+    let root = document.getElementById('nm-summon-root');
+    if (!root) {
+      root = document.createElement('div');
+      root.id = 'nm-summon-root';
+      document.body.appendChild(root);
+    }
+    return root;
+  }
+  function nmAttackBegin(kind) {
+    if (!GAME.nm) return;
+    GAME.nm.attack = { kind, t0: GAME.frame, drainAt: GAME.frame + 120 };
+    playGlitchSound();
+  }
+  function nmClearAttack() {
+    const root = document.getElementById('nm-summon-root');
+    if (root) root.innerHTML = '';
+    if (GAME.nm) GAME.nm.attack = null;
+  }
+  function nmResolveAttack(dmg, noteEn, noteFr) {
+    if (!GAME.nm || !GAME.nm.attack) return;
+    nmClearAttack();
+    GAME.nm.hp -= dmg;
+    GAME.nm.hitFlash = 12;
+    GAME.nm.weak = null;
+    GAME.nm.weakAt = GAME.frame + 30; // staggered: the heart surfaces almost at once
+    GAME.score += dmg * 4;
+    playFanfare();
+    gToast([`${noteEn} the nightmare reels: -${dmg} hp!!`, `${noteFr} le cauchemar vacille : -${dmg} pv !!`], 200);
+    if (GAME.nm.hp <= 0) gNmWin();
+  }
+  function nmPanel(title) {
+    const root = nmOverlayRoot();
+    root.innerHTML = '';
+    const panel = document.createElement('div');
+    panel.className = 'nm-panel';
+    const head = document.createElement('div');
+    head.className = 'nm-panel-head';
+    head.textContent = title;
+    panel.appendChild(head);
+    root.appendChild(panel);
+    return panel;
+  }
+  /* — summon 1: slimeCAPTCHA. pixel Y2K robot check, pikmin edition — */
+  function nmSummonCaptcha() {
+    nmAttackBegin('captcha');
+    const mode = Math.abs(gStateHash('captcha' + GAME.frame)) % 3;
+    if (mode === 0) {
+      // click every square containing a PIKMIN (decoys: meadow blooms)
+      const panel = nmPanel(trT('🤖 slimeCAPTCHA — select every square with a PIKMIN', '🤖 slimeCAPTCHA — cochez chaque case avec un PIKMIN'));
+      const grid = document.createElement('div');
+      grid.className = 'nm-cap-grid';
+      const cast = (typeof pikEnsureCast === 'function') ? pikEnsureCast() : [];
+      const cells = [];
+      let pikCount = 0;
+      for (let i = 0; i < 9; i++) {
+        const isPik = Math.random() < 0.45 || (i === 8 && pikCount === 0);
+        const cell = document.createElement('button');
+        cell.type = 'button';
+        cell.className = 'nm-cap-cell';
+        const img = document.createElement('img');
+        if (isPik && cast.length) {
+          const p = cast[i % cast.length];
+          img.src = pikSprite(pikEntryColor(p), p.s || 0, p.sp || null);
+          cell.dataset.pik = '1';
+          pikCount++;
+        } else {
+          img.src = (typeof trailBloomSprite === 'function') ? trailBloomSprite(i % 6) : '';
+        }
+        img.alt = '';
+        cell.appendChild(img);
+        cell.addEventListener('click', () => {
+          cell.classList.toggle('is-picked');
+          const picked = [...grid.querySelectorAll('.is-picked')];
+          const right = picked.every((c) => c.dataset.pik) && picked.length === grid.querySelectorAll('[data-pik]').length;
+          if (right && picked.length) nmResolveAttack(2, '🤖 HUMAN (and pikmin-literate)!!', '🤖 HUMAIN (et pikminophile) !!');
+        });
+        cells.push(cell);
+        grid.appendChild(cell);
+      }
+      panel.appendChild(grid);
+      const hint = document.createElement('div');
+      hint.className = 'nm-panel-hint';
+      hint.textContent = trT('(the flowers are DECOYS. classic robot trap.)', '(les fleurs sont des LEURRES. piège à robot classique.)');
+      panel.appendChild(hint);
+    } else if (mode === 1) {
+      // the checkbox that dodges — twice — then surrenders
+      const panel = nmPanel(trT('🤖 slimeCAPTCHA — just tick the box. easy. right?', '🤖 slimeCAPTCHA — cochez la case. facile. non ?'));
+      const row = document.createElement('button');
+      row.type = 'button';
+      row.className = 'nm-cap-checkrow';
+      row.textContent = trT('☐ I am not a robot', '☐ Je ne suis pas un robot');
+      let dodges = 0;
+      row.addEventListener('mouseenter', () => {
+        if (dodges < 2) { dodges++; row.style.transform = `translate(${(Math.random() * 120 - 60) | 0}px, ${(Math.random() * 60 - 20) | 0}px)`; playTone(300, 'square', 0.05, 0, 0.03); }
+        else row.style.transform = '';
+      });
+      row.addEventListener('click', () => {
+        if (dodges < 2) { dodges++; row.style.transform = `translate(${(Math.random() * 120 - 60) | 0}px, 20px)`; return; }
+        row.textContent = trT('☑ I am not a robot (verified by vibes)', '☑ Je ne suis pas un robot (vérifié aux vibes)');
+        setTimeout(() => nmResolveAttack(2, '🤖 the box surrendered!!', '🤖 la case a capitulé !!'), 350);
+      });
+      panel.appendChild(row);
+      const hint = document.createElement('div');
+      hint.className = 'nm-panel-hint';
+      hint.textContent = trT('(it dodges twice. everyone has limits.)', '(elle esquive deux fois. chacun ses limites.)');
+      panel.appendChild(hint);
+    } else {
+      // one precise computer cold-joke question
+      const QS = [
+        { q: ['how many kinds of visitors read binary?', 'combien de types de visiteurs lisent le binaire ?'], opts: ['2', '10', '♡'], ok: 1 },
+        { q: ['a bug that ships anyway is called…', 'un bug livré quand même s\'appelle…'], opts: [trT('a mistake', 'une erreur'), trT('a FEATURE', 'une FONCTIONNALITÉ'), trT('art', 'de l\'art')], ok: 1 },
+        { q: ['where do pikmin store their memories?', 'où les pikmin stockent-ils leurs souvenirs ?'], opts: ['RAM', trT('the cloud ☁️ (it\'s a species)', 'le nuage ☁️ (c\'est une espèce)'), 'floppy'], ok: 1 }
+      ];
+      const pick = QS[Math.abs(gStateHash('capq' + GAME.frame)) % QS.length];
+      const panel = nmPanel('🤖 slimeCAPTCHA — ' + trT(pick.q[0], pick.q[1]));
+      const row = document.createElement('div');
+      row.className = 'nm-cap-opts';
+      pick.opts.forEach((o, i) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'nm-cap-opt';
+        b.textContent = String(o);
+        b.addEventListener('click', () => {
+          if (i === pick.ok) nmResolveAttack(2, '🤖 correct!!', '🤖 correct !!');
+          else { b.classList.add('is-wrong'); playTone(180, 'sawtooth', 0.1, 0, 0.05); }
+        });
+        row.appendChild(b);
+      });
+      panel.appendChild(row);
+    }
+  }
+  /* — summon 2: the résumé attack. stamp it HIRED to stop the guilt — */
+  function nmSummonResume() {
+    nmAttackBegin('resume');
+    openWindow('win-career');
+    const body = document.querySelector('#win-career .window-body');
+    if (!body) { nmResolveAttack(1, '📄', '📄'); return; }
+    const stamp = document.createElement('button');
+    stamp.type = 'button';
+    stamp.id = 'nm-hire-stamp';
+    stamp.className = 'nm-hire-stamp';
+    stamp.textContent = trT('HIRE ME ♡', 'EMBAUCHEZ-MOI ♡');
+    stamp.addEventListener('click', () => {
+      stamp.classList.add('is-stamped');
+      stamp.textContent = trT('HIRED ♡♡♡', 'EMBAUCHÉE ♡♡♡');
+      playFanfare();
+      setTimeout(() => {
+        stamp.remove();
+        nmResolveAttack(2, '📄 résumé APPROVED!!', '📄 CV APPROUVÉ !!');
+      }, 600);
+    });
+    body.appendChild(stamp);
+    gToast(['📄 it summoned the RESUME!! find the bouncing stamp and HIRE HER to stop the drain!!', '📄 il a invoqué le CV !! trouvez le tampon qui rebondit et EMBAUCHEZ-LA pour stopper la fuite !!'], 240);
+  }
+  /* — summon 3: the shell is dream-locked. `wake up` frees you.
+       (the dev left a skeleton key: her NAME hits like a truck) — */
+  function nmSummonTerminal() {
+    nmAttackBegin('term');
+    openWindow('win-terminal');
+    termLine('', '');
+    termLine(trT('🌙 THE NIGHTMARE LOCKED THIS SHELL IN A DREAM LOOP', '🌙 LE CAUCHEMAR A ENFERMÉ CE SHELL DANS UNE BOUCLE DE RÊVE'), 't-err');
+    termLine(trT('type `wake up` to break the loop and stagger the boss', 'tapez `wake up` pour briser la boucle et étourdir le boss'), 't-accent');
+    termLine(trT('(psst — the dev left her own skeleton key in here: typing `yongshan` hits the boss REALLY hard. her privilege, your gain ♡)', '(psst — la dev a laissé son passe-partout ici : taper `yongshan` frappe le boss TRÈS fort. son privilège, votre gain ♡)'), 't-dim');
+  }
+  /* — summon 4: the pink screen of dreams. any key banishes it — */
+  function nmSummonBsod() {
+    nmAttackBegin('bsod');
+    const root = nmOverlayRoot();
+    root.innerHTML = '';
+    const scr = document.createElement('div');
+    scr.className = 'yos-bsod nm-bsod';
+    const face = document.createElement('div');
+    face.className = 'yos-bsod-face';
+    face.textContent = ':(';
+    const txt = document.createElement('div');
+    txt.className = 'yos-bsod-text';
+    txt.textContent = trT('NIGHTMARE_OVERFLOW at 0xZZZ… press ANY key to banish the pink', 'NIGHTMARE_OVERFLOW à 0xZZZ… toute touche bannit le rose');
+    scr.append(face, txt);
+    const done = () => {
+      document.removeEventListener('keydown', done, true);
+      nmResolveAttack(2, '💗 pink banished!!', '💗 rose banni !!');
+    };
+    scr.addEventListener('click', done);
+    document.addEventListener('keydown', done, true);
+    root.appendChild(scr);
+  }
+  /* — summon 5: it CAGED one of your pikmin. smash the cage ×3 — */
+  function nmSummonPikRescue() {
+    nmAttackBegin('pik');
+    const cast = (typeof pikEnsureCast === 'function') ? pikEnsureCast() : [];
+    const p = cast[0] || { h: 150, s: 2 };
+    const panel = nmPanel(trT('🥡 IT CAGED YOUR PIKMIN!! smash the cage (×3) to free it!!', '🥡 IL A ENCAGÉ VOTRE PIKMIN !! brisez la cage (×3) pour le libérer !!'));
+    const cage = document.createElement('button');
+    cage.type = 'button';
+    cage.className = 'nm-cage';
+    const bars = document.createElement('span');
+    bars.className = 'nm-cage-bars';
+    bars.textContent = '▮▮▮▮▮';
+    const img = document.createElement('img');
+    img.src = pikSprite(pikEntryColor(p), p.s || 0, p.sp || null);
+    img.alt = '';
+    cage.append(img, bars);
+    let hits = 0;
+    cage.addEventListener('click', () => {
+      hits++;
+      cage.classList.remove('is-hit');
+      void cage.offsetWidth;
+      cage.classList.add('is-hit');
+      playTone(240 + hits * 120, 'square', 0.08, 0, 0.05);
+      bars.textContent = '▮▮▮▮▮'.slice(0, 5 - hits) + '⛓'.repeat(0);
+      if (hits >= 3) {
+        nmResolveAttack(3, trT('🌸 FREED!! it bites the boss on the way out!!', '🌸 LIBÉRÉ !!'), '🌸 LIBÉRÉ !! il mord le boss en sortant !!');
+      }
+    });
+    panel.appendChild(cage);
+  }
+  const NM_SUMMON_FX = { captcha: nmSummonCaptcha, resume: nmSummonResume, term: nmSummonTerminal, bsod: nmSummonBsod, pik: nmSummonPikRescue };
+  // dev/testing backdoor (read-mostly) — also a fun console toy ♡
+  try {
+    window.__yosNM = {
+      force() { if (GAME.state === 'run' && !GAME.nm) { gNightmareStart(); return true; } return false; },
+      state() {
+        return {
+          state: GAME.state, lives: GAME.lives, coins: GAME.coins, px: GAME.nmPx,
+          nm: GAME.nm ? { hp: GAME.nm.hp, intro: GAME.nm.intro, attack: GAME.nm.attack && GAME.nm.attack.kind, disk: !!GAME.nm.disk, queue: (GAME.nm.summonQueue || []).slice() } : null
+        };
+      },
+      summon(id) { if (GAME.nm && !GAME.nm.attack && NM_SUMMON_FX[id]) { NM_SUMMON_FX[id](); return true; } return false; },
+      disk() { if (GAME.nm) { GAME.nm.disk = { x: (GAME.nmPx || 46) + 26, y: G_GROUND - 26 }; return true; } return false; },
+      save() { return store.get('yos-nm-save', null); },
+      tick(n) { // manual frame-stepping: rAF sleeps in hidden tabs, tests don't
+        for (let i = 0; i < (n || 1); i++) { try { gTick(true); } catch (e) { return String(e); } }
+        return true;
+      }
+    };
+  } catch (e) { /* no window, no toys */ }
+
+  /* — the random checkpoint disk: catch it mid-fight, keep your progress
+       across visits. cozy soulslike. — */
+  function nmSaveState() {
+    if (!GAME.nm) return;
+    store.set('yos-nm-save', {
+      hp: GAME.nm.hp, lives: GAME.lives, coins: GAME.coins, score: GAME.score,
+      said: GAME.nm.said, queue: GAME.nm.summonQueue, t: Date.now()
+    });
+    playSparkleSound();
+    gToast(['💾 CHECKPOINT!! nightmare progress saved — it keeps across visits ♡', '💾 CHECKPOINT !! progression du cauchemar sauvegardée — même entre deux visites ♡'], 220);
+  }
+
   function gNightmareStart() {
     GAME.nm = {
       hp: 12, x: G_W + 60, t: 0, intro: 150,
       weak: null, weakAt: GAME.frame + 260, hurtCd: 0,
       shots: [], hitFlash: 0,
-      sayAt: GAME.frame + 380, say: null, said: []
+      sayAt: GAME.frame + 380, say: null, said: [],
+      attack: null,
+      summonQueue: NM_SUMMONS.map((s) => s.id).sort(() => Math.random() - 0.5),
+      nextSummonAt: GAME.frame + 700,
+      disk: null, diskAt: GAME.frame + 900 + Math.random() * 600
     };
+    // a caught checkpoint disk brings you right back where you left off
+    const sav = store.get('yos-nm-save', null);
+    if (sav && typeof sav.hp === 'number') {
+      GAME.nm.hp = Math.max(1, Math.min(12, sav.hp));
+      GAME.nm.said = sav.said || [];
+      if (Array.isArray(sav.queue)) GAME.nm.summonQueue = sav.queue;
+      GAME.lives = Math.max(GAME.lives, sav.lives || 1);
+      GAME.coins = Math.max(GAME.coins, sav.coins || 0);
+      GAME.score = Math.max(GAME.score, sav.score || 0);
+      setTimeout(() => gToast([`💾 checkpoint restored!! the nightmare remembers you (hp ${GAME.nm ? GAME.nm.hp : '?'}/12)`, `💾 checkpoint restauré !! le cauchemar se souvient de vous (pv ${GAME.nm ? GAME.nm.hp : '?'}/12)`], 240), 2600);
+    }
     GAME.nmPx = G_SLIME_X;
     GAME.obs = [];
     GAME.boss = null;
     GAME.pickup = null;
+    GAME.event = null; // the nightmare clears the stage — no event dialogs mid-boss
+    GAME.nextEventSec = 99999; // and none may interrupt (gNmWin re-arms below)
     // ⚡ GRAND ENTRANCE: rumble, alarm arpeggio, the works
     playGlitchSound();
     playTone(65, 'sawtooth', 0.5, 0, 0.12);
@@ -7402,6 +7733,20 @@ document.addEventListener('DOMContentLoaded', () => {
   function gNmSpeak() {
     const nm = GAME.nm;
     if (!nm) return;
+    // a due SUMMON outranks ordinary dream-talk (one at a time, queued)
+    if (!nm.attack && nm.summonQueue && nm.summonQueue.length && GAME.frame >= nm.nextSummonAt) {
+      const sid = nm.summonQueue.shift();
+      const sum = NM_SUMMONS.find((s) => s.id === sid);
+      if (sum && NM_SUMMON_FX[sid]) {
+        nm.say = { text: trT(sum.t[0], sum.t[1]), until: GAME.frame + 220 };
+        playTone(340, 'sine', 0.2, 0, 0.04);
+        playTone(200, 'sine', 0.3, 0.14, 0.05);
+        setTimeout(() => { if (GAME.nm) NM_SUMMON_FX[sid](); }, 1500);
+        nm.nextSummonAt = GAME.frame + 1150; // next summon well after this one resolves
+        nm.sayAt = GAME.frame + 520;
+        return;
+      }
+    }
     let pool = NM_DREAMS.filter((d) => nm.said.indexOf(d.id) === -1);
     if (!pool.length) { nm.said = []; pool = NM_DREAMS; }
     const joke = pool[Math.abs(gStateHash('dream' + nm.t)) % pool.length];
@@ -7440,6 +7785,20 @@ document.addEventListener('DOMContentLoaded', () => {
     // dream-talk: its one and only attack
     if (nm.intro <= 0 && GAME.frame >= nm.sayAt) gNmSpeak();
     if (nm.say && GAME.frame > nm.say.until) nm.say = null;
+    // an unresolved SUMMON drains you: coins first, then hearts
+    if (nm.attack && GAME.frame >= nm.attack.drainAt) {
+      nm.attack.drainAt = GAME.frame + 110;
+      if (GAME.coins > 0) { fxCoins(-3); playTone(220, 'sawtooth', 0.06, 0, 0.03); }
+      else { fxLife(-1); gToast(['⚠ the summon is DRAINING you — resolve it!!', '⚠ l\'invocation vous VIDE — résolvez-la !!'], 120); if (GAME.state !== 'run') return; }
+    }
+    // the checkpoint disk: drifts across the floor, catch it with WASD
+    if (!nm.disk && GAME.frame >= nm.diskAt && !nm.attack) {
+      nm.disk = { x: G_W + 14, y: G_GROUND - 26 };
+    }
+    if (nm.disk) {
+      nm.disk.x -= 1.6;
+      if (nm.disk.x < -20) { nm.disk = null; nm.diskAt = GAME.frame + 1100 + Math.random() * 800; }
+    }
     // a glowing weak heart surfaces every few seconds
     if (nm.intro <= 0 && !nm.weak && GAME.frame >= nm.weakAt) {
       nm.weak = { ox: 18 + Math.random() * (NM_W - 44), oy: NM_H * 0.45 + Math.random() * (NM_H * 0.4), until: GAME.frame + 115 };
@@ -7487,6 +7846,12 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       return true;
     });
+    // walking into the checkpoint disk saves the whole fight
+    if (nm.disk && nm.disk.x > px - 12 && nm.disk.x < px + pw + 6 && nm.disk.y > py - 14) {
+      nm.disk = null;
+      nm.diskAt = GAME.frame + 1400 + Math.random() * 900;
+      nmSaveState();
+    }
     // ramming the boss
     const overlap = px < nm.x + NM_W && px + pw > nm.x && py < nmY + NM_H && py + ph > nmY;
     if (overlap) {
@@ -7539,8 +7904,11 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function gNmWin() {
+    nmClearAttack();
+    store.set('yos-nm-save', null); // the nightmare is debugged — checkpoint retired
     GAME.nm = null;
     GAME.nmPx = null;
+    GAME.nextEventSec = gPlaySecs() + 30; // the event layer wakes back up
     liveAway(false); // and the streamer strolls back in, suspiciously sleepy
     const nmCam = document.getElementById('game-reaction-cam');
     if (nmCam && GAME.state !== 'ad') nmCam.classList.remove('cam-ad-dock');
@@ -7579,6 +7947,26 @@ document.addEventListener('DOMContentLoaded', () => {
     const nmY = 8 + Math.sin(nm.t * 0.05) * 7;
     const jx = nm.hitFlash > 0 ? (Math.random() * 4 - 2) : 0; // glitch shudder
     if (nm.hitFlash > 0) nm.hitFlash--;
+    // the drifting checkpoint disk (pixel floppy with a heart label)
+    if (nm.disk) {
+      const dx = nm.disk.x, dy = nm.disk.y + Math.sin(nm.t * 0.1) * 3;
+      g2.fillStyle = '#8fd4fa'; g2.fillRect(dx, dy, 16, 16);
+      g2.fillStyle = '#5a3d6e'; g2.fillRect(dx + 3, dy, 10, 6);
+      g2.fillStyle = '#fffdfb'; g2.fillRect(dx + 3, dy + 9, 10, 6);
+      g2.fillStyle = '#ff5fb0'; g2.fillRect(dx + 7, dy + 11, 3, 3);
+      g2.font = "9px 'Jersey 25', 'VT323', monospace";
+      g2.fillStyle = '#ffd400';
+      g2.fillText(trT('SAVE!', 'SAVE !'), dx - 2, dy - 4);
+    }
+    // active summon banner: the player always knows WHAT to resolve
+    if (nm.attack) {
+      g2.textAlign = 'center';
+      g2.fillStyle = '#ff5fb0';
+      g2.font = "12px 'Jersey 25', 'VT323', monospace";
+      const label = { captcha: trT('🤖 SOLVE THE CAPTCHA!!', '🤖 RÉSOLVEZ LE CAPTCHA !!'), resume: trT('📄 STAMP THE RESUME (career window)!!', '📄 TAMPONNEZ LE CV (fenêtre career) !!'), term: trT('🖥️ TYPE `wake up` IN THE TERMINAL!!', '🖥️ TAPEZ `wake up` DANS LE TERMINAL !!'), bsod: trT('💗 PRESS ANY KEY!!', '💗 APPUYEZ SUR UNE TOUCHE !!'), pik: trT('🥡 SMASH THE CAGE!!', '🥡 BRISEZ LA CAGE !!') }[nm.attack.kind] || '';
+      g2.fillText(label, G_W / 2, G_H - 10);
+      g2.textAlign = 'left';
+    }
     // entrance veil: the arena dims while the giant drifts in (soft, steady)
     if (nm.intro > 0) {
       g2.globalAlpha = Math.min(0.42, nm.intro / 150 * 0.42);
@@ -7966,7 +8354,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       // encounters follow a calm clock: first at ~24-32s, then every 38-60s
-      if (!GAME.event && !GAME.boss && gPlaySecs() > GAME.nextEventSec) gStartEvent();
+      if (!GAME.event && !GAME.boss && !GAME.nm && gPlaySecs() > GAME.nextEventSec) gStartEvent();
       // the HR fairy strikes while the iron is warm: 45s+ of play AND the
       // player just got something delicious (joy stamped < 9s ago)
       if (!GAME.event && !GAME.boss && !gInterviewOffered && gPlaySecs() > 45 &&
@@ -9296,7 +9684,107 @@ document.addEventListener('DOMContentLoaded', () => {
     [ // 9 signal antenna: zigzag → ball tip → glowing tip (very computer)
       ['...........', '....S......', '.....S.....', '....S......', '.....S.....'],
       ['....D......', '.....S.....', '....S......', '.....S.....', '.....S.....'],
-      ['....Y......', '....YS.....', '.....S.....', '....S......', '.....S.....']]
+      ['....Y......', '....YS.....', '.....S.....', '....S......', '.....S.....']],
+    [ // 10 sakura: petal pair → puff → five-petal blossom
+      ['...........', '....P......', '.....SP....', '.....S.....', '.....S.....'],
+      ['....PP.....', '....PP.....', '.....S.....', '.....S.....', '.....S.....'],
+      ['...P.w.P...', '....PwP....', '...P.S.P...', '.....S.....', '.....S.....']],
+    [ // 11 sunflower: shoot → ring bud → big gold face
+      ['...........', '.....L.....', '.....S.....', '.....S.....', '.....S.....'],
+      ['....YYY....', '....YDY....', '.....S.....', '.....S.....', '.....S.....'],
+      ['...YYYYY...', '...YDDDY...', '...YYYYY...', '.....S.....', '.....S.....']],
+    [ // 12 dandelion: leaf → tuft → full wish-puff
+      ['...........', '.....L.....', '....LS.....', '.....S.....', '.....S.....'],
+      ['....www....', '.....w.....', '.....S.....', '.....S.....', '.....S.....'],
+      ['....w.w....', '...w.w.w...', '....w.w....', '.....S.....', '.....S.....']],
+    [ // 13 cattail: reed → velvet tip → tall corn-dog (botanical!)
+      ['.....L.....', '.....S.....', '.....S.....', '.....S.....', '.....S.....'],
+      ['.....D.....', '.....D.....', '.....S.....', '.....S.....', '.....S.....'],
+      ['.....D.....', '.....D.....', '.....D.....', '.....S.....', '.....S.....']],
+    [ // 14 fern curl: tight curl → half open → full spiral
+      ['...........', '...........', '....SS.....', '.....S.....', '.....S.....'],
+      ['....SSS....', '....S......', '.....S.....', '.....S.....', '.....S.....'],
+      ['...SSS.....', '...S.SS....', '....SS.....', '.....S.....', '.....S.....']],
+    [ // 15 lavender: sprig → twin buds → stacked bloom
+      ['...........', '.....L.....', '.....S.....', '.....S.....', '.....S.....'],
+      ['....B.B....', '.....S.....', '.....S.....', '.....S.....', '.....S.....'],
+      ['.....B.....', '....B.B....', '....BSB....', '.....S.....', '.....S.....']],
+    [ // 16 snowdrop: nod → white droplet → double droplet
+      ['...........', '.....SL....', '....S......', '.....S.....', '.....S.....'],
+      ['....S......', '...Sw......', '.....S.....', '.....S.....', '.....S.....'],
+      ['...S..S....', '..Sw..Sw...', '.....S.....', '.....S.....', '.....S.....']],
+    [ // 17 bellflower: hook → bell → ringing bell (with clapper)
+      ['...........', '....SS.....', '.....S.....', '.....S.....', '.....S.....'],
+      ['....BBB....', '....B.B....', '.....S.....', '.....S.....', '.....S.....'],
+      ['....BBB....', '....BBB....', '....BYB....', '.....S.....', '.....S.....']],
+    [ // 18 pinwheel: stick → half spin → full pinwheel (Y2K toy!)
+      ['...........', '.....D.....', '.....S.....', '.....S.....', '.....S.....'],
+      ['....PD.....', '.....DP....', '.....S.....', '.....S.....', '.....S.....'],
+      ['....P.B....', '.....D.....', '....B.P....', '.....S.....', '.....S.....']],
+    [ // 19 crystal: chip → shard → glowing cluster
+      ['...........', '.....w.....', '.....S.....', '.....S.....', '.....S.....'],
+      ['.....B.....', '....BwB....', '.....S.....', '.....S.....', '.....S.....'],
+      ['....B.w....', '....wBB....', '....B.B....', '.....S.....', '.....S.....']],
+    [ // 20 heart vine: curl → small heart → double hearts
+      ['...........', '....S......', '.....S.....', '.....S.....', '.....S.....'],
+      ['....P.P....', '.....P.....', '.....S.....', '.....S.....', '.....S.....'],
+      ['..P.P.P.P..', '...P...P...', '.....S.....', '.....S.....', '.....S.....']],
+    [ // 21 wheat: blade → grains → full ear
+      ['...........', '.....L.....', '.....S.....', '.....S.....', '.....S.....'],
+      ['....Y.Y....', '.....Y.....', '.....S.....', '.....S.....', '.....S.....'],
+      ['....Y.Y....', '....Y.Y....', '.....Y.....', '.....S.....', '.....S.....']],
+    [ // 22 maple: stub → half leaf → proud maple (very canada)
+      ['...........', '.....L.....', '.....S.....', '.....S.....', '.....S.....'],
+      ['....PP.....', '....PPP....', '.....S.....', '.....S.....', '.....S.....'],
+      ['....P.P....', '...PPPPP...', '.....P.....', '.....S.....', '.....S.....']],
+    [ // 23 bonsai: seedling → mini canopy → sculpted cloud pads
+      ['...........', '....LL.....', '.....S.....', '.....S.....', '.....S.....'],
+      ['...LLL.....', '.....S.....', '....SS.....', '.....S.....', '.....S.....'],
+      ['..LLL.LLL..', '....S.S....', '.....S.....', '.....S.....', '.....S.....']],
+    [ // 24 lotus: pad → closed bud → open lotus
+      ['...........', '...........', '....LLL....', '.....S.....', '.....S.....'],
+      ['....BB.....', '....BBB....', '.....S.....', '.....S.....', '.....S.....'],
+      ['...B.w.B...', '....BBB....', '....LLL....', '.....S.....', '.....S.....']],
+    [ // 25 clockwork: gear seed → wound spring → ticking bloom (computer!)
+      ['...........', '.....D.....', '.....S.....', '.....S.....', '.....S.....'],
+      ['....DwD....', '.....D.....', '.....S.....', '.....S.....', '.....S.....'],
+      ['....DYD....', '....DwD....', '....D.D....', '.....S.....', '.....S.....']],
+    [ // 26 bubble stem: one bubble → two → fizzing column
+      ['...........', '.....w.....', '.....S.....', '.....S.....', '.....S.....'],
+      ['....w......', '......w....', '.....S.....', '.....S.....', '.....S.....'],
+      ['....w.w....', '......w....', '....w......', '.....S.....', '.....S.....']],
+    [ // 27 candy cane: nub → hook → full cane with stripe
+      ['...........', '....PP.....', '.....S.....', '.....S.....', '.....S.....'],
+      ['....PPw....', '.....S.....', '.....S.....', '.....S.....', '.....S.....'],
+      ['....PwP....', '....P......', '....wS.....', '.....S.....', '.....S.....']],
+    [ // 28 starfruit sprig: dot → slice → twin stars
+      ['...........', '.....Y.....', '.....S.....', '.....S.....', '.....S.....'],
+      ['....Y.Y....', '.....Y.....', '.....S.....', '.....S.....', '.....S.....'],
+      ['...Y...Y...', '....Y.Y....', '.....S.....', '.....S.....', '.....S.....']],
+    [ // 29 forget-me-not: leaflet → trio → cloud of tiny blues
+      ['...........', '.....L.....', '....SL.....', '.....S.....', '.....S.....'],
+      ['....B.B....', '.....B.....', '.....S.....', '.....S.....', '.....S.....'],
+      ['...B.B.B...', '....B.B....', '...B.S.B...', '.....S.....', '.....S.....']],
+    [ // 30 mochi dango: one ball → two → three on a skewer
+      ['...........', '.....P.....', '.....S.....', '.....S.....', '.....S.....'],
+      ['.....P.....', '.....w.....', '.....S.....', '.....S.....', '.....S.....'],
+      ['.....P.....', '.....w.....', '.....L.....', '.....S.....', '.....S.....']],
+    [ // 31 ribbon: knot → single loop → double bow
+      ['...........', '....P......', '.....S.....', '.....S.....', '.....S.....'],
+      ['....PP.....', '.....P.....', '.....S.....', '.....S.....', '.....S.....'],
+      ['...PP.PP...', '....P.P....', '.....P.....', '.....S.....', '.....S.....']],
+    [ // 32 cactus bloom: spike → spikier → surprise pink flower
+      ['...........', '....LLL....', '.....S.....', '.....S.....', '.....S.....'],
+      ['...L.L.L...', '....LLL....', '.....S.....', '.....S.....', '.....S.....'],
+      ['....PPP....', '...L.L.L...', '....LLL....', '.....S.....', '.....S.....']],
+    [ // 33 morning glory: curl → cone → open trumpet
+      ['...........', '....SS.....', '.....S.....', '.....S.....', '.....S.....'],
+      ['....BB.....', '.....B.....', '.....S.....', '.....S.....', '.....S.....'],
+      ['...BwwB....', '....BB.....', '.....S.....', '.....S.....', '.....S.....']],
+    [ // 34 sparkler: wick → first spark → full fizz (Y2K new year!)
+      ['...........', '.....D.....', '.....S.....', '.....S.....', '.....S.....'],
+      ['....Y......', '.....D.....', '.....S.....', '.....S.....', '.....S.....'],
+      ['...Y.w.Y...', '....wYw....', '.....D.....', '.....S.....', '.....S.....']]
   ];
   /* bespoke bodies for the hidden 22 — the weirdest shapes live here.
      grey silhouettes of these exact shapes tease the empty dex slots. */
