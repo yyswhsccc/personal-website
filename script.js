@@ -353,6 +353,17 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function closeWindow(win) {
+    if (win.id === 'win-terminal' && document.body.classList.contains('terminal-only')) {
+      // in door mode the shell is the only thing on screen — closing it
+      // must never leave a void. leaving the shell = waking the whole OS.
+      document.body.classList.remove('terminal-only');
+      const g = document.getElementById('matrix-greeter');
+      if (g) g.remove();
+      if (window.__matrixGreetTimer) { clearInterval(window.__matrixGreetTimer); window.__matrixGreetTimer = null; }
+      win.classList.remove('terminal-door-win');
+      try { history.replaceState(null, '', location.pathname); } catch (e) { /* hash stays */ }
+      showToast(trT('the rest of the OS woke up anyway ♡ (the name still works in the terminal)', 'le reste de l\'OS s\'est réveillé quand même ♡ (le nom marche toujours dans le terminal)'));
+    }
     if (win.id === 'win-live' && typeof liveExit === 'function') {
       liveExit();
       // stage recruits + bloom-ups walk home to the desktop with you
@@ -4334,11 +4345,13 @@ document.addEventListener('DOMContentLoaded', () => {
     fork: `https://github.com/${GH_USER}/${GH_REPO}/fork`
   };
   function ghApi(path, fresh) {
+    // fresh=true is for DELTA BASELINES: live 2xx or null, never a stale
+    // cache — a days-old count must not fuel a false "was that you?!"
     const cache = store.get('yos-gh-cache', {});
     const hit = cache[path];
     if (!fresh && hit && Date.now() - hit.t < 600000) return Promise.resolve(hit.data);
-    if (!navigator.onLine) return Promise.resolve(hit ? hit.data : null);
-    return fetch('https://api.github.com' + path, { headers: { Accept: 'application/vnd.github+json' } })
+    if (!navigator.onLine) return Promise.resolve(fresh ? null : (hit ? hit.data : null));
+    return fetch('https://api.github.com' + path, { headers: { Accept: 'application/vnd.github+json' }, cache: fresh ? 'no-store' : 'default' })
       .then((r) => (r.ok ? r.json() : Promise.reject()))
       .then((data) => {
         const c = store.get('yos-gh-cache', {});
@@ -4346,7 +4359,7 @@ document.addEventListener('DOMContentLoaded', () => {
         store.set('yos-gh-cache', c);
         return data;
       })
-      .catch(() => (hit ? hit.data : null));
+      .catch(() => (fresh ? null : (hit ? hit.data : null)));
   }
   function gitMark(sub) {
     const used = store.get('yos-git-used', []);
@@ -4356,24 +4369,32 @@ document.addEventListener('DOMContentLoaded', () => {
       if (used.length >= 5) achvUnlock('gitgud');
     }
   }
-  var ghWatchTimer = null;
+  var ghWatchTimer = null, ghWatchSeq = 0;
   function ghWatchDelta(kind) {
     // after the visitor opens GitHub, we politely peek at the PUBLIC
     // counter a few times — if it grew, the whole site celebrates. we
     // never learn WHO pressed the button, only that someone kind did.
+    // sequence-owned: the newest call is the only living watcher, and a
+    // watcher only ever clears ITS OWN interval (no cross-kills, no spam).
+    const seq = ++ghWatchSeq;
     if (ghWatchTimer) { clearInterval(ghWatchTimer); ghWatchTimer = null; }
     const path = kind === 'star' ? `/repos/${GH_USER}/${GH_REPO}` : `/users/${GH_USER}`;
     const read = (d) => (d ? (kind === 'star' ? d.stargazers_count : d.followers) : null);
     ghApi(path, true).then((d0) => {
+      if (seq !== ghWatchSeq) return; // superseded while the baseline flew
       const base = read(d0);
-      if (base == null) return;
+      if (base == null) return; // no LIVE baseline → no watch, no false joy
       let polls = 0;
-      ghWatchTimer = setInterval(() => {
-        if (++polls > 8) { clearInterval(ghWatchTimer); ghWatchTimer = null; return; }
+      const timer = setInterval(() => {
+        if (seq !== ghWatchSeq) { clearInterval(timer); return; }
+        if (++polls > 8) { clearInterval(timer); if (ghWatchTimer === timer) ghWatchTimer = null; return; }
         ghApi(path, true).then((d) => {
+          if (seq !== ghWatchSeq) { clearInterval(timer); return; }
           const now = read(d);
           if (now != null && now > base) {
-            clearInterval(ghWatchTimer); ghWatchTimer = null;
+            clearInterval(timer);
+            if (ghWatchTimer === timer) ghWatchTimer = null;
+            ghWatchSeq++; // this watch is fulfilled — retire it for good
             playFanfare();
             if (typeof fxBanner === 'function') {
               fxBanner(kind === 'star' ? '⭐ A NEW STAR!!' : '💚 A NEW FOLLOWER!!',
@@ -4386,11 +4407,13 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         });
       }, 25000);
+      ghWatchTimer = timer;
     });
   }
+  const GIT_KNOWN = ['help', '--help', 'status', 'log', 'star', 'follow', 'fork', 'clone', 'pull', 'push', 'commit', 'branch', 'checkout', 'merge', 'stash', 'blame', 'diff', 'cherry-pick', 'tag', 'remote', 'reflog', 'bisect', 'rebase', 'init', 'gc', 'rm', 'config'];
   function termGit(args) {
     const sub = (args[0] || 'status').toLowerCase();
-    gitMark(sub);
+    if (GIT_KNOWN.indexOf(sub) !== -1) gitMark(sub === '--help' ? 'help' : sub); // typos don't count toward Git Gud
     if (sub === 'help' || sub === '--help') {
       termLine(trT('git — the fourth-wall edition. real GitHub, cute verbs:', 'git — édition quatrième mur. vrai GitHub, verbes mignons :'), 't-accent');
       [['status', trT('LIVE repo stats from GitHub', 'stats LIVE du dépôt GitHub')],
@@ -14458,6 +14481,7 @@ document.addEventListener('DOMContentLoaded', () => {
       achvUnlock('truefan');
       if (typeof pikParade === 'function') pikParade();
       // the welcome card: lowest-cost way to meet yongshan, highest-warmth
+      /* (built below — shown only on the yongshan-key path) */
       let root = document.getElementById('wp-root');
       if (root) root.remove();
       root = document.createElement('div');
