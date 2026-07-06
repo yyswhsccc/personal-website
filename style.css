@@ -7480,3 +7480,50 @@ body.nm-melt-static::after {
   padding: 7px 9px;
   color: var(--text);
 }
+
+/* ============ wrist_link.exe window + worldwide meadow ladder ============ */
+.window-watchlink { max-width: 480px; min-height: 400px; }
+.watch-shell { display: flex; flex-direction: column; gap: 10px; font-size: 0.88rem; line-height: 1.5; }
+.watch-status {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  background: var(--cream);
+  border: 2px dashed var(--pink-deep);
+}
+.watch-status.is-on { background: linear-gradient(90deg, rgba(159, 232, 192, 0.35), rgba(255, 179, 221, 0.3)); border-style: solid; }
+.watch-status-line { font-family: var(--font-pixel); font-size: 1rem; color: var(--pink-deep); }
+.watch-status-sub { font-size: 0.82rem; color: var(--text-soft); }
+.watch-status .wp-btn { align-self: flex-start; }
+.watch-blurb {
+  font-size: 0.82rem;
+  background: rgba(201, 167, 245, 0.18);
+  border-left: 3px solid var(--purple);
+  padding: 7px 10px;
+}
+.pikdex-lb-line { cursor: var(--cursor-heart); }
+.pikdex-lb-line:hover { filter: brightness(1.05); }
+.piklb-ladder {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 10px 12px;
+  background: var(--cream);
+  border: 2px solid var(--border);
+}
+.piklb-head, .piklb-foot { font-family: var(--font-pixel); font-size: 0.78rem; color: var(--text-soft); }
+.piklb-row {
+  display: grid;
+  grid-template-columns: minmax(128px, auto) 1fr minmax(56px, auto);
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-pixel);
+  font-size: 0.85rem;
+}
+.piklb-row.is-you { background: rgba(255, 233, 138, 0.4); outline: 2px dashed var(--pink-hot); }
+.piklb-name { white-space: nowrap; }
+.piklb-bar { height: 10px; background: #efe3f6; border: 1px solid var(--border); overflow: hidden; }
+.piklb-bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--pink), var(--pink-hot)); }
+.piklb-n { text-align: right; color: var(--pink-deep); white-space: nowrap; }
+html[data-theme="dark"] .piklb-bar { background: #3a2452; }

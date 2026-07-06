@@ -84,7 +84,7 @@
     })();
   </script>
 
-  <link rel="stylesheet" href="style.css?v=49">
+  <link rel="stylesheet" href="style.css?v=50">
 <script>/* wrist-sized screens get the wrist edition */(function(){try{if(screen.width<=340&&screen.height<=430)location.replace('watch.html');}catch(e){}})();</script>
 </head>
 <body>
@@ -237,6 +237,23 @@
         <circle cx="20.1" cy="17.2" r="1" fill="#ffc2e2" opacity="0.9" />
       </g>
 
+      <!-- wrist_link.exe — a pixel smartwatch wearing the slime's heart -->
+      <g id="y2k-watch-icon">
+        <!-- straps -->
+        <rect x="11" y="1.5" width="10" height="6" rx="1.5" fill="#c9a7f5" stroke="#5a3d6e" stroke-width="1.6" />
+        <rect x="11" y="24.5" width="10" height="6" rx="1.5" fill="#c9a7f5" stroke="#5a3d6e" stroke-width="1.6" />
+        <!-- case + crown -->
+        <rect x="26.5" y="13" width="3" height="6" rx="1" fill="#ffb37a" stroke="#5a3d6e" stroke-width="1.4" />
+        <rect x="5" y="6" width="22" height="20" rx="6" fill="#ff8fc7" stroke="#5a3d6e" stroke-width="2" />
+        <!-- screen -->
+        <rect x="8" y="9" width="16" height="14" rx="3.5" fill="#2a1436" stroke="#5a3d6e" stroke-width="1.6" />
+        <!-- heart on screen -->
+        <path d="M 16 20.4 C 11.6 17.4, 13.4 13.4, 16 15.6 C 18.6 13.4, 20.4 17.4, 16 20.4 Z" fill="#ff5fb0" />
+        <rect x="9.5" y="10.5" width="4" height="2" rx="1" fill="rgba(255,255,255,0.35)" />
+        <!-- sparkle -->
+        <circle cx="24.5" cy="7.5" r="1.2" fill="#ffe98a" stroke="#5a3d6e" stroke-width="0.8" />
+      </g>
+
       <!-- Pixel handheld console (slime_run.exe) -->
       <g id="y2k-game-icon">
         <rect x="4" y="2" width="24" height="28" rx="3" fill="url(#purple-folder-grad)" stroke="#5a3d6e" stroke-width="2" />
@@ -381,6 +398,12 @@
           <button class="desktop-icon-btn" data-window="win-pikdex" aria-haspopup="dialog">
             <svg class="icon-visual" viewBox="0 0 32 32" width="46" height="46"><use href="#y2k-pikdex-icon" /></svg>
             <div class="icon-label" data-i18n="file.pikdex">pikdex.exe</div>
+          </button>
+
+          <!-- Wrist link: the smartwatch companion -->
+          <button class="desktop-icon-btn" data-window="win-watch" aria-haspopup="dialog">
+            <svg class="icon-visual" viewBox="0 0 32 32" width="46" height="46"><use href="#y2k-watch-icon" /></svg>
+            <div class="icon-label" data-i18n="file.watch">wrist_link.exe</div>
           </button>
 
         </div>
@@ -1019,6 +1042,27 @@
       </section>
 
       <!-- 3f2. PIKDEX — the pikmin collection deck -->
+      <section class="window window-closed window-watchlink" id="win-watch" aria-labelledby="title-watch" role="dialog">
+        <div class="window-header drag-handle">
+          <div class="window-title-container">
+            <span class="window-icon">⌚</span>
+            <span class="window-title" id="title-watch" data-i18n="file.watch">wrist_link.exe</span>
+          </div>
+          <div class="window-controls">
+            <button class="win-btn win-btn-minimize" aria-label="Minimize window">_</button>
+            <button class="win-btn win-btn-maximize" aria-label="Maximize window">⛶</button>
+            <button class="win-btn win-btn-close" aria-label="Close window">♥</button>
+          </div>
+        </div>
+        <div class="window-body">
+          <div class="watch-shell" id="watch-shell"><!-- rendered by JS --></div>
+        </div>
+        <div class="window-footer">
+          <span data-i18n="watch.footer.l">pets & plucks sync through the cloud</span>
+          <span data-i18n="watch.footer.r">no app store required ♡</span>
+        </div>
+      </section>
+
       <section class="window window-closed window-pikdex" id="win-pikdex" aria-labelledby="title-pikdex" role="dialog">
         <div class="window-header drag-handle">
           <div class="window-title-container">
@@ -1287,6 +1331,9 @@
           <button role="menuitem" class="start-menu-item" data-target="win-pikdex">
             <span class="item-icon">🌷</span> <span data-i18n="file.pikdex">pikdex.exe</span>
           </button>
+          <button role="menuitem" class="start-menu-item" data-target="win-watch">
+            <span class="item-icon">⌚</span> <span data-i18n="file.watch">wrist_link.exe</span>
+          </button>
           <button role="menuitem" class="start-menu-item" data-target="win-interview">
             <span class="item-icon">📅</span> <span data-i18n="file.interview">interview_scheduler.exe</span>
           </button>
@@ -1342,7 +1389,7 @@
   <!-- Toast Notification -->
   <div id="email-toast" class="toast-hidden" role="status" aria-live="polite">Email copied to clipboard! ♡</div>
 
-  <script src="i18n.js?v=49"></script>
-  <script src="script.js?v=49"></script>
+  <script src="i18n.js?v=50"></script>
+  <script src="script.js?v=50"></script>
 </body>
 </html>

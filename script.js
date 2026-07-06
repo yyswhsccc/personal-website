@@ -325,6 +325,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (winId === 'win-leaderboard' && typeof renderLeaderboard === 'function') renderLeaderboard();
     if (winId === 'win-leaderboard' && typeof renderAchievements === 'function') renderAchievements();
     if (winId === 'win-pikdex' && typeof renderPikdex === 'function') renderPikdex();
+    if (winId === 'win-watch' && typeof renderWatchWin === 'function') renderWatchWin();
     if (typeof applyPikFloat === 'function') applyPikFloat(); // live/game open → desktop twins tuck away
 
     // Fresh opens always land inside the CURRENT viewport, sized to fit the
@@ -13295,7 +13296,67 @@ document.addEventListener('DOMContentLoaded', () => {
 
   /* ---------- pikdex.exe rendering: hue wheel + deck grid + dossier ---------- */
   var pikLbCache = null, pikLbCacheAt = 0;
+  const PIKLB_TIER_NAMES = [
+    ['🌱 Sprout Scout', '🌱 Éclaireur de Pousses'],
+    ['🌼 Meadow Regular', '🌼 Habitué de la Prairie'],
+    ['🌈 TRUE COLOR', '🌈 TRUE COLOR'],
+    ['🌿 Overgrower', '🌿 Sur-Cultivateur'],
+    ['🌺 Evolution Engine', '🌺 Moteur d\'Évolution'],
+    ['👑 Apex Rancher', '👑 Éleveur Apex'],
+    ['✨ Meadow Deity', '✨ Divinité de la Prairie']
+  ];
+  function pikLbDetail(counts) {
+    const wrap = document.createElement('div');
+    wrap.id = 'pikdex-lb-detail';
+    wrap.className = 'piklb-ladder';
+    const head = document.createElement('div');
+    head.className = 'piklb-head';
+    head.textContent = trT('🌍 WORLDWIDE MEADOW STANDINGS — gardeners who reached each rank', '🌍 CLASSEMENT MONDIAL DE LA PRAIRIE — jardiniers ayant atteint chaque rang');
+    wrap.appendChild(head);
+    const myTier = pikLbTier(pikCountTotal());
+    const maxC = Math.max(1, counts[1] || 0);
+    for (let i = PIKLB_TIERS.length; i >= 1; i--) {
+      const row = document.createElement('div');
+      row.className = 'piklb-row' + (myTier === i ? ' is-you' : '');
+      const name = document.createElement('span');
+      name.className = 'piklb-name';
+      name.textContent = trT(PIKLB_TIER_NAMES[i - 1][0], PIKLB_TIER_NAMES[i - 1][1]) + ' · ' + PIKLB_TIERS[i - 1] + '+';
+      const bar = document.createElement('span');
+      bar.className = 'piklb-bar';
+      const fill = document.createElement('i');
+      fill.style.width = Math.max(3, Math.round(((counts[i] || 0) / maxC) * 100)) + '%';
+      bar.appendChild(fill);
+      const n = document.createElement('span');
+      n.className = 'piklb-n';
+      n.textContent = String(counts[i] || 0) + (myTier === i ? trT(' ◀ YOU', ' ◀ TOI') : '');
+      row.append(name, bar, n);
+      wrap.appendChild(row);
+    }
+    const foot = document.createElement('div');
+    foot.className = 'piklb-foot';
+    foot.textContent = myTier >= 1
+      ? trT('anonymous census — each gardener is counted once per rank reached ♡', 'recensement anonyme — chaque jardinier compte une fois par rang atteint ♡')
+      : trT(`pluck ${PIKLB_TIERS[0] - pikCountTotal()} more to enter the standings ♡`, `cueille encore ${PIKLB_TIERS[0] - pikCountTotal()} pour entrer au classement ♡`);
+    wrap.appendChild(foot);
+    return wrap;
+  }
   function pikLbRender(el) {
+    if (!el._wired) {
+      el._wired = 1;
+      el.setAttribute('role', 'button');
+      el.setAttribute('tabindex', '0');
+      el.title = trT('click: worldwide standings', 'clic : classement mondial');
+      const toggle = () => {
+        const old = document.getElementById('pikdex-lb-detail');
+        if (old) { old.remove(); return; }
+        const paintDetail = (counts) => { if (counts) el.parentNode.insertBefore(pikLbDetail(counts), el.nextSibling); };
+        if (pikLbCache) { paintDetail(pikLbCache); return; }
+        pikLbRender(el); // triggers the fetch; try again once it lands
+        setTimeout(() => { if (pikLbCache && !document.getElementById('pikdex-lb-detail')) paintDetail(pikLbCache); }, 1500);
+      };
+      el.addEventListener('click', toggle);
+      el.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } });
+    }
     const total = pikCountTotal();
     const mine = trT(`🧺 your lifetime plucks: ${total}`, `🧺 tes cueillettes : ${total}`);
     const paint = (counts) => {
@@ -14151,20 +14212,44 @@ document.addEventListener('DOMContentLoaded', () => {
         .catch(() => 'taken'); // a stale pin squats that counter — new pin, please
     });
   }
-  function watchPanelOpen() {
-    let root = document.getElementById('wp-root');
-    if (root) { root.remove(); }
-    root = document.createElement('div');
-    root.id = 'wp-root';
-    const panel = document.createElement('div');
-    panel.className = 'wp-panel';
-    const head = document.createElement('div');
-    head.className = 'wp-panel-head';
-    head.textContent = trT('⌚ pair a smartwatch', '⌚ appairer une montre');
-    const body = document.createElement('div');
-    body.className = 'wp-panel-body';
-    const mk = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt) e.textContent = txt; return e; };
-    body.appendChild(mk('p', '', trT('1 · open this on the watch:', '1 · ouvre ceci sur la montre :')));
+  function watchPanelOpen() { openWindow('win-watch'); } // the panel grew up into a desktop app
+  function renderWatchWin() {
+    const shell = document.getElementById('watch-shell');
+    if (!shell) return;
+    shell.innerHTML = ''; // rebuilt below — every string goes through textContent
+    const mk = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
+
+    // — status card: the truth about your wrist —
+    const paired = store.get('yos-watch-paired', 0);
+    const card = mk('div', 'watch-status' + (paired ? ' is-on' : ''));
+    card.appendChild(mk('div', 'watch-status-line', paired
+      ? trT('⌚ PAIRED — the wrist slime is live', '⌚ APPAIRÉE — le slime de poignet est en ligne')
+      : trT('⌚ no watch paired yet', '⌚ aucune montre appairée pour l\'instant')));
+    if (paired) {
+      const plucked = store.get('yos-wgp-seen', 0);
+      const petted = store.get('yos-wpt-seen', 0);
+      card.appendChild(mk('div', 'watch-status-sub', trT(
+        `lifetime from the wrist: 🌸 ${plucked} pikmin plucked · ♡ ${petted} pets → fans`,
+        `depuis le poignet : 🌸 ${plucked} pikmin cueillis · ♡ ${petted} caresses → fans`)));
+      const syncBtn = mk('button', 'wp-btn', trT('🔄 sync now', '🔄 synchroniser'));
+      syncBtn.type = 'button';
+      syncBtn.addEventListener('click', () => {
+        syncBtn.disabled = true;
+        syncBtn.textContent = trT('🔄 asking the cloud…', '🔄 le cloud réfléchit…');
+        if (typeof watchPullSync === 'function') watchPullSync();
+        setTimeout(() => { syncBtn.disabled = false; syncBtn.textContent = trT('🔄 sync now', '🔄 synchroniser'); renderWatchWin(); }, 4000);
+      });
+      card.appendChild(syncBtn);
+    }
+    shell.appendChild(card);
+
+    // — how the magic works, in one breath —
+    shell.appendChild(mk('p', 'watch-blurb', trT(
+      'the watch runs a featherweight yongshanOS: a clock, the slime (pettable), and a WRIST GARDEN that grows a real pikmin every ~100 minutes. plucks land in your pikdex, pets become fans — same save, two screens ♡',
+      'la montre fait tourner un yongshanOS plume : une horloge, le slime (caressable) et un JARDIN DE POIGNET qui fait pousser un vrai pikmin toutes les ~100 min. les cueillettes filent dans ton pikdex, les caresses deviennent des fans — même sauvegarde, deux écrans ♡')));
+
+    // — pairing (works for first pairing AND re-pairing) —
+    shell.appendChild(mk('p', '', trT('1 · open this on the watch:', '1 · ouvre ceci sur la montre :')));
     const urlRow = mk('div', 'wp-row');
     const WATCH_URL = 'https://yyswhsccc.github.io/personal-website/watch.html';
     const url = mk('p', 'wp-url', 'yyswhsccc.github.io/personal-website/watch.html');
@@ -14172,6 +14257,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const copyBtn = mk('button', 'wp-btn wp-copy', '📋');
     copyBtn.type = 'button';
     copyBtn.setAttribute('aria-label', trT('copy the watch link', 'copier le lien montre'));
+    const status = mk('div', 'wp-status', '');
     const doCopy = () => {
       const done = () => { status.textContent = trT('📋 link copied — paste it into a message to yourself ♡', '📋 lien copié — colle-le dans un message pour toi ♡'); };
       if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(WATCH_URL).then(done).catch(done);
@@ -14180,13 +14266,8 @@ document.addEventListener('DOMContentLoaded', () => {
     url.addEventListener('click', doCopy);
     copyBtn.addEventListener('click', doCopy);
     urlRow.append(url, copyBtn);
-    body.appendChild(urlRow);
-    const noBrowser = mk('p', 'wp-note', '');
-    noBrowser.textContent = trT(
-      '⌚ no browser on the watch? Apple Watch doesn\'t ship one — copy the link and TEXT IT TO YOURSELF: tapping it inside Messages/Mail opens the page right on the watch ♡. Wear OS: any browser from the on-watch Play Store works.',
-      '⌚ pas de navigateur sur la montre ? l\'Apple Watch n\'en a pas — copie le lien et ENVOIE-LE-TOI PAR MESSAGE : le toucher dans Messages/Mail ouvre la page directement sur la montre ♡. Wear OS : n\'importe quel navigateur du Play Store de la montre.');
-    body.appendChild(noBrowser);
-    body.appendChild(mk('p', '', trT('2 · the watch shows a 4-digit code. type it here (all the typing happens on the BIG screen ♡):', '2 · la montre affiche un code à 4 chiffres. tape-le ici (tout le clavier reste sur le GRAND écran ♡) :')));
+    shell.appendChild(urlRow);
+    shell.appendChild(mk('p', '', trT('2 · the watch shows a 4-digit code. type it here (all the typing happens on the BIG screen ♡):', '2 · la montre affiche un code à 4 chiffres. tape-le ici (tout le clavier reste sur le GRAND écran ♡) :')));
     const row = mk('div', 'wp-row');
     const inp = document.createElement('input');
     inp.type = 'text';
@@ -14197,28 +14278,25 @@ document.addEventListener('DOMContentLoaded', () => {
     inp.setAttribute('aria-label', trT('watch pairing code', 'code d\'appairage montre'));
     const btn = mk('button', 'wp-btn', trT('pair ♡', 'appairer ♡'));
     btn.type = 'button';
-    const status = mk('div', 'wp-status', store.get('yos-watch-paired', 0) ? trT('⌚ a watch is already paired — pairing again is fine.', '⌚ une montre est déjà appairée — ré-appairer ne casse rien.') : '');
     btn.addEventListener('click', () => {
       status.textContent = trT('pairing…', 'appairage…');
       btn.disabled = true;
       watchPair(inp.value).then((res) => {
         btn.disabled = false;
-        if (res === 'ok') { status.textContent = trT('⌚ PAIRED!! the wrist slime is live. pets & plucks sync home ♡', '⌚ APPAIRÉ !! le slime de poignet est en ligne. caresses & cueillettes se synchronisent ♡'); playFanfare(); }
+        if (res === 'ok') { status.textContent = trT('⌚ PAIRED!! the wrist slime is live ♡', '⌚ APPAIRÉE !! le slime de poignet est en ligne ♡'); playFanfare(); setTimeout(renderWatchWin, 1200); }
         else if (res === 'badpin') status.textContent = trT('that needs to be 4 digits', 'il faut 4 chiffres');
         else if (res === 'taken') status.textContent = trT('code collision (rare!!) — tap the watch for a fresh code and retry', 'collision de code (rare !!) — nouveau code sur la montre et réessaie');
         else status.textContent = trT('cloud unreachable — try again in a moment', 'cloud injoignable — réessaie dans un instant');
       });
     });
     row.append(inp, btn);
-    body.append(row, status);
-    const close = mk('button', 'wp-close', '✕');
-    close.type = 'button';
-    close.setAttribute('aria-label', trT('close', 'fermer'));
-    close.addEventListener('click', () => root.remove());
-    panel.append(close, head, body);
-    root.appendChild(panel);
-    document.body.appendChild(root);
-    inp.focus();
+    shell.append(row, status);
+
+    // — the honest fine print for browser-less watches —
+    const noBrowser = mk('p', 'wp-note', trT(
+      '⌚ no browser on the watch? Apple Watch doesn\'t ship one — copy the link and TEXT IT TO YOURSELF: tapping it inside Messages/Mail opens the page right on the watch ♡. Wear OS: any browser from the on-watch Play Store works.',
+      '⌚ pas de navigateur sur la montre ? l\'Apple Watch n\'en a pas — copie le lien et ENVOIE-LE-TOI PAR MESSAGE : le toucher dans Messages/Mail ouvre la page directement sur la montre ♡. Wear OS : n\'importe quel navigateur du Play Store de la montre.'));
+    shell.appendChild(noBrowser);
   }
   var watchPullTimer = null;
   function watchPullArm() {
