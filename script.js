@@ -3697,7 +3697,8 @@ document.addEventListener('DOMContentLoaded', () => {
     { id: 'comboking', icon: '🎯', n: ['Ultra Combo Patron', 'Mécène Ultra Combo'], d: ['landed a ×5 gift combo. the stage shook. the union filed a compliment.', 'a aligné un combo cadeau ×5. la scène a tremblé. le syndicat a déposé un compliment.'], t: ['the same gift, fast, five times. the stage remembers.', 'le même cadeau, vite, cinq fois. la scène s\'en souvient.'] },
     { id: 'paparazzi', icon: '📸', n: ['Meadow Paparazzi', 'Paparazzi de la Prairie'], d: ['shot the slime on stage — 3, 2, 1, flash, framed, timestamped.', 'a photographié le slime sur scène — 3, 2, 1, flash, encadré, horodaté.'], t: ['gift a 📷 in the live room. the slime has a good side. all sides.', 'offre un 📷 au salon live. le slime a un bon profil. tous.'] },
     { id: 'selfiestar', icon: '🤳', n: ['Framed Together', 'Encadrés Ensemble'], d: ['took a selfie WITH the slime. it photobombed with honor. never uploaded.', 'a pris un selfie AVEC le slime. photobomb honorable. jamais téléversé.'], t: ['sometimes after a photo, the slime asks a question.', 'parfois après une photo, le slime pose une question.'] },
-    { id: 'wallfamous', icon: '🌍', n: ['Framed Worldwide', 'Encadré·e Mondialement'], d: ['hung a selfie on the REAL worldwide wall. publicly, proudly, consensually.', 'a accroché un selfie sur le VRAI mur mondial. publiquement, fièrement, avec consentement.'], t: ['the wall is real now. it has a bouncer and everything.', 'le mur est réel désormais. il a même un videur.'] }
+    { id: 'wallfamous', icon: '🌍', n: ['Framed Worldwide', 'Encadré·e Mondialement'], d: ['hung a selfie on the REAL worldwide wall. publicly, proudly, consensually.', 'a accroché un selfie sur le VRAI mur mondial. publiquement, fièrement, avec consentement.'], t: ['the wall is real now. it has a bouncer and everything.', 'le mur est réel désormais. il a même un videur.'] },
+    { id: 'rescued', icon: '🛟', n: ['Plot Armor', 'Armure Scénaristique'], d: ['got trapped in the digital cage — and was personally rescued by the slime of legend.', 'piégé·e dans la cage numérique — et personnellement sauvé·e par le slime légendaire.'], t: ['the villain is fine. mostly. his ego returned a 500.', 'le méchant va bien. presque. son ego a renvoyé un 500.'] }
   ];
 
   // ---- metric engine: count things, achievements pop themselves ----
@@ -5053,7 +5054,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const handler = TERM_COMMANDS[cmd];
     if (handler) handler();
     else if (tryFuzzyCheat(lower)) { /* the slime god heard a near-spell and took over */ }
-    else termLine(trT(`${cmd}: command not found — try \`help\``, `${cmd} : commande introuvable — essayez \`help\``), 't-err');
+    else {
+      termLine(trT(`${cmd}: command not found — try \`help\``, `${cmd} : commande introuvable — essayez \`help\``), 't-err');
+      // mercy protocol: a visitor flailing at the door gets RESCUED, cinematically
+      if (document.body.classList.contains('terminal-only') && window.__door && !window.__door.rescued) {
+        const panicky = /help!|idk|do?n'?t know|anyone|please|plz|hello|stuck|lost|confus|how do|what do|no idea|救命|不会|帮帮/i.test(lower);
+        doorFlail += panicky ? 2 : 1;
+        if (doorFlail >= 4) { window.__door.rescued = true; setTimeout(doorRescue, 700); }
+      }
+    }
   }
 
   // rapid-fire detector: >5 commands in 1.2s smells like automation
@@ -10902,8 +10911,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const gen = albumGen; // a tab switch re-renders the shell; late fetches must not touch the new render
     const load = (cursor) => wallList(cursor).then((res) => {
       if (gen !== albumGen) return;
-      if (!res) { note.textContent = trT('🌍 the wall is warming up — hang the first photo from a selfie ♡', '🌍 le mur chauffe — accroche la première photo depuis un selfie ♡'); return; }
+      if (!res) { note.textContent = trT('🌍 the wall is warming up — hang the first photo from a selfie ♡', '🌍 le mur chauffe — accroche la première photo depuis un selfie ♡'); if (!cursor) albumDeco(shell, 0); return; }
       wallSeen += res.photos.length;
+      if (!cursor) albumDeco(shell, wallSeen); // deco density follows the REAL wall size
       albumSetHits(shell, wallSeen);
       note.textContent = trT(`🌍 THE WORLDWIDE WALL — ${wallSeen}${res.cursor ? '+' : ''} framed visitors (owner-moderated ♡)`, `🌍 LE MUR MONDIAL — ${wallSeen}${res.cursor ? '+' : ''} visiteurs encadrés (modéré ♡)`);
       const newCards = [];
@@ -10922,7 +10932,7 @@ document.addEventListener('DOMContentLoaded', () => {
         grid.appendChild(card);
         newCards.push(card);
       });
-      albumGlueStk(newCards); // wall photos deserve corner stickers too — cards arrive async
+      if (wallSeen >= 4) albumGlueStk(newCards); // corner stickers arrive once the wall feels lived-in
       if (res.cursor) {
         const more = document.createElement('button');
         more.type = 'button';
@@ -10947,16 +10957,21 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
   function albumDeco(shell, count) {
-    // scrolling ticker — the wall introduces itself, twice for a seamless loop
-    const tick = document.createElement('div');
-    tick.className = 'album-ticker';
-    const run = document.createElement('span');
-    run.className = 'album-ticker-run';
-    const line = trT('✦ now_loading: memories.exe ✦ 100% cute · 0% bugs ✦ ctrl+S your feelings ✦ best viewed with sparkles ON ✦ ', '✦ chargement : souvenirs.exe ✦ 100% mignon · 0% bug ✦ ctrl+S tes émotions ✦ à regarder étoiles ON ✦ ');
-    run.textContent = line + line;
-    tick.appendChild(run);
-    tick.setAttribute('aria-hidden', 'true');
-    shell.prepend(tick);
+    /* a REAL bedroom wall starts bare and grows cluttered as memories pile up:
+       0 photos → just the badge altar + counter · 1+ → the ticker wakes ·
+       2+ → sparkles + the error.exe sticker · 4+ → the sticker swarm moves in ·
+       6+ → the butterfly discovers the place */
+    if (count >= 1) {
+      const tick = document.createElement('div');
+      tick.className = 'album-ticker';
+      const run = document.createElement('span');
+      run.className = 'album-ticker-run';
+      const line = trT('✦ now_loading: memories.exe ✦ 100% cute · 0% bugs ✦ ctrl+S your feelings ✦ best viewed with sparkles ON ✦ ', '✦ chargement : souvenirs.exe ✦ 100% mignon · 0% bug ✦ ctrl+S tes émotions ✦ à regarder étoiles ON ✦ ');
+      run.textContent = line + line;
+      tick.appendChild(run);
+      tick.setAttribute('aria-hidden', 'true');
+      shell.prepend(tick);
+    }
     // status row now hosts only the error.exe sticker (centered)
     const status = document.createElement('div');
     status.className = 'album-statusrow';
@@ -10989,47 +11004,52 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     shell.appendChild(badges);
     albumSetHits(shell, count);
-    const err = document.createElement('div');
-    err.className = 'album-err';
-    err.setAttribute('aria-hidden', 'true');
-    const errT = document.createElement('div');
-    errT.className = 'album-err-title';
-    errT.textContent = trT('⚠ error.exe', '⚠ erreur.exe');
-    const errB = document.createElement('div');
-    errB.className = 'album-err-body';
-    errB.textContent = trT('2 cute!!', 'trop mimi !!');
-    const errOk = document.createElement('button');
-    errOk.type = 'button';
-    errOk.className = 'album-err-ok';
-    errOk.textContent = 'OK ♡';
-    errOk.tabIndex = -1;
-    errOk.addEventListener('click', () => {
-      err.classList.add('is-dismissed');
-      playTone(660, 'square', 0.06, 0, 0.03);
-      setTimeout(() => err.remove(), 520);
-    });
-    err.append(errT, errB, errOk);
-    status.appendChild(err); // the sticker lives in its own centered row — never over a photo
-    // twinkling sparkles + one very rare butterfly (a bug that is a feature)
-    const sparks = ['✦', '✧', '⋆', '✦'].map((ch, i) => {
-      const s = document.createElement('span');
-      s.className = 'album-spark';
-      s.setAttribute('aria-hidden', 'true');
-      s.textContent = ch;
-      s.style.left = (8 + (i * 137) % 82) + '%';
-      s.style.top = (14 + (i * 211) % 70) + '%';
-      s.style.animationDelay = (i * 0.65) + 's';
-      return s;
-    });
-    const fly = document.createElement('span');
-    fly.className = 'album-fly';
-    fly.setAttribute('aria-hidden', 'true');
-    const flyX = document.createElement('span');
-    flyX.className = 'album-fly-x';
-    flyX.textContent = '🦋';
-    fly.appendChild(flyX);
-    shell.append(fly, ...sparks);
-    albumSwarm(shell);
+    if (count >= 2) {
+      const err = document.createElement('div');
+      err.className = 'album-err';
+      err.setAttribute('aria-hidden', 'true');
+      const errT = document.createElement('div');
+      errT.className = 'album-err-title';
+      errT.textContent = trT('⚠ error.exe', '⚠ erreur.exe');
+      const errB = document.createElement('div');
+      errB.className = 'album-err-body';
+      errB.textContent = trT('2 cute!!', 'trop mimi !!');
+      const errOk = document.createElement('button');
+      errOk.type = 'button';
+      errOk.className = 'album-err-ok';
+      errOk.textContent = 'OK ♡';
+      errOk.tabIndex = -1;
+      errOk.addEventListener('click', () => {
+        err.classList.add('is-dismissed');
+        playTone(660, 'square', 0.06, 0, 0.03);
+        setTimeout(() => err.remove(), 520);
+      });
+      err.append(errT, errB, errOk);
+      status.appendChild(err); // the sticker lives in its own centered row — never over a photo
+      // twinkling sparkles arrive with the second memory
+      const sparks = ['✦', '✧', '⋆', '✦'].map((ch, i) => {
+        const s = document.createElement('span');
+        s.className = 'album-spark';
+        s.setAttribute('aria-hidden', 'true');
+        s.textContent = ch;
+        s.style.left = (8 + (i * 137) % 82) + '%';
+        s.style.top = (14 + (i * 211) % 70) + '%';
+        s.style.animationDelay = (i * 0.65) + 's';
+        return s;
+      });
+      shell.append(...sparks);
+    }
+    if (count >= 6) {
+      const fly = document.createElement('span');
+      fly.className = 'album-fly';
+      fly.setAttribute('aria-hidden', 'true');
+      const flyX = document.createElement('span');
+      flyX.className = 'album-fly-x';
+      flyX.textContent = '🦋';
+      fly.appendChild(flyX);
+      shell.appendChild(fly);
+    }
+    albumSwarm(shell, count);
   }
   // ---- the sticker SWARM: a wall so covered in stickers it rearranges itself.
   // stickers sit ABOVE the photos on purpose (hover a photo → it lifts out
@@ -11052,7 +11072,10 @@ document.addEventListener('DOMContentLoaded', () => {
       card.appendChild(s);
     });
   }
-  function albumSwarm(shell) {
+  function albumSwarm(shell, count) {
+    // the swarm only moves in once the wall holds 4+ memories — and grows with them
+    if (albumSwarmTimer) { clearInterval(albumSwarmTimer); albumSwarmTimer = null; }
+    if (!count || count < 4) return;
     const layer = document.createElement('div');
     layer.className = 'album-swarm';
     layer.setAttribute('aria-hidden', 'true');
@@ -11084,7 +11107,8 @@ document.addEventListener('DOMContentLoaded', () => {
     KAO.forEach((t) => pool.push({ t, cls: 'stk stk-kao' }));
     EMO.forEach((t) => pool.push({ t, cls: 'stk stk-emoji' }));
     for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const tmp = pool[i]; pool[i] = pool[j]; pool[j] = tmp; }
-    const n = (shell.clientWidth || 520) < 480 ? 8 : 14;
+    const cap = (shell.clientWidth || 520) < 480 ? 8 : 14;
+    const n = Math.min(cap, count + 2); // 4 photos → 6 stickers … 12+ → the full swarm
     pool.slice(0, n).forEach((spec) => {
       const s = document.createElement('span');
       s.className = spec.cls;
@@ -11137,13 +11161,15 @@ document.addEventListener('DOMContentLoaded', () => {
       b.addEventListener('click', () => { albumTab = id; renderAlbum(); });
       tabs.appendChild(b);
     });
-    const charm = document.createElement('span');
-    charm.className = 'album-charm';
-    charm.textContent = '📎♡';
-    charm.setAttribute('aria-hidden', 'true');
-    tabs.appendChild(charm);
+    if (albumGet().length + albumVideos.length >= 1) {
+      const charm = document.createElement('span');
+      charm.className = 'album-charm';
+      charm.textContent = '📎♡';
+      charm.setAttribute('aria-hidden', 'true');
+      tabs.appendChild(charm);
+    }
     shell.appendChild(tabs);
-    if (albumTab === 'wall') { renderWall(shell); albumDeco(shell, 0); return; }
+    if (albumTab === 'wall') { renderWall(shell); return; } // renderWall decorates once it knows the real count
     const photos = albumGet();
     const note = document.createElement('div');
     note.className = 'album-note';
@@ -15885,6 +15911,127 @@ document.addEventListener('DOMContentLoaded', () => {
       intro: () => [trT('🧩 run `visitorfetch` — then tell the door how many CORES your machine confessed to.', '🧩 lance `visitorfetch` — puis dis à la porte combien de CŒURS ta machine a avoués.')],
       check: (d, norm, lw) => lw.trim() === String(navigator.hardwareConcurrency || 8) }
   ];
+  /* ---- THE MERCY PROTOCOL: some visitors cannot code. the door does not
+     abandon them — it stages a whole rescue movie instead. the green greeter
+     reveals his villain arc, cages the tty… and monologues one sentence too
+     long. enter: the slime of legend. one ultimate. curtains. site. ---- */
+  var doorFlail = 0;
+  function rescueSlime(hero) {
+    const cv = document.createElement('canvas');
+    cv.width = 112; cv.height = 112;
+    const x = cv.getContext('2d');
+    const ROWS = hero ? [
+      '......FF......', '.....F..F.....', '......FF......', '......S.......',
+      '....PPPPPP....', '..PPPPPPPPPP..', '.PwwPPPPPPPPP.', '.PwPPPPPPPPPP.',
+      'PPPeePPPPeePPP', 'PPbPPPPPPPPbPP', 'PPPPPPmmPPPPPP', 'PPPPPmmmmPPPPP',
+      '.PPPPPPPPPPPP.', '..DDDDDDDDDD..'] : [
+      '......FF......', '.....F..F.....', '......FF......', '......S.......',
+      '....PPPPPP....', '..PPPPPPPPPP..', '.PwwPPPPPPPPP.', '.PwPPPPPPPPPP.',
+      'PPeeeePPeeeePP', 'PPeeeeeeeeeePP', 'PPuPPPmmPPuPPP', 'PPPPPPmmPPPPPP',
+      '.PPPPPPPPPPPP.', '..DDDDDDDDDD..'];
+    const PAL = hero
+      ? { P: '#ff9ecb', D: '#e06aaa', w: 'rgba(255,255,255,0.78)', e: '#14020e', m: '#c2447e', b: '#ff6fae', S: '#2ea043', F: '#39d353' }
+      : { P: '#7ee787', D: '#2ea043', w: 'rgba(255,255,255,0.7)', e: '#0a0f0a', m: '#1f6f2f', u: '#a5f3b4', S: '#57c689', F: '#39d353' };
+    ROWS.forEach((row, ry) => { for (let rx = 0; rx < row.length; rx++) { const ch = row[rx]; if (ch === '.') continue; x.fillStyle = PAL[ch] || PAL.P; x.fillRect(rx * 8, ry * 8, 8, 8); } });
+    return cv;
+  }
+  function doorRescue() {
+    if (document.getElementById('door-rescue')) return;
+    clearTimeout(window.__doorIdle);
+    if (window.__matrixGreetTimer) { clearInterval(window.__matrixGreetTimer); window.__matrixGreetTimer = null; }
+    const g = document.getElementById('matrix-greeter');
+    if (g) g.remove(); // the greeter has… other plans tonight
+    const stage = document.createElement('div');
+    stage.id = 'door-rescue';
+    stage.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(stage);
+    const tint = document.createElement('div');
+    tint.className = 'rescue-tint';
+    stage.appendChild(tint);
+    // the cage: columns of green digits slam down over the whole tty
+    const GLY = '01ｱｲｳｹｺ10';
+    for (let i = 0; i < 13; i++) {
+      const bar = document.createElement('div');
+      bar.className = 'rescue-bar';
+      bar.style.left = (2 + i * 7.7) + '%';
+      bar.style.animationDelay = (i % 5) * 90 + 'ms';
+      let txt = '';
+      for (let j = 0; j < 90; j++) txt += GLY[Math.floor(Math.random() * GLY.length)];
+      bar.textContent = txt;
+      stage.appendChild(bar);
+    }
+    playTone(150, 'sawtooth', 0.4, 0, 0.06);
+    // the villain takes center stage
+    const vil = document.createElement('div');
+    vil.className = 'rescue-actor rescue-villain';
+    vil.style.cssText = 'right:14%;top:30%;';
+    const vbub = document.createElement('div');
+    vbub.className = 'rescue-bub rescue-bub-villain';
+    vil.append(vbub, rescueSlime(false));
+    stage.appendChild(vil);
+    const VILLAIN = [
+      trT('AHAHAHA!! CAGED. you are CAGED, little visitor!! I watched you type `help` with SEVEN exclamation marks and I chose violence ♡', 'AHAHAHA !! EN CAGE. tu es EN CAGE, petit·e visiteur·euse !! je t\'ai vu taper `help` avec SEPT points d\'exclamation et j\'ai choisi la violence ♡'),
+      trT('this prison is compiled from your OWN unknown commands. artisanal. zero dependencies. escape complexity: O(never). your `anyone`? nobody is coming.', 'cette prison est compilée depuis TES commandes introuvables. artisanale. zéro dépendance. complexité d\'évasion : O(jamais). ton `anyone` ? personne ne viendra.'),
+      trT('and now — before I `rm -rf` you — allow me to recite my full tragic backstory. it begins in 1997, with a missing semicolon on line—', 'et maintenant — avant de te `rm -rf` — laisse-moi réciter ma tragique histoire. tout commence en 1997, avec un point-virgule manquant à la ligne—')
+    ];
+    const timers = [];
+    VILLAIN.forEach((line, i) => timers.push(setTimeout(() => { vbub.textContent = line; playTone(190 + i * 30, 'square', 0.09, 0, 0.04); }, 700 + i * 3400)));
+    // …he never finishes the third sentence. THE HERO ARRIVES.
+    setTimeout(() => {
+      const hero = document.createElement('div');
+      hero.className = 'rescue-actor rescue-hero';
+      hero.style.cssText = 'left:16%;top:-30%;';
+      const hbub = document.createElement('div');
+      hbub.className = 'rescue-bub rescue-bub-hero';
+      hero.append(hbub, rescueSlime(true));
+      stage.appendChild(hero);
+      requestAnimationFrame(() => requestAnimationFrame(() => { hero.style.top = '34%'; }));
+      const flash = document.createElement('div');
+      flash.className = 'rescue-flash';
+      stage.appendChild(flash);
+      setTimeout(() => flash.remove(), 700);
+      document.body.classList.add('rescue-quake');
+      setTimeout(() => document.body.classList.remove('rescue-quake'), 600);
+      playFanfare();
+      setTimeout(() => { hbub.textContent = trT('did someone spam `help`? great news. I AM help ♡', 'quelqu\'un a spammé `help` ? bonne nouvelle. JE SUIS help ♡'); }, 800);
+      // THE ULTIMATE — one cast, fight over
+      setTimeout(() => {
+        const nova = document.createElement('div');
+        nova.className = 'rescue-nova';
+        nova.style.left = 'calc(16% + 30px)';
+        nova.style.top = 'calc(34% + 40px)';
+        stage.appendChild(nova);
+        for (let i = 0; i < 18; i++) {
+          const h = document.createElement('span');
+          h.className = 'rescue-heart';
+          h.textContent = ['♥', '♡', '✦', '💾'][i % 4];
+          h.style.left = 'calc(16% + 40px)';
+          h.style.top = 'calc(34% + 40px)';
+          h.style.setProperty('--hx', (Math.cos(i / 18 * 6.283) * (200 + Math.random() * 240)) + 'px');
+          h.style.setProperty('--hy', (Math.sin(i / 18 * 6.283) * (160 + Math.random() * 200)) + 'px');
+          stage.appendChild(h);
+        }
+        vil.classList.add('is-bonked');
+        vbub.textContent = trT('…segmentation fault (ego dumped)', '…segmentation fault (ego vidé)');
+        stage.classList.add('is-shatter');
+        document.body.classList.add('rescue-quake');
+        setTimeout(() => document.body.classList.remove('rescue-quake'), 600);
+        playTone(880, 'triangle', 0.2, 0, 0.06);
+        playTone(1320, 'triangle', 0.25, 0.12, 0.05);
+        setTimeout(() => { hbub.textContent = trT('your monologue exceeded its time limit. verdict: O(bonk).', 'ton monologue a dépassé son temps limite. verdict : O(bonk).'); }, 900);
+        setTimeout(() => { hbub.textContent = trT('locks? DELETED. puzzles? SKIPPED. you are coming in the FRONT door — as my honored guest ♡', 'verrous ? SUPPRIMÉS. énigmes ? SAUTÉES. tu entres par la GRANDE porte — invité·e d\'honneur ♡'); }, 3100);
+      }, 2600);
+      timers.forEach(clearTimeout);
+    }, 8600);
+    // curtains: the site itself is the after-credits scene
+    setTimeout(() => {
+      achvUnlock('rescued');
+      stage.style.transition = 'opacity 0.9s';
+      stage.style.opacity = '0';
+      setTimeout(() => stage.remove(), 950);
+      terminalDoorOpen(true);
+    }, 15400);
+  }
   function doorInit() {
     if (window.__door) return window.__door;
     const pool = DOOR_POOL.slice().sort(() => Math.random() - 0.5);
@@ -15990,8 +16137,10 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }, o.dense ? 42 : 50);
   }
-  function terminalDoorOpen() {
-    termLine(trT('🔓 the name IS the key. compiling the rest of the world…', '🔓 le nom EST la clé. compilation du reste du monde…'), 't-ok');
+  function terminalDoorOpen(rescued) {
+    termLine(rescued
+      ? trT('🛟 rescued by the slime of legend. compiling the rest of the world…', '🛟 sauvé·e par le slime légendaire. compilation du reste du monde…')
+      : trT('🔓 the name IS the key. compiling the rest of the world…', '🔓 le nom EST la clé. compilation du reste du monde…'), 't-ok');
     setTimeout(() => {
       document.body.classList.remove('terminal-only');
       const g = document.getElementById('matrix-greeter');
