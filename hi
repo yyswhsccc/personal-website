@@ -14,6 +14,14 @@
 
   [2m(someone types to you in real time, typos included. still only text.)[0m
 
+[1mSTEP 1.5 — step INSIDE the slime-docker[0m (a container, in YOUR terminal):
+
+  [2mpaste this one honest line (it only wraps curl — read it):[0m
+    [96mslime() { curl -sN -G --data-urlencode "c=$*" https://yongshanos-wall.yongshanos.workers.dev/sh; }[0m
+
+  then: [92mslime ls[0m · [92mslime whoami[0m · [92mslime sudo rm -rf /[0m · [92mslime help[0m
+  [2m(it answers everything. nothing runs on your machine. it is curl in a slime costume.)[0m
+
 [1mSTEP 2 — find the door[0m (it hides. of course it hides.):
 
   the address is base64. decode it, open it in any browser:
