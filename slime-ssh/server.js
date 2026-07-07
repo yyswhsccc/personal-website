@@ -534,8 +534,27 @@ function main() {
     client.on('close', releaseOnce);
     client.on('error', () => { /* resets happen. no hard feelings. */ });
 
+    // hard ceiling on ANY connection's lifetime — covers exec-only clients
+    // that never disconnect, so a held-open channel can't camp a slot.
+    // (shell sessions have their own idle + 30-min caps too; this is the
+    // connection-level backstop.) a little slack past SESSION_MS.
+    const connKill = setTimeout(() => { try { client.end(); } catch (e) { /* gone */ } }, SESSION_MS + 15000);
+    client.on('close', () => clearTimeout(connKill));
+
     // any name, any auth, zero friction — the whole container is the welcome mat
     client.on('authentication', (ctx) => ctx.accept());
+
+    /* ── HARD PERIMETER ─────────────────────────────────────────────
+       this box ALSO serves the owner's Moodle site (Apache on *:80/443)
+       and sits next to the AWS metadata endpoint (169.254.169.254). the
+       fake shell never opens an outbound socket itself, so the only way
+       a visitor could reach any of that is SSH tunnelling. reject every
+       forwarding / proxy vector EXPLICITLY — belt and suspenders. (ssh2
+       also rejects unhandled channels, but a security boundary must not
+       lean on a default.) nothing here should ever escape the slime. */
+    client.on('tcpip', (accept, reject) => { if (reject) reject(); });               // ssh -L / ssh -D  (direct-tcpip → Moodle, MySQL, metadata, open proxy)
+    client.on('openssh.streamlocal', (accept, reject) => { if (reject) reject(); }); // ssh -L to a unix socket
+    client.on('request', (accept, reject) => { if (reject) reject(); });             // ssh -R (tcpip-forward) + every other global request
 
     client.on('ready', () => {
       client.on('session', (accept) => {
@@ -543,16 +562,24 @@ function main() {
         let ptyInfo = null;
         session.on('pty', (a, r, info) => { ptyInfo = info; if (a) a(); });
         session.on('window-change', (a) => { if (a) a(); });
-        session.on('subsystem', (a, r) => { if (r) r(); }); // no sftp. the container has 6 files and they are feelings.
+        session.on('x11', (a, r) => { if (r) r(); });          // no X11 forwarding — another tunnel out
+        session.on('auth-agent', (a, r) => { if (r) r(); });   // no agent forwarding
+        session.on('subsystem', (a, r) => { if (r) r(); }); // no sftp/scp. the container has 6 files and they are feelings.
         session.on('exec', (a, r, execInfo) => {
-          // one-shot: ssh -p 2222 host 'ls' — answer and hang up, like /sh did
+          // one-shot: ssh -p 2222 host 'ls' — answer, then close THIS channel
+          // only (never the whole connection: a client may run several exec
+          // channels, e.g. ControlMaster, and killing the connection after
+          // the first would cut them off).
           const stream = a();
           const sess = makeSession(client, stream, false);
           const io = makeIO(sess);
+          client.once('close', () => { sess.closed = true; for (const to of sess.timers) clearTimeout(to); });
           (async () => {
             try { await respond(execInfo.command, io); } catch (e) { /* hung up */ }
+            sess.closed = true;
+            for (const to of sess.timers) clearTimeout(to);
             try { stream.exit(0); } catch (e) { /* gone */ }
-            endSession(sess, '');
+            try { stream.end(); } catch (e) { /* gone */ }
           })();
         });
         session.on('shell', (a) => {
