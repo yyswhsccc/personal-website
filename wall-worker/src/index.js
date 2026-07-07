@@ -113,18 +113,31 @@ function hiShow(ctx) {
       await bs(3);
       await out(D + '(sorry. vim muscle memory.)' + R + '\n\n');
       await sleep(650);
-      await out(B + 'ok — the actual message:' + R + '\n');
+      await out(B + 'ok — here is what you found:' + R + '\n');
       await t('a pixel meadow. a slime that streams. and a locked DOOR full of puzzles.\n', 40);
       await sleep(350);
-      await t('the address is ' + C + 'https://yyswhsccc.github.io/pers' + R, 24);
+      await t('the door is at ' + C + 'https://yyswhsccc.github.io/pers' + R, 24);
       await sleep(1100);
       await out(D + '  …wait. you decoded base64 to get HERE. plaintext would insult you.' + R);
       await sleep(700);
       await bs(120, 9); // the whole line vanishes, fast and slightly panicked (overshoot is harmless at col 0)
-      await t('the address is encrypted. as is tradition:\n', 36);
-      await sleep(250);
-      await out('\n  ' + C + 'echo aHR0cHM6Ly95eXN3aHNjY2MuZ2l0aHViLmlvL3BlcnNvbmFsLXdlYnNpdGUvI3Rlcm1pbmFs | base64 -d' + R + '\n\n');
-      await out(D + '  (yes, you saw the URL for two seconds. no, it will not be that easy again ♡)' + R + '\n\n');
+      await t('right. the OFFICIAL tour guide, keep-able and copy-pasteable:\n', 38);
+      await sleep(300);
+      // the tutorial proper — printed crisply so it survives in the scrollback
+      const DOOR_B64 = 'aHR0cHM6Ly95eXN3aHNjY2MuZ2l0aHViLmlvL3BlcnNvbmFsLXdlYnNpdGUvI3Rlcm1pbmFsCg==';
+      await out('\n' + P + '━━ HOW TO ENTER ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━' + R + '\n');
+      await out(B + 'STEP 1' + R + ' · decode the address (it prints a URL):\n\n');
+      await out('    ' + C + 'echo ' + DOOR_B64 + ' | base64 -d' + R + '\n\n');
+      await out(D + '    macOS shortcut: ' + R + 'open "$(echo ' + DOOR_B64 + ' | base64 -d)"\n\n');
+      await sleep(400);
+      await out(B + 'STEP 2' + R + ' · open it in any browser. the door is ' + P + 'LOCKED' + R + ' —\n');
+      await out('    a short chain of tiny puzzles, freshly shuffled for you alone.\n');
+      await out('    survivors are told the key ♡ (' + C + 'hint' + R + ' helps. flailing summons a hero.)\n\n');
+      await sleep(400);
+      await out(B + 'BONUS' + R + ' · pikmin trading cards, dealt by YOUR shell\'s own dice:\n\n');
+      await out('    ' + C + 'curl -sL "https://yyswhsccc.github.io/personal-website/pik/$((RANDOM % 5))"' + R + '\n\n');
+      await out(D + '(everything here only prints. nothing executes. your shell is safe.)' + R + '\n');
+      await out(P + '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━' + R + '\n\n');
       await sleep(500);
       await t(G + '$ ' + R + 'logout\n', 30);
       await out(P + '— yongshan ♡ ' + D + '(the slime says hi too. it cannot type. it tried.)' + R + '\n');

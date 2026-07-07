@@ -6,7 +6,7 @@
   [93m   ▀████▀   [0m
   [2mlistens until the bug explains itself and leaves in shame.[0m
   the real one walks a real desktop. the door hides in base64:
-  [95mecho aHR0cHM6Ly95eXN3aHNjY2MuZ2l0aHViLmlvL3BlcnNvbmFsLXdlYnNpdGUvI3Rlcm1pbmFs | base64 -d[0m
+  [95mecho aHR0cHM6Ly95eXN3aHNjY2MuZ2l0aHViLmlvL3BlcnNvbmFsLXdlYnNpdGUvI3Rlcm1pbmFsCg== | base64 -d[0m
 [93m└────────────────────────────────────────┘[0m
   [2mcard 2/5 · dealt by your own $RANDOM · collect all five ♡[0m
 

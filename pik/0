@@ -6,7 +6,7 @@
   [92m   ▀████▀   [0m
   [2mun-happens one bug per cooldown. regret not included.[0m
   the real one walks a real desktop. the door hides in base64:
-  [95mecho aHR0cHM6Ly95eXN3aHNjY2MuZ2l0aHViLmlvL3BlcnNvbmFsLXdlYnNpdGUvI3Rlcm1pbmFs | base64 -d[0m
+  [95mecho aHR0cHM6Ly95eXN3aHNjY2MuZ2l0aHViLmlvL3BlcnNvbmFsLXdlYnNpdGUvI3Rlcm1pbmFsCg== | base64 -d[0m
 [92m└────────────────────────────────────────┘[0m
   [2mcard 1/5 · dealt by your own $RANDOM · collect all five ♡[0m
 

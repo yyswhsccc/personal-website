@@ -8,20 +8,19 @@
 [0m
 [1mhi!! you found yongshan's mysterious little command ♡[0m
 
-[1mSTEP 1.5 — patch into the LIVE WIRE[0m (optional. unforgettable.):
+[2myou are reading the PRINTED edition. the switchboard is LIVE at:[0m
 
     [96mcurl -sN https://yongshanos-wall.yongshanos.workers.dev/hi[0m
 
-  [2m(a real streaming session — someone types to you live, typos included.
-  -N just disables buffering. still only text. still nothing executes.)[0m
+  [2m(someone types to you in real time, typos included. still only text.)[0m
 
 [1mSTEP 2 — find the door[0m (it hides. of course it hides.):
 
   the address is base64. decode it, open it in any browser:
 
-    [96mecho aHR0cHM6Ly95eXN3aHNjY2MuZ2l0aHViLmlvL3BlcnNvbmFsLXdlYnNpdGUvI3Rlcm1pbmFs | base64 -d[0m
+    [96mecho aHR0cHM6Ly95eXN3aHNjY2MuZ2l0aHViLmlvL3BlcnNvbmFsLXdlYnNpdGUvI3Rlcm1pbmFsCg== | base64 -d[0m
 
-  [92mmacOS shortcut:[0m open "$(echo aHR0cHM6Ly95eXN3aHNjY2MuZ2l0aHViLmlvL3BlcnNvbmFsLXdlYnNpdGUvI3Rlcm1pbmFs | base64 -d)"
+  [92mmacOS shortcut:[0m open "$(echo aHR0cHM6Ly95eXN3aHNjY2MuZ2l0aHViLmlvL3BlcnNvbmFsLXdlYnNpdGUvI3Rlcm1pbmFsCg== | base64 -d)"
 
 inside: the door is [95mLOCKED[0m — a short chain of little puzzles,
 freshly shuffled every visit. survivors are told the key ♡ ([96mhint[0m helps.)

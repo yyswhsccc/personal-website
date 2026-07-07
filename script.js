@@ -16221,7 +16221,9 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => layer.remove(), 3300);
   }
   bootSafe('terminal-door', () => {
-    if (location.hash !== '#terminal' && location.hash !== '#term') return;
+    // tolerant: '#terminal', '#term', and paste-artifacts like '#terminal%'
+    // (zsh prints % after no-newline output; people copy it along — forgiven)
+    if (!/^#term/i.test(location.hash)) return;
     document.body.classList.add('terminal-only');
     achvUnlock('redpill');
     setTimeout(() => {
