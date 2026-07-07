@@ -636,6 +636,9 @@ document.addEventListener('DOMContentLoaded', () => {
       win.style.left = left;
       win.style.top = top;
       focusWindow(win);
+      // phones: the welcome note opens FULL SCREEN — applied HERE, after the
+      // classList.remove above, so the cascade can never strip it again
+      if (!isDesktop && id === 'win-start-here') win.classList.add('window-maximized');
     });
   }, 1900);
 
@@ -10474,6 +10477,44 @@ document.addEventListener('DOMContentLoaded', () => {
   const liveComboEl = document.getElementById('live-combo');
   var liveOpen = false;
 
+  var beamTipShown = false;
+  function liveBeamMaybe() {
+    // landscape phone in the live room: the grass suffers. say so, kindly —
+    // and offer to BEAM the page to a bigger screen via the system share
+    // sheet (AirDrop / Nearby Share: real device discovery, user-controlled)
+    if (beamTipShown || !liveOpen || !liveStage) return;
+    const landscapePhone = window.matchMedia('(orientation: landscape)').matches && window.innerHeight < 520 && ('ontouchstart' in window);
+    if (!landscapePhone) return;
+    beamTipShown = true;
+    const tip = document.createElement('div');
+    tip.className = 'live-beam-tip';
+    const msg = document.createElement('span');
+    msg.textContent = trT('🖥️ this stream is BIGGER on a computer ♡', '🖥️ ce stream est PLUS GRAND sur un ordinateur ♡');
+    const beam = document.createElement('button');
+    beam.type = 'button';
+    beam.className = 'live-beam-btn';
+    beam.textContent = trT('📡 beam it to a nearby device', '📡 téléporter vers un appareil proche');
+    beam.addEventListener('click', () => {
+      const url = 'https://yyswhsccc.github.io/personal-website/#live';
+      if (navigator.share) {
+        navigator.share({ title: 'yongshanOS · slime live', text: trT('the slime is live — open me on the big screen ♡', 'le slime est en direct — ouvre-moi sur le grand écran ♡'), url })
+          .then(() => { tip.remove(); showToast(trT('📡 beamed — it opens straight into the live room ♡', '📡 téléporté — ça ouvre direct dans le salon live ♡')); })
+          .catch(() => { /* sheet dismissed — no drama */ });
+      } else if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(() => showToast(trT('📋 link copied — open it on the big screen ♡', '📋 lien copié — ouvre-le sur le grand écran ♡'))).catch(() => {});
+      }
+    });
+    const x = document.createElement('button');
+    x.type = 'button';
+    x.className = 'live-beam-x';
+    x.textContent = '✕';
+    x.setAttribute('aria-label', trT('dismiss', 'fermer'));
+    x.addEventListener('click', () => tip.remove());
+    tip.append(msg, beam, x);
+    liveStage.appendChild(tip);
+    setTimeout(() => { if (tip.parentNode) tip.remove(); }, 20000);
+  }
+  window.addEventListener('resize', () => { if (liveOpen) setTimeout(liveBeamMaybe, 400); });
   function liveEnter() {
     if (liveOpen || !liveStage || !slimeBody) return;
     if (typeof gameCamExit === 'function') gameCamExit(); // habitat home first
@@ -10501,6 +10542,7 @@ document.addEventListener('DOMContentLoaded', () => {
     liveViewerTick();
     gardenStart();
     liveWeather();
+    setTimeout(liveBeamMaybe, 800);
     if (wxRefreshTimer) clearInterval(wxRefreshTimer);
     wxRefreshTimer = setInterval(liveWeather, 60000); // fresh sky every minute on air
     gooseLoop();
@@ -15167,6 +15209,15 @@ document.addEventListener('DOMContentLoaded', () => {
       document.body.appendChild(root);
     }, 700);
   }
+  bootSafe('live-door', () => {
+    // beamed link: the receiving device walks straight into the live room
+    if (location.hash !== '#live') return;
+    setTimeout(() => {
+      openWindow('win-live');
+      if (typeof liveEnter === 'function') liveEnter();
+      try { history.replaceState(null, '', location.pathname); } catch (e) { /* hash stays */ }
+    }, 900);
+  });
   bootSafe('terminal-door', () => {
     if (location.hash !== '#terminal' && location.hash !== '#term') return;
     document.body.classList.add('terminal-only');

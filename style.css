@@ -7701,3 +7701,42 @@ body.terminal-only .game-hint-pop { display: none !important; }
   animation: matrix-label-pulse 0.9s steps(2) infinite;
 }
 @keyframes matrix-label-pulse { 50% { opacity: 0.55; } }
+
+/* 📡 beam tip: landscape phones deserve honesty and an exit ramp */
+.live-beam-tip {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 14;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 94%;
+  font-family: var(--font-pixel);
+  font-size: 0.72rem;
+  color: var(--ink);
+  background: linear-gradient(90deg, #ffe98a, #ffb3dd);
+  border: 2px solid var(--ink);
+  box-shadow: 3px 3px 0 var(--ink);
+  padding: 6px 8px;
+  animation: window-pop-in 0.25s steps(3, end);
+}
+.live-beam-btn {
+  font-family: var(--font-pixel);
+  font-size: 0.72rem;
+  background: linear-gradient(var(--pink), var(--pink-hot));
+  color: #fff;
+  border: 2px solid var(--ink);
+  box-shadow: 2px 2px 0 var(--ink);
+  padding: 4px 8px;
+  cursor: var(--cursor-heart);
+  white-space: nowrap;
+}
+.live-beam-x { background: transparent; border: 0; font-family: var(--font-pixel); cursor: var(--cursor-heart); }
+/* landscape phones: shrink the stage so the GRASS stays on screen */
+@media (orientation: landscape) and (max-height: 520px) {
+  .live-stage { min-height: min(300px, calc(100dvh - 150px)); }
+  .live-stage .slime-pet { width: 120px; height: 106px; left: calc(50% - 60px); top: auto; bottom: 14px; }
+  .live-stage .tamagotchi-bubble { bottom: 138px; }
+}

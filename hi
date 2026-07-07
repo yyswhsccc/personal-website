@@ -8,11 +8,13 @@
 [0m
 [1mhi!! you found yongshan's mysterious little command ♡[0m
 
-[1mSTEP 2 — open her terminal[0m (the site itself stays asleep):
+[1mSTEP 2 — find the door[0m (it hides. of course it hides.):
 
-  [92mmacOS  :[0m open "https://yyswhsccc.github.io/personal-website/#terminal"
-  [92mlinux  :[0m xdg-open "https://yyswhsccc.github.io/personal-website/#terminal"
-  [92mwindows:[0m start https://yyswhsccc.github.io/personal-website/#terminal
+  the address is base64. decode it, open it in any browser:
+
+    [96mecho aHR0cHM6Ly95eXN3aHNjY2MuZ2l0aHViLmlvL3BlcnNvbmFsLXdlYnNpdGUvI3Rlcm1pbmFs | base64 -d[0m
+
+  [92mmacOS shortcut:[0m open "$(echo aHR0cHM6Ly95eXN3aHNjY2MuZ2l0aHViLmlvL3BlcnNvbmFsLXdlYnNpdGUvI3Rlcm1pbmFs | base64 -d)"
 
 inside: the door is [95mLOCKED[0m — a short chain of little puzzles,
 freshly shuffled every visit. survivors are told the key ♡ ([96mhint[0m helps.)
