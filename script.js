@@ -10898,9 +10898,14 @@ document.addEventListener('DOMContentLoaded', () => {
     note.className = 'album-note';
     note.textContent = trT('🌍 THE WORLDWIDE WALL — every photo here was hung by a visitor + their slime. loading…', '🌍 LE MUR MONDIAL — chaque photo ici a été accrochée par un·e visiteur·euse + son slime. chargement…');
     shell.append(note, grid);
+    let wallSeen = 0;
+    const gen = albumGen; // a tab switch re-renders the shell; late fetches must not touch the new render
     const load = (cursor) => wallList(cursor).then((res) => {
+      if (gen !== albumGen) return;
       if (!res) { note.textContent = trT('🌍 the wall is warming up — hang the first photo from a selfie ♡', '🌍 le mur chauffe — accroche la première photo depuis un selfie ♡'); return; }
-      note.textContent = trT(`🌍 THE WORLDWIDE WALL — ${res.photos.length}${res.cursor ? '+' : ''} framed visitors (owner-moderated ♡)`, `🌍 LE MUR MONDIAL — ${res.photos.length}${res.cursor ? '+' : ''} visiteurs encadrés (modéré ♡)`);
+      wallSeen += res.photos.length;
+      albumSetHits(shell, wallSeen);
+      note.textContent = trT(`🌍 THE WORLDWIDE WALL — ${wallSeen}${res.cursor ? '+' : ''} framed visitors (owner-moderated ♡)`, `🌍 LE MUR MONDIAL — ${wallSeen}${res.cursor ? '+' : ''} visiteurs encadrés (modéré ♡)`);
       res.photos.forEach((p) => {
         const card = document.createElement('div');
         card.className = 'album-card';
@@ -10921,13 +10926,133 @@ document.addEventListener('DOMContentLoaded', () => {
         more.className = 'wp-btn';
         more.textContent = trT('more ♡', 'plus ♡');
         more.addEventListener('click', () => { more.remove(); load(res.cursor); });
-        shell.appendChild(more);
+        grid.after(more);
       }
     });
     load();
   }
+  // ---- Y2K wall deco: tickers, badges, stickers — a 2003 bedroom wall, but make it computer ----
+  function albumSetHits(shell, n) {
+    const digits = shell.querySelector('.album-hits-digits');
+    if (!digits) return;
+    digits.innerHTML = '';
+    String(Math.max(0, n)).padStart(6, '0').split('').forEach((d, i) => {
+      const s = document.createElement('span');
+      s.textContent = d;
+      s.style.animationDelay = (i * 0.07) + 's';
+      digits.appendChild(s);
+    });
+  }
+  function albumDeco(shell, count) {
+    // scrolling ticker — the wall introduces itself, twice for a seamless loop
+    const tick = document.createElement('div');
+    tick.className = 'album-ticker';
+    const run = document.createElement('span');
+    run.className = 'album-ticker-run';
+    const line = trT('✦ now_loading: memories.exe ✦ 100% cute · 0% bugs ✦ ctrl+S your feelings ✦ best viewed with sparkles ON ✦ ', '✦ chargement : souvenirs.exe ✦ 100% mignon · 0% bug ✦ ctrl+S tes émotions ✦ à regarder étoiles ON ✦ ');
+    run.textContent = line + line;
+    tick.appendChild(run);
+    tick.setAttribute('aria-hidden', 'true');
+    shell.prepend(tick);
+    // eternal 99% download + odometer hit counter
+    const status = document.createElement('div');
+    status.className = 'album-statusrow';
+    status.setAttribute('aria-hidden', 'true');
+    const dl = document.createElement('div');
+    dl.className = 'album-dl';
+    const dlLabel = document.createElement('span');
+    dlLabel.textContent = trT('cuteness.zip', 'mignonnerie.zip');
+    const dlBar = document.createElement('div');
+    dlBar.className = 'album-dl-bar';
+    const dlPct = document.createElement('span');
+    dlPct.textContent = '99%';
+    dl.append(dlLabel, dlBar, dlPct);
+    const hits = document.createElement('div');
+    hits.className = 'album-hits';
+    const hitsLabel = document.createElement('span');
+    hitsLabel.textContent = trT('memories served:', 'souvenirs servis :');
+    const digits = document.createElement('span');
+    digits.className = 'album-hits-digits';
+    hits.append(hitsLabel, digits);
+    status.append(dl, hits);
+    shell.appendChild(status);
+    albumSetHits(shell, count);
+    // the GeoCities badge altar
+    const badges = document.createElement('div');
+    badges.className = 'album-badges';
+    badges.setAttribute('aria-hidden', 'true');
+    [
+      [trT('♥ SLIME inside ♥', '♥ SLIME inside ♥'), 'is-blink'],
+      [trT('best viewed in 800×600', 'optimisé pour 800×600'), ''],
+      ['GET /pixels → 200 OK', 'is-green'],
+      [trT('no cookies · only crumbs', 'zéro cookie · que des miettes'), ''],
+      [trT('valid HTML… probably', 'HTML valide… sans doute'), ''],
+      [trT('☆ made with <3 and no framework ☆', '☆ fait avec <3 et zéro framework ☆'), 'is-rainbow']
+    ].forEach(([label, cls]) => {
+      const b = document.createElement('span');
+      b.className = 'album-badge' + (cls ? ' ' + cls : '');
+      b.textContent = label;
+      badges.appendChild(b);
+    });
+    shell.appendChild(badges);
+    // corner stickers: spinning mix CD, pixel cat, and the famous error dialog
+    const cd = document.createElement('div');
+    cd.className = 'album-cd';
+    cd.setAttribute('aria-hidden', 'true');
+    const disc = document.createElement('div');
+    disc.className = 'album-cd-disc';
+    const cdLabel = document.createElement('span');
+    cdLabel.textContent = 'mix_2003.iso';
+    cd.append(disc, cdLabel);
+    const cat = document.createElement('div');
+    cat.className = 'album-cat';
+    cat.setAttribute('aria-hidden', 'true');
+    cat.textContent = trT('ᓚᘏᗢ meow.exe', 'ᓚᘏᗢ miaou.exe');
+    const err = document.createElement('div');
+    err.className = 'album-err';
+    err.setAttribute('aria-hidden', 'true');
+    const errT = document.createElement('div');
+    errT.className = 'album-err-title';
+    errT.textContent = trT('⚠ error.exe', '⚠ erreur.exe');
+    const errB = document.createElement('div');
+    errB.className = 'album-err-body';
+    errB.textContent = trT('2 cute!!', 'trop mimi !!');
+    const errOk = document.createElement('button');
+    errOk.type = 'button';
+    errOk.className = 'album-err-ok';
+    errOk.textContent = 'OK ♡';
+    errOk.tabIndex = -1;
+    errOk.addEventListener('click', () => {
+      err.classList.add('is-dismissed');
+      playTone(660, 'square', 0.06, 0, 0.03);
+      setTimeout(() => err.remove(), 520);
+    });
+    err.append(errT, errB, errOk);
+    status.insertBefore(err, hits); // the sticker lives in the status row — never over a photo
+    // twinkling sparkles + one very rare butterfly (a bug that is a feature)
+    const sparks = ['✦', '✧', '⋆', '✦'].map((ch, i) => {
+      const s = document.createElement('span');
+      s.className = 'album-spark';
+      s.setAttribute('aria-hidden', 'true');
+      s.textContent = ch;
+      s.style.left = (8 + (i * 137) % 82) + '%';
+      s.style.top = (14 + (i * 211) % 70) + '%';
+      s.style.animationDelay = (i * 0.65) + 's';
+      return s;
+    });
+    const fly = document.createElement('span');
+    fly.className = 'album-fly';
+    fly.setAttribute('aria-hidden', 'true');
+    const flyX = document.createElement('span');
+    flyX.className = 'album-fly-x';
+    flyX.textContent = '🦋';
+    fly.appendChild(flyX);
+    shell.append(cd, cat, fly, ...sparks);
+  }
   var albumTab = 'mine';
+  var albumGen = 0;
   function renderAlbum() {
+    albumGen++;
     const shell = document.getElementById('album-shell');
     if (!shell) return;
     shell.innerHTML = '';
@@ -10942,8 +11067,13 @@ document.addEventListener('DOMContentLoaded', () => {
       b.addEventListener('click', () => { albumTab = id; renderAlbum(); });
       tabs.appendChild(b);
     });
+    const charm = document.createElement('span');
+    charm.className = 'album-charm';
+    charm.textContent = '📎♡';
+    charm.setAttribute('aria-hidden', 'true');
+    tabs.appendChild(charm);
     shell.appendChild(tabs);
-    if (albumTab === 'wall') { renderWall(shell); return; }
+    if (albumTab === 'wall') { renderWall(shell); albumDeco(shell, 0); return; }
     const photos = albumGet();
     const note = document.createElement('div');
     note.className = 'album-note';
@@ -10954,6 +11084,7 @@ document.addEventListener('DOMContentLoaded', () => {
       empty.className = 'album-empty';
       empty.textContent = trT('no photos yet!! open slime_live.exe and gift a 📷 — the slime is READY.', 'aucune photo !! ouvre slime_live.exe et offre un 📷 — le slime est PRÊT.');
       shell.appendChild(empty);
+      albumDeco(shell, 0);
       return;
     }
     const grid = document.createElement('div');
@@ -11004,6 +11135,7 @@ document.addEventListener('DOMContentLoaded', () => {
       grid.appendChild(card);
     });
     shell.appendChild(grid);
+    albumDeco(shell, photos.length + albumVideos.length);
   }
   /* ---- 🎧 VIBE MODE ----
      browsers cannot (and must not) hear what a visitor is playing — so the

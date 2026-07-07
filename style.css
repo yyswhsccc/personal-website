@@ -7849,6 +7849,7 @@ body.terminal-only .game-hint-pop { display: none !important; }
 .album-cap { font-family: var(--font-pixel); font-size: 0.72rem; color: var(--pink-deep); padding-top: 3px; }
 .album-save, .album-del {
   position: absolute;
+  z-index: 4;
   top: 4px;
   border: 2px solid var(--ink);
   font-family: var(--font-pixel);
@@ -7875,6 +7876,230 @@ body.terminal-only .game-hint-pop { display: none !important; }
 .selfie-pip video { display: block; width: 100%; transform: scaleX(-1); }
 @media (prefers-reduced-motion: reduce) {
   .photo-count, .photo-flash, .live-stage.vibe-sway, .live-stage.vibe-headbang .slime-pet, .live-stage.vibe-nod .slime-pet { animation: none; }
+}
+
+/* ---- Y2K bedroom-wall deco: the album is a 2003 kawaii streamer's photo wall ---- */
+.album-shell {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(rgba(255, 143, 199, 0.13) 1px, transparent 1.5px) 0 0 / 14px 14px,
+    linear-gradient(180deg, rgba(255, 240, 250, 0.55), rgba(233, 242, 255, 0.4));
+  padding: 8px;
+  border: 2px dotted var(--pink);
+}
+html[data-theme="dark"] .album-shell {
+  background:
+    radial-gradient(rgba(255, 110, 192, 0.12) 1px, transparent 1.5px) 0 0 / 14px 14px,
+    linear-gradient(180deg, rgba(56, 32, 79, 0.55), rgba(34, 20, 58, 0.45));
+  border-color: var(--pink-hot);
+}
+html[data-theme="dark"] .album-ticker { background: rgba(34, 20, 58, 0.85); color: var(--pink-hot); }
+.album-ticker {
+  overflow: hidden;
+  white-space: nowrap;
+  font-family: var(--font-pixel);
+  font-size: 0.76rem;
+  color: var(--pink-deep);
+  background: rgba(255, 253, 251, 0.8);
+  border: 2px solid var(--pink);
+  border-left-width: 6px;
+  border-right-width: 6px;
+  padding: 3px 0;
+}
+.album-ticker-run { display: inline-block; animation: album-ticker-roll 26s linear infinite; }
+@keyframes album-ticker-roll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+.album-charm {
+  margin-left: auto;
+  align-self: flex-start;
+  font-size: 0.95rem;
+  transform-origin: top center;
+  animation: album-charm-swing 3.2s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes album-charm-swing { 0%, 100% { transform: rotate(-11deg); } 50% { transform: rotate(11deg); } }
+/* washi tape corners — every polaroid is taped to the wall */
+.album-card::before, .album-card::after {
+  content: '';
+  position: absolute;
+  width: 42px;
+  height: 13px;
+  top: -7px;
+  background: repeating-linear-gradient(45deg, rgba(255, 143, 199, 0.72) 0 6px, rgba(255, 233, 138, 0.72) 6px 12px);
+  border: 1px solid rgba(20, 2, 14, 0.16);
+  pointer-events: none;
+  z-index: 3;
+}
+.album-card::before { left: -9px; transform: rotate(-36deg); }
+.album-card::after { right: -9px; transform: rotate(36deg); }
+.album-card:nth-child(even)::before, .album-card:nth-child(even)::after {
+  background: repeating-linear-gradient(45deg, rgba(154, 226, 202, 0.72) 0 6px, rgba(206, 188, 255, 0.72) 6px 12px);
+}
+.album-card:nth-child(3n)::before, .album-card:nth-child(3n)::after {
+  background: repeating-linear-gradient(45deg, rgba(255, 179, 221, 0.75) 0 4px, rgba(255, 253, 251, 0.8) 4px 8px);
+}
+.album-card:hover::before { transform: rotate(-31deg) translateY(-2px); }
+.album-card:hover::after { transform: rotate(31deg) translateY(-2px); }
+/* 88×31 web badges — the GeoCities altar */
+.album-badges { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; position: relative; z-index: 2; }
+.album-badge {
+  font-family: var(--font-pixel);
+  font-size: 0.66rem;
+  line-height: 1;
+  padding: 5px 8px 4px;
+  border: 2px solid var(--ink);
+  background: var(--cream);
+  color: var(--ink);
+  box-shadow: 2px 2px 0 rgba(20, 2, 14, 0.3);
+  white-space: nowrap;
+}
+.album-badge.is-blink { animation: album-badge-blink 1.1s steps(2, start) infinite; }
+@keyframes album-badge-blink { 0% { background: var(--pink-hot); color: #fff; } 100% { background: var(--cream); color: var(--ink); } }
+.album-badge.is-rainbow {
+  background: linear-gradient(90deg, #ffb3dd, #ffe98a, #9ae2ca, #cebcff, #ffb3dd) 0 0 / 300% 100%;
+  color: #14020e;
+  animation: album-badge-rainbow 4s linear infinite;
+}
+@keyframes album-badge-rainbow { to { background-position: 300% 0; } }
+.album-badge.is-green { background: #123; color: #7dffb0; text-shadow: 0 0 6px rgba(125, 255, 176, 0.8); }
+/* status row: eternal 99% download + visitor counter */
+.album-statusrow { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center; }
+.album-dl { font-family: var(--font-pixel); font-size: 0.68rem; color: var(--text-soft); display: flex; align-items: center; gap: 6px; }
+.album-dl-bar { width: 92px; height: 10px; border: 2px solid var(--ink); background: #fffdfb; position: relative; overflow: hidden; }
+.album-dl-bar::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(90deg, var(--pink-hot) 0 6px, var(--pink) 6px 12px);
+  transform-origin: left;
+  animation: album-dl-99 3.4s steps(2, end) infinite;
+}
+@keyframes album-dl-99 { 0%, 100% { transform: scaleX(0.99); } 50% { transform: scaleX(0.97); } }
+.album-hits { font-family: var(--font-pixel); font-size: 0.68rem; color: var(--text-soft); display: flex; align-items: center; gap: 5px; }
+.album-hits-digits { display: inline-flex; gap: 2px; }
+.album-hits-digits span {
+  display: inline-block;
+  min-width: 13px;
+  text-align: center;
+  padding: 2px 1px;
+  background: #14020e;
+  color: #7dffb0;
+  font-size: 0.72rem;
+  border: 1px solid var(--ink);
+  animation: album-digit-flip 0.5s cubic-bezier(0.2, 1.6, 0.4, 1) backwards;
+}
+@keyframes album-digit-flip { from { transform: rotateX(90deg); opacity: 0; } }
+/* corner stickers */
+.album-cd {
+  position: absolute;
+  top: 52px;
+  right: 6px;
+  z-index: 1;
+  width: 40px;
+  text-align: center;
+  font-family: var(--font-pixel);
+  font-size: 0.5rem;
+  color: var(--text-soft);
+  pointer-events: none;
+}
+.album-cd-disc {
+  width: 34px;
+  height: 34px;
+  margin: 0 auto 1px;
+  border-radius: 50%;
+  border: 2px solid var(--ink);
+  background: conic-gradient(#ffd9ec, #fff3b0, #c9f2e4, #dcd0ff, #ffd9ec);
+  position: relative;
+  animation: album-cd-spin 7s linear infinite;
+}
+.album-shell:hover .album-cd-disc { animation-duration: 1.4s; }
+.album-cd-disc::after {
+  content: '';
+  position: absolute;
+  inset: 11px;
+  border-radius: 50%;
+  background: #fffdfb;
+  border: 2px solid var(--ink);
+}
+@keyframes album-cd-spin { to { transform: rotate(360deg); } }
+.album-cat {
+  position: absolute;
+  bottom: 30px;
+  left: 6px;
+  z-index: 1;
+  font-family: var(--font-pixel);
+  font-size: 0.62rem;
+  color: var(--text-soft);
+  transform: rotate(-6deg);
+  pointer-events: none;
+  text-align: center;
+}
+.album-err {
+  flex-shrink: 0;
+  transform: rotate(3deg);
+  font-family: var(--font-pixel);
+  font-size: 0.6rem;
+  border: 2px solid #14020e;
+  background: #fffdfb;
+  color: #14020e;
+  box-shadow: 3px 3px 0 rgba(20, 2, 14, 0.3);
+}
+.album-err-title { background: linear-gradient(90deg, #ff8fc7, #cebcff); color: #fff; padding: 1px 6px; }
+.album-err-body { padding: 4px 6px 5px; text-align: center; }
+.album-err-ok {
+  display: block;
+  margin: 0 auto 4px;
+  font-family: var(--font-pixel);
+  font-size: 0.6rem;
+  border: 2px solid #14020e;
+  background: #ffe9f4;
+  color: #14020e;
+  padding: 0 8px;
+  cursor: var(--cursor-heart);
+  box-shadow: 1px 1px 0 #14020e;
+}
+.album-err-ok:active { transform: translate(1px, 1px); box-shadow: none; }
+.album-err.is-dismissed { animation: album-err-bye 0.5s ease-in forwards; }
+@keyframes album-err-bye { to { transform: rotate(14deg) translateY(30px) scale(0.4); opacity: 0; } }
+.album-spark {
+  position: absolute;
+  z-index: 1;
+  color: var(--pink-hot);
+  text-shadow: 0 0 6px rgba(255, 143, 199, 0.9);
+  animation: album-spark-twinkle 2.6s ease-in-out infinite backwards;
+  pointer-events: none;
+  font-size: 0.85rem;
+}
+@keyframes album-spark-twinkle { 0%, 100% { opacity: 0; transform: scale(0.5) rotate(0deg); } 50% { opacity: 1; transform: scale(1.15) rotate(45deg); } }
+.album-fly {
+  position: absolute;
+  z-index: 4;
+  top: 40%;
+  left: -24px;
+  font-size: 1rem;
+  animation: album-fly-cross 17s linear infinite;
+  pointer-events: none;
+}
+/* left animates in % of the SHELL (translate % would resolve against the 20px emoji box) */
+@keyframes album-fly-cross {
+  0%, 62% { left: -24px; transform: translateY(0); opacity: 0; }
+  63% { opacity: 1; }
+  70% { left: 18%; transform: translateY(-26px); }
+  77% { left: 38%; transform: translateY(10px); }
+  84% { left: 60%; transform: translateY(-34px); }
+  91% { left: 82%; transform: translateY(-6px); }
+  96% { opacity: 1; }
+  100% { left: 101%; transform: translateY(-20px); opacity: 0; }
+}
+.album-fly-x { display: inline-block; animation: album-fly-flap 0.5s ease-in-out infinite alternate; }
+@keyframes album-fly-flap { from { transform: scaleX(1) rotate(-8deg); } to { transform: scaleX(0.6) rotate(8deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .album-ticker-run, .album-charm, .album-badge.is-blink, .album-badge.is-rainbow,
+  .album-dl-bar::before, .album-hits-digits span, .album-cd-disc, .album-spark, .album-fly, .album-fly-x { animation: none; }
+  .album-fly { display: none; }
+}
+@media (max-width: 430px) {
+  .album-cd, .album-cat { display: none; } /* tiny screens: readable notes beat corner clutter */
 }
 
 .album-tabs { display: flex; gap: 6px; }
