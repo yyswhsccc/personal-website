@@ -10624,11 +10624,15 @@ document.addEventListener('DOMContentLoaded', () => {
     x.lineWidth = 3;
     x.strokeRect(1.5, 1.5, shot.W + pad * 2 - 3, shot.H + pad * 2 + cap - 3);
     x.drawImage(shot.cv, pad, pad, shot.W, shot.H);
-    x.fillStyle = '#5a3d6e';
-    x.font = "11px 'Courier New', monospace";
-    x.fillText('♡ yongshanOS · slime_live' + (kindLabel ? ' · ' + kindLabel : ''), pad, shot.H + pad + 16);
+    x.fillStyle = '#f0509f';
+    x.font = "14px 'Jersey 25', 'Pixelify Sans', 'VT323', monospace";
     const ts = photoStamp();
-    x.fillText(ts, shot.W + pad - x.measureText(ts).width, shot.H + pad + 16);
+    const tsW = x.measureText(ts).width;
+    // narrow shots (phone stage): fall back to shorter watermarks so the timestamp never collides
+    const label = ['♡ yongshanOS · slime_live' + (kindLabel ? ' · ' + kindLabel : ''), '♡ yongshanOS', '♡']
+      .find((l) => x.measureText(l).width + tsW + 10 <= shot.W) || '';
+    x.fillText(label, pad, shot.H + pad + 16);
+    x.fillText(ts, shot.W + pad - tsW, shot.H + pad + 16);
     x.fillStyle = '#ffb3dd';
     x.fillText('✦', shot.W + pad - 2, pad + 12);
     return fc.toDataURL('image/jpeg', 0.72);

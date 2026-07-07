@@ -7846,7 +7846,7 @@ body.terminal-only .game-hint-pop { display: none !important; }
 }
 .album-card:hover { transform: rotate(0deg) scale(1.04); z-index: 2; }
 .album-card img, .album-card video { display: block; width: 100%; image-rendering: auto; }
-.album-cap { font-family: var(--font-pixel); font-size: 0.62rem; color: var(--text-soft); padding-top: 3px; }
+.album-cap { font-family: var(--font-pixel); font-size: 0.72rem; color: var(--pink-deep); padding-top: 3px; }
 .album-save, .album-del {
   position: absolute;
   top: 4px;
