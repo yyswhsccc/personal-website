@@ -5282,18 +5282,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function resolvedTheme() {
     if (themePref === 'auto') {
-      // auto follows the VISITOR'S local clock: daylight hours get
-      // light mode, evenings get dark. If the clock is unreadable,
-      // fall back to the system preference.
+      // auto, repaired: if the visitor's SYSTEM says dark, follow it —
+      // that is an explicit signal, and systems set to auto-switch raise
+      // it at night exactly when they should. otherwise (system is light
+      // or unreadable) the visitor's own clock decides: 21:00–08:00 is
+      // night here, whatever the OS thinks. (a web page cannot ask "is
+      // your OS set to auto?" — prefers-color-scheme only exposes the
+      // CURRENT value — so dark-wins + clock is the honest whole of it.)
       try {
+        if (darkMQ.matches) return 'dark';
         const hr = new Date().getHours();
-        if (typeof hr === 'number' && hr >= 0 && hr <= 23) return (hr >= 7 && hr < 19) ? 'light' : 'dark';
+        if (typeof hr === 'number' && hr >= 0 && hr <= 23) return (hr >= 21 || hr < 8) ? 'dark' : 'light';
       } catch (e) { /* clockless devices exist, apparently */ }
-      return darkMQ.matches ? 'dark' : 'light';
+      return 'light';
     }
     return themePref === 'dark' ? 'dark' : 'light';
   }
-  // re-evaluate the sun every 10 minutes so 19:00 flips the lights
+  // re-evaluate the sun every 10 minutes so 21:00 flips the lights
   setInterval(() => {
     if (themePref === 'auto' && typeof applyTheme === 'function') applyTheme();
   }, 600000);
@@ -5658,14 +5663,39 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => swSay(["zzz… shipped… while asleep… new personal best…", "zzz… livré… en dormant… nouveau record perso…"]), 3100);
   }
   function swSceneAma() {
-    const q = swScenePick([
-      ['do slimes dream of electric bugs?', 'les slimes rêvent-ils de bugs électriques ?'],
-      ['how many hugs per sprint is healthy?', 'combien de câlins par sprint c\'est raisonnable ?'],
-      ['is she hiring… a professional sleepwalker?', 'elle recrute… un somnambule professionnel ?']
+    // dream questions get DREAM answers — hand-written pairs, never the
+    // keyword engine (whose polite "not in my jelly yet… email her!"
+    // fallback reads as a bug when the asker is our own sleepwalker)
+    const qa = swScenePick([
+      [
+        ['do slimes dream of electric bugs?', 'les slimes rêvent-ils de bugs électriques ?'],
+        ['it\'s ASLEEP and still doing QA?! …yes. tiny glowing ones. they debug themselves out of politeness, then leave a five-star review of the dream ♡', 'il DORT et il fait encore de la QA ?! …oui. des minuscules, lumineux. ils se déboguent tout seuls par politesse, puis laissent cinq étoiles au rêve ♡']
+      ],
+      [
+        ['how many hugs per sprint is healthy?', 'combien de câlins par sprint c\'est raisonnable ?'],
+        ['the WHO recommends 13. Yongshan ships 47 — one per merged PR — and the surplus goes straight to prod. zero incidents so far ♡', 'l\'OMS en recommande 13. Yongshan en livre 47 — un par PR fusionnée — et le surplus part direct en prod. zéro incident à ce jour ♡']
+      ],
+      [
+        ['is she hiring… a professional sleepwalker?', 'elle recrute… un somnambule professionnel ?'],
+        ['that position is filled (by you, apparently, and you\'re doing it in your sleep). SHE is the one open to work — engineers who ship awake AND asleep are rare ♡', 'ce poste est pris (par toi, visiblement, et tu le fais en dormant). c\'est ELLE qui est ouverte aux offres — les ingés qui livrent éveillés ET endormis sont rares ♡']
+      ]
     ]);
     setTimeout(() => swSay(["zzz… one question… very important…", "zzz… une question… très importante…"]), 600);
-    setTimeout(() => { try { amaAsk(trT(...q)); } catch (e) { /* the bot sleeps too */ } }, 1500);
-    setTimeout(() => swSay(["zzz… mmh… great answer… five stars…", "zzz… mmh… super réponse… cinq étoiles…"]), 3400);
+    setTimeout(() => {
+      try {
+        amaAddUser(trT(...qa[0]));
+        const typing = document.createElement('div');
+        typing.className = 'ama-typing';
+        typing.innerHTML = '<span>·</span><span>·</span><span>·</span>';
+        amaAppend(typing);
+        setTimeout(() => {
+          typing.remove();
+          amaAddBot(trT(...qa[1]));
+          playTone(987.77, 'sine', 0.08, 0, 0.05);
+        }, 900);
+      } catch (e) { /* the bot sleeps too */ }
+    }, 1500);
+    setTimeout(() => swSay(["zzz… mmh… great answer… five stars…", "zzz… mmh… super réponse… cinq étoiles…"]), 3600);
   }
   function swSceneCareer(target) {
     const r = target.getBoundingClientRect();
