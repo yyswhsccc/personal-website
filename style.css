@@ -7678,3 +7678,26 @@ body.terminal-only .game-hint-pop { display: none !important; }
   .live-stage.gift-disco, .live-stage.gift-rainbow,
   .slime-pet.gift-shiver, .slime-pet.gift-robo { animation: none; }
 }
+
+/* critters v2: big, bouncy, impossible to miss */
+.gift-critter { font-size: 1.9rem; z-index: 9; }
+.gift-critter.is-arriving { animation: gift-critter-arrive 0.55s cubic-bezier(0.2, 1.6, 0.4, 1); }
+@keyframes gift-critter-arrive { 0% { transform: scaleX(var(--flip, 1)) scale(0.1) translateY(-46px); opacity: 0; } 70% { transform: scaleX(var(--flip, 1)) scale(1.25); } 100% { transform: scaleX(var(--flip, 1)) scale(1); opacity: 1; } }
+.gift-critter { transition: opacity 0.5s; }
+.gift-snailtrail { position: absolute; z-index: 4; font-size: 0.9rem; color: #9fe8c0; text-shadow: 0 0 4px rgba(159, 232, 192, 0.9); opacity: 0.8; }
+
+.matrix-rain-label {
+  position: fixed;
+  top: 46%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 315;
+  font-family: var(--font-pixel);
+  font-size: clamp(1.2rem, 4vw, 2.2rem);
+  letter-spacing: 4px;
+  color: #7ee787;
+  text-shadow: 0 0 18px rgba(57, 211, 83, 0.9), 0 0 40px rgba(57, 211, 83, 0.5);
+  pointer-events: none;
+  animation: matrix-label-pulse 0.9s steps(2) infinite;
+}
+@keyframes matrix-label-pulse { 50% { opacity: 0.55; } }

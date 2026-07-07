@@ -4625,34 +4625,55 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ---- the terminal door: a tiny CTF playground until the name is spoken ----
     if (document.body.classList.contains('terminal-only')) {
-      const door = window.__door || (window.__door = { tries: 0, decoded: false, enc: ['rot13', 'base64', 'hex'][Math.floor(Math.random() * 3)] });
+      const door = doorInit();
       if (window.__doorIdle) { clearTimeout(window.__doorIdle); window.__doorIdle = null; } // the visitor drives now
       // the key is her NAME in any reasonable outfit: case, spaces, with or
       // without the family name, even behind a sudo. typos are NOT outfits.
+      // …but the door insists on its locks FIRST.
       const norm = lower.replace(/[^a-z]/g, '');
       const DOOR_KEYS = ['yongshan', 'yongshanyu', 'yuyongshan'];
       const isKey = DOOR_KEYS.indexOf(norm) !== -1;
       const sudoKey = norm.indexOf('sudo') === 0 && DOOR_KEYS.indexOf(norm.slice(4)) !== -1;
-      if (isKey || sudoKey || lower === 'wake up' || lower === 'wakeup') {
-        if (sudoKey) termLine(trT('🔑 root acknowledged. the door never needed it — but the bow is appreciated.', '🔑 root reconnu. la porte n\'en avait pas besoin — mais la révérence est appréciée.'), 't-ok');
-        if (lower === 'wake up' || lower === 'wakeup') termLine(trT('🐇 the classic line. the door respects a purist.', '🐇 la réplique classique. la porte respecte les puristes.'), 't-ok');
-        if (door.decoded) {
-          achvUnlock('ctfslime');
-          store.set('yos-pending-coins', (store.get('yos-pending-coins', 0) || 0) + 10);
-          termLine(trT('🚩 CTF CLEARED — you DECODED your way in. +10 coins staged for slime_run ♡', '🚩 CTF RÉUSSI — tu es entré·e en DÉCODANT. +10 pièces pour slime_run ♡'), 't-ok');
+      if (isKey || sudoKey) {
+        if (door.stage < door.chain.length) {
+          door.knew = true;
+          termLine(trT('😳 you KNOW the name already?! the door blushes — but it insists on formalities.', '😳 tu CONNAIS déjà le nom ?! la porte rougit — mais elle tient aux formalités.'), 't-accent');
+          termLine(trT(`   (${door.chain.length - door.stage} lock(s) left — \`hint\` shows the current one.)`, `   (${door.chain.length - door.stage} verrou(s) restant(s) — \`hint\` montre l'actuel.)`), 't-dim');
+          matrixGreeterSay(trT('locks first. it is a VERY proper door.', 'les verrous d\'abord. c\'est une porte TRÈS à cheval sur les formes.'));
+          return;
         }
+        if (sudoKey) termLine(trT('🔑 root acknowledged. the door never needed it — but the bow is appreciated.', '🔑 root reconnu. la porte n\'en avait pas besoin — mais la révérence est appréciée.'), 't-ok');
+        achvUnlock('ctfslime');
+        store.set('yos-pending-coins', (store.get('yos-pending-coins', 0) || 0) + 10);
+        termLine(trT(`🚩 CTF CLEARED — ${door.chain.length} locks + the name. +10 coins staged for slime_run ♡`, `🚩 CTF RÉUSSI — ${door.chain.length} verrous + le nom. +10 pièces pour slime_run ♡`), 't-ok');
         terminalDoorOpen();
         return;
       }
-      const ENCODED = { rot13: 'lbatfuna', base64: 'eW9uZ3NoYW4=', hex: '796f6e677368616e' };
+      if (lower === 'wake up' || lower === 'wakeup') {
+        termLine(trT('🐇 the classic line!! it rattles the door… but these locks want ANSWERS.', '🐇 la réplique classique !! la porte tremble… mais ces verrous veulent des RÉPONSES.'), 't-accent');
+        matrixGreeterSay(trT('nice pull. the door is a fan too. locks, though.', 'belle référence. la porte est fan aussi. mais : verrous.'));
+        return;
+      }
+      // the current lock accepts its answer from anywhere in the shell
+      if (door.stage < door.chain.length && door.chain[door.stage].check(door, norm, lower)) {
+        doorPuzzleAdvance(door);
+        return;
+      }
+      if (lower === 'hint') {
+        if (door.stage < door.chain.length) doorPuzzleShow(door);
+        else {
+          termLine(trT('🔓 all locks are open — the door only wants her NAME now.', '🔓 tous les verrous sont ouverts — la porte ne veut plus que son NOM.'), 't-ok');
+        }
+        return;
+      }
+      const ENCODED = { rot13: doorEncode(door.cipherWord, 'rot13'), base64: doorEncode(door.cipherWord, 'base64'), hex: doorEncode(door.cipherWord, 'hex') };
       if (lower === 'ls' || lower === 'ls -la' || lower === 'dir') {
         termLine('key.enc          README.whisper          the_rest_of_the_OS.zzz', 't-ok');
         matrixGreeterSay(trT('ooh. a LOOKER. `cat` them. I would.', 'oh. quelqu\'un qui REGARDE. `cat`-les. moi je le ferais.'));
         return;
       }
       if (lower === 'cat readme.whisper' || lower === 'cat readme') {
-        termLine(trT('the name is the key. it is on the github readme you came from.', 'le nom est la clé. il est sur le readme github d\'où tu viens.'), 't-dim');
-        termLine(trT('…but key.enc holds the same key, encoded. decode it yourself for the 🚩 flag.', '…mais key.enc contient la même clé, encodée. décode-la toi-même pour le drapeau 🚩.'), 't-accent');
+        termLine(trT('the door has locks. `hint` shows the current one. the FINAL thing it wants is a name.', 'la porte a des verrous. `hint` montre l\'actuel. la DERNIÈRE chose qu\'elle veut est un nom.'), 't-dim');
         return;
       }
       if (lower === 'cat key.enc') {
@@ -4662,12 +4683,12 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
       if (lower === 'decode key.enc' || lower === 'decode') {
-        if (door.enc === 'rot13') termLine("$ tr 'a-z' 'n-za-m' <<< lbatfuna  →  yongshan", 't-ok');
-        else if (door.enc === 'base64') termLine('$ echo eW9uZ3NoYW4= | base64 -d  →  yongshan', 't-ok');
-        else termLine('$ xxd -r -p <<< 796f6e677368616e  →  yongshan', 't-ok');
+        const wEnc = ENCODED[door.enc];
+        if (door.enc === 'rot13') termLine("$ tr 'a-z' 'n-za-m' <<< " + wEnc + '  →  ' + door.cipherWord, 't-ok');
+        else if (door.enc === 'base64') termLine('$ echo ' + wEnc + ' | base64 -d  →  ' + door.cipherWord, 't-ok');
+        else termLine('$ xxd -r -p <<< ' + wEnc + '  →  ' + door.cipherWord, 't-ok');
         termLine(trT('   (that is the REAL command, by the way — it works in your terminal too)', '   (c\'est la VRAIE commande, au passage — elle marche aussi dans ton terminal)'), 't-dim');
-        door.decoded = true;
-        matrixGreeterSay(trT('DECODED. now say it like you mean it.', 'DÉCODÉ. maintenant dis-le avec conviction.'));
+        matrixGreeterSay(trT('DECODED. now TYPE the word — the lock is listening.', 'DÉCODÉ. maintenant TAPE le mot — le verrou écoute.'));
         return;
       }
       if (lower === 'visitorfetch' || lower === 'neofetch --visitor') {
@@ -11611,19 +11632,34 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!liveOpen || !liveStage) return;
     const w = liveStage.clientWidth || 500;
     const rt = Math.random() < 0.5;
-    const c = giftStageItem('gift-critter' + (e === '🦋' ? ' is-flutter' : e === '🐌' ? ' is-slowpoke' : ''), e, rt ? -40 : w + 20, 6 + Math.random() * 12);
+    // THEATRICAL entrance: the guest pops in a fifth of the way ON-stage
+    // (dust puff, chirp), then crosses under its own JS-driven power —
+    // zero reliance on CSS transitions, impossible to miss
+    const startX = rt ? Math.round(w * 0.18) : Math.round(w * 0.82);
+    const c = giftStageItem('gift-critter is-arriving' + (e === '🐌' ? ' is-slowpoke' : ''), e, startX, 10);
     if (!c) return;
     if (!rt) c.style.setProperty('--flip', '-1');
-    const dur = e === '🐌' ? 42000 : e === '🦋' ? 16000 : 11000;
-    c.style.transition = 'left ' + dur + 'ms linear';
-    requestAnimationFrame(() => { c.style.left = (rt ? w + 40 : -60) + 'px'; });
-    setTimeout(() => c.remove(), dur + 500);
+    for (let i = 0; i < 4; i++) setTimeout(() => spawnParticle(startX + (Math.random() - 0.5) * 34, (liveStage.clientHeight || 300) - 34, '💨'), i * 70);
+    pikChirp();
+    setTimeout(() => c.classList.remove('is-arriving'), 600);
+    const spd = e === '🐌' ? 0.5 : e === '🦋' ? 1.5 : 2.4; // px per 50ms tick
+    const baseBottom = 10;
+    let x = startX, tt = 0;
+    const iv = setInterval(() => {
+      if (!liveOpen || !c.isConnected) { clearInterval(iv); c.remove(); return; }
+      tt++;
+      x += (rt ? 1 : -1) * spd;
+      c.style.left = x + 'px';
+      if (e === '🦋') c.style.bottom = (baseBottom + 36 + Math.sin(tt / 6) * 32) + 'px'; // REAL swoops
+      else if (e === '🐌' && tt % 22 === 0) { const dot = giftStageItem('gift-snailtrail', '·', x - (rt ? 16 : -16), baseBottom + 4); if (dot) setTimeout(() => dot.remove(), 7000); }
+      if (x < -60 || x > w + 60 || tt > 800) { clearInterval(iv); c.style.opacity = '0'; setTimeout(() => c.remove(), 600); }
+    }, 50);
     const fan = GARDEN.buddies.find((b) => !b.carry);
-    if (fan) { fan.visitX = Math.max(20, Math.min(w - 40, w / 2)); fan.visitUntil = Date.now() + 4200; setTimeout(() => pikSay(fan, 'pik?!', 1400), 700); }
-    const SQUEAK = { '🦆': 'quack', '🪿': 'HONK', '🐸': 'ribbit', '🐱': 'mew', '🐶': 'wan!', '🐝': 'bzzz', '🐧': 'noot noot', '🐌': '…', '🦄': '✨neigh✨', '🐢': '(unhurried)', '🐰': 'boing', '🦋': '(silent elegance)', '🐙': 'blub', '🐹': 'squeak', '🦩': '(one leg. always.)' };
-    setTimeout(() => { if (liveOpen && !pet.sleeping) showBubble(trT('a wild ' + e + ' crossed the stream!! (' + (SQUEAK[e] || 'hello') + ')', 'un ' + e + ' sauvage traverse le stream !! (' + (SQUEAK[e] || 'coucou') + ')'), 2400); }, 1000);
+    if (fan) { fan.visitX = Math.max(20, Math.min(w - 40, startX + (rt ? 60 : -60))); fan.visitUntil = Date.now() + 4200; setTimeout(() => pikSay(fan, 'pik?!', 1400), 700); }
+    const SQUEAK = { '🦆': 'quack', '🪿': 'HONK', '🐸': 'ribbit', '🐱': 'mew', '🐶': 'wan!', '🐝': 'bzzz', '🐧': 'noot noot', '🐌': '(…moving. technically.)', '🦄': '✨neigh✨', '🐢': '(unhurried)', '🐰': 'boing', '🦋': '(silent elegance)', '🐙': 'blub', '🐹': 'squeak', '🦩': '(one leg. always.)' };
+    setTimeout(() => { if (liveOpen && !pet.sleeping) showBubble(trT('a wild ' + e + ' joined the stream!! (' + (SQUEAK[e] || 'hello') + ')', 'un ' + e + ' sauvage rejoint le stream !! (' + (SQUEAK[e] || 'coucou') + ')'), 2400); }, 900);
   }
-  function giftActCrown(e) {
+    function giftActCrown(e) {
     if (!liveOpen || !slimeBody) return;
     if (slimeBody.querySelector('.gift-crown')) return;
     const cr = document.createElement('span');
@@ -14923,8 +14959,8 @@ document.addEventListener('DOMContentLoaded', () => {
     ['there is no spoon. there IS a slime.', 'il n\'y a pas de cuillère. il y a un slime.'],
     ['I know kung fu. also CSS. mostly CSS.', 'je connais le kung-fu. et le CSS. surtout le CSS.'],
     ['this shell is real. the walls around it are negotiable.', 'ce shell est réel. les murs autour sont négociables.'],
-    ['type `yongshan` — the name is the key. it opens EVERYTHING.', 'tape `yongshan` — le nom est la clé. il ouvre TOUT.'],
-    ['(`help` works too. but the name… the name is the good ending.)', '(`help` marche aussi. mais le nom… le nom est la vraie fin.)']
+    ['the locks are fair. mostly. I have seen them be smug.', 'les verrous sont réglos. en général. je les ai vus être narquois.'],
+    ['(`hint` reprints the current lock. no shame in it.)', '(`hint` réaffiche le verrou en cours. aucune honte.)']
   ];
   function matrixGreeterShow() {
     if (document.getElementById('matrix-greeter')) return;
@@ -14950,6 +14986,71 @@ document.addEventListener('DOMContentLoaded', () => {
     window.__matrixGreetTimer = setInterval(speak, 6500);
     g.append(bub, cv);
     document.body.appendChild(g);
+  }
+  /* ---- THE DOOR LOCKS: 2-3 chained mini-puzzles, freshly shuffled every
+     visit. each solve prints the next lock; the FINAL reveal is that the
+     key is her name (fuzzy-matched). the chain IS the CTF. ---- */
+  function doorEncode(word, enc) {
+    if (enc === 'rot13') return word.replace(/[a-z]/g, (ch) => String.fromCharCode((ch.charCodeAt(0) - 97 + 13) % 26 + 97));
+    if (enc === 'base64') { try { return btoa(word); } catch (e2) { return word; } }
+    return Array.from(word).map((ch) => ch.charCodeAt(0).toString(16)).join('');
+  }
+  const DOOR_POOL = [
+    { id: 'cipher',
+      intro: (d) => [trT('🧩 a file is locked on this tty. find it. read it. decode it.', '🧩 un fichier est verrouillé sur ce tty. trouve-le. lis-le. décode-le.'),
+        trT('   (`ls` is a fine first instinct — type the DECODED word to turn the lock.)', '   (`ls` est un bon réflexe — tape le mot DÉCODÉ pour tourner le verrou.)')],
+      check: (d, norm) => norm === d.cipherWord },
+    { id: 'bootnum',
+      intro: () => [trT('🧩 the boot log already whispered it: how many pikmin mounted /dev/meadow?', '🧩 le journal de boot l\'a déjà murmuré : combien de pikmin ont monté /dev/meadow ?'),
+        trT('   (scroll up. type the number.)', '   (remonte. tape le nombre.)')],
+      check: (d, norm, lw) => lw.trim() === '72' },
+    { id: 'binary',
+      intro: () => [trT('🧩 the door hums in binary: 01110000 01101001 01101011', '🧩 la porte fredonne en binaire : 01110000 01101001 01101011'),
+        trT('   (type the word it is humming.)', '   (tape le mot qu\'elle fredonne.)')],
+      check: (d, norm) => norm === 'pik' },
+    { id: 'riddle',
+      intro: () => [trT('🧩 riddle: I have keys but open no locks, a space but no room —', '🧩 énigme : j\'ai des touches mais n\'ouvre aucun verrou, un espace mais pas de pièce —'),
+        trT('   you can enter, but never leave. what am I?', '   on peut y entrer, jamais en sortir. que suis-je ?')],
+      check: (d, norm) => norm === 'keyboard' || norm === 'akeyboard' || norm === 'clavier' || norm === 'unclavier' },
+    { id: 'double',
+      intro: () => [trT('🧩 the meadow doubles: 2 · 4 · 8 · 16 · ?', '🧩 la prairie double : 2 · 4 · 8 · 16 · ?'),
+        trT('   (type the next number.)', '   (tape le nombre suivant.)')],
+      check: (d, norm, lw) => lw.trim() === '32' },
+    { id: 'cores',
+      intro: () => [trT('🧩 run `visitorfetch` — then tell the door how many CORES your machine confessed to.', '🧩 lance `visitorfetch` — puis dis à la porte combien de CŒURS ta machine a avoués.')],
+      check: (d, norm, lw) => lw.trim() === String(navigator.hardwareConcurrency || 8) }
+  ];
+  function doorInit() {
+    if (window.__door) return window.__door;
+    const pool = DOOR_POOL.slice().sort(() => Math.random() - 0.5);
+    window.__door = {
+      tries: 0, knew: false, stage: 0,
+      chain: pool.slice(0, 2 + (Math.random() < 0.5 ? 1 : 0)),
+      enc: ['rot13', 'base64', 'hex'][Math.floor(Math.random() * 3)],
+      cipherWord: ['meadow', 'pikmin', 'slime'][Math.floor(Math.random() * 3)]
+    };
+    return window.__door;
+  }
+  function doorPuzzleShow(door) {
+    termLine('', '');
+    termLine(trT(`🔒 LOCK ${door.stage + 1}/${door.chain.length}`, `🔒 VERROU ${door.stage + 1}/${door.chain.length}`), 't-accent');
+    door.chain[door.stage].intro(door).forEach((l) => termLine(l, 't-ok'));
+  }
+  function doorPuzzleAdvance(door) {
+    door.stage++;
+    playSparkleSound();
+    termLine(trT(`✔ LOCK ${door.stage}/${door.chain.length} OPEN — the door shivers happily`, `✔ VERROU ${door.stage}/${door.chain.length} OUVERT — la porte frissonne de joie`), 't-ok');
+    if (door.stage < door.chain.length) {
+      matrixGreeterSay(trT('one down. the door is quietly impressed.', 'un de moins. la porte est discrètement impressionnée.'));
+      doorPuzzleShow(door);
+    } else {
+      termLine('', '');
+      termLine(trT('🔓 ALL LOCKS OPEN. the last thing the door wants is not a puzzle —', '🔓 TOUS LES VERROUS OUVERTS. la dernière chose que veut la porte n\'est pas une énigme —'), 't-accent');
+      termLine(trT('   it is a NAME. hers. you have seen it on every doorframe on the way here 🐇', '   c\'est un NOM. le sien. tu l\'as vu sur chaque chambranle en venant ici 🐇'), 't-ok');
+      matrixGreeterSay(door.knew
+        ? trT('you tried it earlier — NOW it will work ♡', 'tu l\'as tenté plus tôt — MAINTENANT ça marchera ♡')
+        : trT('the key is her name. say it — any way you like.', 'la clé est son nom. dis-le — comme tu veux.'));
+    }
   }
   function matrixGreeterSay(text) {
     // the greeter reacts to what you DO — and holds the thought a while
@@ -14983,35 +15084,46 @@ document.addEventListener('DOMContentLoaded', () => {
     rows.forEach(([k, v]) => termLine(v ? '  ' + k.padEnd(14, ' ') + v : '  ' + k, v ? 't-ok' : 't-accent'));
     termLine(trT('  (read locally from your browser\'s own public announcements. sent nowhere. ever.)', '  (lu localement depuis ce que ton navigateur annonce déjà. envoyé nulle part. jamais.)'), 't-dim');
   }
-  function matrixRain() {
+  function matrixRain(opts) {
     if (document.getElementById('matrix-rain')) return;
+    const o = opts || {};
+    const ms = o.ms || 6000;
+    const cell = o.dense ? 11 : 14;
     const cv = document.createElement('canvas');
     cv.id = 'matrix-rain';
     cv.width = innerWidth; cv.height = innerHeight;
     cv.style.cssText = 'position:fixed;inset:0;z-index:310;pointer-events:none;';
     document.body.appendChild(cv);
+    let label = null;
+    if (o.label) {
+      label = document.createElement('div');
+      label.className = 'matrix-rain-label';
+      label.textContent = o.label;
+      document.body.appendChild(label);
+    }
     const x = cv.getContext('2d');
     const GLYPHS = 'ｱｲｳｴｵｶｷｸｹｺ01♡yongshan';
-    const cols = Math.floor(cv.width / 14);
+    const cols = Math.floor(cv.width / cell);
     const drops = Array.from({ length: cols }, () => Math.random() * -40);
     const t0 = Date.now();
     const iv = setInterval(() => {
-      x.fillStyle = 'rgba(13,17,23,0.16)';
+      x.fillStyle = o.dense ? 'rgba(13,17,23,0.22)' : 'rgba(13,17,23,0.16)';
       x.fillRect(0, 0, cv.width, cv.height);
-      x.font = '13px monospace';
+      x.font = (cell - 1) + 'px monospace';
       drops.forEach((d, i) => {
         const ch = GLYPHS[Math.floor(Math.random() * GLYPHS.length)];
         x.fillStyle = ch === '♡' ? '#ff8fc7' : '#39d353';
-        x.fillText(ch, i * 14, d * 14);
-        drops[i] = d * 14 > cv.height && Math.random() > 0.975 ? 0 : d + 1;
+        x.fillText(ch, i * cell, d * cell);
+        drops[i] = d * cell > cv.height && Math.random() > (o.dense ? 0.96 : 0.975) ? 0 : d + 1;
       });
-      if (Date.now() - t0 > 6000) {
+      if (Date.now() - t0 > ms) {
         clearInterval(iv);
         cv.style.transition = 'opacity 0.8s';
         cv.style.opacity = '0';
-        setTimeout(() => cv.remove(), 900);
+        if (label) { label.style.transition = 'opacity 0.6s'; label.style.opacity = '0'; }
+        setTimeout(() => { cv.remove(); if (label) label.remove(); }, 900);
       }
-    }, 50);
+    }, o.dense ? 42 : 50);
   }
   function terminalDoorOpen() {
     termLine(trT('🔓 the name IS the key. compiling the rest of the world…', '🔓 le nom EST la clé. compilation du reste du monde…'), 't-ok');
@@ -15076,26 +15188,47 @@ document.addEventListener('DOMContentLoaded', () => {
       ];
       termLine('', '');
       BOOT.forEach(([l, cls, at]) => setTimeout(() => termLine(l, cls), at));
+      // — act two: the compile storm. fast, dense, ninety-percent real —
       setTimeout(() => {
+        const OPS = ['mov', 'jmp', 'call', 'push', 'xor', 'lea'];
+        const SRCS = ['slime/heart.c', 'meadow/petal.c', 'door/locks.c', 'wrist/garden.c', 'nightmare/boss.c', 'terminal/tty1.c'];
+        for (let i = 0; i < 22; i++) {
+          setTimeout(() => {
+            const roll = Math.random();
+            const addr = '0x' + (0x1000 + Math.floor(Math.random() * 0xEFFF)).toString(16);
+            if (roll < 0.4) termLine('CC   ' + SRCS[Math.floor(Math.random() * SRCS.length)], 't-dim');
+            else if (roll < 0.75) termLine(addr + '  ' + OPS[Math.floor(Math.random() * OPS.length)] + '  joy, everywhere', 't-dim');
+            else termLine('OK   checksum ♡ ' + addr.slice(2), 't-ok');
+          }, i * 45);
+        }
+      }, 900);
+      // — act three: the construct loads —
+      setTimeout(() => {
+        termLine('LD   yongshanOS.elf — linking the construct…', 't-accent');
+        matrixRain({ ms: 3400, dense: true, label: trT('ENTERING THE CONSTRUCT…', 'ENTRÉE DANS LA MATRICE…') });
+      }, 2050);
+      // — act four: the first lock —
+      setTimeout(() => {
+        const door = doorInit();
         termLine('', '');
         termLine(trT('🐇 you took the mysterious command. respect.', '🐇 tu as suivi la commande mystérieuse. respect.'), 't-accent');
-        termLine(trT('   the rest of her OS is asleep. type `yongshan` — the name is the key.', '   le reste de son OS dort. tape `yongshan` — le nom est la clé.'), 't-ok');
-        termLine(trT('   (the curious try `ls` first. the brave decode what they find. 🚩)', '   (les curieux tapent `ls` d\'abord. les braves décodent ce qu\'ils trouvent. 🚩)'), 't-dim');
-        termLine(trT('   (also in stock: `visitorfetch` · `matrix` · the ENTIRE regular shell)', '   (aussi en rayon : `visitorfetch` · `matrix` · TOUT le shell habituel)'), 't-dim');
+        termLine(trT(`   this door is LOCKED — ${door.chain.length} locks, freshly shuffled for you alone.`, `   cette porte est VERROUILLÉE — ${door.chain.length} verrous, fraîchement mélangés rien que pour toi.`), 't-ok');
+        termLine(trT('   (`hint` reprints the lock · `visitorfetch` & `matrix` & the whole shell still work)', '   (`hint` réaffiche le verrou · `visitorfetch` & `matrix` & tout le shell marchent)'), 't-dim');
+        doorPuzzleShow(door);
         // discoverability: if the visitor just stares, the greeter drives ONCE
         window.__doorIdle = setTimeout(() => {
           if (!document.body.classList.contains('terminal-only')) return;
           const ti2 = document.getElementById('term-input');
           if (!ti2 || ti2.value) return;
           matrixGreeterSay(trT('no rush. here — I\'ll drive:', 'pas de stress. tiens — je conduis :'));
-          ['l', 's'].forEach((ch, i) => setTimeout(() => { ti2.value += ch; }, 700 + i * 320));
+          ['h', 'i', 'n', 't'].forEach((ch, i) => setTimeout(() => { ti2.value += ch; }, 700 + i * 240));
           setTimeout(() => {
             if (!document.body.classList.contains('terminal-only')) return;
             if (ti2.form) ti2.form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
             setTimeout(() => matrixGreeterSay(trT('like THIS. your turn ♡', 'comme ÇA. à toi ♡')), 500);
-          }, 1700);
-        }, 12000);
-      }, 850);
+          }, 1900);
+        }, 14000);
+      }, 5700);
       matrixGreeterShow();
     }, 600);
   });
