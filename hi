@@ -14,13 +14,15 @@
 
   [2m(someone types to you in real time, typos included. still only text.)[0m
 
-[1mSTEP 1.5 — step INSIDE the slime-docker[0m (a container, in YOUR terminal):
+[1mSTEP 1.5 — step INSIDE the slime-docker[0m (a REAL container. one command):
 
-  [2mpaste this one honest line (it only wraps curl — read it):[0m
-    [96mslime() { curl -sN -G --data-urlencode "c=$*" https://yongshanos-wall.yongshanos.workers.dev/sh; }[0m
+    [96mssh $(echo c3NoOi8vc2xpbWVAMy45OC4yMTcuMTU3OjIyMjI= | base64 -d)[0m
 
-  then: [92mslime ls[0m · [92mslime whoami[0m · [92mslime sudo rm -rf /[0m · [92mslime help[0m
-  [2m(it answers everything. nothing runs on your machine. it is curl in a slime costume.)[0m
+  [2m(plain ssh: any name works, no password. the show replays in there,
+  then the prompt is YOURS — [0m[92mls[0m · [92mwhoami[0m · [92msudo rm -rf /[0m · [92mhelp[0m · [92mexit[0m[2m)[0m
+
+  [2mfirewalled at work? the curl-costume shell still answers:[0m
+    [2mslime() { curl -sN -G --data-urlencode "c=$*" https://yongshanos-wall.yongshanos.workers.dev/sh; }[0m
 
 [1mSTEP 2 — find the door[0m (it hides. of course it hides.):
 

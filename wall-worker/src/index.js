@@ -139,16 +139,20 @@ function hiShow(ctx) {
       await out(D + '(everything here only prints. nothing executes. your shell is safe.)' + R + '\n');
       await out(P + '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━' + R + '\n\n');
       await sleep(600);
-      // the after-credits scene: STEP INSIDE the container
+      // the after-credits scene: STEP INSIDE the container — a REAL one
+      // now (an actual ssh server; the show replays on connect and then
+      // the visitor owns the prompt. no prefix, no wrapper, no piping.)
       await t(B + 'wait. one more thing.' + R + '\n', 30);
       await sleep(400);
-      await t('there is a CONTAINER. I built it for you. you can step inside —\n', 44);
-      await out('paste this one line ' + D + '(read it first: it only wraps curl. fully honest.)' + R + ':\n\n');
-      await out('  ' + C + 'slime() { curl -sN -G --data-urlencode "c=$*" ' + SH_URL + '; }' + R + '\n\n');
-      await out('then you have a shell INTO the slime\'s world. try:\n');
-      await out('  ' + G + 'slime ls' + R + '        ' + G + 'slime whoami' + R + '      ' + G + 'slime top' + R + '\n');
-      await out('  ' + G + 'slime vim' + R + '       ' + G + 'slime sudo rm -rf /' + R + '   ' + D + '← especially this one' + R + '\n');
-      await out('  ' + G + 'slime help' + R + '      ' + G + 'slime exit' + R + '        ' + D + '(it has opinions)' + R + '\n\n');
+      await t('there is a CONTAINER. a REAL one. you can step inside —\n', 44);
+      await out('one command ' + D + '(plain ssh: any name works, no password, nothing to install)' + R + ':\n\n');
+      await out('  ' + C + 'ssh $(echo ' + SSH_B64 + ' | base64 -d)' + R + '\n\n');
+      await out('the show replays in there — then the prompt is YOURS. try:\n');
+      await out('  ' + G + 'ls' + R + '        ' + G + 'whoami' + R + '      ' + G + 'top' + R + '\n');
+      await out('  ' + G + 'vim' + R + '       ' + G + 'sudo rm -rf /' + R + '   ' + D + '← especially this one' + R + '\n');
+      await out('  ' + G + 'help' + R + '      ' + G + 'exit' + R + '        ' + D + '(it has opinions)' + R + '\n\n');
+      await out(D + 'firewalled at work? the curl-costume shell still answers:' + R + '\n');
+      await out('  ' + D + 'slime() { curl -sN -G --data-urlencode "c=$*" ' + SH_URL + '; }' + R + '\n\n');
       await sleep(500);
       await t(G + '$ ' + R + 'logout\n', 30);
       await out(P + '— yongshan ♡ ' + D + '(the slime says hi too. it cannot type. it tried.)' + R + '\n');
@@ -174,6 +178,7 @@ function hiShow(ctx) {
    typed, in-character response. NOTHING ever executes on the
    visitor's machine — it is curl, cosplaying as a shell. ---- */
 const SH_URL = 'https://yongshanos-wall.yongshanos.workers.dev/sh';
+const SSH_B64 = 'c3NoOi8vc2xpbWVAMy45OC4yMTcuMTU3OjIyMjI='; // ssh://slime@3.98.217.157:2222 — the REAL container
 const DOOR_B64 = 'aHR0cHM6Ly95eXN3aHNjY2MuZ2l0aHViLmlvL3BlcnNvbmFsLXdlYnNpdGUvI3Rlcm1pbmFsCg==';
 const DOOR_URL = 'https://yyswhsccc.github.io/personal-website/#terminal';
 // strip every terminal-hijack codepoint before echoing user text back:
