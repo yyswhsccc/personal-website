@@ -326,6 +326,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (winId === 'win-leaderboard' && typeof renderAchievements === 'function') renderAchievements();
     if (winId === 'win-pikdex' && typeof renderPikdex === 'function') renderPikdex();
     if (winId === 'win-watch' && typeof renderWatchWin === 'function') renderWatchWin();
+    if (winId === 'win-album' && typeof renderAlbum === 'function') renderAlbum();
     if (typeof applyPikFloat === 'function') applyPikFloat(); // live/game open → desktop twins tuck away
 
     // Fresh opens always land inside the CURRENT viewport, sized to fit the
@@ -1218,10 +1219,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const pxPerTick = 0.55;                 // ≈23px/s: an actual reading pace
         const lead = 1400, linger = 1200;
         let pauseUntil = Date.now() + lead;
+        // iOS floors fractional scrollLeft (0.55 could read back as 0 forever),
+        // so we keep our own float position and only WRITE rounded values
+        let pos = 0;
         speechBubble._marquee = setInterval(() => {
           if (Date.now() < pauseUntil) return;
-          speechBubble.scrollLeft += pxPerTick;
-          if (speechBubble.scrollLeft >= over - 1) { // the TRUE end of the line
+          pos += pxPerTick;
+          speechBubble.scrollLeft = Math.round(pos);
+          if (pos >= over - 1) { // the TRUE end of the line (tracked, not read back)
             clearInterval(speechBubble._marquee);
             speechBubble._marquee = null;
             if (speechTimeout) clearTimeout(speechTimeout);
@@ -3689,7 +3694,9 @@ document.addEventListener('DOMContentLoaded', () => {
     { id: 'gitfollow', icon: '💚', n: ['Follower of the Way', 'Disciple de la Voie'], d: ['the follower counter climbed while you were around. adopted forever.', 'le compteur d\'abonnés a grimpé en ta présence. adopté·e pour toujours.'], t: ['following someone is a kind of spell too.', 'suivre quelqu\'un est aussi une sorte de sort.'] },
     { id: 'redpill', icon: '🐇', n: ['Followed the Pink Rabbit', 'A Suivi le Lapin Rose'], d: ['arrived through the mysterious little command. the desktop has you now.', 'est arrivé·e par la mystérieuse petite commande. le bureau te tient désormais.'], t: ['somewhere on github, a readme whispers a command.', 'quelque part sur github, un readme murmure une commande.'] },
     { id: 'ctfslime', icon: '🚩', n: ['Capture the Slime', 'Capture le Slime'], d: ['decoded key.enc at the door instead of just reading the hint. certified hacker-chan.', 'a décodé key.enc à la porte au lieu de lire l\'indice. hacker-chan certifié·e.'], t: ['the door has a puzzle for the brave. `ls` first.', 'la porte cache une énigme pour les braves. `ls` d\'abord.'] },
-    { id: 'comboking', icon: '🎯', n: ['Ultra Combo Patron', 'Mécène Ultra Combo'], d: ['landed a ×5 gift combo. the stage shook. the union filed a compliment.', 'a aligné un combo cadeau ×5. la scène a tremblé. le syndicat a déposé un compliment.'], t: ['the same gift, fast, five times. the stage remembers.', 'le même cadeau, vite, cinq fois. la scène s\'en souvient.'] }
+    { id: 'comboking', icon: '🎯', n: ['Ultra Combo Patron', 'Mécène Ultra Combo'], d: ['landed a ×5 gift combo. the stage shook. the union filed a compliment.', 'a aligné un combo cadeau ×5. la scène a tremblé. le syndicat a déposé un compliment.'], t: ['the same gift, fast, five times. the stage remembers.', 'le même cadeau, vite, cinq fois. la scène s\'en souvient.'] },
+    { id: 'paparazzi', icon: '📸', n: ['Meadow Paparazzi', 'Paparazzi de la Prairie'], d: ['shot the slime on stage — 3, 2, 1, flash, framed, timestamped.', 'a photographié le slime sur scène — 3, 2, 1, flash, encadré, horodaté.'], t: ['gift a 📷 in the live room. the slime has a good side. all sides.', 'offre un 📷 au salon live. le slime a un bon profil. tous.'] },
+    { id: 'selfiestar', icon: '🤳', n: ['Framed Together', 'Encadrés Ensemble'], d: ['took a selfie WITH the slime. it photobombed with honor. never uploaded.', 'a pris un selfie AVEC le slime. photobomb honorable. jamais téléversé.'], t: ['sometimes after a photo, the slime asks a question.', 'parfois après une photo, le slime pose une question.'] }
   ];
 
   // ---- metric engine: count things, achievements pop themselves ----
@@ -10477,6 +10484,489 @@ document.addEventListener('DOMContentLoaded', () => {
   const liveComboEl = document.getElementById('live-combo');
   var liveOpen = false;
 
+  /* ============ 📷 THE PHOTO STUDIO ============
+     the 📷 gift becomes a real camera: 3·2·1, a hand-drawn snapshot of the
+     ACTUAL stage (sky, grass, slime, squad, guests — all live positions),
+     Y2K polaroid frames, timestamps, an in-site album, 4s video takes, and
+     a 1/3-chance selfie with the slime. camera frames NEVER leave the
+     device; the cloud only ever counts hearts, not faces. */
+  var albumVideos = []; // session-only: blobs don't fit localStorage
+  function albumGet() { const a = store.get('yos-album', []); return Array.isArray(a) ? a : []; }
+  function albumAdd(entry) {
+    const a = albumGet();
+    a.unshift(entry);
+    while (a.length > 12) { a.pop(); }
+    store.set('yos-album', a);
+    if (typeof renderAlbum === 'function') renderAlbum();
+  }
+  function photoStamp() {
+    const d = new Date();
+    const p = (n) => String(n).padStart(2, '0');
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+  }
+  function stageSnapshot(zoom) {
+    const st = liveStage.getBoundingClientRect();
+    const W = Math.max(200, Math.round(st.width)), H = Math.max(150, Math.round(st.height));
+    const cv = document.createElement('canvas');
+    cv.width = W * 2; cv.height = H * 2;
+    const x = cv.getContext('2d');
+    x.scale(2, 2);
+    // the banded pastel sky, faithfully
+    const bands = [['#ffd9ec', 0], ['#ffd9ec', 0.13], ['#fde0f1', 0.13], ['#fde0f1', 0.25], ['#f3e0f8', 0.25], ['#f3e0f8', 0.37], ['#e6e4fb', 0.37], ['#e6e4fb', 0.5], ['#d9eafc', 0.5], ['#d9eafc', 0.63], ['#cfeffc', 0.63], ['#cfeffc', 0.78], ['#c8f3f7', 0.78], ['#c8f3f7', 1]];
+    const g = x.createLinearGradient(0, 0, 0, H);
+    bands.forEach(([c, p]) => g.addColorStop(p, c));
+    x.fillStyle = g;
+    x.fillRect(0, 0, W, H);
+    const gg = x.createLinearGradient(0, H * 0.85, 0, H);
+    gg.addColorStop(0, '#c9ecd0');
+    gg.addColorStop(1, '#8fd6a0');
+    x.fillStyle = gg;
+    x.fillRect(0, H * 0.85, W, H * 0.15);
+    for (let i = 0; i < 30; i++) {
+      x.fillStyle = ['#ffb3dd', '#ffe98a', '#c9a7f5', '#ffffff'][i % 4];
+      x.fillRect((i * 37 + 11) % W, H * 0.87 + ((i * 13) % Math.round(H * 0.1)), 2.5, 2.5);
+    }
+    // everything that LIVES on stage, at its live position
+    liveStage.querySelectorAll('img').forEach((im) => {
+      if (!im.complete || !im.naturalWidth) return;
+      const r = im.getBoundingClientRect();
+      if (r.width < 2 || r.bottom < st.top || r.top > st.bottom + 10) return;
+      try {
+        x.save();
+        const flip = /scaleX\(-1\)/.test(im.style.transform || '');
+        const dx = r.left - st.left, dy = r.top - st.top;
+        if (flip) { x.translate(dx + r.width, dy); x.scale(-1, 1); x.drawImage(im, 0, 0, r.width, r.height); }
+        else x.drawImage(im, dx, dy, r.width, r.height);
+        x.restore();
+      } catch (e2) { /* mid-swap — skip this sprite */ }
+    });
+    liveStage.querySelectorAll('.gift-critter, .pik-carry, .pik-hat, .gift-snack, .gift-crown, .gift-cloud').forEach((el) => {
+      const r = el.getBoundingClientRect();
+      if (r.width < 2) return;
+      const fs = parseFloat(getComputedStyle(el).fontSize) || 16;
+      x.font = fs + 'px sans-serif';
+      x.textBaseline = 'top';
+      try { x.fillText(el.textContent, r.left - st.left, r.top - st.top); } catch (e3) { /* exotic glyph */ }
+    });
+    if (zoom && zoom > 1) {
+      // zoom = a loving crop centered on the slime
+      const pr = slimeBody.getBoundingClientRect();
+      const cx0 = pr.left - st.left + pr.width / 2, cy0 = pr.top - st.top + pr.height / 2;
+      const cw = W / zoom, ch = H / zoom;
+      const sx0 = Math.max(0, Math.min(W - cw, cx0 - cw / 2)), sy0 = Math.max(0, Math.min(H - ch, cy0 - ch / 2));
+      const zc = document.createElement('canvas');
+      zc.width = W * 2; zc.height = H * 2;
+      zc.getContext('2d').drawImage(cv, sx0 * 2, sy0 * 2, cw * 2, ch * 2, 0, 0, W * 2, H * 2);
+      return { cv: zc, W, H };
+    }
+    return { cv, W, H };
+  }
+  function photoFrameify(shot, kindLabel) {
+    const pad = 10, cap = 26;
+    const fc = document.createElement('canvas');
+    fc.width = (shot.W + pad * 2) * 2;
+    fc.height = (shot.H + pad * 2 + cap) * 2;
+    const x = fc.getContext('2d');
+    x.scale(2, 2);
+    x.fillStyle = '#fffdfb';
+    x.fillRect(0, 0, shot.W + pad * 2, shot.H + pad * 2 + cap);
+    x.strokeStyle = '#f0509f';
+    x.lineWidth = 3;
+    x.strokeRect(1.5, 1.5, shot.W + pad * 2 - 3, shot.H + pad * 2 + cap - 3);
+    x.drawImage(shot.cv, pad, pad, shot.W, shot.H);
+    x.fillStyle = '#5a3d6e';
+    x.font = "11px 'Courier New', monospace";
+    x.fillText('♡ yongshanOS · slime_live' + (kindLabel ? ' · ' + kindLabel : ''), pad, shot.H + pad + 16);
+    const ts = photoStamp();
+    x.fillText(ts, shot.W + pad - x.measureText(ts).width, shot.H + pad + 16);
+    x.fillStyle = '#ffb3dd';
+    x.fillText('✦', shot.W + pad - 2, pad + 12);
+    return fc.toDataURL('image/jpeg', 0.72);
+  }
+  function photoFlash() {
+    const f = document.createElement('div');
+    f.className = 'photo-flash';
+    liveStage.appendChild(f);
+    playTone(1600, 'square', 0.05, 0, 0.03);
+    playTone(900, 'square', 0.06, 0.06, 0.03);
+    setTimeout(() => f.remove(), 450);
+  }
+  function photoCountdown(then) {
+    let n = 3;
+    const el = document.createElement('div');
+    el.className = 'photo-count';
+    el.textContent = '3';
+    liveStage.appendChild(el);
+    const poses = ['happy', 'alert', 'hop'];
+    const tick = setInterval(() => {
+      if (typeof moveSlime === 'function') moveSlime({ action: poses[3 - n] || 'happy', mood: trT('posing', 'pose'), duration: 500, distance: 0.2, scheduleNext: false });
+      playTone(880, 'triangle', 0.08, 0, 0.04);
+      n--;
+      if (n <= 0) {
+        clearInterval(tick);
+        el.remove();
+        then();
+      } else {
+        el.textContent = String(n);
+        el.classList.remove('pop');
+        void el.offsetWidth;
+        el.classList.add('pop');
+      }
+    }, 800);
+  }
+  function photoFloatShow(dataUrl, entry) {
+    const wrap = document.createElement('div');
+    wrap.className = 'photo-float';
+    const img = document.createElement('img');
+    img.src = dataUrl;
+    img.alt = '';
+    const bar = document.createElement('div');
+    bar.className = 'photo-float-bar';
+    const save = document.createElement('button');
+    save.type = 'button';
+    save.className = 'wp-btn';
+    save.textContent = trT('💾 save to device', '💾 sur l\'appareil');
+    save.addEventListener('click', () => {
+      const a = document.createElement('a');
+      a.href = dataUrl;
+      a.download = 'yongshanos-' + (entry.k || 'photo') + '-' + entry.t.replace(/[: ]/g, '-') + '.jpg';
+      a.click();
+    });
+    const openAlb = document.createElement('button');
+    openAlb.type = 'button';
+    openAlb.className = 'wp-btn';
+    openAlb.textContent = trT('🖼 album', '🖼 album');
+    openAlb.addEventListener('click', () => { wrap.remove(); openWindow('win-album'); });
+    bar.append(save, openAlb);
+    wrap.append(img, bar);
+    document.body.appendChild(wrap);
+    setTimeout(() => { if (wrap.parentNode) { wrap.classList.add('is-leaving'); setTimeout(() => wrap.remove(), 700); } }, 5200);
+  }
+  function photoShoot(zoom) {
+    photoCountdown(() => {
+      photoFlash();
+      const dataUrl = photoFrameify(stageSnapshot(zoom), null);
+      const entry = { d: dataUrl, t: photoStamp(), k: 'photo' };
+      albumAdd(entry);
+      achvUnlock('paparazzi');
+      showBubble(trT('📸 filed in photo_album.exe!! am I photogenic or AM I PHOTOGENIC', '📸 classée dans photo_album.exe !! je suis photogénique ou JE SUIS PHOTOGÉNIQUE'), 2800);
+      photoFloatShow(dataUrl, entry);
+      if (Math.random() < 1 / 3) setTimeout(selfieInvite, 6000);
+    });
+  }
+  function giftActCamera(e) {
+    if (!liveOpen || !liveStage) return;
+    if (liveStage.querySelector('.photo-studio')) return;
+    const panel = document.createElement('div');
+    panel.className = 'photo-studio';
+    const head = document.createElement('div');
+    head.className = 'vibe-genre-head';
+    head.textContent = trT('📷 slime studio ♡ pick your shot', '📷 studio slime ♡ choisis ta prise');
+    let zoom = 1;
+    const mk = (txt, fn) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'vibe-genre-btn'; b.textContent = txt; b.addEventListener('click', fn); return b; };
+    const zoomBtn = mk('🔍 1x', () => { zoom = zoom === 1 ? 1.5 : 1; zoomBtn.textContent = '🔍 ' + zoom + 'x'; });
+    const row = document.createElement('div');
+    row.className = 'vibe-genre-grid';
+    row.append(
+      mk(trT('📸 photo', '📸 photo'), () => { panel.remove(); photoShoot(zoom); }),
+      mk(trT('🎬 video · 4s', '🎬 vidéo · 4 s'), () => { panel.remove(); videoShoot(zoom); }),
+      zoomBtn,
+      mk('✕', () => panel.remove())
+    );
+    panel.append(head, row);
+    liveStage.appendChild(panel);
+    showBubble(trT('a CAMERA?! wait wait — my good side. both sides. all sides.', 'un APPAREIL ?! attends — mon meilleur profil. les deux. tous.'), 2600);
+    setTimeout(() => { if (panel.parentNode) panel.remove(); }, 20000);
+  }
+  function videoShoot(zoom) {
+    if (!window.MediaRecorder) {
+      showBubble(trT('this browser can\'t record — but photos work!! 📸', 'ce navigateur ne peut pas filmer — mais les photos marchent !! 📸'), 2600);
+      photoShoot(zoom);
+      return;
+    }
+    photoCountdown(() => {
+      const first = stageSnapshot(zoom);
+      const rc = document.createElement('canvas');
+      rc.width = first.cv.width; rc.height = first.cv.height;
+      const rx = rc.getContext('2d');
+      rx.drawImage(first.cv, 0, 0);
+      const stream = rc.captureStream(30);
+      const mime = MediaRecorder.isTypeSupported('video/mp4') ? 'video/mp4' : (MediaRecorder.isTypeSupported('video/webm') ? 'video/webm' : '');
+      const rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+      const chunks = [];
+      rec.ondataavailable = (ev) => { if (ev.data && ev.data.size) chunks.push(ev.data); };
+      const tag = document.createElement('div');
+      tag.className = 'photo-rec-tag';
+      tag.textContent = '● REC';
+      liveStage.appendChild(tag);
+      let stop = false;
+      const draw = () => {
+        if (stop) return;
+        try { const s = stageSnapshot(zoom); rx.drawImage(s.cv, 0, 0, rc.width, rc.height); } catch (e2) { /* frame skip */ }
+        requestAnimationFrame(draw);
+      };
+      rec.onstop = () => {
+        stop = true;
+        tag.remove();
+        const blob = new Blob(chunks, { type: mime || 'video/webm' });
+        const url = URL.createObjectURL(blob);
+        const entry = { v: url, t: photoStamp(), k: 'video', ext: (mime.indexOf('mp4') !== -1 ? 'mp4' : 'webm') };
+        albumVideos.unshift(entry);
+        if (albumVideos.length > 4) { URL.revokeObjectURL(albumVideos.pop().v); }
+        achvUnlock('paparazzi');
+        showBubble(trT('🎬 4 seconds of PURE cinema. it\'s in the album (this visit only — save to keep!!)', '🎬 4 secondes de PUR cinéma. c\'est dans l\'album (cette visite seulement — sauvegarde !!)'), 3200);
+        if (typeof renderAlbum === 'function') renderAlbum();
+        openWindow('win-album');
+      };
+      rec.start();
+      draw();
+      setTimeout(() => { try { rec.stop(); } catch (e3) {} }, 4000);
+    });
+  }
+  function selfieInvite() {
+    if (!liveOpen || !liveStage || liveStage.querySelector('.photo-studio')) return;
+    const panel = document.createElement('div');
+    panel.className = 'photo-studio';
+    const head = document.createElement('div');
+    head.className = 'vibe-genre-head';
+    head.textContent = trT('🤳 wait — take one TOGETHER? (camera stays 100% on your device)', '🤳 attends — on en prend une ENSEMBLE ? (la caméra reste 100 % sur ton appareil)');
+    const row = document.createElement('div');
+    row.className = 'vibe-genre-grid';
+    const mk = (txt, fn) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'vibe-genre-btn'; b.textContent = txt; b.addEventListener('click', fn); return b; };
+    row.append(
+      mk(trT('📸 yes!! selfie time', '📸 oui !! selfie'), () => { panel.remove(); selfieShoot(); }),
+      mk(trT('shy today ♡', 'timide aujourd\'hui ♡'), () => { panel.remove(); showBubble(trT('respected. the offer stands FOREVER.', 'respecté. l\'offre tient POUR TOUJOURS.'), 2200); })
+    );
+    panel.append(head, row);
+    liveStage.appendChild(panel);
+    showBubble(trT('psst… wanna take one TOGETHER? 🤳', 'psst… on en prend une ENSEMBLE ? 🤳'), 2800);
+    setTimeout(() => { if (panel.parentNode) panel.remove(); }, 15000);
+  }
+  function selfieShoot() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      showBubble(trT('no camera here — the friendship photo lives in our hearts', 'pas de caméra ici — la photo d\'amitié vit dans nos cœurs'), 2600);
+      return;
+    }
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 640, height: 480 }, audio: false }).then((stream) => {
+      const vid = document.createElement('video');
+      vid.playsInline = true;
+      vid.muted = true;
+      vid.srcObject = stream;
+      const pip = document.createElement('div');
+      pip.className = 'selfie-pip';
+      pip.appendChild(vid);
+      liveStage.appendChild(pip);
+      vid.play().catch(() => {});
+      showBubble(trT('there you are!! ok ok — 3… 2… 1…', 'te voilà !! ok ok — 3… 2… 1…'), 2200);
+      setTimeout(() => photoCountdown(() => {
+        photoFlash();
+        const W = 320, H = 240;
+        const cv = document.createElement('canvas');
+        cv.width = W * 2; cv.height = H * 2;
+        const x = cv.getContext('2d');
+        x.scale(2, 2);
+        // cover-fit the camera frame (mirrored, like every selfie ever)
+        const vw = vid.videoWidth || 640, vh = vid.videoHeight || 480;
+        const sc = Math.max(W / vw, H / vh);
+        x.save();
+        x.translate(W, 0);
+        x.scale(-1, 1);
+        x.drawImage(vid, (W - vw * sc) / 2, (H - vh * sc) / 2, vw * sc, vh * sc);
+        x.restore();
+        // the slime photobombs the corner, glowing politely
+        const sIm = slimeBody ? slimeBody.querySelector('img') : null;
+        if (sIm && sIm.complete) {
+          x.save();
+          x.shadowColor = 'rgba(255,255,255,0.9)';
+          x.shadowBlur = 12;
+          x.drawImage(sIm, W - 118, H - 104, 112, 98);
+          x.restore();
+        }
+        stream.getTracks().forEach((tr) => tr.stop());
+        pip.remove();
+        const framed = photoFrameify({ cv, W, H }, trT('selfie', 'selfie'));
+        const entry = { d: framed, t: photoStamp(), k: 'selfie' };
+        albumAdd(entry);
+        achvUnlock('selfiestar');
+        photoFloatShow(framed, entry);
+        showBubble(trT('🤳 FRAMED FOREVER. we look incredible.', '🤳 IMMORTALISÉ. on est incroyables.'), 2600);
+        setTimeout(selfieWallAsk, 5800);
+      }), 800);
+    }).catch(() => {
+      showBubble(trT('camera said no — totally fine, the vibe was real ♡', 'la caméra a dit non — pas grave, l\'instant était vrai ♡'), 2600);
+    });
+  }
+  function selfieWallAsk() {
+    if (!liveOpen || !liveStage) return;
+    const panel = document.createElement('div');
+    panel.className = 'photo-studio';
+    const head = document.createElement('div');
+    head.className = 'vibe-genre-head';
+    head.textContent = trT('🌍 count it on the worldwide selfie wall? (a COUNTER — your photo never leaves this device)', '🌍 la compter sur le mur mondial des selfies ? (un COMPTEUR — ta photo ne quitte jamais cet appareil)');
+    const row = document.createElement('div');
+    row.className = 'vibe-genre-grid';
+    const mk = (txt, fn) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'vibe-genre-btn'; b.textContent = txt; b.addEventListener('click', fn); return b; };
+    row.append(
+      mk(trT('hang it ♡', 'accroche-la ♡'), () => {
+        panel.remove();
+        fetch(`${ACHV_API}/hit/${ACHV_NS}/selfie-wall`).then((r) => (r.ok ? r.json() : null)).then((d) => {
+          const n = d && d.value ? d.value : '?';
+          fxBanner('🌍 SELFIE #' + n, trT('you + the slime, counted worldwide ♡', 'toi + le slime, comptés dans le monde ♡'));
+        }).catch(() => {});
+      }),
+      mk(trT('keep it private', 'garder privé'), () => { panel.remove(); showBubble(trT('a private legend. even better.', 'une légende privée. encore mieux.'), 2200); })
+    );
+    panel.append(head, row);
+    liveStage.appendChild(panel);
+    setTimeout(() => { if (panel.parentNode) panel.remove(); }, 15000);
+  }
+  function renderAlbum() {
+    const shell = document.getElementById('album-shell');
+    if (!shell) return;
+    shell.innerHTML = '';
+    const photos = albumGet();
+    const note = document.createElement('div');
+    note.className = 'album-note';
+    note.textContent = trT(`📸 ${photos.length}/12 photos · ${albumVideos.length} video take(s) this visit — the 📷 gift in slime_live opens the studio ♡`, `📸 ${photos.length}/12 photos · ${albumVideos.length} vidéo(s) cette visite — le cadeau 📷 dans slime_live ouvre le studio ♡`);
+    shell.appendChild(note);
+    if (!photos.length && !albumVideos.length) {
+      const empty = document.createElement('div');
+      empty.className = 'album-empty';
+      empty.textContent = trT('no photos yet!! open slime_live.exe and gift a 📷 — the slime is READY.', 'aucune photo !! ouvre slime_live.exe et offre un 📷 — le slime est PRÊT.');
+      shell.appendChild(empty);
+      return;
+    }
+    const grid = document.createElement('div');
+    grid.className = 'album-grid';
+    albumVideos.forEach((v) => {
+      const card = document.createElement('div');
+      card.className = 'album-card';
+      card.style.setProperty('--tilt', ((Math.random() * 5) - 2.5) + 'deg');
+      const vid = document.createElement('video');
+      vid.src = v.v;
+      vid.muted = true;
+      vid.loop = true;
+      vid.playsInline = true;
+      vid.autoplay = true;
+      const cap = document.createElement('div');
+      cap.className = 'album-cap';
+      cap.textContent = '🎬 ' + v.t;
+      const save = document.createElement('button');
+      save.type = 'button';
+      save.className = 'album-save';
+      save.textContent = '💾';
+      save.addEventListener('click', () => { const a = document.createElement('a'); a.href = v.v; a.download = 'yongshanos-video-' + v.t.replace(/[: ]/g, '-') + '.' + v.ext; a.click(); });
+      card.append(vid, cap, save);
+      grid.appendChild(card);
+    });
+    photos.forEach((p, ix) => {
+      const card = document.createElement('div');
+      card.className = 'album-card';
+      card.style.setProperty('--tilt', ((Math.random() * 5) - 2.5) + 'deg');
+      const img = document.createElement('img');
+      img.src = p.d;
+      img.alt = '';
+      const cap = document.createElement('div');
+      cap.className = 'album-cap';
+      cap.textContent = (p.k === 'selfie' ? '🤳 ' : '📸 ') + p.t;
+      const save = document.createElement('button');
+      save.type = 'button';
+      save.className = 'album-save';
+      save.textContent = '💾';
+      save.addEventListener('click', (ev) => { ev.stopPropagation(); const a = document.createElement('a'); a.href = p.d; a.download = 'yongshanos-' + p.k + '-' + p.t.replace(/[: ]/g, '-') + '.jpg'; a.click(); });
+      const del = document.createElement('button');
+      del.type = 'button';
+      del.className = 'album-del';
+      del.textContent = '✕';
+      del.setAttribute('aria-label', trT('delete photo', 'supprimer'));
+      del.addEventListener('click', (ev) => { ev.stopPropagation(); const a = albumGet(); a.splice(ix, 1); store.set('yos-album', a); renderAlbum(); });
+      card.append(img, cap, save, del);
+      grid.appendChild(card);
+    });
+    shell.appendChild(grid);
+  }
+  /* ---- 🎧 VIBE MODE ----
+     browsers cannot (and must not) hear what a visitor is playing — so the
+     visitor TELLS us the genre with one tap, and the whole room commits:
+     pixel headphones for everyone, a genre-matched dance, and the weather
+     sfx ducks to a whisper so their actual music owns the mix. */
+  const VIBE_GENRES = [
+    { id: 'lofi', icon: '☕', n: ['lofi', 'lofi'], line: ['lofi beats to pet slimes to. sway engaged.', 'lofi beats pour caresser des slimes. balancement enclenché.'], act(st) { st.classList.add('vibe-sway'); } },
+    { id: 'pop', icon: '🎤', n: ['pop', 'pop'], line: ['certified BOP detected. the meadow agrees.', 'BOP certifié détecté. la prairie approuve.'], act(st) { [0, 380, 760, 1140].forEach((d) => setTimeout(() => moveSlime({ action: 'hop', mood: 'bop', duration: 320, distance: 0.7, scheduleNext: d === 1140 }), d)); fxRain(['✦', '♥'], 8); } },
+    { id: 'kpop', icon: '💜', n: ['k-pop', 'k-pop'], line: ['the fanchant is MANDATORY. lightsticks up.', 'le fanchant est OBLIGATOIRE. lightsticks levés.'], act(st) { GARDEN.buddies.slice(0, 4).forEach((b, i) => setTimeout(() => { pikSay(b, '💜', 1200); }, i * 200)); [0, 300, 600, 900].forEach((d, i) => setTimeout(() => moveSlime({ action: 'alert', mood: 'choreo', duration: 240, scheduleNext: i === 3 }), d)); } },
+    { id: 'rock', icon: '🤘', n: ['rock', 'rock'], line: ['tell your neck I apologized in advance. 🤘', 'préviens ta nuque que je m\'excuse d\'avance. 🤘'], act(st) { st.classList.add('vibe-headbang'); setTimeout(() => st.classList.remove('vibe-headbang'), 3200); } },
+    { id: 'electronic', icon: '🎛', n: ['electronic', 'électro'], line: ['unts unts unts unts ♡', 'unts unts unts unts ♡'], act(st) { st.classList.add('gift-disco'); if (slimeBody) { slimeBody.classList.add('gift-robo'); setTimeout(() => slimeBody.classList.remove('gift-robo'), 3200); } setTimeout(() => st.classList.remove('gift-disco'), 4200); } },
+    { id: 'classical', icon: '🎻', n: ['classical', 'classique'], line: ['the meadow philharmonic, at your service.', 'la philharmonie de la prairie, à votre service.'], act(st) { GARDEN.buddies.forEach((b, i) => setTimeout(() => pikSay(b, '♪', 1000), 300 + i * 340)); moveSlime({ action: 'alert', mood: 'conductor', duration: 900 }); } },
+    { id: 'jazz', icon: '🎷', n: ['jazz', 'jazz'], line: ['improvising… respectfully.', 'j\'improvise… respectueusement.'], act(st) { st.classList.add('vibe-sway'); burstAtSlime(['🎷', '♪'], 4); } },
+    { id: 'rap', icon: '🧢', n: ['rap', 'rap'], line: ['bars. those were ACTUAL bars.', 'des punchlines. de VRAIES punchlines.'], act(st) { st.classList.add('vibe-nod'); setTimeout(() => st.classList.remove('vibe-nod'), 3600); burstAtSlime(['🧢', '✦'], 4); } }
+  ];
+  function vibeStop() {
+    window.__vibeOn = false;
+    const btn = document.getElementById('live-vibe');
+    if (btn) { btn.setAttribute('aria-pressed', 'false'); btn.classList.remove('is-on'); }
+    if (liveStage) {
+      liveStage.classList.remove('vibe-sway', 'vibe-headbang', 'vibe-nod');
+      liveStage.querySelectorAll('.vibe-phones, .vibe-genre-panel').forEach((el) => el.remove());
+    }
+    GARDEN.buddies.forEach((b) => { if (b._phoneEl) { b._phoneEl.remove(); b._phoneEl = null; } });
+    if (slimeBody) { const p = slimeBody.querySelector('.vibe-phones-slime'); if (p) p.remove(); }
+    wxSfx(wxCurrent); // volume back to normal
+  }
+  function vibeStart(genre) {
+    window.__vibeOn = true;
+    const btn = document.getElementById('live-vibe');
+    if (btn) { btn.setAttribute('aria-pressed', 'true'); btn.classList.add('is-on'); }
+    // everyone puts on headphones — slime AND squad
+    if (slimeBody && !slimeBody.querySelector('.vibe-phones-slime')) {
+      const p = document.createElement('span');
+      p.className = 'vibe-phones-slime';
+      p.textContent = '🎧';
+      slimeBody.appendChild(p);
+    }
+    GARDEN.buddies.forEach((b, i) => {
+      if (b._phoneEl) return;
+      const p = document.createElement('span');
+      p.className = 'pik-carry';
+      p.textContent = '🎧';
+      b.el.appendChild(p);
+      b._phoneEl = p;
+    });
+    wxSfx(wxCurrent); // re-applies volume with the vibe duck
+    showBubble(trT('you like listening to music? I ALSO like listening to music 😋', 'tu aimes écouter de la musique ? MOI AUSSI j\'aime écouter de la musique 😋'), 2800);
+    setTimeout(() => {
+      showBubble(trT(genre.line[0], genre.line[1]), 3000);
+      genre.act(liveStage);
+      burstAtSlime(['🎧', '♪', '♥'], 6);
+    }, 2400);
+    // the vibe fades politely after 3 minutes (or another tap)
+    if (window.__vibeTimer) clearTimeout(window.__vibeTimer);
+    window.__vibeTimer = setTimeout(vibeStop, 180000);
+  }
+  function vibeToggle() {
+    if (!liveOpen || !liveStage) return;
+    if (window.__vibeOn) { vibeStop(); return; }
+    const old = liveStage.querySelector('.vibe-genre-panel');
+    if (old) { old.remove(); return; }
+    const panel = document.createElement('div');
+    panel.className = 'vibe-genre-panel';
+    const head = document.createElement('div');
+    head.className = 'vibe-genre-head';
+    head.textContent = trT('what are we listening to? ♡', 'on écoute quoi ? ♡');
+    panel.appendChild(head);
+    const grid = document.createElement('div');
+    grid.className = 'vibe-genre-grid';
+    VIBE_GENRES.forEach((g) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'vibe-genre-btn';
+      b.textContent = g.icon + ' ' + trT(g.n[0], g.n[1]);
+      b.addEventListener('click', () => { panel.remove(); vibeStart(g); });
+      grid.appendChild(b);
+    });
+    panel.appendChild(grid);
+    liveStage.appendChild(panel);
+    setTimeout(() => { if (panel.parentNode) panel.remove(); }, 15000);
+  }
   var beamTipShown = false;
   function liveBeamMaybe() {
     // landscape phone in the live room: the grass suffers. say so, kindly —
@@ -10552,6 +11042,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function liveExit() {
     if (!liveOpen) return;
     liveOpen = false;
+    if (window.__vibeOn) vibeStop();
     camStop();
     gardenStop();
     if (gooseTimer) { clearTimeout(gooseTimer); gooseTimer = null; }
@@ -11275,12 +11766,14 @@ document.addEventListener('DOMContentLoaded', () => {
     hurricane: ['assets/wx/21_hurricane_extreme_storm.mp3']
   };
   var wxAudioEl = null;
+  try { if (navigator.audioSession) navigator.audioSession.type = 'ambient'; } catch (e) { /* older WebKit */ }
   function wxSfx(kind) {
     if (!wxAudioEl) { wxAudioEl = new Audio(); wxAudioEl.loop = true; }
     const list = WX_SFX[kind];
     if (!list || !liveOpen || !soundEnabled) { try { wxAudioEl.pause(); } catch (e) {} return; }
     wxAudioEl.src = list[Math.floor(Math.random() * list.length)];
-    wxAudioEl.volume = resolvedTheme() === 'dark' ? 0.06 : 0.13;
+    const wxCoarse = window.matchMedia('(pointer: coarse)').matches; // phones: whisper, not noise
+    wxAudioEl.volume = (resolvedTheme() === 'dark' ? 0.06 : 0.13) * (wxCoarse ? 0.3 : 1) * (window.__vibeOn ? 0.15 : 1);
     if (!document.hidden && document.hasFocus()) wxAudioEl.play().catch(() => { /* pre-gesture */ });
   }
   function wxSfxStop() { if (wxAudioEl) { try { wxAudioEl.pause(); } catch (e) {} } }
@@ -11875,6 +12368,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e === '🐞') return giftActBugHunt;
     if (e === '☁️' || e === '☁') return giftActCloud;
     if (e === '😭' || e === '🥺') return giftActFeels;
+    if (e === '📷' || e === '📸') return giftActCamera;
     if (FOOD.indexOf(e) !== -1) return giftActFood;
     if (CRITTER.indexOf(e) !== -1) return giftActCritter;
     if (SPARKLE.indexOf(e) !== -1) return giftActSparkle;
@@ -13184,6 +13678,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  const vibeBtn = document.getElementById('live-vibe');
+  if (vibeBtn) vibeBtn.addEventListener('click', vibeToggle);
   const camBtn = document.getElementById('live-cam');
   if (camBtn) {
     camBtn.addEventListener('click', () => {
