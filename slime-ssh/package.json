@@ -1,0 +1,13 @@
+{
+  "name": "slime-ssh",
+  "version": "1.0.0",
+  "private": true,
+  "description": "slime-docker, now a REAL ssh server — the container the visitor actually steps into",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "ssh2": "^1.16.0"
+  }
+}
