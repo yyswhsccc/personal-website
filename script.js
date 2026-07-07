@@ -4626,8 +4626,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // ---- the terminal door: a tiny CTF playground until the name is spoken ----
     if (document.body.classList.contains('terminal-only')) {
       const door = window.__door || (window.__door = { tries: 0, decoded: false, enc: ['rot13', 'base64', 'hex'][Math.floor(Math.random() * 3)] });
-      if (lower === 'yongshan' || lower === 'sudo yongshan' || lower === 'wake up' || lower === 'wakeup') {
-        if (lower === 'sudo yongshan') termLine(trT('🔑 root acknowledged. the door never needed it — but the bow is appreciated.', '🔑 root reconnu. la porte n\'en avait pas besoin — mais la révérence est appréciée.'), 't-ok');
+      if (window.__doorIdle) { clearTimeout(window.__doorIdle); window.__doorIdle = null; } // the visitor drives now
+      // the key is her NAME in any reasonable outfit: case, spaces, with or
+      // without the family name, even behind a sudo. typos are NOT outfits.
+      const norm = lower.replace(/[^a-z]/g, '');
+      const DOOR_KEYS = ['yongshan', 'yongshanyu', 'yuyongshan'];
+      const isKey = DOOR_KEYS.indexOf(norm) !== -1;
+      const sudoKey = norm.indexOf('sudo') === 0 && DOOR_KEYS.indexOf(norm.slice(4)) !== -1;
+      if (isKey || sudoKey || lower === 'wake up' || lower === 'wakeup') {
+        if (sudoKey) termLine(trT('🔑 root acknowledged. the door never needed it — but the bow is appreciated.', '🔑 root reconnu. la porte n\'en avait pas besoin — mais la révérence est appréciée.'), 't-ok');
         if (lower === 'wake up' || lower === 'wakeup') termLine(trT('🐇 the classic line. the door respects a purist.', '🐇 la réplique classique. la porte respecte les puristes.'), 't-ok');
         if (door.decoded) {
           achvUnlock('ctfslime');
@@ -4671,6 +4678,29 @@ document.addEventListener('DOMContentLoaded', () => {
         termLine(trT('☔ initiating digital drizzle… (6s, purely decorative)', '☔ bruine numérique… (6 s, purement décoratif)'), 't-ok');
         matrixRain();
         return;
+      }
+      // near-miss typos of the name get lovingly roasted, never executed
+      if (norm.length >= 6 && !isKey && !sudoKey) {
+        const lev = (a, b) => {
+          const m = Array.from({ length: a.length + 1 }, (_, i) => [i].concat(new Array(b.length).fill(0)));
+          for (let j = 1; j <= b.length; j++) m[0][j] = j;
+          for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++) {
+            m[i][j] = Math.min(m[i - 1][j] + 1, m[i][j - 1] + 1, m[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+          }
+          return m[a.length][b.length];
+        };
+        const tryNorm = norm.indexOf('sudo') === 0 ? norm.slice(4) : norm;
+        if (DOOR_KEYS.some((k) => { const d = lev(tryNorm, k); return d > 0 && d <= 2; })) {
+          const MOCKS = [
+            [`'${input}'?? adorable. wrong, but adorable. (it's y·o·n·g·s·h·a·n)`, `'${input}' ?? adorable. faux, mais adorable. (c'est y·o·n·g·s·h·a·n)`],
+            ['the door FELT that typo. it is giggling. politely.', 'la porte a SENTI cette typo. elle glousse. poliment.'],
+            ['SO close. her name is not a captcha — breathe, retype ♡', 'TELLEMENT proche. son nom n\'est pas un captcha — respire, retape ♡']
+          ];
+          const mock = MOCKS[Math.floor(Math.random() * MOCKS.length)];
+          termLine(trT(mock[0], mock[1]), 't-err');
+          matrixGreeterSay(trT('that typo had HEART. wrong letters, but heart.', 'cette typo avait du CŒUR. pas les bonnes lettres, mais du cœur.'));
+          return;
+        }
       }
       // anything else falls through to the REAL shell — but the greeter watches
       door.tries++;
@@ -15052,6 +15082,19 @@ document.addEventListener('DOMContentLoaded', () => {
         termLine(trT('   the rest of her OS is asleep. type `yongshan` — the name is the key.', '   le reste de son OS dort. tape `yongshan` — le nom est la clé.'), 't-ok');
         termLine(trT('   (the curious try `ls` first. the brave decode what they find. 🚩)', '   (les curieux tapent `ls` d\'abord. les braves décodent ce qu\'ils trouvent. 🚩)'), 't-dim');
         termLine(trT('   (also in stock: `visitorfetch` · `matrix` · the ENTIRE regular shell)', '   (aussi en rayon : `visitorfetch` · `matrix` · TOUT le shell habituel)'), 't-dim');
+        // discoverability: if the visitor just stares, the greeter drives ONCE
+        window.__doorIdle = setTimeout(() => {
+          if (!document.body.classList.contains('terminal-only')) return;
+          const ti2 = document.getElementById('term-input');
+          if (!ti2 || ti2.value) return;
+          matrixGreeterSay(trT('no rush. here — I\'ll drive:', 'pas de stress. tiens — je conduis :'));
+          ['l', 's'].forEach((ch, i) => setTimeout(() => { ti2.value += ch; }, 700 + i * 320));
+          setTimeout(() => {
+            if (!document.body.classList.contains('terminal-only')) return;
+            if (ti2.form) ti2.form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+            setTimeout(() => matrixGreeterSay(trT('like THIS. your turn ♡', 'comme ÇA. à toi ♡')), 500);
+          }, 1700);
+        }, 12000);
       }, 850);
       matrixGreeterShow();
     }, 600);
