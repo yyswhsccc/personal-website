@@ -7876,3 +7876,15 @@ body.terminal-only .game-hint-pop { display: none !important; }
 @media (prefers-reduced-motion: reduce) {
   .photo-count, .photo-flash, .live-stage.vibe-sway, .live-stage.vibe-headbang .slime-pet, .live-stage.vibe-nod .slime-pet { animation: none; }
 }
+
+.album-tabs { display: flex; gap: 6px; }
+.album-tab {
+  font-family: var(--font-pixel);
+  font-size: 0.82rem;
+  padding: 5px 12px;
+  background: var(--cream);
+  border: 2px solid var(--ink);
+  box-shadow: 2px 2px 0 var(--ink);
+  cursor: var(--cursor-heart);
+}
+.album-tab.is-on { background: linear-gradient(var(--pink), var(--pink-hot)); color: #fff; }

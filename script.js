@@ -3696,7 +3696,8 @@ document.addEventListener('DOMContentLoaded', () => {
     { id: 'ctfslime', icon: '🚩', n: ['Capture the Slime', 'Capture le Slime'], d: ['decoded key.enc at the door instead of just reading the hint. certified hacker-chan.', 'a décodé key.enc à la porte au lieu de lire l\'indice. hacker-chan certifié·e.'], t: ['the door has a puzzle for the brave. `ls` first.', 'la porte cache une énigme pour les braves. `ls` d\'abord.'] },
     { id: 'comboking', icon: '🎯', n: ['Ultra Combo Patron', 'Mécène Ultra Combo'], d: ['landed a ×5 gift combo. the stage shook. the union filed a compliment.', 'a aligné un combo cadeau ×5. la scène a tremblé. le syndicat a déposé un compliment.'], t: ['the same gift, fast, five times. the stage remembers.', 'le même cadeau, vite, cinq fois. la scène s\'en souvient.'] },
     { id: 'paparazzi', icon: '📸', n: ['Meadow Paparazzi', 'Paparazzi de la Prairie'], d: ['shot the slime on stage — 3, 2, 1, flash, framed, timestamped.', 'a photographié le slime sur scène — 3, 2, 1, flash, encadré, horodaté.'], t: ['gift a 📷 in the live room. the slime has a good side. all sides.', 'offre un 📷 au salon live. le slime a un bon profil. tous.'] },
-    { id: 'selfiestar', icon: '🤳', n: ['Framed Together', 'Encadrés Ensemble'], d: ['took a selfie WITH the slime. it photobombed with honor. never uploaded.', 'a pris un selfie AVEC le slime. photobomb honorable. jamais téléversé.'], t: ['sometimes after a photo, the slime asks a question.', 'parfois après une photo, le slime pose une question.'] }
+    { id: 'selfiestar', icon: '🤳', n: ['Framed Together', 'Encadrés Ensemble'], d: ['took a selfie WITH the slime. it photobombed with honor. never uploaded.', 'a pris un selfie AVEC le slime. photobomb honorable. jamais téléversé.'], t: ['sometimes after a photo, the slime asks a question.', 'parfois après une photo, le slime pose une question.'] },
+    { id: 'wallfamous', icon: '🌍', n: ['Framed Worldwide', 'Encadré·e Mondialement'], d: ['hung a selfie on the REAL worldwide wall. publicly, proudly, consensually.', 'a accroché un selfie sur le VRAI mur mondial. publiquement, fièrement, avec consentement.'], t: ['the wall is real now. it has a bouncer and everything.', 'le mur est réel désormais. il a même un videur.'] }
   ];
 
   // ---- metric engine: count things, achievements pop themselves ----
@@ -4827,6 +4828,31 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     if (cmd === 'sudo') { termLine(trT('nice try. this slime respects the principle of least privilege.', 'bien tenté. ce slime respecte le principe du moindre privilège.'), 't-err'); return; }
+    if (cmd === 'wall') {
+      const sub = (args[0] || 'status').toLowerCase();
+      if (!wallApi) { termLine(trT('wall: backend not configured yet (wall-config.json)', 'wall : backend pas encore configuré (wall-config.json)'), 't-err'); return; }
+      const adminKey = store.get('yos-wall-admin', '');
+      if (sub === 'status') {
+        fetch(wallApi + '/health').then((r) => r.json()).then((h) => {
+          termLine(`🌍 wall: ${h.count}/${h.cap} photos · ${h.frozen ? '🧊 FROZEN' : '🟢 accepting'}`, 't-ok');
+        }).catch(() => termLine('wall: unreachable', 't-err'));
+        return;
+      }
+      if (sub === 'admin') { store.set('yos-wall-admin', parts[2] || ''); termLine(trT('wall: owner key stored locally (never synced)', 'wall : clé stockée localement (jamais synchronisée)'), 't-ok'); return; }
+      if (!adminKey) { termLine(trT('wall: owner tools need `wall admin <secret>` first', 'wall : outils proprio — `wall admin <secret>` d\'abord'), 't-err'); return; }
+      if (sub === 'rm' && parts[2]) {
+        fetch(wallApi + '/photo/' + parts[2], { method: 'DELETE', headers: { Authorization: 'Bearer ' + adminKey } })
+          .then((r) => termLine(r.ok ? '🗑 removed' : 'refused (' + r.status + ')', r.ok ? 't-ok' : 't-err'));
+        return;
+      }
+      if (sub === 'freeze' || sub === 'thaw') {
+        fetch(wallApi + '/admin/' + sub, { method: 'POST', headers: { Authorization: 'Bearer ' + adminKey } })
+          .then((r) => termLine(r.ok ? (sub === 'freeze' ? '🧊 wall frozen' : '🟢 wall thawed') : 'refused (' + r.status + ')', r.ok ? 't-ok' : 't-err'));
+        return;
+      }
+      termLine('wall: status · admin <secret> · rm <id> · freeze · thaw', 't-dim');
+      return;
+    }
     if (cmd === 'watch' && !rest) {
       termLine(trT('⌚ opening the smartwatch pairing panel…', '⌚ ouverture du panneau d\'appairage montre…'), 't-ok');
       if (typeof watchPanelOpen === 'function') watchPanelOpen();
@@ -10490,6 +10516,30 @@ document.addEventListener('DOMContentLoaded', () => {
      Y2K polaroid frames, timestamps, an in-site album, 4s video takes, and
      a 1/3-chance selfie with the slime. camera frames NEVER leave the
      device; the cloud only ever counts hearts, not faces. */
+  /* ---- 🌍 the REAL worldwide wall (Cloudflare Worker backend) ----
+     the API base ships in wall-config.json so the frontend needs no
+     redeploy when the backend moves. empty api = wall dormant, selfie
+     flow falls back to the anonymous counter. uploads are consent-only,
+     JPEG-only, rate-limited server-side, owner-moderatable. */
+  var wallApi = '';
+  fetch('wall-config.json?d=' + new Date().toISOString().slice(0, 10))
+    .then((r) => (r.ok ? r.json() : null))
+    .then((c) => { if (c && c.api) wallApi = String(c.api).replace(/\/+$/, ''); })
+    .catch(() => { /* wall stays dormant */ });
+  function wallUpload(dataUrl) {
+    if (!wallApi) return Promise.resolve(null);
+    return fetch(wallApi + '/wall', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ img: dataUrl })
+    }).then((r) => r.json().then((j) => ({ status: r.status, ...j })));
+  }
+  function wallList(cursor) {
+    if (!wallApi) return Promise.resolve(null);
+    return fetch(wallApi + '/wall' + (cursor ? '?cursor=' + encodeURIComponent(cursor) : ''))
+      .then((r) => (r.ok ? r.json() : null))
+      .catch(() => null);
+  }
   var albumVideos = []; // session-only: blobs don't fit localStorage
   function albumGet() { const a = store.get('yos-album', []); return Array.isArray(a) ? a : []; }
   function albumAdd(entry) {
@@ -10790,25 +10840,42 @@ document.addEventListener('DOMContentLoaded', () => {
         achvUnlock('selfiestar');
         photoFloatShow(framed, entry);
         showBubble(trT('🤳 FRAMED FOREVER. we look incredible.', '🤳 IMMORTALISÉ. on est incroyables.'), 2600);
-        setTimeout(selfieWallAsk, 5800);
+        setTimeout(() => selfieWallAsk(entry), 5800);
       }), 800);
     }).catch(() => {
       showBubble(trT('camera said no — totally fine, the vibe was real ♡', 'la caméra a dit non — pas grave, l\'instant était vrai ♡'), 2600);
     });
   }
-  function selfieWallAsk() {
+  function selfieWallAsk(entry) {
     if (!liveOpen || !liveStage) return;
     const panel = document.createElement('div');
     panel.className = 'photo-studio';
     const head = document.createElement('div');
     head.className = 'vibe-genre-head';
-    head.textContent = trT('🌍 count it on the worldwide selfie wall? (a COUNTER — your photo never leaves this device)', '🌍 la compter sur le mur mondial des selfies ? (un COMPTEUR — ta photo ne quitte jamais cet appareil)');
+    head.textContent = wallApi
+      ? trT('🌍 hang it on the WORLDWIDE WALL? it becomes PUBLIC — every visitor will see it (the owner can take any photo down).', '🌍 l\'accrocher au MUR MONDIAL ? elle devient PUBLIQUE — chaque visiteur la verra (la propriétaire peut retirer toute photo).')
+      : trT('🌍 count it on the worldwide selfie wall? (a COUNTER — your photo never leaves this device)', '🌍 la compter sur le mur mondial des selfies ? (un COMPTEUR — ta photo ne quitte jamais cet appareil)');
     const row = document.createElement('div');
     row.className = 'vibe-genre-grid';
     const mk = (txt, fn) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'vibe-genre-btn'; b.textContent = txt; b.addEventListener('click', fn); return b; };
     row.append(
       mk(trT('hang it ♡', 'accroche-la ♡'), () => {
         panel.remove();
+        if (wallApi && entry && entry.d) {
+          showToast(trT('🌍 hanging it…', '🌍 accrochage…'));
+          wallUpload(entry.d).then((res) => {
+            if (res && res.ok) {
+              fxBanner('🌍 ON THE WALL — PHOTO #' + res.n, trT('publicly framed, worldwide. a LEGEND.', 'encadré public, mondial. une LÉGENDE.'));
+              achvUnlock('wallfamous');
+              fetch(`${ACHV_API}/hit/${ACHV_NS}/selfie-wall`).catch(() => {});
+            } else {
+              const msg = (res && res.error) || trT('the wall is unreachable — counted in spirit ♡', 'le mur est injoignable — compté en esprit ♡');
+              showToast('🌍 ' + msg);
+              fetch(`${ACHV_API}/hit/${ACHV_NS}/selfie-wall`).catch(() => {});
+            }
+          }).catch(() => showToast(trT('🌍 the wall hiccuped — try again later ♡', '🌍 le mur a eu un hoquet — réessaie plus tard ♡')));
+          return;
+        }
         fetch(`${ACHV_API}/hit/${ACHV_NS}/selfie-wall`).then((r) => (r.ok ? r.json() : null)).then((d) => {
           const n = d && d.value ? d.value : '?';
           fxBanner('🌍 SELFIE #' + n, trT('you + the slime, counted worldwide ♡', 'toi + le slime, comptés dans le monde ♡'));
@@ -10820,10 +10887,59 @@ document.addEventListener('DOMContentLoaded', () => {
     liveStage.appendChild(panel);
     setTimeout(() => { if (panel.parentNode) panel.remove(); }, 15000);
   }
+  function renderWall(shell) {
+    const grid = document.createElement('div');
+    grid.className = 'album-grid';
+    const note = document.createElement('div');
+    note.className = 'album-note';
+    note.textContent = trT('🌍 THE WORLDWIDE WALL — every photo here was hung by a visitor + their slime. loading…', '🌍 LE MUR MONDIAL — chaque photo ici a été accrochée par un·e visiteur·euse + son slime. chargement…');
+    shell.append(note, grid);
+    const load = (cursor) => wallList(cursor).then((res) => {
+      if (!res) { note.textContent = trT('🌍 the wall is warming up — hang the first photo from a selfie ♡', '🌍 le mur chauffe — accroche la première photo depuis un selfie ♡'); return; }
+      note.textContent = trT(`🌍 THE WORLDWIDE WALL — ${res.photos.length}${res.cursor ? '+' : ''} framed visitors (owner-moderated ♡)`, `🌍 LE MUR MONDIAL — ${res.photos.length}${res.cursor ? '+' : ''} visiteurs encadrés (modéré ♡)`);
+      res.photos.forEach((p) => {
+        const card = document.createElement('div');
+        card.className = 'album-card';
+        card.style.setProperty('--tilt', ((Math.random() * 5) - 2.5) + 'deg');
+        const img = document.createElement('img');
+        img.loading = 'lazy';
+        img.src = wallApi + '/photo/' + p.id;
+        img.alt = '';
+        const cap = document.createElement('div');
+        cap.className = 'album-cap';
+        cap.textContent = '🌍 ' + (p.t || '');
+        card.append(img, cap);
+        grid.appendChild(card);
+      });
+      if (res.cursor) {
+        const more = document.createElement('button');
+        more.type = 'button';
+        more.className = 'wp-btn';
+        more.textContent = trT('more ♡', 'plus ♡');
+        more.addEventListener('click', () => { more.remove(); load(res.cursor); });
+        shell.appendChild(more);
+      }
+    });
+    load();
+  }
+  var albumTab = 'mine';
   function renderAlbum() {
     const shell = document.getElementById('album-shell');
     if (!shell) return;
     shell.innerHTML = '';
+    // tab bar: my photos ↔ the worldwide wall
+    const tabs = document.createElement('div');
+    tabs.className = 'album-tabs';
+    [['mine', trT('🏠 my photos', '🏠 mes photos')], ['wall', trT('🌍 worldwide wall', '🌍 mur mondial')]].forEach(([id, label]) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'album-tab' + (albumTab === id ? ' is-on' : '');
+      b.textContent = label;
+      b.addEventListener('click', () => { albumTab = id; renderAlbum(); });
+      tabs.appendChild(b);
+    });
+    shell.appendChild(tabs);
+    if (albumTab === 'wall') { renderWall(shell); return; }
     const photos = albumGet();
     const note = document.createElement('div');
     note.className = 'album-note';

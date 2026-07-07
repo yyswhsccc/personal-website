@@ -1,0 +1,8 @@
+name = "yongshanos-wall"
+main = "src/index.js"
+compatibility_date = "2026-06-01"
+
+# filled by deploy.sh (wrangler kv namespace create WALL)
+[[kv_namespaces]]
+binding = "WALL"
+id = "9ab46b57fa184b96b522b788d875c2aa"
