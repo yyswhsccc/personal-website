@@ -10906,6 +10906,7 @@ document.addEventListener('DOMContentLoaded', () => {
       wallSeen += res.photos.length;
       albumSetHits(shell, wallSeen);
       note.textContent = trT(`🌍 THE WORLDWIDE WALL — ${wallSeen}${res.cursor ? '+' : ''} framed visitors (owner-moderated ♡)`, `🌍 LE MUR MONDIAL — ${wallSeen}${res.cursor ? '+' : ''} visiteurs encadrés (modéré ♡)`);
+      const newCards = [];
       res.photos.forEach((p) => {
         const card = document.createElement('div');
         card.className = 'album-card';
@@ -10919,7 +10920,9 @@ document.addEventListener('DOMContentLoaded', () => {
         cap.textContent = '🌍 ' + (p.t || '');
         card.append(img, cap);
         grid.appendChild(card);
+        newCards.push(card);
       });
+      albumGlueStk(newCards); // wall photos deserve corner stickers too — cards arrive async
       if (res.cursor) {
         const more = document.createElement('button');
         more.type = 'button';
@@ -11048,6 +11051,95 @@ document.addEventListener('DOMContentLoaded', () => {
     flyX.textContent = '🦋';
     fly.appendChild(flyX);
     shell.append(cd, cat, fly, ...sparks);
+    albumSwarm(shell);
+  }
+  // ---- the sticker SWARM: a wall so covered in stickers it rearranges itself.
+  // stickers sit ABOVE the photos on purpose (hover a photo → it lifts out
+  // from under the clutter); every interactive row floats above the swarm.
+  var albumSwarmTimer = null;
+  var STK_EMO = ['💾', '📼', '💿', '🖱️', '🕹️', '🎀', '💝', '🧸', '📟', '💌', '🪩', '🍓', '⭐', '☎️'];
+  // 2-3 photos get a sticker GLUED to a corner — it rides the hover-lift
+  function albumGlueStk(cards) {
+    for (let i = cards.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const tmp = cards[i]; cards[i] = cards[j]; cards[j] = tmp; }
+    cards.slice(0, 3).forEach((card) => {
+      if (card.querySelector('.card-stk')) return;
+      const s = document.createElement('span');
+      s.className = 'card-stk';
+      s.setAttribute('aria-hidden', 'true');
+      s.textContent = STK_EMO[Math.floor(Math.random() * STK_EMO.length)];
+      // never the top-right corner — that's where the hover 💾/✕ buttons live
+      s.style.setProperty('--sx', (Math.random() < 0.5 ? 4 + Math.random() * 14 : 62 + Math.random() * 24) + '%');
+      s.style.setProperty('--sy', (58 + Math.random() * 24) + '%');
+      s.style.setProperty('--stkr', (Math.random() * 30 - 15).toFixed(1) + 'deg');
+      card.appendChild(s);
+    });
+  }
+  function albumSwarm(shell) {
+    const layer = document.createElement('div');
+    layer.className = 'album-swarm';
+    layer.setAttribute('aria-hidden', 'true');
+    const WORDS = [
+      [trT('404 cute not found', '404 mignon introuvable'), ''],
+      [trT('1.44MB of feelings', '1,44 Mo d\'émotions'), 'alt'],
+      ['C:\\crushes\\', 'alt2'],
+      [trT('free.99', 'gratuit.99'), ''],
+      [trT('dial-up 4ever ☎', 'RTC 4ever ☎'), 'alt'],
+      ['ctrl+alt+cute', 'alt2'],
+      [trT('shipped ♡ 2003', 'expédié ♡ 2003'), ''],
+      [trT('sudo hug', 'sudo câlin'), 'alt'],
+      [trT('rm -rf sadness', 'rm -rf tristesse'), 'alt2'],
+      ['<marquee>bff</marquee>', ''],
+      ['www.slime.exe', 'alt'],
+      [trT('100% pixel ♡ 0% ads', '100% pixel ♡ 0% pub'), 'alt2']
+    ];
+    const KAO = ['(=^･ω･^=)', '(ﾉ◕ヮ◕)ﾉ*:･ﾟ✧', 'ʕ•ᴥ•ʔ', '(づ｡◕‿‿◕｡)づ', '♡(˶˃ ᵕ ˂˶)'];
+    const EMO = STK_EMO;
+    const place = (el) => {
+      // word chips are wide — keep their left anchor away from the clipped right edge
+      const span = el.classList.contains('stk-word') ? 62 : 88;
+      el.style.left = (2 + Math.random() * span) + '%';
+      el.style.top = (13 + Math.random() * 77) + '%';
+      el.style.setProperty('--stkr', (Math.random() * 26 - 13).toFixed(1) + 'deg');
+    };
+    const pool = [];
+    WORDS.forEach(([t, v]) => pool.push({ t, cls: 'stk stk-word' + (v ? ' ' + v : '') }));
+    KAO.forEach((t) => pool.push({ t, cls: 'stk stk-kao' }));
+    EMO.forEach((t) => pool.push({ t, cls: 'stk stk-emoji' }));
+    for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const tmp = pool[i]; pool[i] = pool[j]; pool[j] = tmp; }
+    const n = (shell.clientWidth || 520) < 480 ? 8 : 14;
+    pool.slice(0, n).forEach((spec) => {
+      const s = document.createElement('span');
+      s.className = spec.cls;
+      s.textContent = spec.t;
+      place(s);
+      layer.appendChild(s);
+    });
+    shell.appendChild(layer);
+    albumGlueStk([...shell.querySelectorAll('.album-card')]);
+    // the wall rearranges itself: every few seconds a sticker hops elsewhere
+    if (albumSwarmTimer) { clearInterval(albumSwarmTimer); albumSwarmTimer = null; }
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    albumSwarmTimer = setInterval(() => {
+      // stop when the layer is gone OR the album window is display:none (closed)
+      if (!layer.isConnected || layer.offsetParent === null) { clearInterval(albumSwarmTimer); albumSwarmTimer = null; return; }
+      const kids = [...layer.children].filter((k) => k.classList.contains('stk'));
+      const hops = 1 + (Math.random() < 0.4 ? 1 : 0);
+      for (let i = 0; i < hops; i++) {
+        const el = kids[Math.floor(Math.random() * kids.length)];
+        if (!el) continue;
+        place(el);
+        el.classList.remove('stk-hop');
+        void el.offsetWidth;
+        el.classList.add('stk-hop');
+        const p = document.createElement('span');
+        p.className = 'stk-poof';
+        p.textContent = '✦';
+        p.style.left = el.style.left;
+        p.style.top = el.style.top;
+        layer.appendChild(p);
+        setTimeout(() => p.remove(), 900);
+      }
+    }, 9000);
   }
   var albumTab = 'mine';
   var albumGen = 0;
