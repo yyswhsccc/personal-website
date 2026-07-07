@@ -16040,7 +16040,10 @@ document.addEventListener('DOMContentLoaded', () => {
     ];
     const timers = [];
     VILLAIN.forEach((line, i) => timers.push(setTimeout(() => { if (!stage.__raging) vbub.textContent = line; playTone(190 + i * 30, 'square', 0.09, 0, 0.04); }, cageMs + 500 + i * 3400)));
-    const heroAt = cageMs + 500 + 3 * 3400 + 400; // he never finishes sentence 3
+    // HARD CAP: no matter how much the visitor rages the villain, the hero MUST
+    // arrive exactly 11s after the cage lands — a rescue is never held hostage
+    // by someone mashing keys. this is a plain fixed timer, immune to the rage loop.
+    const heroAt = cageMs + 11000;
     // …THE HERO ARRIVES — equally huge, from above, in a column of light ------
     setTimeout(() => {
       if (stage.__unlock) stage.__unlock(); // the moment help arrives, you are free
