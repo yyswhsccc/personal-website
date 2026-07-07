@@ -15935,6 +15935,32 @@ document.addEventListener('DOMContentLoaded', () => {
     ROWS.forEach((row, ry) => { for (let rx = 0; rx < row.length; rx++) { const ch = row[rx]; if (ch === '.') continue; x.fillStyle = PAL[ch] || PAL.P; x.fillRect(rx * 8, ry * 8, 8, 8); } });
     return cv;
   }
+  // the screen-lock: while the villain monologues, the visitor is TRAPPED.
+  // every escape attempt (tab away, Escape, scroll, close-attempt, any key)
+  // makes him swell up and ROAR "LET ME FINISH" — you must hear him out.
+  function rescueLock(stage, onRage) {
+    const swallow = (e) => { e.preventDefault(); e.stopPropagation(); onRage(); return false; };
+    const keyTrap = (e) => { if (e.key !== undefined) { onRage(); } e.preventDefault(); e.stopPropagation(); return false; };
+    const beforeUnload = (e) => { onRage(); e.preventDefault(); e.returnValue = ''; return ''; };
+    const vis = () => { if (document.hidden) onRage(); };
+    const opts = { capture: true, passive: false };
+    window.addEventListener('keydown', keyTrap, opts);
+    window.addEventListener('wheel', swallow, opts);
+    window.addEventListener('touchmove', swallow, opts);
+    window.addEventListener('contextmenu', swallow, opts);
+    window.addEventListener('beforeunload', beforeUnload);
+    document.addEventListener('visibilitychange', vis);
+    document.body.classList.add('rescue-locked');
+    stage.__unlock = () => {
+      window.removeEventListener('keydown', keyTrap, opts);
+      window.removeEventListener('wheel', swallow, opts);
+      window.removeEventListener('touchmove', swallow, opts);
+      window.removeEventListener('contextmenu', swallow, opts);
+      window.removeEventListener('beforeunload', beforeUnload);
+      document.removeEventListener('visibilitychange', vis);
+      document.body.classList.remove('rescue-locked');
+    };
+  }
   function doorRescue() {
     if (document.getElementById('door-rescue')) return;
     clearTimeout(window.__doorIdle);
@@ -15948,44 +15974,86 @@ document.addEventListener('DOMContentLoaded', () => {
     const tint = document.createElement('div');
     tint.className = 'rescue-tint';
     stage.appendChild(tint);
-    // the cage: columns of green digits slam down over the whole tty
-    const GLY = '01ｱｲｳｹｺ10';
-    for (let i = 0; i < 13; i++) {
-      const bar = document.createElement('div');
-      bar.className = 'rescue-bar';
-      bar.style.left = (2 + i * 7.7) + '%';
-      bar.style.animationDelay = (i % 5) * 90 + 'ms';
-      let txt = '';
-      for (let j = 0; j < 90; j++) txt += GLY[Math.floor(Math.random() * GLY.length)];
-      bar.textContent = txt;
-      stage.appendChild(bar);
+    // THE CAGE: heavy pillars SLAM down one by one, each kicking up a fat cloud
+    // of digit-dust where it lands. staggered so you feel every impact.
+    const GLY = '01ｱｲｳｹｺ<>{};10';
+    const NBARS = 14;
+    for (let i = 0; i < NBARS; i++) {
+      setTimeout(() => {
+        const bar = document.createElement('div');
+        bar.className = 'rescue-bar';
+        bar.style.left = (1.5 + i * (97 / NBARS)) + '%';
+        let txt = '';
+        for (let j = 0; j < 60; j++) txt += GLY[Math.floor(Math.random() * GLY.length)] + '\n';
+        bar.textContent = txt;
+        stage.appendChild(bar);
+        playTone(60 + Math.random() * 30, 'sawtooth', 0.34, 0, 0.09); // a HEAVY thud
+        setTimeout(() => document.body.classList.add('rescue-quake-sm'), 380);
+        setTimeout(() => document.body.classList.remove('rescue-quake-sm'), 520);
+        // digit-dust burst at the foot of the pillar
+        setTimeout(() => {
+          const dust = document.createElement('div');
+          dust.className = 'rescue-dust';
+          dust.style.left = (1.5 + i * (97 / NBARS)) + '%';
+          for (let k = 0; k < 9; k++) {
+            const d = document.createElement('span');
+            d.textContent = GLY[Math.floor(Math.random() * GLY.length)];
+            d.style.setProperty('--dx', (Math.random() * 120 - 60) + 'px');
+            d.style.setProperty('--dy', (-20 - Math.random() * 70) + 'px');
+            d.style.animationDelay = (Math.random() * 0.1) + 's';
+            dust.appendChild(d);
+          }
+          stage.appendChild(dust);
+          setTimeout(() => dust.remove(), 1400);
+        }, 400);
+      }, i * 240);
     }
-    playTone(150, 'sawtooth', 0.4, 0, 0.06);
-    // the villain takes center stage
+    const cageMs = NBARS * 240 + 500;
+    // the visitor is now LOCKED IN — no tab-away, no scroll, no close ---------
+    const rage = () => {
+      if (stage.__raging) return;
+      stage.__raging = 1;
+      stage.classList.add('is-rage');
+      const vb = stage.querySelector('.rescue-bub-villain');
+      if (vb) vb.textContent = trT('LET ME FINISH!!!', 'LAISSE-MOI FINIR !!!');
+      playTone(70, 'sawtooth', 0.5, 0, 0.1);
+      playTone(110, 'square', 0.3, 0.1, 0.06);
+      document.body.classList.add('rescue-quake');
+      setTimeout(() => { document.body.classList.remove('rescue-quake'); stage.classList.remove('is-rage'); stage.__raging = 0; }, 1600);
+    };
+    setTimeout(() => rescueLock(stage, rage), cageMs - 200);
+    // THE VILLAIN — big, centered, dread incarnate
     const vil = document.createElement('div');
     vil.className = 'rescue-actor rescue-villain';
-    vil.style.cssText = 'right:14%;top:30%;';
     const vbub = document.createElement('div');
     vbub.className = 'rescue-bub rescue-bub-villain';
     vil.append(vbub, rescueSlime(false));
-    stage.appendChild(vil);
+    setTimeout(() => {
+      stage.appendChild(vil);
+      requestAnimationFrame(() => requestAnimationFrame(() => vil.classList.add('is-in')));
+      playTone(140, 'sawtooth', 0.4, 0, 0.07);
+    }, cageMs);
     const VILLAIN = [
-      trT('AHAHAHA!! CAGED. you are CAGED, little visitor!! I watched you type `help` with SEVEN exclamation marks and I chose violence ♡', 'AHAHAHA !! EN CAGE. tu es EN CAGE, petit·e visiteur·euse !! je t\'ai vu taper `help` avec SEPT points d\'exclamation et j\'ai choisi la violence ♡'),
+      trT('AHAHAHA!! you are CAGED, little visitor!! I watched you type `help` with SEVEN exclamation marks and I chose VIOLENCE ♡', 'AHAHAHA !! EN CAGE, petit·e visiteur·euse !! je t\'ai vu taper `help` avec SEPT points d\'exclamation et j\'ai choisi la VIOLENCE ♡'),
       trT('this prison is compiled from your OWN unknown commands. artisanal. zero dependencies. escape complexity: O(never). your `anyone`? nobody is coming.', 'cette prison est compilée depuis TES commandes introuvables. artisanale. zéro dépendance. complexité d\'évasion : O(jamais). ton `anyone` ? personne ne viendra.'),
-      trT('and now — before I `rm -rf` you — allow me to recite my full tragic backstory. it begins in 1997, with a missing semicolon on line—', 'et maintenant — avant de te `rm -rf` — laisse-moi réciter ma tragique histoire. tout commence en 1997, avec un point-virgule manquant à la ligne—')
+      trT('and NOW — before I `rm -rf` you — allow me to recite my FULL tragic backstory. it begins in 1997, with a missing semicolon on line—', 'et MAINTENANT — avant de te `rm -rf` — laisse-moi réciter ma PLEINE histoire tragique. tout commence en 1997, avec un point-virgule manquant à la ligne—')
     ];
     const timers = [];
-    VILLAIN.forEach((line, i) => timers.push(setTimeout(() => { vbub.textContent = line; playTone(190 + i * 30, 'square', 0.09, 0, 0.04); }, 700 + i * 3400)));
-    // …he never finishes the third sentence. THE HERO ARRIVES.
+    VILLAIN.forEach((line, i) => timers.push(setTimeout(() => { if (!stage.__raging) vbub.textContent = line; playTone(190 + i * 30, 'square', 0.09, 0, 0.04); }, cageMs + 500 + i * 3400)));
+    const heroAt = cageMs + 500 + 3 * 3400 + 400; // he never finishes sentence 3
+    // …THE HERO ARRIVES — equally huge, from above, in a column of light ------
     setTimeout(() => {
+      if (stage.__unlock) stage.__unlock(); // the moment help arrives, you are free
+      const beam = document.createElement('div');
+      beam.className = 'rescue-beam';
+      stage.appendChild(beam);
       const hero = document.createElement('div');
       hero.className = 'rescue-actor rescue-hero';
-      hero.style.cssText = 'left:16%;top:-30%;';
       const hbub = document.createElement('div');
       hbub.className = 'rescue-bub rescue-bub-hero';
       hero.append(hbub, rescueSlime(true));
       stage.appendChild(hero);
-      requestAnimationFrame(() => requestAnimationFrame(() => { hero.style.top = '34%'; }));
+      requestAnimationFrame(() => requestAnimationFrame(() => hero.classList.add('is-in')));
       const flash = document.createElement('div');
       flash.className = 'rescue-flash';
       stage.appendChild(flash);
@@ -15993,44 +16061,74 @@ document.addEventListener('DOMContentLoaded', () => {
       document.body.classList.add('rescue-quake');
       setTimeout(() => document.body.classList.remove('rescue-quake'), 600);
       playFanfare();
-      setTimeout(() => { hbub.textContent = trT('did someone spam `help`? great news. I AM help ♡', 'quelqu\'un a spammé `help` ? bonne nouvelle. JE SUIS help ♡'); }, 800);
-      // THE ULTIMATE — one cast, fight over
+      setTimeout(() => { hbub.textContent = trT('did someone spam `help`? great news. I AM help ♡', 'quelqu\'un a spammé `help` ? bonne nouvelle. JE SUIS help ♡'); }, 900);
+      // ✦✦✦ THE ULTIMATE — SLIME-GOD OVERDRIVE: charge, then a screen-filling nova ✦✦✦
       setTimeout(() => {
+        hero.classList.add('is-charging');
+        hbub.textContent = trT('SUDO OVERRIDE ♡ initiating…', 'SUDO OVERRIDE ♡ initialisation…');
+        // rings converge on the hero as it powers up
+        for (let i = 0; i < 4; i++) {
+          const ring = document.createElement('div');
+          ring.className = 'rescue-charge-ring';
+          ring.style.animationDelay = (i * 0.22) + 's';
+          hero.appendChild(ring);
+          setTimeout(() => ring.remove(), 1600);
+        }
+        playTone(220, 'sine', 0.5, 0, 0.04);
+        playTone(440, 'sine', 0.5, 0.25, 0.04);
+        playTone(880, 'sine', 0.5, 0.5, 0.04);
+      }, 2300);
+      setTimeout(() => {
+        // the cast: white flash, giant nova, radial rune ring, 40 hearts, letters
+        const flash2 = document.createElement('div');
+        flash2.className = 'rescue-flash rescue-flash-big';
+        stage.appendChild(flash2);
+        setTimeout(() => flash2.remove(), 900);
         const nova = document.createElement('div');
         nova.className = 'rescue-nova';
-        nova.style.left = 'calc(16% + 30px)';
-        nova.style.top = 'calc(34% + 40px)';
         stage.appendChild(nova);
-        for (let i = 0; i < 18; i++) {
+        const shock = document.createElement('div');
+        shock.className = 'rescue-shock';
+        stage.appendChild(shock);
+        const word = document.createElement('div');
+        word.className = 'rescue-ult-word';
+        word.textContent = trT('rm -rf /villain ✦', 'rm -rf /vilain ✦');
+        stage.appendChild(word);
+        for (let i = 0; i < 40; i++) {
           const h = document.createElement('span');
           h.className = 'rescue-heart';
-          h.textContent = ['♥', '♡', '✦', '💾'][i % 4];
-          h.style.left = 'calc(16% + 40px)';
-          h.style.top = 'calc(34% + 40px)';
-          h.style.setProperty('--hx', (Math.cos(i / 18 * 6.283) * (200 + Math.random() * 240)) + 'px');
-          h.style.setProperty('--hy', (Math.sin(i / 18 * 6.283) * (160 + Math.random() * 200)) + 'px');
+          h.textContent = ['♥', '♡', '✦', '💾', '⭐', '🩷'][i % 6];
+          const ang = i / 40 * 6.283;
+          h.style.setProperty('--hx', (Math.cos(ang) * (260 + Math.random() * 320)) + 'px');
+          h.style.setProperty('--hy', (Math.sin(ang) * (220 + Math.random() * 280)) + 'px');
+          h.style.animationDelay = (Math.random() * 0.2) + 's';
           stage.appendChild(h);
         }
+        hero.classList.remove('is-charging');
+        hero.classList.add('is-blast');
         vil.classList.add('is-bonked');
-        vbub.textContent = trT('…segmentation fault (ego dumped)', '…segmentation fault (ego vidé)');
+        vbub.textContent = trT('…segmentation fault (ego dumped) 💥', '…segmentation fault (ego vidé) 💥');
         stage.classList.add('is-shatter');
-        document.body.classList.add('rescue-quake');
-        setTimeout(() => document.body.classList.remove('rescue-quake'), 600);
-        playTone(880, 'triangle', 0.2, 0, 0.06);
-        playTone(1320, 'triangle', 0.25, 0.12, 0.05);
-        setTimeout(() => { hbub.textContent = trT('your monologue exceeded its time limit. verdict: O(bonk).', 'ton monologue a dépassé son temps limite. verdict : O(bonk).'); }, 900);
-        setTimeout(() => { hbub.textContent = trT('locks? DELETED. puzzles? SKIPPED. you are coming in the FRONT door — as my honored guest ♡', 'verrous ? SUPPRIMÉS. énigmes ? SAUTÉES. tu entres par la GRANDE porte — invité·e d\'honneur ♡'); }, 3100);
-      }, 2600);
+        document.body.classList.add('rescue-quake-big');
+        setTimeout(() => document.body.classList.remove('rescue-quake-big'), 1000);
+        playTone(160, 'sawtooth', 0.5, 0, 0.12);
+        playTone(880, 'triangle', 0.3, 0.1, 0.07);
+        playTone(1320, 'triangle', 0.35, 0.22, 0.06);
+        playTone(1760, 'sine', 0.4, 0.34, 0.05);
+        setTimeout(() => { hbub.textContent = trT('your monologue exceeded its time limit. verdict: O(bonk).', 'ton monologue a dépassé son temps limite. verdict : O(bonk).'); }, 1200);
+        setTimeout(() => { hbub.textContent = trT('locks? DELETED. puzzles? SKIPPED. you enter by the FRONT door — my honored guest ♡', 'verrous ? SUPPRIMÉS. énigmes ? SAUTÉES. tu entres par la GRANDE porte — invité·e d\'honneur ♡'); }, 3400);
+      }, 3400);
       timers.forEach(clearTimeout);
-    }, 8600);
+    }, heroAt);
     // curtains: the site itself is the after-credits scene
     setTimeout(() => {
+      if (stage.__unlock) stage.__unlock();
       achvUnlock('rescued');
-      stage.style.transition = 'opacity 0.9s';
+      stage.style.transition = 'opacity 1s';
       stage.style.opacity = '0';
-      setTimeout(() => stage.remove(), 950);
+      setTimeout(() => stage.remove(), 1050);
       terminalDoorOpen(true);
-    }, 15400);
+    }, heroAt + 8200);
   }
   function doorInit() {
     if (window.__door) return window.__door;
