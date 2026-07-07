@@ -385,6 +385,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (win.id === 'win-game' && typeof gameCamExit === 'function') gameCamExit();
     if (win.id === 'win-game' && typeof gameUnrotate === 'function') gameUnrotate();
+    // v5.2: slamming the arcade shut right after the post-curfew dream
+    // ambush — without ever pressing start — is an answer. the slime
+    // hears it, takes it well, and writes it down (see swArcadeRejected)
+    if (win.id === 'win-game' && swRejectUntil && Date.now() < swRejectUntil && GAME.state === 'ad') swArcadeRejected();
     playCloseSound();
     win.classList.add('window-closed');
     win.classList.remove('window-active');
@@ -5293,6 +5297,17 @@ document.addEventListener('DOMContentLoaded', () => {
   setInterval(() => {
     if (themePref === 'auto' && typeof applyTheme === 'function') applyTheme();
   }, 600000);
+  // phones suspend background tabs, so the 10-minute sun check above
+  // sleeps straight through sunset. the moment the page is visible
+  // again (app switch, tab switch, bfcache resume), re-read the clock —
+  // but only repaint if the answer actually changed
+  const reapplySunOnWake = () => {
+    if (themePref !== 'auto' || typeof applyTheme !== 'function') return;
+    const have = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+    if (resolvedTheme() !== have) applyTheme();
+  };
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) reapplySunOnWake(); });
+  window.addEventListener('pageshow', (e) => { if (e.persisted) reapplySunOnWake(); });
 
   function applyThemeChrome() {
     const tabTitle = document.getElementById('tab-title');
@@ -5351,8 +5366,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (pet.busy || pet.sleeping || isGrabbing) return;
     if (slimeBody) slimeBody.classList.add('is-ghost-hidden');
     // 92% of sleeps turn into a sleepwalking tour (dark mode's whole
-    // arcade funnel walks on these little feet)
-    if (Math.random() < 0.92) {
+    // arcade funnel walks on these little feet) — but the dream curfew
+    // (v5.2) can dial it down: 10% while the curfew is on, 50% forever
+    // once the dream journal says "fewer arcade ambushes, please"
+    if (Math.random() < swWalkChance()) {
       if (sleepwalkTimer) clearTimeout(sleepwalkTimer);
       sleepwalkTimer = setTimeout(() => startSleepwalk(), 5000 + Math.random() * 6000);
     }
@@ -5504,13 +5521,196 @@ document.addEventListener('DOMContentLoaded', () => {
   var sleepwalkTimer = null;
   var swEl = null;
 
+  /* ---- v5.2: the DREAM CURFEW 🌙 ----
+     one arcade ambush per half hour, MAX. the moment a sleepwalk opens
+     the arcade, game-dreams go on a 30-minute curfew: walks turn rare
+     (10%) and only visit NON-game features, so the visitor can actually
+     be immersed in the rest of the site. when the curfew lifts there is
+     a small ceremony (of course there is). and if the visitor slams the
+     arcade shut right after the first post-curfew ambush, the slime
+     WRITES IT DOWN in its dream journal, forever: sleepwalks drop to
+     50%, and only 1-in-4 ever dreams of the arcade again. the other 3
+     go do things. real things. dreams respect boundaries. */
+  var swCurfewUntil = store.get('yos-sw-curfew', 0);
+  var swAverse = store.get('yos-sw-averse', false);
+  var swPostCurfew = false; // set by the lift: the NEXT ambush is on probation
+  var swRejectUntil = 0;    // closing the arcade before this = "no thanks"
+  var swCurfewTimer = null;
+
+  function swCurfewOn() { return Date.now() < swCurfewUntil; }
+  // how often a sleep turns into a walk at all
+  function swWalkChance() { return swCurfewOn() ? 0.10 : (swAverse ? 0.50 : 0.92); }
+  // how often a walk aims at the arcade
+  function swGameChance() { return swCurfewOn() ? 0 : (swAverse ? 0.25 : 0.92); }
+
+  function swStartCurfew() {
+    swCurfewUntil = Date.now() + 30 * 60 * 1000;
+    store.set('yos-sw-curfew', swCurfewUntil);
+    swScheduleLift();
+  }
+
+  function swScheduleLift() {
+    if (swCurfewTimer) clearTimeout(swCurfewTimer);
+    if (!swCurfewUntil) return;
+    // if the curfew ran out while the visitor was away, lift it a few
+    // beats after nightfall — the bedtime announcement goes first
+    swCurfewTimer = setTimeout(swCurfewLift, Math.max(swCurfewUntil - Date.now(), 4000));
+  }
+
+  const SW_LIFT_LINES = [
+    ["⏰ DING!! dream curfew: SERVED!! arcade dreams are street-legal again ♡", "⏰ DRING !! couvre-feu des rêves : PURGÉ !! les rêves d'arcade sont à nouveau permis ♡"],
+    ["*stretches* thirty!! whole!! minutes!! of dreaming about NOT the arcade. I did it. I'm free ♡", "*s'étire* trente !! minutes !! entières !! à rêver d'AUTRE chose que l'arcade. c'est fait. libre ♡"],
+    ["🎟️ permit renewed!! tonight's dreams may legally contain up to 100% arcade ♡", "🎟️ permis renouvelé !! cette nuit, mes rêves peuvent légalement contenir jusqu'à 100 % d'arcade ♡"]
+  ];
+
+  function swCurfewLift() {
+    if (!swCurfewUntil || swCurfewOn()) return; // not set, or fired early
+    swCurfewUntil = 0;
+    store.set('yos-sw-curfew', 0);
+    swPostCurfew = true; // the next arcade ambush is on probation
+    // no audience, no ceremony — but the curfew still lifts quietly
+    if (resolvedTheme() !== 'dark' || document.body.classList.contains('terminal-only') || sleepwalkActive) return;
+    // the ceremony: the sleeper bursts out of bed waving a tiny permit
+    ghostAppear(0, false);
+    const pickL = SW_LIFT_LINES[Math.floor(Math.random() * SW_LIFT_LINES.length)];
+    showBubble(trT(...pickL), 4600);
+    burstAtSlime(['🌙', '✦', '♡'], 9);
+    try {
+      const r = slimeBody.getBoundingClientRect();
+      swProp(r.left + r.width / 2 - 62, Math.max(8, r.top - 46), trT('CURFEW — EXPIRED 🎟️', 'COUVRE-FEU — EXPIRÉ 🎟️'), true);
+    } catch (e) { /* habitat off-screen; the feeling stands */ }
+    // a tiny municipal fanfare (the slime notarized this itself)
+    playTone(523, 'triangle', 0.12, 0, 0.05);
+    setTimeout(() => playTone(659, 'triangle', 0.12, 0, 0.05), 130);
+    setTimeout(() => playTone(784, 'triangle', 0.12, 0, 0.05), 260);
+    setTimeout(() => playTone(1046, 'triangle', 0.2, 0, 0.06), 390);
+  }
+
+  function swArcadeRejected() {
+    swRejectUntil = 0;
+    if (swAverse) return;
+    swAverse = true;
+    store.set('yos-sw-averse', true);
+    // the memory, written where memories go: localStorage, with feelings
+    showBubble(trT('…noted!! 📔 *writes in dream journal* “less arcade. more everything else.” sorry sorry ♡', '…noté !! 📔 *écrit dans le journal des rêves* « moins d\'arcade. plus de tout le reste. » pardon pardon ♡'), 5200, true);
+    burstAtSlime(['📔', '✏️', '💧'], 6);
+    playTone(330, 'sine', 0.22, 0, 0.04);
+    setTimeout(() => playTone(262, 'sine', 0.3, 0, 0.05), 260);
+  }
+
+  /* ---- v5.2 stage props: stamps, sparkles, the 💤 breadcrumb trail ---- */
+  function swProp(x, y, text, big) {
+    if (REDUCED_MOTION) return;
+    const p = document.createElement('span');
+    p.className = 'sw-prop' + (big ? ' sw-prop-big' : '');
+    p.textContent = text;
+    p.style.left = x + 'px';
+    p.style.top = y + 'px';
+    document.body.appendChild(p);
+    p.addEventListener('animationend', () => p.remove());
+  }
+  function swSparkleAt(x, y, n) {
+    if (REDUCED_MOTION) return;
+    for (let i = 0; i < n; i++) {
+      setTimeout(() => {
+        const s = document.createElement('span');
+        s.className = 'trail-sparkle';
+        s.textContent = Math.random() < 0.6 ? '✦' : '♡';
+        s.style.left = (x + (Math.random() - 0.5) * 70) + 'px';
+        s.style.top = (y + (Math.random() - 0.5) * 34) + 'px';
+        s.style.color = ['#ff8fc7', '#c9a7f5', '#6cc4f5'][i % 3];
+        document.body.appendChild(s);
+        s.addEventListener('animationend', () => s.remove());
+      }, i * 90);
+    }
+  }
+  function swTrailDot(x, y) {
+    if (REDUCED_MOTION) return;
+    const z = document.createElement('span');
+    z.className = 'sw-trail';
+    z.textContent = Math.random() < 0.75 ? '💤' : '✦';
+    z.style.left = x + 'px';
+    z.style.top = y + 'px';
+    document.body.appendChild(z);
+    z.addEventListener('animationend', () => z.remove());
+  }
+  function swSay(pair) {
+    if (!swEl) return;
+    const bub = swEl.querySelector('.sw-bubble');
+    if (bub) bub.textContent = trT(...pair);
+    playTone(262, 'sine', 0.3, 0, 0.02);
+  }
+  function swScenePick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+  /* ---- v5.2 arrival scenes: the tour got a SHOW ----
+     the sleepwalker doesn't just open a window anymore — it DOES
+     something there, still fast asleep. every act touches the real
+     feature (the terminal gets typed into, the bot gets a question). */
+  function swSceneTerminal() {
+    const bit = swScenePick([
+      ['$ sudo dream --apply hugs', ['dream.service: 1 hug deployed to prod ♡ (zero downtime)', 'dream.service : 1 câlin déployé en prod ♡ (zéro coupure)'], 't-ok'],
+      ['$ git commit -m "zzz"', ['[dreams 5f1eep] 1 file changed, ∞ feelings inserted ♡', '[rêves 5f1eep] 1 fichier modifié, ∞ sentiments insérés ♡'], 't-ok'],
+      ['$ whoami', ['a slime. asleep. still typing. honestly impressive', 'un slime. endormi. qui tape quand même. franchement impressionnant'], 't-dim']
+    ]);
+    setTimeout(() => swSay(["zzz… lemme just… type one thing…", "zzz… je vais juste… taper un truc…"]), 500);
+    setTimeout(() => termLine(bit[0], 't-cmd'), 1400);
+    setTimeout(() => termLine(trT(...bit[1]), bit[2]), 2300);
+    setTimeout(() => swSay(["zzz… shipped… while asleep… new personal best…", "zzz… livré… en dormant… nouveau record perso…"]), 3100);
+  }
+  function swSceneAma() {
+    const q = swScenePick([
+      ['do slimes dream of electric bugs?', 'les slimes rêvent-ils de bugs électriques ?'],
+      ['how many hugs per sprint is healthy?', 'combien de câlins par sprint c\'est raisonnable ?'],
+      ['is she hiring… a professional sleepwalker?', 'elle recrute… un somnambule professionnel ?']
+    ]);
+    setTimeout(() => swSay(["zzz… one question… very important…", "zzz… une question… très importante…"]), 600);
+    setTimeout(() => { try { amaAsk(trT(...q)); } catch (e) { /* the bot sleeps too */ } }, 1500);
+    setTimeout(() => swSay(["zzz… mmh… great answer… five stars…", "zzz… mmh… super réponse… cinq étoiles…"]), 3400);
+  }
+  function swSceneCareer(target) {
+    const r = target.getBoundingClientRect();
+    setTimeout(() => {
+      swProp(r.left + r.width / 2 - 32, r.top + 20, 'LGTM ♡');
+      swSparkleAt(r.left + r.width / 2, r.top + 26, 5);
+      playSparkleSound();
+    }, 1300);
+    setTimeout(() => swSay(["zzz… approved… her whole career… again…", "zzz… approuvé… toute sa carrière… encore…"]), 2400);
+  }
+  function swSceneSkills(target) {
+    const r = target.getBoundingClientRect();
+    setTimeout(() => {
+      swProp(r.left + r.width / 2 - 52, r.top + 20, '+1 ✦ dream XP');
+      swSparkleAt(r.left + r.width / 2, r.top + 26, 6);
+      playSparkleSound();
+    }, 1300);
+    setTimeout(() => swSay(["zzz… grinding levels… in my sleep… efficiency…", "zzz… je farme des niveaux… en dormant… l'efficacité…"]), 2400);
+  }
+  function swSceneFanwall(target) {
+    const r = target.getBoundingClientRect();
+    setTimeout(() => {
+      swProp(r.left + r.width / 2 - 28, Math.max(8, r.top - 18), '♡ zzz');
+      swSparkleAt(r.left + r.width / 2, r.top + 8, 6);
+      playSparkleSound();
+    }, 1300);
+    setTimeout(() => swSay(["zzz… autograph… for my biggest fan… me…", "zzz… un autographe… pour mon plus grand fan… moi…"]), 2400);
+  }
+  function swSceneEducation(target) {
+    const r = target.getBoundingClientRect();
+    setTimeout(() => {
+      swProp(r.left + r.width / 2 - 26, r.top + 20, 'A+ ⭐');
+      swSparkleAt(r.left + r.width / 2, r.top + 26, 5);
+      playSparkleSound();
+    }, 1300);
+    setTimeout(() => swSay(["zzz… top 5%… of nappers… too…", "zzz… top 5 %… des siesteurs… aussi…"]), 2400);
+  }
+
   const SW_TARGETS = [
-    { sel: '[data-window="win-career"]', line: ["zzz… 47 merged PRs… all mine… well. hers…", "zzz… 47 PR fusionnées… toutes à moi… enfin. à elle…"] },
-    { sel: '[data-window="win-skills"]', line: ["zzz… Python level five… so shiny…", "zzz… Python niveau cinq… ça brille…"] },
-    { sel: '[data-window="win-ama"]', line: ["zzz… ask the bot… it knows… everything about her…", "zzz… demande au bot… il sait… tout sur elle…"] },
-    { sel: '[data-window="win-terminal"]', line: ["zzz… sudo… hire… yongshan…", "zzz… sudo… hire… yongshan…"] },
-    { sel: '#chip-fanwall', line: ["zzz… so many fans… need… more fans…", "zzz… tant de fans… il en faut… plus…"] },
-    { sel: '[data-window="win-education"]', line: ["zzz… top five percent… of dreams…", "zzz… top cinq pour cent… des rêves…"] }
+    { sel: '[data-window="win-career"]', line: ["zzz… 47 merged PRs… all mine… well. hers…", "zzz… 47 PR fusionnées… toutes à moi… enfin. à elle…"], scene: swSceneCareer },
+    { sel: '[data-window="win-skills"]', line: ["zzz… Python level five… so shiny…", "zzz… Python niveau cinq… ça brille…"], scene: swSceneSkills },
+    { sel: '[data-window="win-ama"]', line: ["zzz… ask the bot… it knows… everything about her…", "zzz… demande au bot… il sait… tout sur elle…"], scene: swSceneAma },
+    { sel: '[data-window="win-terminal"]', line: ["zzz… sudo… hire… yongshan…", "zzz… sudo… hire… yongshan…"], scene: swSceneTerminal },
+    { sel: '#chip-fanwall', line: ["zzz… so many fans… need… more fans…", "zzz… tant de fans… il en faut… plus…"], scene: swSceneFanwall },
+    { sel: '[data-window="win-education"]', line: ["zzz… top five percent… of dreams…", "zzz… top cinq pour cent… des rêves…"], scene: swSceneEducation }
   ];
   const SW_GAME_LINE = ["zzz… I hear… an arcade… must… participate…", "zzz… j'entends… une borne d'arcade… je dois… participer…"];
 
@@ -5530,22 +5730,31 @@ document.addEventListener('DOMContentLoaded', () => {
     // and if a run is already underway, it's the arcade, PERIOD (dark-mode
     // sleepwalks must never yank the player out of their game)
     const gwOpen = (() => { const w = document.getElementById('win-game'); return w && !w.classList.contains('window-closed'); })();
-    let target, line, isGame = false, directDive = false;
+    let target, line, isGame = false, directDive = false, scene = null;
     if (gwOpen) {
       // the game is ALREADY running: no button detours — the dreamer
       // waddles straight to the canvas and dives in as a game entity
+      // (legal even under curfew: a dive is a gift, not an ambush —
+      // the visitor opened the arcade themselves)
       target = document.getElementById('game-canvas');
       line = SW_GAME_LINE;
       isGame = true;
       directDive = true;
-    } else if (Math.random() < 0.92) {
+    } else if (Math.random() < swGameChance()) {
       target = document.getElementById('chip-game');
       line = SW_GAME_LINE;
       isGame = true;
     } else {
       const options = SW_TARGETS.filter((t) => swVisible(document.querySelector(t.sel)));
-      if (!options.length) { target = document.getElementById('chip-game'); line = SW_GAME_LINE; isGame = true; }
-      else { const pickT = options[Math.floor(Math.random() * options.length)]; target = document.querySelector(pickT.sel); line = pickT.line; }
+      if (!options.length) {
+        // nowhere else to haunt. under curfew (or journal rules) the walk
+        // is politely cancelled — the arcade fallback would break a promise
+        if (swCurfewOn() || swAverse) return;
+        target = document.getElementById('chip-game'); line = SW_GAME_LINE; isGame = true;
+      } else {
+        const pickT = options[Math.floor(Math.random() * options.length)];
+        target = document.querySelector(pickT.sel); line = pickT.line; scene = pickT.scene || null;
+      }
     }
     if (!swVisible(target)) return;
     sleepwalkActive = true;
@@ -5579,23 +5788,34 @@ document.addEventListener('DOMContentLoaded', () => {
     // time-based glide (background-tab safe)
     const t0 = Date.now();
     const walkMs = 3600;
+    let tick = 0;
     const glide = setInterval(() => {
       const p = Math.min(1, (Date.now() - t0) / walkMs);
       const ease = p * p * (3 - 2 * p);
       swEl.style.left = (from.x + (to.x - from.x) * ease) + 'px';
       swEl.style.top = (from.y + (to.y - from.y) * ease + Math.sin(p * 14) * 5) + 'px';
+      // v5.2: a breadcrumb trail of 💤 marks where the dream has been
+      if ((tick++ & 7) === 0) swTrailDot(parseFloat(swEl.style.left) + 50 + (Math.random() - 0.5) * 14, parseFloat(swEl.style.top) + 42);
       if (p >= 1) {
         clearInterval(glide);
-        swArrive(target, isGame, directDive);
+        swArrive(target, isGame, directDive, scene);
       }
     }, 40);
   }
 
-  function swArrive(target, isGame, directDive) {
+  function swArrive(target, isGame, directDive, scene) {
     // the sleepwalker "clicks" the feature open, still fast asleep —
     // unless it's already open (direct dives skip the doorbell)
     if (!directDive) { try { target.click(); } catch { /* dream logic */ } }
     playTone(392, 'sine', 0.25, 0, 0.04);
+
+    if (isGame && !directDive) {
+      // v5.2: an ambush just landed — the arcade goes on dream curfew,
+      // and if this was the post-curfew probation ambush, closing the
+      // window without playing counts as the visitor's answer
+      swStartCurfew();
+      if (swPostCurfew) { swPostCurfew = false; swRejectUntil = Date.now() + 25000; }
+    }
 
     if (isGame) {
       // dive into the canvas and transmute into a power-up
@@ -5620,8 +5840,10 @@ document.addEventListener('DOMContentLoaded', () => {
         } else { swFinish(false); }
       }, 900);
     } else {
-      // linger, sleep-brag, then dissolve back to bed
-      setTimeout(() => swFinish(false), 3600);
+      // v5.2: linger, perform this destination's act (the terminal gets
+      // typed into, the bot gets a question…), then dissolve back to bed
+      if (scene) { try { scene(target); } catch (e) { /* dream logic */ } }
+      setTimeout(() => swFinish(false), scene ? 5600 : 3600);
     }
   }
 
@@ -5652,6 +5874,9 @@ document.addEventListener('DOMContentLoaded', () => {
       if (nightFirstTimer) clearTimeout(nightFirstTimer);
       nightFirstTimer = setTimeout(nightRetireNow, 2100);
       nightLoop();
+      // v5.2: if a dream curfew is pending (or expired while the lights
+      // were on), nightfall is when the lift ceremony gets its audience
+      swScheduleLift();
     } else {
       if (nightLoopTimer) clearTimeout(nightLoopTimer);
       if (nightRetireTimer) clearTimeout(nightRetireTimer);

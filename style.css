@@ -4392,6 +4392,52 @@ html[data-theme="dark"] .sleepwalker .sw-bubble {
   border-color: var(--pink-hot);
 }
 
+/* =====================================================
+   v5.2 — the dream curfew: breadcrumb trail, stage props
+   ===================================================== */
+.sw-trail {
+  position: fixed;
+  z-index: 2590; /* just under the sleepwalker's little feet */
+  pointer-events: none;
+  font-size: 0.85rem;
+  line-height: 1;
+  animation: sw-trail-float 1.5s ease-out forwards;
+}
+@keyframes sw-trail-float {
+  0% { opacity: 0.9; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-24px) scale(0.55); }
+}
+.sw-prop {
+  position: fixed;
+  z-index: 2650;
+  pointer-events: none;
+  font-family: var(--font-pixel);
+  font-size: 0.92rem;
+  padding: 3px 9px;
+  background: var(--panel);
+  border: 2px solid var(--ink);
+  box-shadow: 2px 2px 0 var(--pink-hot);
+  color: var(--text);
+  white-space: nowrap;
+  animation: sw-prop-pop 2.8s ease forwards;
+}
+.sw-prop-big {
+  font-size: 1.05rem;
+  box-shadow: 3px 3px 0 var(--pink-hot);
+  animation-duration: 3.6s;
+}
+html[data-theme="dark"] .sw-prop {
+  background: #2a1a47;
+  color: #ffe6f4;
+  border-color: var(--pink-hot);
+}
+@keyframes sw-prop-pop {
+  0% { opacity: 0; transform: scale(1.9) rotate(-16deg); }
+  12% { opacity: 1; transform: scale(1) rotate(-7deg); }
+  72% { opacity: 1; transform: translateY(0) rotate(-7deg) scale(1); }
+  100% { opacity: 0; transform: translateY(-30px) rotate(-7deg) scale(0.92); }
+}
+
 /* coach slime hero-leaps from the habitat into the arcade */
 .slime-coach {
   position: fixed;
@@ -7634,6 +7680,8 @@ body.terminal-only #win-terminal.terminal-door-win {
 body.terminal-only .game-invite,
 body.terminal-only .watch-hint-banner,
 body.terminal-only .sleepwalker,
+body.terminal-only .sw-trail,
+body.terminal-only .sw-prop,
 body.terminal-only .game-hint-pop { display: none !important; }
 
 /* ============ gift choreography wardrobe ============ */
