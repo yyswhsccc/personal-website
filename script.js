@@ -3685,7 +3685,8 @@ document.addEventListener('DOMContentLoaded', () => {
     { id: 'stargazer', icon: '⭐', n: ['Counted Among Stars', 'Compté Parmi les Étoiles'], d: ['the star counter moved while you were around. the terminal noticed. it always notices.', 'le compteur d\'étoiles a bougé en ta présence. le terminal l\'a vu. il voit tout.'], t: ['some buttons on github echo all the way back here.', 'certains boutons de github résonnent jusqu\'ici.'] },
     { id: 'gitfollow', icon: '💚', n: ['Follower of the Way', 'Disciple de la Voie'], d: ['the follower counter climbed while you were around. adopted forever.', 'le compteur d\'abonnés a grimpé en ta présence. adopté·e pour toujours.'], t: ['following someone is a kind of spell too.', 'suivre quelqu\'un est aussi une sorte de sort.'] },
     { id: 'redpill', icon: '🐇', n: ['Followed the Pink Rabbit', 'A Suivi le Lapin Rose'], d: ['arrived through the mysterious little command. the desktop has you now.', 'est arrivé·e par la mystérieuse petite commande. le bureau te tient désormais.'], t: ['somewhere on github, a readme whispers a command.', 'quelque part sur github, un readme murmure une commande.'] },
-    { id: 'ctfslime', icon: '🚩', n: ['Capture the Slime', 'Capture le Slime'], d: ['decoded key.enc at the door instead of just reading the hint. certified hacker-chan.', 'a décodé key.enc à la porte au lieu de lire l\'indice. hacker-chan certifié·e.'], t: ['the door has a puzzle for the brave. `ls` first.', 'la porte cache une énigme pour les braves. `ls` d\'abord.'] }
+    { id: 'ctfslime', icon: '🚩', n: ['Capture the Slime', 'Capture le Slime'], d: ['decoded key.enc at the door instead of just reading the hint. certified hacker-chan.', 'a décodé key.enc à la porte au lieu de lire l\'indice. hacker-chan certifié·e.'], t: ['the door has a puzzle for the brave. `ls` first.', 'la porte cache une énigme pour les braves. `ls` d\'abord.'] },
+    { id: 'comboking', icon: '🎯', n: ['Ultra Combo Patron', 'Mécène Ultra Combo'], d: ['landed a ×5 gift combo. the stage shook. the union filed a compliment.', 'a aligné un combo cadeau ×5. la scène a tremblé. le syndicat a déposé un compliment.'], t: ['the same gift, fast, five times. the stage remembers.', 'le même cadeau, vite, cinq fois. la scène s\'en souvient.'] }
   ];
 
   // ---- metric engine: count things, achievements pop themselves ----
@@ -5424,6 +5425,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function startSleepwalk() {
+    if (document.body.classList.contains('terminal-only')) return; // the door hates popups
     // sleepwalks also launch from a maximized live room: a sleeping
     // streamer on stage is still a sleeping streamer
     const asleepOnStage = typeof liveOpen !== 'undefined' && liveOpen && pet.sleeping;
@@ -10397,6 +10399,7 @@ document.addEventListener('DOMContentLoaded', () => {
     gInviteRetryTimer = setTimeout(function tryShow() {
       gInviteRetryTimer = null;
       if (gInviteShownThisVisit) return;
+      if (document.body.classList.contains('terminal-only')) { scheduleGameInvite(12000); return; } // the door hates popups
       // light mode only: in the dark, the SLEEPWALKER is the ad — and
       // applyTheme re-arms this popup at dawn, so no 8s idle loop here
       if (resolvedTheme() !== 'light') return;
@@ -11104,6 +11107,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       const escaping = b.escapeUntil && now < b.escapeUntil;
       let target = sx + b.offset;
+      if (!b.carry && b.visitUntil && now < b.visitUntil) target = b.visitX; // invited somewhere (guests, boxes, bugs)
       if (b.carry) {
         // deliver to the slime's SIDE, never underneath — the courier
         // must stay visible for its big moment
@@ -11537,6 +11541,238 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   /* ---------- gifts ---------- */
+  /* ============ GIFT CHOREOGRAPHY ENGINE ============
+     every emoji belongs to a TROUPE with its own stage act. MEGA spells
+     still outrank everything; these acts make sure no gift lands flat. */
+  function giftStageItem(cls, txt, leftPx, bottomPx) {
+    if (!liveStage) return null;
+    const s = document.createElement('span');
+    s.className = cls;
+    s.textContent = txt;
+    s.style.left = leftPx + 'px';
+    if (bottomPx != null) s.style.bottom = bottomPx + 'px';
+    liveStage.appendChild(s);
+    return s;
+  }
+  function giftActFood(e) {
+    if (!liveOpen || !liveStage) return;
+    const w = liveStage.clientWidth || 500;
+    const sx = slimeStageX();
+    const fx = Math.max(50, Math.min(w - 70, sx + (Math.random() < 0.5 ? -1 : 1) * (80 + Math.random() * 50)));
+    const item = giftStageItem('gift-snack', e, fx, 12);
+    if (!item) return;
+    const baseX = sx - slimePosition.x;
+    setTimeout(() => {
+      if (typeof moveSlime === 'function') moveSlime({ action: 'goto', mood: trT('snack radar', 'radar à snack'), target: { x: fx - baseX, y: slimePosition.y }, duration: 700, scheduleNext: false });
+    }, 300);
+    setTimeout(() => {
+      if (typeof moveSlime === 'function') moveSlime({ action: 'eat', mood: trT('nom', 'miam'), duration: 900, distance: 0 });
+      item.classList.add('is-eaten');
+      setTimeout(() => item.remove(), 600);
+      burstAtSlime(['✦', '♥', e], 4);
+      const SIP = ['☕', '🍵', '🧋'];
+      showBubble(SIP.indexOf(e) !== -1
+        ? trT(e + ' sip… sip… (respectful slurping) ♡', e + ' sip… sip… (slurp respectueux) ♡')
+        : trT(e + ' nom nom nom. crumbs? WHAT crumbs', e + ' miam miam. des miettes ? QUELLES miettes'), 2600);
+      pikChirp();
+    }, 1250);
+  }
+  function giftActCritter(e) {
+    if (!liveOpen || !liveStage) return;
+    const w = liveStage.clientWidth || 500;
+    const rt = Math.random() < 0.5;
+    const c = giftStageItem('gift-critter' + (e === '🦋' ? ' is-flutter' : e === '🐌' ? ' is-slowpoke' : ''), e, rt ? -40 : w + 20, 6 + Math.random() * 12);
+    if (!c) return;
+    if (!rt) c.style.setProperty('--flip', '-1');
+    const dur = e === '🐌' ? 42000 : e === '🦋' ? 16000 : 11000;
+    c.style.transition = 'left ' + dur + 'ms linear';
+    requestAnimationFrame(() => { c.style.left = (rt ? w + 40 : -60) + 'px'; });
+    setTimeout(() => c.remove(), dur + 500);
+    const fan = GARDEN.buddies.find((b) => !b.carry);
+    if (fan) { fan.visitX = Math.max(20, Math.min(w - 40, w / 2)); fan.visitUntil = Date.now() + 4200; setTimeout(() => pikSay(fan, 'pik?!', 1400), 700); }
+    const SQUEAK = { '🦆': 'quack', '🪿': 'HONK', '🐸': 'ribbit', '🐱': 'mew', '🐶': 'wan!', '🐝': 'bzzz', '🐧': 'noot noot', '🐌': '…', '🦄': '✨neigh✨', '🐢': '(unhurried)', '🐰': 'boing', '🦋': '(silent elegance)', '🐙': 'blub', '🐹': 'squeak', '🦩': '(one leg. always.)' };
+    setTimeout(() => { if (liveOpen && !pet.sleeping) showBubble(trT('a wild ' + e + ' crossed the stream!! (' + (SQUEAK[e] || 'hello') + ')', 'un ' + e + ' sauvage traverse le stream !! (' + (SQUEAK[e] || 'coucou') + ')'), 2400); }, 1000);
+  }
+  function giftActCrown(e) {
+    if (!liveOpen || !slimeBody) return;
+    if (slimeBody.querySelector('.gift-crown')) return;
+    const cr = document.createElement('span');
+    cr.className = 'gift-crown';
+    cr.textContent = '👑';
+    slimeBody.appendChild(cr);
+    burstAtSlime(['👑', '✦'], 6);
+    showBubble(trT('CROWNED. this stream is now a MONARCHY (a cute one) ♡', 'COURONNÉ. ce stream est désormais une MONARCHIE (mignonne) ♡'), 2800);
+    setTimeout(() => { cr.classList.add('is-leaving'); setTimeout(() => cr.remove(), 600); }, 20000);
+  }
+  function giftActDisco(e) {
+    if (!liveOpen || !liveStage) return;
+    liveStage.classList.add('gift-disco');
+    fxOrbit('🪩', 6);
+    if (typeof moveSlime === 'function') moveSlime({ action: 'flip', mood: 'disco', duration: 800 });
+    showBubble(trT('DISCO MODE. the FPS counter is dancing too', 'MODE DISCO. même le compteur FPS danse'), 2600);
+    setTimeout(() => liveStage.classList.remove('gift-disco'), 4500);
+  }
+  function giftActGems(e) {
+    if (!liveOpen || !liveStage) return;
+    fxRain(['💎', '✦'], 10);
+    const w = liveStage.clientWidth || 500;
+    GARDEN.buddies.filter((b) => !b.carry).slice(0, 3).forEach((b, i) => {
+      setTimeout(() => {
+        b.carry = '💎';
+        const ce = document.createElement('span');
+        ce.className = 'pik-carry';
+        ce.textContent = '💎';
+        b.el.appendChild(ce);
+        b.carryEl = ce;
+        b.x = Math.max(14, Math.min(w - 40, Math.random() * w));
+        b.el.style.left = b.x + 'px';
+        pikChirp();
+      }, 500 + i * 350);
+    });
+    showBubble(trT('GEMS?! squad — GATHER. this is not a drill', "des GEMMES ?! l'escouade — RASSEMBLEMENT. pas un exercice"), 2600);
+  }
+  function giftActRainbow(e) {
+    if (!liveOpen || !liveStage) return;
+    fxZoom('🌈');
+    fxRain(['♥', '✦', '🫧'], 12);
+    liveStage.classList.add('gift-rainbow');
+    setTimeout(() => liveStage.classList.remove('gift-rainbow'), 3200);
+    showBubble(trT('double rainbow?? single. but I FELT double', "double arc-en-ciel ?? simple. mais je l'ai SENTI double"), 2600);
+  }
+  function giftActSparkle(e) {
+    if (!liveOpen) return;
+    burstAtSlime([e, '♥', '✦'], 8);
+    if (slimeBody) { slimeBody.classList.add('gift-blush'); setTimeout(() => slimeBody.classList.remove('gift-blush'), 3200); }
+    if (e === '🌹' || e === '🌸' || e === '💐' || e === '🌷') fxRain(['🌸', e], 10);
+  }
+  function giftActZap(e) {
+    if (!liveOpen || !liveStage) return;
+    fxFlash();
+    const b = giftStageItem('gift-bolt', '⚡', (liveStage.clientWidth || 500) * (0.3 + Math.random() * 0.4), null);
+    if (b) { b.style.top = '4%'; setTimeout(() => b.remove(), 900); }
+    if (typeof moveSlime === 'function') moveSlime({ action: 'alert', mood: trT('zapped', 'électrisé'), duration: 700 });
+    showBubble(trT('⚡ UNSCHEDULED LIGHTNING (very scheduled, I have a guy)', "⚡ FOUDRE IMPRÉVUE (très prévue, j'ai un contact)"), 2400);
+  }
+  function giftActFire(e) {
+    if (!liveOpen || !liveStage) return;
+    const w = liveStage.clientWidth || 500;
+    for (let i = 0; i < 10; i++) setTimeout(() => { const s = giftStageItem('gift-ember', Math.random() < 0.5 ? '🔥' : '✦', Math.random() * w, 0); if (s) setTimeout(() => s.remove(), 2200); }, i * 130);
+    showBubble(trT('this stream is officially LIT. no notes.', 'ce stream est officiellement EN FEU. rien à redire.'), 2400);
+  }
+  function giftActSnow(e) {
+    if (!liveOpen) return;
+    fxRain(['❄️', '🫧', '✦'], 14);
+    if (slimeBody) { slimeBody.classList.add('gift-shiver'); setTimeout(() => slimeBody.classList.remove('gift-shiver'), 2200); }
+    showBubble(trT('brrr!! ❄️ cozy mode: ENGAGED (bring blankets)', 'brrr !! ❄️ mode cocon : ACTIVÉ (apportez des plaids)'), 2400);
+  }
+  function giftActDead(e) {
+    if (!liveOpen || !slimeBody) return;
+    slimeBody.classList.add('gift-ded');
+    showBubble('☠️ …', 1500);
+    setTimeout(() => {
+      slimeBody.classList.remove('gift-ded');
+      if (typeof moveSlime === 'function') moveSlime({ action: 'hop', mood: trT('revived', 'ressuscité'), duration: 600 });
+      showBubble(trT('jk. reports of my death were LOL at best', 'jk. les rumeurs de ma mort étaient LOL au mieux'), 2400);
+      burstAtSlime(['💀', '♥'], 5);
+    }, 1800);
+  }
+  function giftActRobot(e) {
+    if (!liveOpen || !slimeBody) return;
+    slimeBody.classList.add('gift-robo');
+    showBubble('BEEP. BOOP. AFFECTION.EXE RUNNING.', 2600);
+    burstAtSlime(['🤖', '⚙️'], 4);
+    setTimeout(() => slimeBody.classList.remove('gift-robo'), 3200);
+  }
+  function giftActBox(e) {
+    if (!liveOpen || !liveStage) return;
+    const w = liveStage.clientWidth || 500;
+    const bx = w * (0.35 + Math.random() * 0.3);
+    const box = giftStageItem('gift-snack gift-box', '📦', bx, 10);
+    if (!box) return;
+    GARDEN.buddies.filter((b) => !b.carry).slice(0, 2).forEach((b) => { b.visitX = bx; b.visitUntil = Date.now() + 2200; });
+    showBubble(trT("a package?! I didn't order— SQUAD, OPEN IT", "un colis ?! j'ai rien comman— L'ESCOUADE, OUVREZ"), 2200);
+    setTimeout(() => {
+      box.classList.add('is-eaten');
+      setTimeout(() => box.remove(), 500);
+      playSparkleSound();
+      const POOL = ['🧋', '🐸', '💎', '❄️', '🌈', '🦆', '👑', '🔥'];
+      const inner = POOL[Math.floor(Math.random() * POOL.length)];
+      showBubble(trT('inside the box: ' + inner + ' — GIFT-CEPTION!!', 'dans le colis : ' + inner + ' — CADEAU-CEPTION !!'), 2200);
+      const act = giftActFor(inner);
+      if (act) setTimeout(() => act(inner), 800);
+    }, 2000);
+  }
+  function giftActBugHunt(e) {
+    if (!liveOpen || !liveStage) return;
+    const w = liveStage.clientWidth || 500;
+    const bug = giftStageItem('gift-critter is-scuttle', '🐞', -30, 8);
+    if (!bug) return;
+    bug.style.transition = 'left 9000ms linear';
+    requestAnimationFrame(() => { bug.style.left = (w + 40) + 'px'; });
+    GARDEN.buddies.filter((b) => !b.carry).forEach((b, i) => {
+      setTimeout(() => { b.visitX = Math.min(w - 30, 60 + i * 60); b.visitUntil = Date.now() + 5200; pikSay(b, 'pik!!', 900); }, 300 + i * 220);
+    });
+    showBubble(trT('🐞 A BUG?! IN PROD?! squad — standard procedure!!', '🐞 UN BUG ?! EN PROD ?! escouade — procédure standard !!'), 2400);
+    setTimeout(() => { bug.remove(); if (liveOpen && !pet.sleeping) { showBubble(trT('bug escorted off-stage. QA approves ♡', 'bug escorté hors scène. la QA approuve ♡'), 2200); pikChirp(); pikChirp(); } }, 9200);
+  }
+  function giftActCloud(e) {
+    if (!liveOpen || !liveStage) return;
+    const w = liveStage.clientWidth || 500;
+    const cl = giftStageItem('gift-cloud', '☁️', -50, null);
+    if (!cl) return;
+    cl.style.top = '8%';
+    cl.style.transition = 'left 8000ms linear';
+    requestAnimationFrame(() => { cl.style.left = (w + 50) + 'px'; });
+    let drops = 0;
+    const iv = setInterval(() => {
+      if (++drops > 10 || !liveOpen) { clearInterval(iv); return; }
+      const rect = cl.getBoundingClientRect();
+      const stage = liveStage.getBoundingClientRect();
+      const s = giftStageItem('gift-ember is-rain', '♥', rect.left - stage.left + 10, null);
+      if (s) { s.style.top = (rect.top - stage.top + 20) + 'px'; setTimeout(() => s.remove(), 1600); }
+    }, 650);
+    setTimeout(() => cl.remove(), 8600);
+    showBubble(trT("☁️ the cloud came DOWN?! it's raining affection", "☁️ le cloud est DESCENDU ?! il pleut de l'affection"), 2400);
+  }
+  function giftActFeels(e) {
+    if (!liveOpen) return;
+    GARDEN.gatherUntil = Date.now() + 3200;
+    burstAtSlime([e, '♥'], 5);
+    showBubble(e === '😭'
+      ? trT('😭 we cry TOGETHER on this stream. union rules.', '😭 ici on pleure ENSEMBLE. règle du syndicat.')
+      : trT("🥺 who hurt you. I have pikmin and I'm not afraid to hug.", "🥺 qui t'a fait du mal. j'ai des pikmin et je n'ai pas peur des câlins."), 3000);
+  }
+  function giftActCake(e) {
+    if (!liveOpen) return;
+    GARDEN.gatherUntil = Date.now() + 3600;
+    GARDEN.buddies.forEach((b, i) => setTimeout(() => pikSay(b, '♪', 900), 400 + i * 260));
+    setTimeout(() => { if (liveOpen && !pet.sleeping) showBubble(trT('🎂 everyone SANG?! ok ok. wish time… *blows*', '🎂 tout le monde a CHANTÉ ?! bon bon. vœu… *souffle*'), 2600); }, 1800);
+    setTimeout(() => { fxRain(['🎉', '✦', '♥'], 14); playSparkleSound(); }, 3100);
+  }
+  function giftActFor(e) {
+    const FOOD = ['🍬', '🍩', '🍰', '🧁', '🍭', '🍪', '🍓', '🍡', '🥟', '🍙', '🍜', '☕', '🍵', '🥐', '🍦', '🧋'];
+    const CRITTER = ['🦆', '🐛', '🐱', '🐶', '🦄', '🐸', '🐢', '🐰', '🐝', '🦋', '🐙', '🐹', '🐧', '🦩', '🐌'];
+    const SPARKLE = ['💖', '💘', '💐', '🌸', '🌷', '🎀', '⭐', '✨', '🫧', '🌙', '🍀', '🎆', '🌹'];
+    if (e === '🎂') return giftActCake;
+    if (e === '👑') return giftActCrown;
+    if (e === '🪩') return giftActDisco;
+    if (e === '💎') return giftActGems;
+    if (e === '🌈') return giftActRainbow;
+    if (e === '⚡') return giftActZap;
+    if (e === '🔥') return giftActFire;
+    if (e === '❄️' || e === '❄') return giftActSnow;
+    if (e === '💀') return giftActDead;
+    if (e === '🤖') return giftActRobot;
+    if (e === '📦') return giftActBox;
+    if (e === '🐞') return giftActBugHunt;
+    if (e === '☁️' || e === '☁') return giftActCloud;
+    if (e === '😭' || e === '🥺') return giftActFeels;
+    if (FOOD.indexOf(e) !== -1) return giftActFood;
+    if (CRITTER.indexOf(e) !== -1) return giftActCritter;
+    if (SPARKLE.indexOf(e) !== -1) return giftActSparkle;
+    return null;
+  }
+
   const GIFTS = {
     candy:  { icon: '🍬', fans: 1, react: [["a candy!! crunch crunch ♡", "un bonbon !! cronch cronch ♡"], ["sugar rush initiated", "rush de sucre enclenché"]] },
     rose:   { icon: '🌹', fans: 2, react: [["a rose?? for ME?? *blushes in pixels*", "une rose ?? pour MOI ?? *rougit en pixels*"], ["I will water it with love", "je l'arroserai avec de l'amour"]] },
@@ -11776,6 +12012,19 @@ document.addEventListener('DOMContentLoaded', () => {
     if (Date.now() < giftStormUntil) return; // union rules: no counting during a storm
     gainFollowers(n);
   }
+  function giftComboEscalate(icon) {
+    if (giftComboN === 3) {
+      fxBanner(trT('COMBO ×3!!', 'COMBO ×3 !!'), icon + icon + icon);
+      fxRain([icon, '✦'], 12);
+      playTone(1318, 'triangle', 0.12, 0, 0.05);
+    } else if (giftComboN === 5) {
+      fxBanner(trT('⚡ ULTRA COMBO ×5 ⚡', '⚡ ULTRA COMBO ×5 ⚡'), trT('the stage is SHAKING', 'la scène TREMBLE'));
+      fxShake();
+      fxFirework(icon, 3);
+      giftGain(5);
+      achvUnlock('comboking');
+    }
+  }
 
   function flyGiftToStage(icon, fromEl) {
     if (!fromEl || !liveStage) return;
@@ -11877,6 +12126,13 @@ document.addEventListener('DOMContentLoaded', () => {
     store.set('yos-live-gifted', true);
     updateLiveTab();
     giftPulse();
+    // combo counting works for picker emojis too — spam responsibly ♡
+    if (giftComboId === e) giftComboN++;
+    else { giftComboId = e; giftComboN = 1; }
+    if (giftComboTimer) clearTimeout(giftComboTimer);
+    giftComboTimer = setTimeout(() => { giftComboId = null; giftComboN = 0; if (liveComboEl) liveComboEl.textContent = ''; }, 2600);
+    if (liveComboEl && giftComboN > 1) liveComboEl.textContent = `${e} ×${giftComboN}!!`;
+    giftComboEscalate(e);
     flyGiftToStage(e, document.getElementById('live-emoji-open'));
     const line = makeChatLine({ u: trT('you', 'toi'), c: '#f0509f', t: `${trT('sent', 'a envoyé')} ${e} !!` });
     liveMirror(line);
@@ -11917,7 +12173,10 @@ document.addEventListener('DOMContentLoaded', () => {
       return true;
     }
 
-    const bless = emojiBlessing(e);
+    // bespoke stage acts OUTRANK the generic MEGA blessing — an emoji with
+    // its own choreography always performs it (rocket/goose/squirrel keep
+    // their earlier special branches; blessed spells cover the rest)
+    const bless = giftActFor(e) ? null : emojiBlessing(e);
     playTone(980, 'triangle', 0.12, 0, 0.05);
 
     if (bless && bless.rocket) {
@@ -11947,6 +12206,8 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       giftGain(2);
       setTimeout(() => {
+        const act = giftActFor(e);
+        if (act) { act(e); return; } // the troupe takes it from here
         burstAtSlime([e, '♥'], 5);
         const r = GENERIC_EMOJI_REACT[emojiHash(e) % GENERIC_EMOJI_REACT.length];
         showBubble(trT(r[0], r[1]).replace('{e}', e), 2600);
@@ -12074,6 +12335,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (giftComboTimer) clearTimeout(giftComboTimer);
     giftComboTimer = setTimeout(() => { giftComboId = null; giftComboN = 0; if (liveComboEl) liveComboEl.textContent = ''; }, 2600);
     if (liveComboEl && giftComboN > 1) liveComboEl.textContent = `${g.icon} ×${giftComboN}!!`;
+    giftComboEscalate(g.icon);
 
     // the gift flies from the button to the stage
     const fly = document.createElement('span');
@@ -12127,6 +12389,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (typeof moveSlime === 'function') moveSlime({ action: id === 'rocket' ? 'flip' : 'happy', mood: trT('spoiled', 'gâté'), duration: 760, distance: 0.4 });
       burstAtSlime(['♥', '✦', g.icon], id === 'rocket' ? 12 : 5);
       if (id === 'rocket') megaRocket();
+      else { const act = giftActFor(g.icon); if (act) setTimeout(() => act(g.icon), 900); } // then the stage act
     }, 650);
   }
 
@@ -14969,6 +15232,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!store.get('yos-watch-paired', 0)) {
       setTimeout(() => {
         if (store.get('yos-watch-paired', 0)) return; // paired mid-session
+        if (document.body.classList.contains('terminal-only')) return; // the door hates popups
         const b = document.createElement('button');
         b.type = 'button';
         b.id = 'watch-hint-banner';

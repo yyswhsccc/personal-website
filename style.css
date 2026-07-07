@@ -7588,3 +7588,93 @@ body.terminal-only #win-terminal.terminal-door-win {
   .matrix-bubble { max-width: 160px; font-size: 0.72rem; }
   body.terminal-only #win-terminal.terminal-door-win { height: 62vh; }
 }
+
+/* the terminal door is a POPUP-FREE zone — atmosphere is load-bearing */
+body.terminal-only .game-invite,
+body.terminal-only .watch-hint-banner,
+body.terminal-only .sleepwalker,
+body.terminal-only .game-hint-pop { display: none !important; }
+
+/* ============ gift choreography wardrobe ============ */
+.gift-snack {
+  position: absolute;
+  z-index: 5;
+  font-size: 1.5rem;
+  filter: drop-shadow(1px 2px 0 rgba(20, 2, 14, 0.3));
+  animation: gift-snack-land 0.5s cubic-bezier(0.2, 1.6, 0.4, 1);
+}
+@keyframes gift-snack-land { from { transform: translateY(-70px) scale(0.5); opacity: 0; } }
+.gift-snack.is-eaten { animation: gift-snack-eaten 0.5s ease-in forwards; }
+@keyframes gift-snack-eaten { to { transform: scale(0) rotate(30deg); opacity: 0; } }
+.gift-box { font-size: 1.8rem; }
+.gift-critter {
+  position: absolute;
+  z-index: 5;
+  font-size: 1.5rem;
+  transform: scaleX(var(--flip, 1));
+  animation: gift-critter-bob 0.5s steps(2) infinite;
+  filter: drop-shadow(1px 2px 0 rgba(20, 2, 14, 0.25));
+}
+@keyframes gift-critter-bob { 50% { margin-bottom: 3px; } }
+.gift-critter.is-flutter { animation: gift-critter-flutter 1.4s ease-in-out infinite; }
+@keyframes gift-critter-flutter { 0%, 100% { margin-bottom: 0; } 50% { margin-bottom: 26px; } }
+.gift-critter.is-slowpoke { animation: none; }
+.gift-critter.is-scuttle { animation: gift-critter-bob 0.22s steps(2) infinite; }
+.gift-crown {
+  position: absolute;
+  top: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9;
+  font-size: 1.3rem;
+  filter: drop-shadow(0 0 6px rgba(255, 212, 0, 0.8));
+  animation: pik-hat-bob 1.6s steps(2, end) infinite;
+}
+.gift-crown.is-leaving { opacity: 0; transition: opacity 0.6s; }
+.live-stage.gift-disco { animation: gift-disco-lights 0.55s steps(2) 8; }
+@keyframes gift-disco-lights {
+  0% { filter: hue-rotate(0deg) saturate(1.25); }
+  50% { filter: hue-rotate(80deg) saturate(1.5); }
+  100% { filter: hue-rotate(-60deg) saturate(1.3); }
+}
+.live-stage.gift-rainbow { animation: gift-rainbow-wash 3.2s ease-in-out; }
+@keyframes gift-rainbow-wash { 50% { filter: saturate(1.7) brightness(1.06); } }
+.slime-pet.gift-blush img { filter: drop-shadow(0 0 10px rgba(255, 110, 176, 0.9)) saturate(1.3); }
+.slime-pet.gift-shiver { animation: gift-shiver 0.14s linear 14; }
+@keyframes gift-shiver { 25% { transform: translate(-1.5px, 0); } 75% { transform: translate(1.5px, 0); } }
+.slime-pet.gift-ded img { transform: rotate(84deg) translateY(9px); transition: transform 0.4s; filter: grayscale(0.7); }
+.slime-pet.gift-robo { animation: gift-robo-steps 0.5s steps(2) 6; }
+@keyframes gift-robo-steps {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  50% { transform: translate(4px, -2px) rotate(3deg); }
+  100% { transform: translate(-4px, 0) rotate(-3deg); }
+}
+.gift-bolt {
+  position: absolute;
+  z-index: 9;
+  font-size: 2.6rem;
+  filter: drop-shadow(0 0 12px rgba(255, 233, 138, 0.95));
+  animation: gift-bolt-strike 0.9s steps(3) forwards;
+}
+@keyframes gift-bolt-strike { 0% { transform: translateY(-30px); opacity: 1; } 70% { opacity: 1; } 100% { transform: translateY(30px); opacity: 0; } }
+.gift-ember {
+  position: absolute;
+  bottom: 0;
+  z-index: 5;
+  font-size: 1rem;
+  animation: gift-ember-rise 2s ease-out forwards;
+}
+@keyframes gift-ember-rise { to { transform: translateY(-130px) scale(1.4); opacity: 0; } }
+.gift-ember.is-rain { animation: gift-heart-drip 1.5s ease-in forwards; }
+@keyframes gift-heart-drip { to { transform: translateY(90px); opacity: 0; } }
+.gift-cloud {
+  position: absolute;
+  z-index: 6;
+  font-size: 2.2rem;
+  filter: drop-shadow(1px 2px 0 rgba(20, 2, 14, 0.2));
+}
+@media (prefers-reduced-motion: reduce) {
+  .gift-snack, .gift-critter, .gift-bolt, .gift-ember, .gift-cloud,
+  .live-stage.gift-disco, .live-stage.gift-rainbow,
+  .slime-pet.gift-shiver, .slime-pet.gift-robo { animation: none; }
+}
