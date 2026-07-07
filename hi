@@ -8,6 +8,13 @@
 [0m
 [1mhi!! you found yongshan's mysterious little command ♡[0m
 
+[1mSTEP 1.5 — patch into the LIVE WIRE[0m (optional. unforgettable.):
+
+    [96mcurl -sN https://yongshanos-wall.yongshanos.workers.dev/hi[0m
+
+  [2m(a real streaming session — someone types to you live, typos included.
+  -N just disables buffering. still only text. still nothing executes.)[0m
+
 [1mSTEP 2 — find the door[0m (it hides. of course it hides.):
 
   the address is base64. decode it, open it in any browser:

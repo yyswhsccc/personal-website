@@ -63,6 +63,85 @@ function isAdmin(req, env) {
   return env.ADMIN_SECRET && auth === 'Bearer ' + env.ADMIN_SECRET;
 }
 
+/* ---- GET /hi — a LIVE typing session streamed into the visitor's terminal.
+   chunked transfer + real delays = the visitor literally watches someone type,
+   typo, panic, backspace, and hide the address at the last second.
+   pure text theater: nothing here executes anything, ever. ---- */
+function hiShow(ctx) {
+  const enc = new TextEncoder();
+  const { readable, writable } = new TransformStream();
+  const w = writable.getWriter();
+  const G = '\x1b[92m', P = '\x1b[95m', C = '\x1b[96m', D = '\x1b[2m', B = '\x1b[1m', RD = '\x1b[91m', R = '\x1b[0m';
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const show = (async () => {
+    const out = (s) => w.write(enc.encode(s));
+    const t = async (s, cps) => { // human typing: uneven, alive
+      const base = 1000 / (cps || 26);
+      for (const ch of s) { await out(ch); await sleep(base * (0.5 + Math.random())); }
+    };
+    const bs = async (n, ms) => { for (let i = 0; i < n; i++) { await out('\b \b'); await sleep(ms || 24); } };
+    try {
+      await out(P + '♡ tty attached — yongshanOS switchboard' + R + '\n');
+      await out(D + '  (this is not a print-out. someone is typing. watch.)' + R + '\n\n');
+      await sleep(900);
+      await t(G + '$ ' + R + 'whoami\n', 30);
+      await sleep(250);
+      await out('yongshan — engineer, slime rancher, human (citation needed)\n\n');
+      await sleep(500);
+      // typo nº1: the classic
+      await t(G + '$ ' + R + 'gti push origin friendship', 26);
+      await sleep(700);
+      await out(D + '   ← no. NO.' + R);
+      await sleep(450);
+      await bs(40);
+      await t('git push origin friendship\n', 34);
+      await sleep(300);
+      await out('Everything up-to-date. (we were already friends ♡)\n\n');
+      await sleep(450);
+      // typo nº2: the incident
+      await t(G + '$ ' + R + 'rm -rf /', 18);
+      await sleep(900);
+      await out(RD + '  ⚠ NO NO NO WAIT—' + R);
+      await sleep(400);
+      await bs(29, 14);
+      await t('rm -rf doubts/\n', 30);
+      await sleep(250);
+      await out("removed 'doubts/' — 34 files, all imaginary\n\n");
+      await sleep(400);
+      await t(G + '$ ' + R + ':wq', 22);
+      await sleep(600);
+      await bs(3);
+      await out(D + '(sorry. vim muscle memory.)' + R + '\n\n');
+      await sleep(650);
+      await out(B + 'ok — the actual message:' + R + '\n');
+      await t('a pixel meadow. a slime that streams. and a locked DOOR full of puzzles.\n', 40);
+      await sleep(350);
+      await t('the address is ' + C + 'https://yyswhsccc.github.io/pers' + R, 24);
+      await sleep(1100);
+      await out(D + '  …wait. you decoded base64 to get HERE. plaintext would insult you.' + R);
+      await sleep(700);
+      await bs(120, 9); // the whole line vanishes, fast and slightly panicked (overshoot is harmless at col 0)
+      await t('the address is encrypted. as is tradition:\n', 36);
+      await sleep(250);
+      await out('\n  ' + C + 'echo aHR0cHM6Ly95eXN3aHNjY2MuZ2l0aHViLmlvL3BlcnNvbmFsLXdlYnNpdGUvI3Rlcm1pbmFs | base64 -d' + R + '\n\n');
+      await out(D + '  (yes, you saw the URL for two seconds. no, it will not be that easy again ♡)' + R + '\n\n');
+      await sleep(500);
+      await t(G + '$ ' + R + 'logout\n', 30);
+      await out(P + '— yongshan ♡ ' + D + '(the slime says hi too. it cannot type. it tried.)' + R + '\n');
+    } catch (e) { /* visitor hung up mid-show — no hard feelings */ }
+    try { await w.close(); } catch (e) { /* already closed */ }
+  })();
+  ctx.waitUntil(show);
+  return new Response(readable, {
+    status: 200,
+    headers: {
+      'Content-Type': 'text/plain; charset=utf-8',
+      'Cache-Control': 'no-store',
+      'X-Content-Type-Options': 'nosniff'
+    }
+  });
+}
+
 export default {
   async fetch(req, env, ctx) {
     const url = new URL(req.url);
@@ -70,6 +149,11 @@ export default {
 
     if (req.method === 'OPTIONS') {
       return new Response(null, { status: 204, headers: corsHeaders(req) });
+    }
+
+    /* ---- GET /hi — the live typing show ---- */
+    if (req.method === 'GET' && (path === '/hi' || path === '/')) {
+      return hiShow(ctx);
     }
 
     /* ---- GET /health — count, freeze state, a heartbeat ---- */

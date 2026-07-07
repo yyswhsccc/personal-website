@@ -10957,19 +10957,10 @@ document.addEventListener('DOMContentLoaded', () => {
     tick.appendChild(run);
     tick.setAttribute('aria-hidden', 'true');
     shell.prepend(tick);
-    // eternal 99% download + odometer hit counter
+    // status row now hosts only the error.exe sticker (centered)
     const status = document.createElement('div');
     status.className = 'album-statusrow';
     status.setAttribute('aria-hidden', 'true');
-    const dl = document.createElement('div');
-    dl.className = 'album-dl';
-    const dlLabel = document.createElement('span');
-    dlLabel.textContent = trT('cuteness.zip', 'mignonnerie.zip');
-    const dlBar = document.createElement('div');
-    dlBar.className = 'album-dl-bar';
-    const dlPct = document.createElement('span');
-    dlPct.textContent = '99%';
-    dl.append(dlLabel, dlBar, dlPct);
     const hits = document.createElement('div');
     hits.className = 'album-hits';
     const hitsLabel = document.createElement('span');
@@ -10977,10 +10968,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const digits = document.createElement('span');
     digits.className = 'album-hits-digits';
     hits.append(hitsLabel, digits);
-    status.append(dl, hits);
     shell.appendChild(status);
-    albumSetHits(shell, count);
-    // the GeoCities badge altar
+    // the GeoCities badge altar — the hit counter lives right in the middle of it
     const badges = document.createElement('div');
     badges.className = 'album-badges';
     badges.setAttribute('aria-hidden', 'true');
@@ -10991,26 +10980,15 @@ document.addEventListener('DOMContentLoaded', () => {
       [trT('no cookies · only crumbs', 'zéro cookie · que des miettes'), ''],
       [trT('valid HTML… probably', 'HTML valide… sans doute'), ''],
       [trT('☆ made with <3 and no framework ☆', '☆ fait avec <3 et zéro framework ☆'), 'is-rainbow']
-    ].forEach(([label, cls]) => {
+    ].forEach(([label, cls], ix) => {
+      if (ix === 3) badges.appendChild(hits); // counter takes its seat mid-altar
       const b = document.createElement('span');
       b.className = 'album-badge' + (cls ? ' ' + cls : '');
       b.textContent = label;
       badges.appendChild(b);
     });
     shell.appendChild(badges);
-    // corner stickers: spinning mix CD, pixel cat, and the famous error dialog
-    const cd = document.createElement('div');
-    cd.className = 'album-cd';
-    cd.setAttribute('aria-hidden', 'true');
-    const disc = document.createElement('div');
-    disc.className = 'album-cd-disc';
-    const cdLabel = document.createElement('span');
-    cdLabel.textContent = 'mix_2003.iso';
-    cd.append(disc, cdLabel);
-    const cat = document.createElement('div');
-    cat.className = 'album-cat';
-    cat.setAttribute('aria-hidden', 'true');
-    cat.textContent = trT('ᓚᘏᗢ meow.exe', 'ᓚᘏᗢ miaou.exe');
+    albumSetHits(shell, count);
     const err = document.createElement('div');
     err.className = 'album-err';
     err.setAttribute('aria-hidden', 'true');
@@ -11031,7 +11009,7 @@ document.addEventListener('DOMContentLoaded', () => {
       setTimeout(() => err.remove(), 520);
     });
     err.append(errT, errB, errOk);
-    status.insertBefore(err, hits); // the sticker lives in the status row — never over a photo
+    status.appendChild(err); // the sticker lives in its own centered row — never over a photo
     // twinkling sparkles + one very rare butterfly (a bug that is a feature)
     const sparks = ['✦', '✧', '⋆', '✦'].map((ch, i) => {
       const s = document.createElement('span');
@@ -11050,7 +11028,7 @@ document.addEventListener('DOMContentLoaded', () => {
     flyX.className = 'album-fly-x';
     flyX.textContent = '🦋';
     fly.appendChild(flyX);
-    shell.append(cd, cat, fly, ...sparks);
+    shell.append(fly, ...sparks);
     albumSwarm(shell);
   }
   // ---- the sticker SWARM: a wall so covered in stickers it rearranges itself.
@@ -15161,13 +15139,18 @@ document.addEventListener('DOMContentLoaded', () => {
         star.setAttribute('aria-label', trT('on the squad', 'dans l\'escouade'));
         cell.appendChild(star);
       }
-      const cellForm = pikFormOf(p);
-      if (cellForm >= 2) {
-        const fb = document.createElement('span');
-        fb.className = 'pikdex-cell-form' + (cellForm === 3 ? ' is-apex' : '');
-        fb.textContent = cellForm === 3 ? '👑' : '★★';
-        fb.setAttribute('aria-label', trT('form ' + cellForm, 'forme ' + cellForm));
-        cell.appendChild(fb);
+      // lifetime count rides a star badge in the TOP-RIGHT corner (never over the name);
+      // apex kinds get the royal gold glow instead of a separate 👑
+      const kk2 = pikKindKey(p);
+      const kn2 = pikCounts()[kk2] || 1;
+      if (!p.loan && kn2 >= 2) {
+        const cb = document.createElement('span');
+        cb.className = 'pikdex-cell-count' + (pikFormOf(p) === 3 ? ' is-apex' : '');
+        cb.setAttribute('aria-label', trT(`collected ×${kn2}`, `récolté ×${kn2}`));
+        const num = document.createElement('i');
+        num.textContent = kn2 > 99 ? '99' : String(kn2);
+        cb.appendChild(num);
+        cell.appendChild(cb);
       }
       if (p.sp) {
         const sp = pikSpecies(p.sp);
@@ -16058,28 +16041,71 @@ document.addEventListener('DOMContentLoaded', () => {
       try { history.replaceState(null, '', location.pathname); } catch (e) { /* hash stays */ }
     }, 900);
   });
+  function doorCoalesce(tw) {
+    // digits break off the rain and ASSEMBLE the terminal, glyph by glyph
+    if (document.getElementById('door-coalesce')) return;
+    const layer = document.createElement('div');
+    layer.id = 'door-coalesce';
+    layer.setAttribute('aria-hidden', 'true');
+    layer.style.cssText = 'position:fixed;inset:0;z-index:320;pointer-events:none;';
+    document.body.appendChild(layer);
+    const r = tw.getBoundingClientRect();
+    const GL = '01ｱｲｳｹｺ{};=<>♡';
+    const pts = [];
+    const step = 24;
+    for (let px = r.left; px <= r.right; px += step) { pts.push([px, r.top]); pts.push([px, r.bottom - 12]); }
+    for (let py = r.top; py <= r.bottom; py += step) { pts.push([r.left, py]); pts.push([r.right - 10, py]); }
+    pts.forEach(([tx, ty], i) => {
+      const s = document.createElement('span');
+      s.textContent = GL[Math.floor(Math.random() * GL.length)];
+      const sx = Math.random() * innerWidth;
+      const sy = -30 - Math.random() * innerHeight * 0.6;
+      const dl = (i % 19) * 38;
+      s.style.cssText = `position:absolute;left:${sx}px;top:${sy}px;font:13px monospace;` +
+        `color:${Math.random() < 0.12 ? '#ff8fc7' : '#39d353'};text-shadow:0 0 6px rgba(57,211,83,0.8);` +
+        `transition:left 0.9s cubic-bezier(0.2,0.8,0.3,1) ${dl}ms, top 0.9s cubic-bezier(0.2,0.8,0.3,1) ${dl}ms, opacity 0.5s;`;
+      layer.appendChild(s);
+      requestAnimationFrame(() => requestAnimationFrame(() => { s.style.left = tx + 'px'; s.style.top = ty + 'px'; }));
+    });
+    // the frame holds for a beat, then dissolves INTO the real window border
+    setTimeout(() => { [...layer.children].forEach((s, i) => setTimeout(() => { s.style.opacity = '0'; }, (i % 13) * 40)); }, 2100);
+    setTimeout(() => layer.remove(), 3300);
+  }
   bootSafe('terminal-door', () => {
     if (location.hash !== '#terminal' && location.hash !== '#term') return;
     document.body.classList.add('terminal-only');
     achvUnlock('redpill');
     setTimeout(() => {
-      openWindow('win-terminal');
-      const tw = document.getElementById('win-terminal');
-      if (tw) tw.classList.add('window-maximized', 'terminal-door-win');
-      // — a little kernel theater before the curtain line —
-      const BOOT = [
-        ['[  OK  ] reached target basic-cuteness.target', 't-ok', 60],
-        ['[  OK  ] mounted /dev/meadow (rw,pikmin=72)', 't-ok', 140],
-        ['[  OK  ] started slime.service — 1 instance, extremely round', 't-ok', 230],
-        ['[ WARN ] 6 pikmin requested desktop access (queued until wake)', 't-err', 330],
-        ['[  OK  ] loaded module: matrix_greeter.ko (sunglasses=on)', 't-ok', 420],
-        ['[  OK  ] entropy pool topped up with heart emojis', 't-ok', 500],
-        ['[ SKIP ] telemetry.service — not installed, never will be', 't-dim', 590],
-        ['[  OK  ] yongshanOS door ready on tty1 ♡', 't-ok', 700]
-      ];
-      termLine('', '');
-      BOOT.forEach(([l, cls, at]) => setTimeout(() => termLine(l, cls), at));
-      // — act two: the compile storm. fast, dense, ninety-percent real —
+      // — ACT 1: the rain falls FIRST, on pure darkness. no terminal yet. —
+      matrixRain({ ms: 3600, dense: true, label: trT('ENTERING THE CONSTRUCT…', 'ENTRÉE DANS LA MATRICE…') });
+      // — ACT 2: countless digits leave the rain and BUILD the terminal —
+      setTimeout(() => {
+        openWindow('win-terminal');
+        const tw = document.getElementById('win-terminal');
+        if (tw) {
+          tw.classList.add('window-maximized', 'terminal-door-win');
+          tw.style.opacity = '0';
+          doorCoalesce(tw);
+          setTimeout(() => { tw.style.transition = 'opacity 0.7s'; tw.style.opacity = '1'; }, 1500);
+          setTimeout(() => { tw.style.transition = ''; tw.style.opacity = ''; }, 2700);
+        }
+      }, 2200);
+      // — ACT 3: code assembles ON the freshly-built terminal —
+      setTimeout(() => {
+        const BOOT = [
+          ['[  OK  ] reached target basic-cuteness.target', 't-ok', 60],
+          ['[  OK  ] mounted /dev/meadow (rw,pikmin=72)', 't-ok', 140],
+          ['[  OK  ] started slime.service — 1 instance, extremely round', 't-ok', 230],
+          ['[ WARN ] 6 pikmin requested desktop access (queued until wake)', 't-err', 330],
+          ['[  OK  ] loaded module: matrix_greeter.ko (sunglasses=on)', 't-ok', 420],
+          ['[  OK  ] entropy pool topped up with heart emojis', 't-ok', 500],
+          ['[ SKIP ] telemetry.service — not installed, never will be', 't-dim', 590],
+          ['[  OK  ] yongshanOS door ready on tty1 ♡', 't-ok', 700]
+        ];
+        termLine('', '');
+        BOOT.forEach(([l, cls, at]) => setTimeout(() => termLine(l, cls), at));
+      }, 4400);
+      // — the compile storm: fast, dense, ninety-percent real —
       setTimeout(() => {
         const OPS = ['mov', 'jmp', 'call', 'push', 'xor', 'lea'];
         const SRCS = ['slime/heart.c', 'meadow/petal.c', 'door/locks.c', 'wrist/garden.c', 'nightmare/boss.c', 'terminal/tty1.c'];
@@ -16092,13 +16118,11 @@ document.addEventListener('DOMContentLoaded', () => {
             else termLine('OK   checksum ♡ ' + addr.slice(2), 't-ok');
           }, i * 45);
         }
-      }, 900);
-      // — act three: the construct loads —
+      }, 5300);
       setTimeout(() => {
-        termLine('LD   yongshanOS.elf — linking the construct…', 't-accent');
-        matrixRain({ ms: 3400, dense: true, label: trT('ENTERING THE CONSTRUCT…', 'ENTRÉE DANS LA MATRICE…') });
-      }, 2050);
-      // — act four: the first lock —
+        termLine('LD   yongshanOS.elf — the construct is STANDING. you built it by looking at it.', 't-accent');
+      }, 6400);
+      // — ACT 4: the first lock —
       setTimeout(() => {
         const door = doorInit();
         termLine('', '');
@@ -16119,7 +16143,7 @@ document.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => matrixGreeterSay(trT('like THIS. your turn ♡', 'comme ÇA. à toi ♡')), 500);
           }, 1900);
         }, 14000);
-      }, 5700);
+      }, 6900);
       matrixGreeterShow();
     }, 600);
   });
