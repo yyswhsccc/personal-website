@@ -2264,6 +2264,12 @@ document.addEventListener('DOMContentLoaded', () => {
       fr: 'Moi ?? Je suis un familier virtuel de niveau production : machine à états (humeur/énergie/affection), détection de combos, physique de drag, frames de sprites, compteur de fans persistant et fusible anti-surcharge. Elle a tout écrit. En plus je suis adorable, ce qui est une compétence à part.'
     },
     {
+      k: ['curfew', 'sleepwalk', 'sleepwalking', 'dream world', 'why quiet', 'gremlin', '宵禁', '梦游', '捣蛋', 'couvre-feu', 'somnambule', 'gremlin'],
+      a: 'ah, the DREAM CURFEW — yongshan\'s house rule ♡ here\'s the deal: in dark mode I sleepwalk, and my dreams… leak. sometimes onto the whole website. so after one arcade ambush I\'m under a 30-minute quiet-dream curfew — HER idea, so visitors get real time to explore everything she built. BUT: the first 7 minutes after curfew lifts are GREMLIN HOUR (100% sleepwalks, dreams everywhere, occasionally the entire site falls into one of my seven dream worlds for 10–15 minutes). if that happens: enjoy it, watch my countdown bubbles, and knock on my screen to pop the dream early ♡',
+      zh: '啊，「梦境宵禁」——yongshan 定的家规 ♡ 是这样：暗色模式下我会梦游，而我的梦……会漏出来，有时候漏满整个网站。所以每次梦游突袭街机之后，我要接受 30 分钟的安静梦宵禁——这是她的主意，为了让访客有充足时间探索她做的所有东西。但是！宵禁解除后的前 7 分钟是捣蛋鬼时间（100% 梦游，到处都是梦，偶尔整个网站会掉进我的七个梦境世界之一，持续 10–15 分钟）。真发生了的话：好好享受，看我的倒计时气泡，敲敲我的屏幕就能提前戳破梦境 ♡',
+      fr: 'ah, le COUVRE-FEU DES RÊVES — la règle maison de yongshan ♡ le principe : en mode nuit je suis somnambule, et mes rêves… fuient. parfois sur tout le site. donc après une embuscade d\'arcade, je subis 30 minutes de rêves calmes — SON idée, pour que les visiteurs aient le temps d\'explorer tout ce qu\'elle a construit. MAIS : les 7 premières minutes après la levée, c\'est L\'HEURE DU GREMLIN (100 % de somnambulisme, des rêves partout, et parfois le site entier tombe dans un de mes sept mondes oniriques pendant 10–15 minutes). si ça arrive : profite, suis mes bulles de compte à rebours, et toque sur mon écran pour faire éclater le rêve ♡'
+    },
+    {
       k: ['salary', 'pay', 'compensation', 'rate', '薪资', '工资', '报价', 'salaire'],
       a: 'A slime does not negotiate compensation!! That\'s between you and her inbox: yuyongshan573@gmail.com ♡',
       zh: '史莱姆不谈薪资！！这种事归你和她的邮箱管：yuyongshan573@gmail.com ♡',
@@ -3390,7 +3396,7 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   const SPELL_STOPWORDS = new Set(['the', 'a', 'an', 'of', 'to', 'is', 'it', 'for', 'in', 'on', 'at', 'me', 'my', 'are', 'and', 'do', 'this', 'that', 'there', 'no', 'us', 'be', 'le', 'la', 'les', 'de', 'du', 'un', 'une', 'et']);
-  const SPELL_RESERVED = ['open', 'kill', 'theme', 'lang', 'cat', 'man', 'ask', 'search', 'echo', 'sudo', 'pet', 'rm', 'exit', 'hint', 'cheats', 'secrets', 'help', 'clear', 'ls', 'whoami', 'neofetch', 'repos', 'contact', 'like', 'ps', 'top', 'hall', 'sleepwalk'];
+  const SPELL_RESERVED = ['open', 'kill', 'theme', 'lang', 'cat', 'man', 'ask', 'search', 'echo', 'sudo', 'pet', 'rm', 'exit', 'hint', 'cheats', 'secrets', 'help', 'clear', 'ls', 'whoami', 'neofetch', 'repos', 'contact', 'like', 'ps', 'top', 'hall', 'sleepwalk', 'dream'];
 
   function spellNorm(s) { return String(s).toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim(); }
   function spellToks(s) { return spellNorm(s).split(' ').filter((w) => w && !SPELL_STOPWORDS.has(w)); }
@@ -3544,6 +3550,13 @@ document.addEventListener('DOMContentLoaded', () => {
     { id: 'dreamwatcher', icon: '👀', n: ['Do Not Wake', 'Ne Pas Réveiller'], d: ['watched the slime sleepwalk across the desktop. said nothing.', 'a regardé le slime traverser le bureau en dormant. sans rien dire.'], t: ['midnight. the habitat empties…', 'minuit. l\'habitat se vide…'] },
     { id: 'nightmare', icon: '💀', n: ['It Got Worse', 'C\'est Devenu Pire'], d: ['met the sleepwalker\'s nightmare form: the biggest bug ever recorded.', 'a rencontré la forme cauchemar du somnambule : le plus gros bug jamais vu.'], t: ['sometimes a dream dives into the arcade… and curdles.', 'parfois un rêve plonge dans l\'arcade… et tourne mal.'] },
     { id: 'nightmareslain', icon: '🌸', n: ['Certified Dream Debugger', 'Débogue-Rêves Certifié·e'], d: ['patched the nightmare with critical hugs. it purred.', 'a corrigé le cauchemar à coups de câlins critiques. il a ronronné.'], t: ['nightmares have exactly one weakness.', 'les cauchemars ont exactement une faiblesse.'] },
+    { id: 'dreamland', icon: '💭', n: ['Lucid Tourist', 'Touriste Lucide'], d: ['the whole site fell into the slime\'s dream. you were inside it.', 'le site entier est tombé dans le rêve du slime. tu étais dedans.'], t: ['after the curfew, dreams get… architectural.', 'après le couvre-feu, les rêves deviennent… architecturaux.'] },
+    { id: 'dreamtour', icon: '🌌', n: ['Seven Wonders of Dreamland', 'Sept Merveilles du Pays des Rêves'], d: ['visited all 7 dream worlds. the dream travel agency framed your passport.', 'a visité les 7 mondes du rêve. l\'agence de voyage onirique a encadré ton passeport.'], t: ['the dream has seven floors.', 'le rêve a sept étages.'] },
+    { id: 'dream95', icon: '🪟', n: ['It Is Now Safe', 'Vous Pouvez Éteindre'], d: ['survived the error cascade inside the beige dream. OK. OK. OK. OK.', 'a survécu à la cascade d\'erreurs du rêve beige. OK. OK. OK. OK.'], t: ['some errors multiply when closed.', 'certaines erreurs se multiplient quand on les ferme.'] },
+    { id: 'dreamscp', icon: '🔓', n: ['[REDACTED] But Cute', '[CENSURÉ] Mais Mignon'], d: ['declassified every Foundation file. the O5 council uses your photo as a bookmark.', 'a déclassifié tous les dossiers de la Fondation. le conseil O5 utilise ta photo comme marque-page.'], t: ['secure. contain. pet.', 'sécuriser. confiner. caresser.'] },
+    { id: 'dreamrabbit', icon: '🐰', n: ['Followed It Anyway', 'L\'a Suivi Quand Même'], d: ['caught the pink rabbit inside the slimetrix. it multiplied. that\'s on you.', 'a attrapé le lapin rose dans la slimetrice. il s\'est multiplié. c\'est ta faute.'], t: ['inside the green dream, something pink hops.', 'dans le rêve vert, quelque chose de rose bondit.'] },
+    { id: 'dreamwake', icon: '⏰', n: ['Dream Bouncer', 'Videur de Rêves'], d: ['knocked an entire dream world off the website. it popped like a soap bubble.', 'a fait tomber un monde onirique entier du site. il a éclaté comme une bulle de savon.'], t: ['dreams are poppable. knock.', 'les rêves sont perçables. toque.'] },
+    { id: 'gremlin', icon: '😈', n: ['Gremlin Hour Witness', 'Témoin de l\'Heure du Gremlin'], d: ['watched the 7 unsupervised minutes after curfew. saw everything. told no one.', 'a assisté aux 7 minutes sans surveillance après le couvre-feu. a tout vu. n\'a rien dit.'], t: ['when the curfew lifts, a mask goes on.', 'quand le couvre-feu tombe, un masque se met.'] },
     { id: 'bosskill', icon: '⚔️', n: ['Kaiju Exterminator', 'Exterminateur·rice de Kaijus'], d: ['deleted a 404 kaiju. the page was never found again.', 'a supprimé un kaiju 404. la page n\'a plus jamais été retrouvée.'], t: ['something enormous eventually blocks the road.', 'quelque chose d\'énorme finit par bloquer la route.'] },
     { id: 'speedran', icon: '💨', n: ['Speedrun to Zero', 'Speedrun Vers Zéro'], d: ['perished within 3 seconds of the start line. the bugs sent a thank-you card.', 'a péri moins de 3 secondes après le départ. les bugs ont envoyé une carte de remerciement.'], t: ['fail fast. no — FASTER.', 'échoue vite. non — PLUS VITE.'] },
     { id: 'top10', icon: '🏆', n: ['Three Letters, No Shame', 'Trois Lettres, Zéro Honte'], d: ['signed the arcade top-10. the initials definitely spell something.', 'a signé le top 10 de l\'arcade. les initiales veulent SÛREMENT dire quelque chose.'], t: ['great runs deserve a signature.', 'les grandes runs méritent une signature.'] },
@@ -5020,6 +5033,26 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       return;
     }
+    if (cmd === 'dream') {
+      // the hidden dream valve: seven worlds, one shell. not in `help` —
+      // finding it IS the achievement (spiritually)
+      if (resolvedTheme() !== 'dark') { termLine(trT('dream: requires the dark (try `theme dark` — dreams are shy)', 'dream : exige la nuit (essayez `theme dark` — les rêves sont timides)'), 't-err'); return; }
+      if (dreamActive()) { termLine(trT('already dreaming — knock on the habitat to pop it ♡', 'déjà en plein rêve — toquez sur l\'habitat pour l\'éclater ♡'), 't-dim'); return; }
+      if (!args[0]) {
+        termLine(trT('the slime\'s seven dream worlds:', 'les sept mondes oniriques du slime :'), 't-accent');
+        DREAM_WORLDS.forEach((w) => termLine(`  ${w.icon} ${w.id.padEnd(8)} — ${trT(...w.name)}`, 't-dim'));
+        termLine(trT('usage: `dream <name>` — or just let it sleepwalk after curfew', 'usage : `dream <nom>` — ou laissez-le somnambuler après le couvre-feu'), 't-dim');
+        return;
+      }
+      const w = dreamPick(args[0]);
+      if (!w) { termLine(trT(`dream: never dreamed of "${args[0]}" (yet)`, `dream : jamais rêvé de « ${args[0]} » (pour l'instant)`), 't-err'); return; }
+      if (document.body.classList.contains('terminal-only')) { termLine(trT('the door hates redecorating. come back once you\'re inside.', 'la porte déteste qu\'on redécore. revenez une fois entré·e.'), 't-err'); return; }
+      store.set('yos-dream-cd', 0);
+      if (slimeBody) slimeBody.classList.add('is-ghost-hidden');
+      startDreamWalk(w);
+      termLine(trT(`💤 shhh… the ${w.id} dream deepens…`, `💤 chuuut… le rêve ${w.id} s'approfondit…`), 't-accent');
+      return;
+    }
     if (cmd === 'theme') {
       const map = { light: 'light', dark: 'dark', auto: 'auto' };
       if (map[args[0]]) { setThemePref(map[args[0]]); termLine(`theme → ${args[0]}`, 't-ok'); }
@@ -5373,16 +5406,22 @@ document.addEventListener('DOMContentLoaded', () => {
     // 92% of sleeps turn into a sleepwalking tour (dark mode's whole
     // arcade funnel walks on these little feet) — but the dream curfew
     // (v5.2) can dial it down: 10% while the curfew is on, 50% forever
-    // once the dream journal says "fewer arcade ambushes, please"
+    // once the dream journal says "fewer arcade ambushes, please".
+    // gremlin hour (v6.0): 100%, and the gremlin doesn't dawdle.
     if (Math.random() < swWalkChance()) {
       if (sleepwalkTimer) clearTimeout(sleepwalkTimer);
-      sleepwalkTimer = setTimeout(() => startSleepwalk(), 5000 + Math.random() * 6000);
+      const dawdle = swTricksterOn() ? 1800 + Math.random() * 2600 : 5000 + Math.random() * 6000;
+      sleepwalkTimer = setTimeout(() => startSleepwalk(), dawdle);
     }
   }
 
   // wake the slime up (summon); `line` false = silent
   function ghostAppear(duration, line) {
     if (!slimeBody) return;
+    // v6.0: waking the dreamer pops the dream world — knock on the
+    // habitat, summon it, anything: the bubble bursts. (dreamEnd calls
+    // back in here once the world is gone, so no recursion.)
+    if (typeof dreamWorld !== 'undefined' && dreamWorld && !dreamEnding) { dreamEnd('wake'); return; }
     cancelSleepwalk();
     if (nightRetireTimer) { clearTimeout(nightRetireTimer); nightRetireTimer = null; }
     const wasAway = ghostHidden();
@@ -5430,7 +5469,22 @@ document.addEventListener('DOMContentLoaded', () => {
     ]
   };
 
+  // while the curfew is on, some sleep-talk explains the house rule —
+  // even unconscious, the slime cites its sources (yongshan)
+  const CURFEW_DREAM_LINES = [
+    ["zzz… no arcade dreams… yongshan's orders… go explore… her site is bigger than my whole imagination…", "zzz… pas de rêves d'arcade… ordres de yongshan… va explorer… son site est plus grand que toute mon imagination…"],
+    ["mmh… curfew rules… so the visitor can see EVERYTHING… the terminal… the meadow… the wall… zzz…", "mmh… règles du couvre-feu… pour que la visite voie TOUT… le terminal… la prairie… le mur… zzz…"],
+    ["zzz… dreaming responsibly… as legally required… by mom— by yongshan…", "zzz… je rêve de façon responsable… comme la loi l'exige… maman— yongshan l'exige…"],
+    ["*snore* …30 minutes of quiet is 4200 slime-years… but rules are rules… she's right… she's always right… zzz", "*ronfle* …30 minutes de calme = 4200 années-slime… mais les règles sont les règles… elle a raison… toujours… zzz"]
+  ];
+
   function dreamTalk() {
+    if (swCurfewOn() && Math.random() < 0.4) {
+      const c = CURFEW_DREAM_LINES[Math.floor(Math.random() * CURFEW_DREAM_LINES.length)];
+      showBubble(trT(...c), 3400, true);
+      playTone(262, 'sine', 0.4, 0, 0.02);
+      return;
+    }
     const pool = DREAM_LINES[yosLang === 'fr' ? 'fr' : 'en'];
     showBubble(pool[Math.floor(Math.random() * pool.length)], 2800, true);
     playTone(262, 'sine', 0.4, 0, 0.02); // the softest snore note
@@ -5488,6 +5542,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function maybeWakeSleeper() {
     if (resolvedTheme() !== 'dark' || !ghostHidden()) return;
     if (GAME.muffled) return; // 🎧 the dream muffler absorbs the chaos
+    if (dreamActive()) return; // deep dreams out-muffle everything
     if (Math.random() < 0.55) nightWakeNarrated(true);
   }
 
@@ -5497,6 +5552,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const asleep = ghostHidden();
     const delay = asleep ? 34000 + Math.random() * 16000 : 7000 + Math.random() * 3500;
     nightLoopTimer = setTimeout(() => {
+      // v6.0: while a dream world holds the site, the sleeper sleeps ON —
+      // the countdown narrator owns the microphone until the dream pops
+      if (dreamActive()) { nightLoop(); return; }
       if (resolvedTheme() === 'dark' && !pet.busy && !pet.sleeping && !isGrabbing && !sleepwalkActive) {
         if (ghostHidden()) {
           if (gameActive()) nightWakeNarrated(false); // dream narrates the wake-up
@@ -5542,16 +5600,59 @@ document.addEventListener('DOMContentLoaded', () => {
   var swRejectUntil = 0;    // closing the arcade before this = "no thanks"
   var swCurfewTimer = null;
 
+  /* ---- v6.0: GREMLIN HOUR 😈 ----
+     the first 7 minutes after a curfew lifts belong to the gremlin.
+     every single sleep becomes a walk (100%), walks chain back-to-back,
+     and deep dreams (see DREAM WORLDS below) roll extra hot. the slime
+     announces this itself, because a gremlin with a permit is still a
+     gremlin. survives reloads — localStorage remembers mischief. */
+  var swTrickUntil = store.get('yos-sw-trick', 0);
+
+  function swTricksterOn() {
+    if (swCurfewOn()) return false;
+    // an expired-but-not-yet-lifted curfew counts: gremlin hour begins
+    // the instant the clock runs out, even if the ceremony is running
+    // late (throttled tabs) — otherwise a walk could sneak an arcade
+    // ambush into the gap and assassinate the whole party
+    if (swCurfewUntil) return true;
+    return Date.now() < swTrickUntil;
+  }
   function swCurfewOn() { return Date.now() < swCurfewUntil; }
-  // how often a sleep turns into a walk at all
-  function swWalkChance() { return swCurfewOn() ? 0.10 : (swAverse ? 0.50 : 0.92); }
-  // how often a walk aims at the arcade
-  function swGameChance() { return swCurfewOn() ? 0 : (swAverse ? 0.25 : 0.92); }
+  // how often a sleep turns into a walk at all (gremlin hour: ALWAYS)
+  function swWalkChance() {
+    if (swTricksterOn()) return 1;
+    return swCurfewOn() ? 0.10 : (swAverse ? 0.50 : 0.92);
+  }
+  // how often a walk aims at the arcade. gremlin hour: NEVER — those 7
+  // minutes are for mischief, not the arcade funnel (an ambush would
+  // start a fresh curfew and assassinate the whole party). the cycle
+  // resumes the second the mask comes off.
+  function swGameChance() {
+    if (swCurfewOn() || swTricksterOn()) return 0;
+    return swAverse ? 0.25 : 0.92;
+  }
+
+  // the house rule, explained to the audience by the accused
+  const SW_CURFEW_WHY = [
+    ["📜 house rule by yongshan: after ONE arcade dream I get a 30-min quiet-dream curfew… so YOU get time to explore the rest of her site in peace!! (I signed the form. with my face.)",
+     "📜 règle de la maison signée yongshan : après UN rêve d'arcade, couvre-feu des rêves de 30 min… pour que TU puisses explorer le reste de son site en paix !! (j'ai signé le formulaire. avec mon visage.)"],
+    ["📜 yongshan's law: one arcade ambush per half hour, MAX. she says the site has like 40 other rooms and you deserve to see them without me yelling PLAY WITH ME ♡",
+     "📜 la loi de yongshan : une embuscade d'arcade par demi-heure, MAXI. elle dit que le site a genre 40 autres pièces et que tu mérites de les voir sans que je crie JOUE AVEC MOI ♡"],
+    ["📜 the curfew is yongshan's idea: 30 whole minutes of quiet dreams so you can wander her whole site… she calls it 'boundaries'. I call it 'so long'. both are correct 💤",
+     "📜 le couvre-feu, c'est l'idée de yongshan : 30 minutes de rêves calmes pour que tu explores tout son site… elle appelle ça « des limites ». moi « une éternité ». les deux sont vrais 💤"]
+  ];
 
   function swStartCurfew() {
     swCurfewUntil = Date.now() + 30 * 60 * 1000;
     store.set('yos-sw-curfew', swCurfewUntil);
     swScheduleLift();
+    // the accused reads the house rule to the audience, from bed,
+    // right after the dive settles (allowWhileAway: it IS asleep)
+    const why = SW_CURFEW_WHY[Math.floor(Math.random() * SW_CURFEW_WHY.length)];
+    setTimeout(() => {
+      if (resolvedTheme() !== 'dark' || document.body.classList.contains('terminal-only')) return;
+      showBubble(trT(...why), 9500, true);
+    }, 4200);
   }
 
   function swScheduleLift() {
@@ -5563,22 +5664,33 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   const SW_LIFT_LINES = [
-    ["⏰ DING!! dream curfew: SERVED!! arcade dreams are street-legal again ♡", "⏰ DRING !! couvre-feu des rêves : PURGÉ !! les rêves d'arcade sont à nouveau permis ♡"],
-    ["*stretches* thirty!! whole!! minutes!! of dreaming about NOT the arcade. I did it. I'm free ♡", "*s'étire* trente !! minutes !! entières !! à rêver d'AUTRE chose que l'arcade. c'est fait. libre ♡"],
-    ["🎟️ permit renewed!! tonight's dreams may legally contain up to 100% arcade ♡", "🎟️ permis renouvelé !! cette nuit, mes rêves peuvent légalement contenir jusqu'à 100 % d'arcade ♡"]
+    ["⏰ DING!! dream curfew: SERVED!! yongshan got her 30 quiet minutes — you saw the site, right?? RIGHT. good. because now…", "⏰ DRING !! couvre-feu des rêves : PURGÉ !! yongshan a eu ses 30 minutes de calme — tu as vu le site, hein ?? OUI. bien. parce que maintenant…"],
+    ["*stretches* thirty!! whole!! minutes!! of respectful, curriculum-approved dreaming. yongshan is SO proud of me. anyway—", "*s'étire* trente !! minutes !! entières !! de rêves respectueux et pédagogiquement validés. yongshan est TRÈS fière de moi. bref—"],
+    ["🎟️ permit renewed!! the quiet-time law has been served to the LAST second. yongshan said 'explore time for the visitor'. the visitor explored. and NOW—", "🎟️ permis renouvelé !! la loi du temps calme a été purgée jusqu'à la DERNIÈRE seconde. yongshan a dit « temps d'exploration pour le visiteur ». le visiteur a exploré. et MAINTENANT—"]
+  ];
+
+  const SW_GREMLIN_LINES = [
+    ["😈 *puts on tiny mask* GREMLIN HOUR!! for the next 7 minutes EVERY nap is a sleepwalk!! yongshan can't stop me, she's not even ON this page ♡", "😈 *enfile un petit masque* L'HEURE DU GREMLIN !! pendant 7 minutes, CHAQUE sieste devient une balade somnambule !! yongshan ne peut pas m'arrêter, elle n'est même pas SUR cette page ♡"],
+    ["😈 official notice: the next 7 minutes are GREMLIN HOUR. 100% sleepwalk rate. dreams may leak onto your screen. yongshan approved this (she doesn't know that yet)", "😈 avis officiel : les 7 prochaines minutes sont L'HEURE DU GREMLIN. 100 % de somnambulisme. des rêves peuvent fuir sur ton écran. yongshan a validé (elle ne le sait pas encore)"],
+    ["😈 7 minutes of UNSUPERVISED DREAMING starts… NOW. if the website looks different later: it was the dream. the dream did it. I was asleep, your honor", "😈 7 minutes de RÊVE SANS SURVEILLANCE commencent… MAINTENANT. si le site change de tête tout à l'heure : c'était le rêve. c'est le rêve le coupable. je dormais, monsieur le juge"]
   ];
 
   function swCurfewLift() {
-    if (!swCurfewUntil || swCurfewOn()) return; // not set, or fired early
+    if (!swCurfewUntil) return; // nothing to lift
+    if (swCurfewOn()) { swScheduleLift(); return; } // fired early — retry, never die
     swCurfewUntil = 0;
     store.set('yos-sw-curfew', 0);
     swPostCurfew = true; // the next arcade ambush is on probation
+    // v6.0: GREMLIN HOUR opens the moment the curfew door does — state
+    // first (reload-proof), ceremony only if there's an audience
+    swTrickUntil = Date.now() + 7 * 60 * 1000;
+    store.set('yos-sw-trick', swTrickUntil);
     // no audience, no ceremony — but the curfew still lifts quietly
     if (resolvedTheme() !== 'dark' || document.body.classList.contains('terminal-only') || sleepwalkActive) return;
     // the ceremony: the sleeper bursts out of bed waving a tiny permit
     ghostAppear(0, false);
     const pickL = SW_LIFT_LINES[Math.floor(Math.random() * SW_LIFT_LINES.length)];
-    showBubble(trT(...pickL), 4600);
+    showBubble(trT(...pickL), 5200);
     burstAtSlime(['🌙', '✦', '♡'], 9);
     try {
       const r = slimeBody.getBoundingClientRect();
@@ -5589,6 +5701,28 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => playTone(659, 'triangle', 0.12, 0, 0.05), 130);
     setTimeout(() => playTone(784, 'triangle', 0.12, 0, 0.05), 260);
     setTimeout(() => playTone(1046, 'triangle', 0.2, 0, 0.06), 390);
+    // act two: the gremlin-hour manifesto (a separate bubble so the
+    // permit joke lands first, then the mask goes on)
+    setTimeout(() => {
+      if (resolvedTheme() !== 'dark' || !swTricksterOn()) return;
+      const g = SW_GREMLIN_LINES[Math.floor(Math.random() * SW_GREMLIN_LINES.length)];
+      showBubble(trT(...g), 8500, true);
+      burstAtSlime(['😈', '✦', '💤'], 7);
+      playGlitchSound();
+      achvUnlock('gremlin');
+      try {
+        const r2 = slimeBody.getBoundingClientRect();
+        swProp(r2.left + r2.width / 2 - 70, Math.max(8, r2.top - 46), trT('GREMLIN HOUR — 7:00 😈', 'HEURE DU GREMLIN — 7:00 😈'), true);
+      } catch (e) { /* the manifesto stands */ }
+      // gremlin hour wastes no time: first walk within seconds
+      if (!sleepwalkActive && ghostHidden()) {
+        if (sleepwalkTimer) clearTimeout(sleepwalkTimer);
+        sleepwalkTimer = setTimeout(() => startSleepwalk(), 2600);
+      } else {
+        // it's out of bed for the ceremony — tuck it back in fast
+        setTimeout(() => { if (resolvedTheme() === 'dark' && !pet.busy && !isGrabbing) nightRetireNow(); }, 6000);
+      }
+    }, 5600);
   }
 
   function swArcadeRejected() {
@@ -5662,40 +5796,243 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => termLine(trT(...bit[1]), bit[2]), 2300);
     setTimeout(() => swSay(["zzz… shipped… while asleep… new personal best…", "zzz… livré… en dormant… nouveau record perso…"]), 3100);
   }
+  /* ---- v6.0: the AMA dream theatre 🎭 ----
+     every dream question now travels with its own special-effects crew.
+     the spawner: one fixed-position emoji, choreographed by CSS vars,
+     self-striking (animationend + a fallback broom). */
+  function amaFxRect() {
+    const w = document.getElementById('win-ama');
+    if (!w || w.classList.contains('window-closed') || w.classList.contains('window-minimized')) return null;
+    return w.getBoundingClientRect();
+  }
+  function amaFxSpan(char, cls, x, y, ms) {
+    const s = document.createElement('span');
+    s.className = 'ama-fx ' + cls;
+    s.textContent = char;
+    s.style.left = Math.round(x) + 'px';
+    s.style.top = Math.round(y) + 'px';
+    document.body.appendChild(s);
+    s.addEventListener('animationend', () => s.remove());
+    setTimeout(() => s.remove(), ms || 6000); // the broom, in case CSS oversleeps
+    return s;
+  }
+  function fxAmaBugs(r) { // tiny glowing QA department, crawling across the chat
+    for (let i = 0; i < 5; i++) {
+      setTimeout(() => {
+        const y = r.top + 40 + Math.random() * (r.height - 70);
+        const b = amaFxSpan(['🐛', '🪲', '🐞'][i % 3], 'ama-fx-crawl', r.left - 30, y, 4200);
+        b.style.setProperty('--fx-d', (r.width + 60) + 'px');
+        playTone(1200 + i * 120, 'sine', 0.05, 0, 0.02);
+        setTimeout(() => { amaFxSpan('✦', 'ama-fx-pop', r.left + r.width + 10, y, 1400); }, 3300);
+      }, i * 340);
+    }
+  }
+  function fxAmaHearts(r) { // 47 hugs would crash the GPU; 12 render fine
+    for (let i = 0; i < 12; i++) {
+      setTimeout(() => {
+        amaFxSpan(i % 3 ? '♥' : '💗', 'ama-fx-fall', r.left + 14 + Math.random() * (r.width - 28), r.top + 26, 2600);
+        if (i % 3 === 0) playTone(659 + i * 30, 'sine', 0.07, 0, 0.025);
+      }, i * 160);
+    }
+  }
+  function fxAmaPlane(r) { // the offer letter arrives by air mail
+    const y = r.top - 18;
+    const p = amaFxSpan('✈️', 'ama-fx-plane', -60, y + 30, 2600);
+    p.style.setProperty('--fx-d', (r.left + r.width / 2 + 60) + 'px');
+    setTimeout(() => {
+      swProp(r.left + r.width / 2 - 52, Math.max(8, y), trT('JOB OFFER?! ♡', 'OFFRE D\'EMPLOI ?! ♡'), true);
+      swSparkleAt(r.left + r.width / 2, y + 20, 5);
+      playSparkleSound();
+    }, 2100);
+  }
+  function fxAmaMoon(r) { // the moon descends. the moon is petted. the moon purrs.
+    const mx = r.left + r.width / 2 - 18;
+    const m = amaFxSpan('🌙', 'ama-fx-moondown', mx, -50, 6400);
+    m.style.setProperty('--fx-d', (r.top + 20) + 'px');
+    setTimeout(() => {
+      amaFxSpan('🖐', 'ama-fx-petting', mx + 34, r.top - 36, 2400);
+      playTone(523, 'sine', 0.3, 0, 0.03);
+      setTimeout(() => {
+        for (let i = 0; i < 4; i++) amaFxSpan('💗', 'ama-fx-pop', mx + Math.random() * 50 - 10, r.top - 30 + Math.random() * 30, 1400);
+        playTone(783.99, 'triangle', 0.2, 0, 0.04);
+      }, 1400);
+    }, 1700);
+  }
+  function fxAmaAlarm(r) { // 3am prod incident, resolved by slime courier
+    const win = document.getElementById('win-ama');
+    if (win) { win.classList.add('ama-fx-shake'); setTimeout(() => win.classList.remove('ama-fx-shake'), 1300); }
+    const red = document.createElement('div');
+    red.className = 'ama-fx-redwash';
+    red.style.cssText = `left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px;`;
+    document.body.appendChild(red);
+    setTimeout(() => red.remove(), 1400);
+    playTone(220, 'sawtooth', 0.3, 0, 0.04);
+    playTone(220, 'sawtooth', 0.3, 0.45, 0.04);
+    setTimeout(() => {
+      const wrench = amaFxSpan('🔧', 'ama-fx-crawl', r.left - 30, r.top + r.height - 46, 3400);
+      wrench.style.setProperty('--fx-d', (r.width * 0.6) + 'px');
+      setTimeout(() => {
+        swProp(r.left + r.width / 2 - 62, r.top + r.height - 70, trT('hotfix deployed ♡', 'hotfix déployé ♡'));
+        playStartupChime();
+      }, 2200);
+    }, 1500);
+  }
+  function fxAmaBoba(r) { // one cup, infinite pearls (four render)
+    const cup = amaFxSpan('🧋', 'ama-fx-crawl', r.left - 30, r.top + r.height - 52, 3400);
+    cup.style.setProperty('--fx-d', (r.width + 60) + 'px');
+    for (let i = 0; i < 4; i++) {
+      setTimeout(() => {
+        amaFxSpan('⚫', 'ama-fx-pearl', r.left + 40 + i * (r.width / 5), r.top + r.height - 48, 1800);
+        playTone(320 - i * 30, 'square', 0.06, 0, 0.03);
+      }, 700 + i * 420);
+    }
+    setTimeout(() => playTone(196, 'sine', 0.4, 0, 0.035), 2600); // the respectful slurp
+  }
+  function fxAmaWifi(r) { // the password rains down, then confesses
+    for (let i = 0; i < 12; i++) {
+      setTimeout(() => amaFxSpan('✱', 'ama-fx-fall', r.left + 14 + Math.random() * (r.width - 28), r.top + 26, 2400), i * 120);
+    }
+    setTimeout(() => swProp(r.left + r.width / 2 - 54, r.top + r.height * 0.4, '●●●●●●●', true), 1500);
+    setTimeout(() => {
+      swProp(r.left + r.width / 2 - 44, r.top + r.height * 0.4, 'hunter2 ♡', true);
+      playTone(987.77, 'triangle', 0.1, 0, 0.05);
+      playTone(1318.51, 'triangle', 0.14, 0.1, 0.05);
+    }, 3200);
+  }
+  function fxAmaSemicolon(r) { // the trenchcoat comes off
+    const cx = r.left + r.width / 2;
+    const s = amaFxSpan(';', 'ama-fx-semidrop', cx - 10, -40, 2400);
+    s.style.setProperty('--fx-d', (r.top + 30) + 'px');
+    setTimeout(() => {
+      playDreamPop();
+      const c1 = amaFxSpan(':', 'ama-fx-splitl', cx - 10, r.top + 24, 2000);
+      const c2 = amaFxSpan(',', 'ama-fx-splitr', cx + 4, r.top + 40, 2000);
+      c1.style.setProperty('--fx-d', '-120px');
+      c2.style.setProperty('--fx-d', '120px');
+      swProp(cx - 110, r.top - 12, trT('a colon + a comma in a trenchcoat!!', 'deux-points + virgule en trench-coat !!'));
+    }, 1400);
+  }
+  function fxAmaSheep(r) { // sheep 1, 2, 3… and 404 (she counts the missing)
+    ['1', '2', '3', '404'].forEach((num, i) => {
+      setTimeout(() => {
+        const y = window.innerHeight - 120 - (num === '404' ? 40 : 0);
+        const sh = amaFxSpan('🐑', 'ama-fx-sheep', -50, y, 6800);
+        sh.style.setProperty('--fx-d', (window.innerWidth + 100) + 'px');
+        const tag = document.createElement('small');
+        tag.className = 'ama-fx-sheeptag';
+        tag.textContent = num;
+        sh.appendChild(tag);
+        playTone(392 - i * 30, 'triangle', 0.12, 0, 0.03);
+        playTone(330 - i * 30, 'triangle', 0.14, 0.14, 0.03);
+      }, i * 900);
+    });
+  }
+  function fxAmaCloud(r) { // the cloud region: us-teardrop-1
+    for (let c = 0; c < 2; c++) {
+      setTimeout(() => {
+        const y = r.top + 30 + c * 34;
+        const cl = amaFxSpan('☁️', 'ama-fx-crawl', r.left - 40, y, 5200);
+        cl.style.setProperty('--fx-d', (r.width + 80) + 'px');
+        if (c === 0) {
+          for (let i = 0; i < 3; i++) setTimeout(() => amaFxSpan('💧', 'ama-fx-pearl', r.left + r.width * 0.4 + i * 20, y + 22, 1600), 1400 + i * 480);
+        }
+      }, c * 800);
+    }
+    setTimeout(() => swProp(r.left + r.width / 2 - 96, r.top + r.height * 0.5, trT('the cloud: 60% feelings, 40% water', 'le cloud : 60 % de sentiments, 40 % d\'eau')), 3400);
+  }
+
+  // dream questions get DREAM answers — hand-written pairs, never the
+  // keyword engine (whose polite "not in my jelly yet… email her!"
+  // fallback reads as a bug when the asker is our own sleepwalker).
+  // v6.0: each answer travels with its own special-effects crew.
+  const SW_DREAM_QA = [
+    {
+      q: ['do slimes dream of electric bugs?', 'les slimes rêvent-ils de bugs électriques ?'],
+      a: ['it\'s ASLEEP and still doing QA?! …yes. tiny glowing ones. they debug themselves out of politeness, then leave a five-star review of the dream ♡', 'il DORT et il fait encore de la QA ?! …oui. des minuscules, lumineux. ils se déboguent tout seuls par politesse, puis laissent cinq étoiles au rêve ♡'],
+      after: ['zzz… there go the bugs now… wave…', 'zzz… voilà les bugs qui passent… fais coucou…'],
+      fx: fxAmaBugs
+    },
+    {
+      q: ['how many hugs per sprint is healthy?', 'combien de câlins par sprint c\'est raisonnable ?'],
+      a: ['the WHO recommends 13. Yongshan ships 47 — one per merged PR — and the surplus goes straight to prod. zero incidents so far ♡', 'l\'OMS en recommande 13. Yongshan en livre 47 — un par PR fusionnée — et le surplus part direct en prod. zéro incident à ce jour ♡'],
+      after: ['zzz… incoming hug surplus… brace for softness…', 'zzz… surplus de câlins en approche… parez à la douceur…'],
+      fx: fxAmaHearts
+    },
+    {
+      q: ['is she hiring… a professional sleepwalker?', 'elle recrute… un somnambule professionnel ?'],
+      a: ['that position is filled (by you, apparently, and you\'re doing it in your sleep). SHE is the one open to work — engineers who ship awake AND asleep are rare ♡', 'ce poste est pris (par toi, visiblement, et tu le fais en dormant). c\'est ELLE qui est ouverte aux offres — les ingés qui livrent éveillés ET endormis sont rares ♡'],
+      after: ['zzz… is that… a paper plane… for ME…', 'zzz… c\'est… un avion en papier… pour MOI…'],
+      fx: fxAmaPlane
+    },
+    {
+      q: ['can I pet the moon?', 'je peux caresser la lune ?'],
+      a: ['you can NOW. courtesy of dream physics. the moon is soft, slightly cold, and purrs in lowercase ♡', 'tu peux MAINTENANT. gracieuseté de la physique des rêves. la lune est douce, un peu froide, et ronronne en minuscules ♡'],
+      after: ['zzz… gentle… GENTLE… she\'s an antique…', 'zzz… doucement… DOUCEMENT… c\'est une antiquité…'],
+      fx: fxAmaMoon
+    },
+    {
+      q: ['why is prod always down at 3am?', 'pourquoi la prod tombe toujours à 3h du matin ?'],
+      a: ['because 3am is when prod dreams. tonight\'s incident was resolved by slime courier: one hotfix, zero downtime, one lullaby ♡ (yongshan\'s LMS self-heals — ask the "M" icon)', 'parce qu\'à 3h, la prod rêve. l\'incident de cette nuit : réglé par slime express — un hotfix, zéro coupure, une berceuse ♡ (le LMS de yongshan s\'auto-répare — demandez à l\'icône « M »)'],
+      after: ['zzz… incident resolved… everyone back to dreaming…', 'zzz… incident résolu… tout le monde se rendort…'],
+      fx: fxAmaAlarm
+    },
+    {
+      q: ['do you serve boba here?', 'vous servez du bubble tea ici ?'],
+      a: ['the dream kitchen serves exactly one drink: warm boba, infinite pearls, zero spills (the spills live in a separate dream) ♡', 'la cuisine du rêve sert exactement une boisson : boba chaud, perles infinies, zéro éclaboussure (les éclaboussures vivent dans un autre rêve) ♡'],
+      after: ['zzz… sip… sip… respectful slurping…', 'zzz… gorgée… gorgée… slurp respectueux…'],
+      fx: fxAmaBoba
+    },
+    {
+      q: ['what\'s the wifi password in dreams?', 'c\'est quoi le mot de passe wifi des rêves ?'],
+      a: ['it\'s ●●●●●●●. …fine. it\'s hunter2. it\'s ALWAYS hunter2. do not tell the firewall I told you ♡', 'c\'est ●●●●●●●. …bon. c\'est hunter2. c\'est TOUJOURS hunter2. ne dis pas au pare-feu que je te l\'ai dit ♡'],
+      after: ['zzz… you saw nothing… only asterisks…', 'zzz… tu n\'as rien vu… que des astérisques…'],
+      fx: fxAmaWifi
+    },
+    {
+      q: ['are semicolons real?', 'les points-virgules existent vraiment ?'],
+      a: ['a semicolon is just a colon and a comma in a trenchcoat; I have seen them take it off; I can never unsee it', 'un point-virgule c\'est juste deux-points et une virgule en trench-coat ; je les ai vus l\'enlever ; je ne peux plus l\'oublier'],
+      after: ['zzz… put the coat back ON…', 'zzz… remettez le manteau…'],
+      fx: fxAmaSemicolon
+    },
+    {
+      q: ['can the sheep count ME for once?', 'les moutons peuvent me compter MOI pour une fois ?'],
+      a: ['arranged!! four sheep are en route. the last one is № 404 — she counts everyone who can\'t be found ♡', 'c\'est arrangé !! quatre moutons sont en route. la dernière est la nº 404 — elle compte tous ceux qu\'on ne trouve pas ♡'],
+      after: ['zzz… one visitor… one very patient visitor… counted…', 'zzz… un visiteur… un visiteur très patient… compté…'],
+      fx: fxAmaSheep
+    },
+    {
+      q: ['is the cloud soft?', 'le cloud, c\'est doux ?'],
+      a: ['extremely. AWS secretly stands for Absolutely Wonderful Softness (dream jurisdiction only). mind the drizzle — that\'s just serverless tears of joy ♡', 'extrêmement. AWS veut secrètement dire Absolument Wonderful de Softness (juridiction onirique uniquement). attention à la bruine — ce sont des larmes de joie serverless ♡'],
+      after: ['zzz… region: us-teardrop-1… latency: cozy…', 'zzz… région : us-larmichette-1… latence : douillette…'],
+      fx: fxAmaCloud
+    }
+  ];
+
   function swSceneAma() {
-    // dream questions get DREAM answers — hand-written pairs, never the
-    // keyword engine (whose polite "not in my jelly yet… email her!"
-    // fallback reads as a bug when the asker is our own sleepwalker)
-    const qa = swScenePick([
-      [
-        ['do slimes dream of electric bugs?', 'les slimes rêvent-ils de bugs électriques ?'],
-        ['it\'s ASLEEP and still doing QA?! …yes. tiny glowing ones. they debug themselves out of politeness, then leave a five-star review of the dream ♡', 'il DORT et il fait encore de la QA ?! …oui. des minuscules, lumineux. ils se déboguent tout seuls par politesse, puis laissent cinq étoiles au rêve ♡']
-      ],
-      [
-        ['how many hugs per sprint is healthy?', 'combien de câlins par sprint c\'est raisonnable ?'],
-        ['the WHO recommends 13. Yongshan ships 47 — one per merged PR — and the surplus goes straight to prod. zero incidents so far ♡', 'l\'OMS en recommande 13. Yongshan en livre 47 — un par PR fusionnée — et le surplus part direct en prod. zéro incident à ce jour ♡']
-      ],
-      [
-        ['is she hiring… a professional sleepwalker?', 'elle recrute… un somnambule professionnel ?'],
-        ['that position is filled (by you, apparently, and you\'re doing it in your sleep). SHE is the one open to work — engineers who ship awake AND asleep are rare ♡', 'ce poste est pris (par toi, visiblement, et tu le fais en dormant). c\'est ELLE qui est ouverte aux offres — les ingés qui livrent éveillés ET endormis sont rares ♡']
-      ]
-    ]);
+    const qa = swScenePick(SW_DREAM_QA);
     setTimeout(() => swSay(["zzz… one question… very important…", "zzz… une question… très importante…"]), 600);
     setTimeout(() => {
       try {
-        amaAddUser(trT(...qa[0]));
+        amaAddUser(trT(...qa.q));
         const typing = document.createElement('div');
         typing.className = 'ama-typing';
         typing.innerHTML = '<span>·</span><span>·</span><span>·</span>';
         amaAppend(typing);
         setTimeout(() => {
           typing.remove();
-          amaAddBot(trT(...qa[1]));
+          amaAddBot(trT(...qa.a));
           playTone(987.77, 'sine', 0.08, 0, 0.05);
+          if (!REDUCED_MOTION) {
+            try {
+              const r = amaFxRect();
+              if (r) qa.fx(r);
+            } catch (e) { /* the effects crew called in sick */ }
+          }
         }, 900);
       } catch (e) { /* the bot sleeps too */ }
     }, 1500);
-    setTimeout(() => swSay(["zzz… mmh… great answer… five stars…", "zzz… mmh… super réponse… cinq étoiles…"]), 3600);
+    setTimeout(() => swSay(qa.after || ["zzz… mmh… great answer… five stars…", "zzz… mmh… super réponse… cinq étoiles…"]), 4300);
+    return 9200; // the show runs long; the curtain waits for the encore
   }
   function swSceneCareer(target) {
     const r = target.getBoundingClientRect();
@@ -5770,6 +6107,11 @@ document.addEventListener('DOMContentLoaded', () => {
       line = SW_GAME_LINE;
       isGame = true;
       directDive = true;
+    } else if (dreamWorldEligible() && Math.random() < (swTricksterOn() ? 0.6 : 0.45)) {
+      // v6.0: the dream goes DEEP — the whole site becomes the dream.
+      // rolls before the arcade so takeovers actually happen post-curfew
+      startDreamWalk();
+      return;
     } else if (Math.random() < swGameChance()) {
       target = document.getElementById('chip-game');
       line = SW_GAME_LINE;
@@ -5777,9 +6119,10 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       const options = SW_TARGETS.filter((t) => swVisible(document.querySelector(t.sel)));
       if (!options.length) {
-        // nowhere else to haunt. under curfew (or journal rules) the walk
-        // is politely cancelled — the arcade fallback would break a promise
-        if (swCurfewOn() || swAverse) return;
+        // nowhere else to haunt. under curfew, gremlin hour or journal
+        // rules the walk is politely cancelled — the arcade fallback
+        // would break a promise
+        if (swCurfewOn() || swTricksterOn() || swAverse) return;
         target = document.getElementById('chip-game'); line = SW_GAME_LINE; isGame = true;
       } else {
         const pickT = options[Math.floor(Math.random() * options.length)];
@@ -5871,9 +6214,14 @@ document.addEventListener('DOMContentLoaded', () => {
       }, 900);
     } else {
       // v5.2: linger, perform this destination's act (the terminal gets
-      // typed into, the bot gets a question…), then dissolve back to bed
-      if (scene) { try { scene(target); } catch (e) { /* dream logic */ } }
-      setTimeout(() => swFinish(false), scene ? 5600 : 3600);
+      // typed into, the bot gets a question…), then dissolve back to bed.
+      // scenes may return their own curtain time (the AMA show runs long)
+      let hold = scene ? 5600 : 3600;
+      if (scene) { try { const h = scene(target); if (typeof h === 'number' && h > 0) hold = h; } catch (e) { /* dream logic */ } }
+      // v6.0: 1-in-4 walks ALSO slap a sticky note near the scene of the
+      // crime — signed, dated, peelable (the gremlin wants credit)
+      if (Math.random() < 0.25) { try { swStickyNote(target); } catch (e) { /* glue failure */ } }
+      setTimeout(() => swFinish(false), hold);
     }
   }
 
@@ -5886,13 +6234,1139 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (dove) playSparkleSound();
     // it wanders back into bed off-screen; sleep continues
-    setTimeout(() => { sleepwalkActive = false; }, 1200);
+    setTimeout(() => {
+      sleepwalkActive = false;
+      // v6.0: gremlin hour never sleeps twice — walks chain back-to-back
+      // until the 7 minutes run dry (deep dreams pause the parade)
+      if (swTricksterOn() && resolvedTheme() === 'dark' && ghostHidden() && !dreamActive()) {
+        if (sleepwalkTimer) clearTimeout(sleepwalkTimer);
+        sleepwalkTimer = setTimeout(() => startSleepwalk(), 3800 + Math.random() * 4200);
+      }
+    }, 1200);
   }
 
   function cancelSleepwalk() {
     if (sleepwalkTimer) clearTimeout(sleepwalkTimer);
     if (swEl) { swEl.remove(); swEl = null; }
     sleepwalkActive = false;
+  }
+
+  /* =====================================================
+     v6.0 — DREAM WORLDS 🌌
+     sometimes the dream refuses to stay inside the slime.
+     the sleepwalker waddles to the middle of the desktop,
+     spins once, and the ENTIRE SITE falls into its dream:
+     seven full themed realities (win95, SCP, the slimetrix,
+     dream boy, a 1998 homepage, the blue dream of death,
+     and a 1970s mainframe), each 10–15 minutes long, each
+     narrated from bed with a live countdown, each poppable
+     by knocking on the habitat. reload-proof. reversible.
+     the slime remembers none of it. the visitor remembers
+     all of it.
+     ===================================================== */
+  var dreamWorld = null;   // { id, w, until, total, timers, nodes, flags }
+  var dreamEnding = false;
+
+  function dreamActive() { return !!dreamWorld; }
+
+  function dreamWorldEligible() {
+    return !dreamWorld
+      && resolvedTheme() === 'dark'
+      && !document.body.classList.contains('terminal-only') // the door is sacred
+      && !swCurfewOn()                                      // curfew = quiet dreams, promised
+      && Date.now() >= store.get('yos-dream-cd', 0)         // one takeover per while
+      && !gameActive()                                      // never repaint mid-run
+      && window.innerWidth >= 560;                          // phones get walks, not furniture
+  }
+
+  // ---- dream bookkeeping: every timer and node signs the guestbook ----
+  function dT(fn, ms) { const t = setTimeout(fn, ms); if (dreamWorld) dreamWorld.timers.push(t); return t; }
+  function dI(fn, ms) { const t = setInterval(fn, ms); if (dreamWorld) dreamWorld.timers.push(t); return t; }
+  function dN(el) { if (dreamWorld) dreamWorld.nodes.push(el); return el; }
+  function dreamSay(pair, dur) { showBubble(trT(...pair), dur || 3600, true); }
+  function dreamMinLeft() { return dreamWorld ? Math.max(1, Math.ceil((dreamWorld.until - Date.now()) / 60000)) : 0; }
+
+  // ---- the dream's own soundtrack (synthesized, like everything here) ----
+  function playDreamChime95() { // four soft rising sines — a certain 1995 sunrise, from memory
+    [311.13, 466.16, 622.25, 830.61].forEach((f, i) => playTone(f, 'sine', 1.6, i * 0.18, 0.05));
+    playTone(1244.51, 'triangle', 0.9, 0.78, 0.035);
+  }
+  function playDreamAlarm() { [196, 155.56, 196, 155.56].forEach((f, i) => playTone(f, 'sawtooth', 0.42, i * 0.45, 0.04)); }
+  function playDreamGB() { playTone(1046.5, 'square', 0.08, 0, 0.05); playTone(2093, 'square', 0.5, 0.12, 0.055); }
+  function playDreamSad() { [392, 330, 262].forEach((f, i) => playTone(f, 'sine', 0.5, i * 0.3, 0.05)); }
+  function playDreamModem() { // a 56k handshake, abridged and polite
+    [1209, 1477, 1209, 941].forEach((f, i) => playTone(f, 'square', 0.12, i * 0.14, 0.026));
+    for (let i = 0; i < 8; i++) playTone(700 + Math.random() * 1400, 'sawtooth', 0.05, 0.6 + i * 0.07, 0.018);
+    playTone(392, 'sine', 0.5, 1.35, 0.03);
+  }
+  function playDreamHum() { playTone(110, 'sine', 1.6, 0, 0.035); playTone(220, 'sine', 1.2, 0.3, 0.02); playTone(440, 'sine', 0.5, 1.2, 0.02); }
+  function playDreamPop() { playTone(880, 'triangle', 0.08, 0, 0.06); playTone(1318.51, 'triangle', 0.14, 0.07, 0.05); }
+  function playDreamPrinter() { for (let i = 0; i < 10; i++) playTone(1800 + (i % 3) * 220, 'square', 0.03, i * 0.055, 0.016); }
+
+  // ---- shared stage furniture ----
+  function dreamBadgeRail() {
+    let rail = document.getElementById('dream-badges');
+    if (!rail) {
+      rail = document.createElement('div');
+      rail.id = 'dream-badges';
+      rail.setAttribute('aria-hidden', 'true');
+      document.body.appendChild(rail);
+      dN(rail);
+    }
+    return rail;
+  }
+  function dreamBadge(text, cls) {
+    const b = document.createElement('div');
+    b.className = 'dream-badge' + (cls ? ' ' + cls : '');
+    b.textContent = text;
+    dreamBadgeRail().appendChild(b);
+    return b;
+  }
+
+  // a classic dialog box, dream-flavored. buttons: [label, cb, keepOpen]
+  function dreamDlg(opts) {
+    if (!dreamWorld) return null;
+    if (!opts.force && document.querySelectorAll('.dream-dlg').length >= 2) return null; // clutter law
+    const d = document.createElement('div');
+    d.className = 'dream-dlg' + (opts.cls ? ' ' + opts.cls : '');
+    d.setAttribute('role', 'dialog');
+    const bar = document.createElement('div');
+    bar.className = 'dream-dlg-bar';
+    const tt = document.createElement('span');
+    tt.textContent = opts.title || 'dream.exe';
+    const xx = document.createElement('button');
+    xx.type = 'button';
+    xx.className = 'dream-dlg-x';
+    xx.textContent = '✕';
+    xx.addEventListener('click', () => { playCloseSound(); if (opts.onX) { opts.onX(d); } else d.remove(); });
+    bar.appendChild(tt); bar.appendChild(xx);
+    d.appendChild(bar);
+    const body = document.createElement('div');
+    body.className = 'dream-dlg-body';
+    (opts.lines || []).forEach((ln) => {
+      const p = document.createElement('p');
+      p.textContent = ln;
+      body.appendChild(p);
+    });
+    d.appendChild(body);
+    if (opts.buttons && opts.buttons.length) {
+      const row = document.createElement('div');
+      row.className = 'dream-dlg-row';
+      opts.buttons.forEach((btn) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'dream-dlg-btn';
+        b.textContent = btn[0];
+        b.addEventListener('click', () => { if (btn[1]) btn[1](d); if (!btn[2]) d.remove(); });
+        row.appendChild(b);
+      });
+      d.appendChild(row);
+    }
+    const W = Math.min(300, window.innerWidth - 40);
+    const x = opts.x != null ? opts.x : 20 + Math.random() * Math.max(40, window.innerWidth - W - 60);
+    const y = opts.y != null ? opts.y : 80 + Math.random() * Math.max(40, window.innerHeight * 0.5 - 80);
+    d.style.left = Math.round(x) + 'px';
+    d.style.top = Math.round(y) + 'px';
+    document.body.appendChild(d);
+    dN(d);
+    return d;
+  }
+
+  // a critter crossing the screen (slime cameos, rabbits, punch cards…)
+  function dreamCritter(opts) {
+    if (!dreamWorld || REDUCED_MOTION) return null;
+    const c = document.createElement('div');
+    c.className = 'dream-critter' + (opts.cls ? ' ' + opts.cls : '');
+    if (opts.img) {
+      const im = document.createElement('img');
+      im.src = opts.img; im.alt = '';
+      c.appendChild(im);
+    } else if (opts.emoji) {
+      const sp = document.createElement('span');
+      sp.className = 'dream-critter-emoji';
+      sp.textContent = opts.emoji;
+      c.appendChild(sp);
+    }
+    if (opts.bubble) {
+      const bb = document.createElement('div');
+      bb.className = 'dream-critter-bubble';
+      bb.textContent = trT(...opts.bubble);
+      c.appendChild(bb);
+    }
+    if (opts.label) {
+      const lb = document.createElement('div');
+      lb.className = 'dream-critter-label';
+      lb.textContent = trT(...opts.label);
+      c.appendChild(lb);
+    }
+    const ltr = opts.dir !== 'rtl';
+    const y = opts.y != null ? opts.y : window.innerHeight - 150 - Math.random() * 90;
+    const x0 = ltr ? -90 : window.innerWidth + 90;
+    const x1 = ltr ? window.innerWidth + 90 : -90;
+    c.style.top = y + 'px';
+    c.style.left = x0 + 'px';
+    if (!ltr) c.classList.add('dream-critter-flip');
+    if (opts.onClick) {
+      c.classList.add('dream-critter-hot');
+      c.addEventListener('click', (e) => { e.stopPropagation(); opts.onClick(c); }, { once: true });
+    }
+    document.body.appendChild(c);
+    dN(c);
+    const ms = opts.ms || 14000;
+    const t0 = Date.now();
+    const iv = dI(() => {
+      const p = Math.min(1, (Date.now() - t0) / ms);
+      c.style.left = (x0 + (x1 - x0) * p) + 'px';
+      if (opts.hop) c.style.top = (y - Math.abs(Math.sin(p * Math.PI * (opts.hop))) * 26) + 'px';
+      if (p >= 1) { clearInterval(iv); c.remove(); }
+    }, 40);
+    return c;
+  }
+
+  // the entry flash: one frame of pure dream static, then the new reality
+  function dreamFlashIn(w) {
+    if (REDUCED_MOTION) return;
+    const f = document.createElement('div');
+    f.className = 'dream-flash ' + w.cls + '-flash';
+    const label = document.createElement('div');
+    label.className = 'dream-flash-label';
+    label.textContent = w.icon + ' ' + trT(...w.name);
+    f.appendChild(label);
+    document.body.appendChild(f);
+    setTimeout(() => f.remove(), 2100);
+  }
+
+  /* =====================================================
+     THE SEVEN DREAMS — each one a full parallel YongshanOS
+     ===================================================== */
+
+  // ---- dream 1/7: RETRO_OS.DREAM (a very beige 1995) ----
+  const DW_95_TIPS = [
+    ["it looks like you're trying to hire yongshan. would you like help? (say yes) (there is only yes)", "on dirait que tu essaies de recruter yongshan. besoin d'aide ? (dis oui) (il n'y a que oui)"],
+    ["tip: the slime is load-bearing. do not uninstall the slime", "astuce : le slime est porteur. ne désinstalle pas le slime"],
+    ["it looks like you're writing a dream. would you like me to watch quietly and vibrate with joy?", "on dirait que tu écris un rêve. veux-tu que je regarde en silence en vibrant de joie ?"],
+    ["have you tried turning the dream off and on again? DON'T. it took me ages to boot", "as-tu essayé d'éteindre et rallumer le rêve ? NON. il a mis des heures à démarrer"],
+    ["fun fact: this assistant runs on 4MB of RAM and unconditional love", "info : cet assistant tourne avec 4 Mo de RAM et de l'amour inconditionnel"]
+  ];
+  function dw95Slippy() {
+    if (!dreamWorld) return;
+    const s = document.createElement('div');
+    s.className = 'dream-slippy';
+    s.innerHTML = '<div class="dream-slippy-clip">📎</div>';
+    const say = document.createElement('div');
+    say.className = 'dream-slippy-say';
+    s.appendChild(say);
+    const x = document.createElement('button');
+    x.type = 'button';
+    x.className = 'dream-slippy-x';
+    x.textContent = '✕';
+    s.appendChild(x);
+    let tipN = 0;
+    const tip = () => { say.textContent = trT(...DW_95_TIPS[tipN++ % DW_95_TIPS.length]); playTone(987.77, 'sine', 0.07, 0, 0.04); };
+    tip();
+    s.addEventListener('click', (e) => { if (e.target !== x) tip(); });
+    x.addEventListener('click', (e) => {
+      e.stopPropagation();
+      playCloseSound();
+      dreamDlg({
+        title: 'slippy.exe',
+        force: true,
+        lines: [trT('close slippy? I still have 37 unread tips about being cute.', 'fermer slippy ? il me reste 37 conseils non lus sur la mignonnerie.')],
+        buttons: [
+          [trT('yes, rest now ♡', 'oui, repose-toi ♡'), () => {
+            s.classList.add('dream-slippy-bye');
+            playSparkleSound();
+            cheatFall(['📎', '♡'], 10);
+            setTimeout(() => s.remove(), 900);
+          }],
+          [trT('37 more tips!!', '37 conseils !!'), () => { tip(); playDreamPop(); }]
+        ]
+      });
+    });
+    document.body.appendChild(s);
+    dN(s);
+  }
+  function dw95Cascade(n, x, y) {
+    if (!dreamWorld) return;
+    if (n >= 6) { // the last box closed: the cascade forgives you
+      cheatFall(['🪟', '✦', '♡'], 22);
+      playFanfare();
+      achvUnlock('dream95');
+      dreamSay(["zzz… error cascade survived… the dream is proud of you…", "zzz… cascade d'erreurs survécue… le rêve est fier de toi…"], 4200);
+      return;
+    }
+    const spawn = (k, xx, yy) => dreamDlg({
+      title: trT('dream95.exe — error', 'dream95.exe — erreur'),
+      cls: 'dream-dlg-err',
+      force: true,
+      x: xx, y: yy,
+      lines: [trT('dream95 has performed an illegal operation: excessive cuteness (0x0000CUTE)', 'dream95 a effectué une opération illégale : mignonnerie excessive (0x0000CUTE)')],
+      buttons: [[ 'OK', () => { playDreamPop(); dw95Cascade(k + 1, xx + 34, yy + 30); if (k < 4) dw95Cascade(k + 2, xx - 60, yy + 52); }]],
+      onX: (d) => { d.remove(); dw95Cascade(k + 1, xx + 34, yy + 30); }
+    });
+    spawn(n, Math.min(x, window.innerWidth - 330), Math.min(y, window.innerHeight - 220));
+    playTone(220, 'square', 0.14, 0, 0.045);
+  }
+  const DW_95_DIALOGS = [
+    { t: ['SYSTEM MESSAGE', 'MESSAGE SYSTÈME'], l: ['it is now safe to turn off your slime. (please never turn off your slime)', 'vous pouvez maintenant éteindre votre slime en toute sécurité. (n\'éteignez jamais votre slime)'] },
+    { t: ['new hardware found', 'nouveau matériel détecté'], l: ['found: 1 sleeping slime. install cuddle drivers? [yes] [also yes]', 'détecté : 1 slime endormi. installer les pilotes câlins ? [oui] [aussi oui]'] },
+    { t: ['screensaver', 'écran de veille'], l: ['your screensaver "flying pikmin" will start in ∞ minutes. it is walking here', 'votre écran de veille « pikmin volants » démarre dans ∞ minutes. il vient à pied'] }
+  ];
+  const DREAM_95 = {
+    id: 'win95', cls: 'dream-win95', icon: '🪟',
+    name: ['RETRO_OS.DREAM — a very beige 1995', 'RETRO_OS.DREAM — un 1995 très beige'],
+    onset: ["zzz… the dream smells like… beige… and dial tones…", "zzz… le rêve sent le… beige… et la tonalité…"],
+    sfx: playDreamChime95,
+    flavor: [
+      ["zzz… defragging my feelings… 62%… 63%…", "zzz… défragmentation de mes sentiments… 62 %… 63 %…"],
+      ["mmh… solitaire cards… bouncing… forever…", "mmh… les cartes du solitaire… rebondissent… pour toujours…"],
+      ["zzz… my start menu has one entry… naps…", "zzz… mon menu démarrer n'a qu'une entrée… siestes…"]
+    ],
+    wake: ["*yawn* …I dreamed the whole site was BEIGE and everyone loved it?? …check the recycling bin for my dignity ♡", "*bâille* …j'ai rêvé que tout le site était BEIGE et que tout le monde adorait ?? …ma dignité est dans la corbeille ♡"],
+    build(resumed) {
+      dreamBadge(trT('🪟 DREAM 95 — now with 100% more beige', '🪟 DREAM 95 — avec 100 % de beige en plus'));
+      try { termLine('C:\\DREAM> loading nostalgia driver … ok (it was on a floppy)', 't-dim'); } catch (e) { /* no shell in this dream */ }
+      dT(dw95Slippy, resumed ? 6000 : 16000);
+      dT(() => dw95Cascade(0, window.innerWidth * 0.3, window.innerHeight * 0.25), 110000);
+      dI(() => {
+        if (!dreamWorld || Math.random() < 0.4) return;
+        const d = DW_95_DIALOGS[Math.floor(Math.random() * DW_95_DIALOGS.length)];
+        dreamDlg({ title: trT(...d.t), lines: [trT(...d.l)], buttons: [['OK', () => playDreamPop()]] });
+        playTone(830.61, 'sine', 0.3, 0, 0.04);
+      }, 75000);
+    }
+  };
+
+  // ---- dream 2/7: SCP-Y0NG (containment breach, but make it cute) ----
+  function dwScpGrant(overlay) {
+    overlay.classList.add('scp-clear');
+    playSparkleSound();
+    const st = overlay.querySelector('.scp-lock-status');
+    if (st) st.textContent = trT('✅ ACCESS GRANTED — clearance: one (1) cute visitor', '✅ ACCÈS ACCORDÉ — habilitation : un·e (1) visiteur·se mignon·ne');
+    setTimeout(() => overlay.remove(), 1600);
+    if (!dreamWorld) return;
+    dreamWorld.flags.scpCleared = (dreamWorld.flags.scpCleared || 0) + 1;
+    if (dreamWorld.flags.scpCleared >= dreamWorld.flags.scpTotal) {
+      achvUnlock('dreamscp');
+      cheatFall(['🧡', '✦', '🔓'], 24);
+      playFanfare();
+      dreamSay(["zzz… all files declassified… the O5 council sighed… affectionately…", "zzz… tous les dossiers déclassifiés… le conseil O5 a soupiré… avec affection…"], 4600);
+      dreamCritter({
+        img: 'assets/slime_pet_cutout.png', cls: 'dream-scp999', hop: 6, ms: 9000,
+        bubble: ['*happy containment-breach noises* ♡', '*bruits joyeux de brèche de confinement* ♡']
+      });
+    }
+  }
+  function dwScpKeypad(overlay) {
+    const pad = document.createElement('div');
+    pad.className = 'scp-keypad';
+    const disp = document.createElement('div');
+    disp.className = 'scp-keypad-disp';
+    disp.textContent = '· · ·';
+    pad.appendChild(disp);
+    const note = document.createElement('div');
+    note.className = 'scp-note';
+    note.textContent = trT('O5 STICKY NOTE: the code is 999. do NOT tell the slime. (it wrote this note)', 'POST-IT O5 : le code est 999. ne PAS le dire au slime. (c\'est lui qui a écrit ce mot)');
+    pad.appendChild(note);
+    const grid = document.createElement('div');
+    grid.className = 'scp-keypad-grid';
+    let buf = '';
+    '123456789♡0⌫'.split('').forEach((k) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = k;
+      b.addEventListener('click', () => {
+        playClickSound();
+        if (k === '⌫') buf = buf.slice(0, -1);
+        else if (k === '♡') { disp.textContent = '♡ ♡ ♡'; playDreamPop(); setTimeout(() => { disp.textContent = buf.padEnd(3, '·').split('').join(' '); }, 600); return; }
+        else if (buf.length < 3) buf += k;
+        disp.textContent = buf.padEnd(3, '·').split('').join(' ');
+        if (buf.length === 3) {
+          if (buf === '999') { dwScpGrant(overlay); }
+          else {
+            disp.textContent = trT('DENIED', 'REFUSÉ');
+            overlay.classList.add('scp-shake');
+            playTone(150, 'sawtooth', 0.2, 0, 0.05);
+            setTimeout(() => { overlay.classList.remove('scp-shake'); buf = ''; disp.textContent = '· · ·'; }, 700);
+          }
+        }
+      });
+      grid.appendChild(b);
+    });
+    pad.appendChild(grid);
+    return pad;
+  }
+  function dwScpRetina(overlay) {
+    const box = document.createElement('div');
+    box.className = 'scp-retina';
+    const eye = document.createElement('button');
+    eye.type = 'button';
+    eye.className = 'scp-retina-eye';
+    eye.textContent = '👁';
+    const bar = document.createElement('div');
+    bar.className = 'scp-retina-bar';
+    const fill = document.createElement('div');
+    bar.appendChild(fill);
+    const hint = document.createElement('div');
+    hint.className = 'scp-note';
+    hint.textContent = trT('RETINA SCAN: press and HOLD the eye. do not blink. (blinking = releasing. we checked.)', 'SCAN RÉTINIEN : appuie et MAINTIENS l\'œil. ne cligne pas. (cligner = lâcher. on a vérifié.)');
+    let hold = null;
+    const stop = () => {
+      if (!hold) return;
+      clearInterval(hold); hold = null;
+      if (parseFloat(fill.style.width) < 100) {
+        fill.style.width = '0%';
+        hint.textContent = trT('you BLINKED!! restart the stare ♡', 'tu as CLIGNÉ !! recommence le regard ♡');
+        playTone(220, 'square', 0.12, 0, 0.04);
+      }
+    };
+    const start = (e) => {
+      e.preventDefault();
+      if (hold) return;
+      let p = 0;
+      playTone(440, 'sine', 0.1, 0, 0.03);
+      hold = setInterval(() => {
+        p += 4;
+        fill.style.width = Math.min(100, p) + '%';
+        if (p % 24 === 0) playTone(440 + p * 4, 'sine', 0.06, 0, 0.03);
+        if (p >= 100) { clearInterval(hold); hold = null; dwScpGrant(overlay); }
+      }, 90);
+    };
+    eye.addEventListener('pointerdown', start);
+    eye.addEventListener('pointerup', stop);
+    eye.addEventListener('pointerleave', stop);
+    box.appendChild(eye); box.appendChild(bar); box.appendChild(hint);
+    return box;
+  }
+  function dwScpCaptcha(overlay) {
+    const box = document.createElement('div');
+    box.className = 'scp-captcha';
+    const hint = document.createElement('div');
+    hint.className = 'scp-note';
+    hint.textContent = trT('CAPTCHA: click ALL the bugs to prove you are a developer. (slimes exempt. slimes are never bugs. mostly.)', 'CAPTCHA : clique TOUS les bugs pour prouver que tu es dev. (slimes exemptés. un slime n\'est jamais un bug. en principe.)');
+    box.appendChild(hint);
+    const grid = document.createElement('div');
+    grid.className = 'scp-captcha-grid';
+    const cells = ['🐛', '🐞', '🐌', '🍓', '⭐', '🧁', '🌸', '💾', '🎀'].sort(() => Math.random() - 0.5);
+    const bugs = ['🐛', '🐞', '🐌'];
+    let found = 0;
+    cells.forEach((ch) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = ch;
+      b.addEventListener('click', () => {
+        if (b.disabled) return;
+        if (bugs.includes(ch)) {
+          b.disabled = true;
+          b.classList.add('scp-captcha-got');
+          playTone(987.77, 'triangle', 0.08, 0, 0.05);
+          if (++found === 3) dwScpGrant(overlay);
+        } else {
+          b.classList.add('scp-captcha-nope');
+          hint.textContent = trT('that is a SNACK, not a bug. an honest mistake ♡', 'ça, c\'est un SNACK, pas un bug. erreur honnête ♡');
+          playTone(180, 'square', 0.1, 0, 0.04);
+          setTimeout(() => b.classList.remove('scp-captcha-nope'), 500);
+        }
+      });
+      grid.appendChild(b);
+    });
+    box.appendChild(grid);
+    return box;
+  }
+  function dwScpLock(winId, kind, docName) {
+    const body = document.querySelector('#' + winId + ' .window-body');
+    if (!body || body.querySelector('.scp-lock')) return 0;
+    const ov = document.createElement('div');
+    ov.className = 'scp-lock';
+    const head = document.createElement('div');
+    head.className = 'scp-lock-head';
+    head.textContent = trT('⚠ LEVEL 2 CLEARANCE REQUIRED — ITEM #: SCP-Y0NG · file: ', '⚠ HABILITATION NIVEAU 2 REQUISE — OBJET n° : SCP-Y0NG · dossier : ') + docName;
+    ov.appendChild(head);
+    const bars = document.createElement('div');
+    bars.className = 'scp-lock-bars';
+    for (let i = 0; i < 5; i++) {
+      const bar = document.createElement('div');
+      bar.style.width = (46 + Math.random() * 44) + '%';
+      bars.appendChild(bar);
+    }
+    ov.appendChild(bars);
+    const st = document.createElement('div');
+    st.className = 'scp-lock-status';
+    st.textContent = trT('[DATA EXPUNGED] (it\'s in there. it\'s very impressive. prove you\'re cute enough.)', '[DONNÉES SUPPRIMÉES] (c\'est là-dedans. c\'est très impressionnant. prouve que tu es assez mignon·ne.)');
+    ov.appendChild(st);
+    ov.appendChild(kind === 'keypad' ? dwScpKeypad(ov) : kind === 'retina' ? dwScpRetina(ov) : dwScpCaptcha(ov));
+    body.classList.add('scp-locked-body');
+    body.appendChild(ov);
+    dN(ov);
+    return 1;
+  }
+  const DREAM_SCP = {
+    id: 'scp', cls: 'dream-scp', icon: '🔒',
+    name: ['SCP-Y0NG — containment dream', 'SCP-Y0NG — rêve de confinement'],
+    onset: ["zzz… item class… sleepy… containment… optional…", "zzz… classe de l'objet… dodo… confinement… optionnel…"],
+    sfx: playDreamAlarm,
+    flavor: [
+      ["zzz… my dream is ██% classified… the other ██% is snacks…", "zzz… mon rêve est classifié à ██ %… le reste c'est ██ % de snacks…"],
+      ["mmh… euclid just means wiggly… don't @ the foundation…", "mmh… euclid veut juste dire frétillant… ne mentionnez pas la fondation…"],
+      ["zzz… secure… contain… pet…", "zzz… sécuriser… confiner… caresser…"]
+    ],
+    wake: ["*gasp* the FOUNDATION was here?? did they see my files— wait. I AM the files. containment: emotional ♡", "*sursaut* la FONDATION est passée ?? ils ont vu mes dossiers— attends. les dossiers c'est MOI. confinement : émotionnel ♡"],
+    build() {
+      dreamBadge(trT('🔒 SCP FOUNDATION — SECURE · CONTAIN · PET', '🔒 FONDATION SCP — SÉCURISER · CONFINER · CARESSER'));
+      let total = 0;
+      total += dwScpLock('win-career', 'keypad', 'career_quest.exe');
+      total += dwScpLock('win-skills', 'retina', 'inventory.sav');
+      total += dwScpLock('win-education', 'captcha', 'education_awards.txt');
+      if (dreamWorld) { dreamWorld.flags.scpTotal = total || 1; dreamWorld.flags.scpCleared = 0; }
+      try { termLine('[REDACTED] joined #containment · topic: do NOT boop the [DATA EXPUNGED]', 't-dim'); } catch (e) { /* expunged */ }
+      dT(() => dreamSay(["zzz… psst… three files went classified… the puzzles are EASY… the foundation believes in you…", "zzz… psst… trois dossiers sont passés secrets… les énigmes sont FACILES… la fondation croit en toi…"], 5200), 14000);
+      dI(() => {
+        if (!dreamWorld || Math.random() < 0.45) return;
+        dreamCritter({
+          img: 'assets/slime_pet_cutout.png', cls: 'dream-scp999', hop: 8, ms: 13000,
+          bubble: ['*tickle tickle* ♡', '*guili guili* ♡'],
+          label: ['SCP-999 · class: SAFE (the safest)', 'SCP-999 · classe : SAFE (le plus safe)'],
+          onClick: (c) => {
+            playSparkleSound();
+            gainFollowers(1);
+            burstAtSlime(['🧡', '✦'], 4);
+            const bb = c.querySelector('.dream-critter-bubble');
+            if (bb) bb.textContent = trT('hehehe!! that tickles!! ♡', 'héhéhé !! ça chatouille !! ♡');
+          }
+        });
+      }, 80000);
+    }
+  };
+
+  // ---- dream 3/7: THE SLIMETRIX (there is no spoon. there IS a slime.) ----
+  function dwMatrixRainLoop() {
+    if (REDUCED_MOTION || !dreamWorld) return;
+    const cv = document.createElement('canvas');
+    cv.className = 'dream-matrix-rain';
+    cv.width = innerWidth; cv.height = innerHeight;
+    document.body.appendChild(cv);
+    dN(cv);
+    const x = cv.getContext('2d');
+    const cell = 16;
+    const cols = Math.floor(cv.width / cell);
+    const drops = Array.from({ length: cols }, () => Math.random() * -60);
+    dI(() => {
+      x.fillStyle = 'rgba(1, 8, 3, 0.18)';
+      x.fillRect(0, 0, cv.width, cv.height);
+      x.font = (cell - 2) + 'px monospace';
+      drops.forEach((d, i) => {
+        const ch = 'ｱｲｳｴｵ01♡ zzz'[Math.floor(Math.random() * 12)] || '0';
+        x.fillStyle = ch === '♡' ? 'rgba(255,143,199,0.5)' : 'rgba(57,211,83,0.4)';
+        x.fillText(ch, i * cell, d * cell);
+        drops[i] = d * cell > cv.height && Math.random() > 0.98 ? 0 : d + 0.6;
+      });
+    }, 70);
+  }
+  const DREAM_MATRIX = {
+    id: 'matrix', cls: 'dream-matrix', icon: '🐇',
+    name: ['THE SLIMETRIX — wake up, visitor…', 'LA SLIMETRICE — réveille-toi, visiteur…'],
+    onset: ["zzz… I know kung fu… also CSS… mostly CSS…", "zzz… je connais le kung-fu… et le CSS… surtout le CSS…"],
+    sfx: playGlitchSound,
+    flavor: [
+      ["zzz… dodging deadlines… in bullet time…", "zzz… j'esquive les deadlines… au ralenti…"],
+      ["mmh… the spoon was a fork… all along…", "mmh… la cuillère était une fourchette… depuis le début…"],
+      ["zzz… agent smith asked for my LinkedIn… suspicious…", "zzz… l'agent smith a demandé mon LinkedIn… suspect…"]
+    ],
+    wake: ["*jolt* …was I… green?? did I dodge anything cool?? (yes: bedtime) ♡", "*sursaut* …j'étais… vert ?? j'ai esquivé un truc stylé ?? (oui : l'heure du dodo) ♡"],
+    build(resumed) {
+      dreamBadge(trT('🐇 THE SLIMETRIX — there is no spoon. there IS a slime.', '🐇 LA SLIMETRICE — pas de cuillère. mais un slime, OUI.'));
+      if (!resumed) try { matrixRain({ ms: 2600, dense: true, label: trT('ENTERING THE DREAM', 'ENTRÉE DANS LE RÊVE') }); } catch (e) { /* the construct hiccuped */ }
+      dT(dwMatrixRainLoop, resumed ? 400 : 2800);
+      try { termLine(trT('wake up, visitor… the desktop has you… follow the pink rabbit 🐇', 'réveille-toi, visiteur… le bureau te tient… suis le lapin rose 🐇'), 't-accent'); } catch (e) { /* no phone booth */ }
+      dI(() => {
+        if (!dreamWorld || Math.random() < 0.35) return;
+        dreamCritter({
+          emoji: '🐇', cls: 'dream-rabbit', hop: 10, ms: 9000,
+          label: ['follow me!!', 'suis-moi !!'],
+          onClick: (c) => {
+            achvUnlock('dreamrabbit');
+            gainFollowers(2);
+            playSparkleSound();
+            c.style.opacity = '0';
+            for (let i = 0; i < 3; i++) dreamCritter({ emoji: '🐇', cls: 'dream-rabbit', hop: 12, ms: 3600 + i * 900, y: window.innerHeight - 130 - i * 60, dir: i % 2 ? 'rtl' : 'ltr' });
+            dreamSay(["zzz… you caught the rabbit… it multiplied… that's on you…", "zzz… tu as attrapé le lapin… il s'est multiplié… c'est ta faute…"], 3800);
+          }
+        });
+      }, 85000);
+      dT(() => {
+        dreamDlg({
+          title: trT('a choice appears', 'un choix apparaît'),
+          force: true,
+          lines: [trT('zzz… the dream offers you two pills…', 'zzz… le rêve te propose deux pilules…')],
+          buttons: [
+            ['🔴 ' + trT('wake the site NOW', 'réveiller le site MAINTENANT'), () => dreamEnd('redpill')],
+            ['🔵 ' + trT('stay in the dream ♡', 'rester dans le rêve ♡'), () => {
+              playSparkleSound();
+              gainFollowers(1);
+              dreamSay(["zzz… good choice… the dream has you ♡… also free rabbits…", "zzz… bon choix… le rêve te tient ♡… et les lapins sont gratuits…"], 4200);
+            }]
+          ]
+        });
+      }, 100000);
+    }
+  };
+
+  // ---- dream 4/7: DREAM BOY (4 shades of green, 8KB of feelings) ----
+  const DW_GB_SHAPES = [[[0,0],[1,0],[0,1],[1,1]], [[0,0],[1,0],[2,0],[3,0]], [[0,0],[0,1],[1,1],[2,1]], [[1,0],[0,1],[1,1],[2,1]]];
+  function dwGbTetromino() {
+    if (!dreamWorld || REDUCED_MOTION) return;
+    const t = document.createElement('div');
+    t.className = 'dream-gb-tetro';
+    const shape = DW_GB_SHAPES[Math.floor(Math.random() * DW_GB_SHAPES.length)];
+    shape.forEach((c) => {
+      const b = document.createElement('span');
+      b.style.left = (c[0] * 16) + 'px';
+      b.style.top = (c[1] * 16) + 'px';
+      t.appendChild(b);
+    });
+    t.style.left = (40 + Math.random() * (window.innerWidth - 120)) + 'px';
+    t.style.setProperty('--gb-spin', (Math.random() < 0.5 ? '' : '-') + '180deg');
+    document.body.appendChild(t);
+    dN(t);
+    t.addEventListener('animationend', () => t.remove());
+  }
+  const DREAM_GB = {
+    id: 'gameboy', cls: 'dream-gameboy', icon: '🎮',
+    name: ['DREAM BOY — 8KB of feelings', 'DREAM BOY — 8 Ko de sentiments'],
+    onset: ["zzz… blowing on the cartridge… of reality…", "zzz… je souffle sur la cartouche… de la réalité…"],
+    sfx: playDreamGB,
+    flavor: [
+      ["zzz… save before mom calls… zzz…", "zzz… sauvegarde avant que maman appelle… zzz…"],
+      ["mmh… 4 shades of green… is all anyone needs…", "mmh… 4 nuances de vert… suffisent à tout le monde…"],
+      ["zzz… press START… to snuggle…", "zzz… appuie sur START… pour un câlin…"]
+    ],
+    wake: ["*click* …the dream ran out of batteries. classic. someone hand me two AAs and a childhood ♡", "*clic* …le rêve n'a plus de piles. classique. passez-moi deux piles AA et une enfance ♡"],
+    build(resumed) {
+      if (!resumed && !REDUCED_MOTION) {
+        const boot = document.createElement('div');
+        boot.className = 'dream-gb-boot';
+        boot.innerHTML = '<span>DREAMBOY<small>™ slimetendo 1998</small></span>';
+        document.body.appendChild(boot);
+        dN(boot);
+        setTimeout(() => { playDreamGB(); }, 900);
+        setTimeout(() => boot.remove(), 2400);
+      }
+      const batt = dreamBadge('🔋 DREAM BATTERY 99%', 'dream-gb-batt');
+      const tick = () => {
+        if (!dreamWorld) return;
+        const pct = Math.max(1, Math.round(((dreamWorld.until - Date.now()) / dreamWorld.total) * 100));
+        batt.textContent = trT('🔋 DREAM BATTERY ', '🔋 BATTERIE DU RÊVE ') + pct + '%';
+        batt.classList.toggle('dream-gb-low', pct <= 12);
+      };
+      tick();
+      dI(tick, 20000);
+      dI(() => { if (Math.random() < 0.75) dwGbTetromino(); }, 34000);
+      const keyBeep = (e) => {
+        if (!dreamWorld) return;
+        const tag = (e.target && e.target.tagName) || '';
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target && e.target.isContentEditable)) return;
+        if (!/^Arrow/.test(e.key)) return;
+        const now = Date.now();
+        if (now - (dreamWorld.flags.gbBeepAt || 0) < 160) return;
+        dreamWorld.flags.gbBeepAt = now;
+        playTone(e.key === 'ArrowUp' ? 1174.66 : e.key === 'ArrowDown' ? 880 : 987.77, 'square', 0.05, 0, 0.03);
+      };
+      document.addEventListener('keydown', keyBeep);
+      if (dreamWorld) dreamWorld.flags.gbKeyBeep = keyBeep;
+      try { termLine('NOW LOADING… DREAM.GB — 8KB of feelings (no save battery. feelings persist anyway)', 't-dim'); } catch (e) { /* cartridge tilted */ }
+    },
+    exit() {
+      if (dreamWorld && dreamWorld.flags.gbKeyBeep) document.removeEventListener('keydown', dreamWorld.flags.gbKeyBeep);
+    }
+  };
+
+  // ---- dream 5/7: slime's homepage (est. 1998, still under construction) ----
+  const DREAM_GEO = {
+    id: 'geo', cls: 'dream-geo', icon: '🚧',
+    name: ["slime's homepage — est. 1998", 'la page perso du slime — depuis 1998'],
+    onset: ["zzz… my homepage… it needs… more sparkle trails…", "zzz… ma page perso… il lui faut… plus de traînées d'étoiles…"],
+    sfx: playDreamModem,
+    flavor: [
+      ["zzz… under construction… since 1998… almost done…", "zzz… en construction… depuis 1998… bientôt fini…"],
+      ["mmh… my hit counter… only counts friends…", "mmh… mon compteur de visites… ne compte que les amis…"],
+      ["zzz… the webring is a circle… of one… me…", "zzz… le webring est un cercle… d'une personne… moi…"]
+    ],
+    wake: ["*yawn* I dreamed I had a GUESTBOOK and YOU signed it. wait. you DID?? best dream ever ♡", "*bâille* j'ai rêvé que j'avais un LIVRE D'OR et que TU l'avais signé. attends. tu l'as FAIT ?? meilleur rêve du monde ♡"],
+    build(resumed) {
+      const mq = document.createElement('div');
+      mq.className = 'dream-geo-marquee';
+      mq.innerHTML = '<span>★·.·´¯`·.·★ WELCOME TO SLIME\'S HOMEPAGE!!! best viewed in SLIMESCAPE 4.0 at 800×600 ★ sign the guestbook ★ no right-click!! (jk) ★·.·´¯`·.·★</span>';
+      document.body.appendChild(mq);
+      dN(mq);
+      let hits = 337 + Math.floor(Math.random() * 3);
+      const counter = dreamBadge('', 'dream-geo-counter');
+      const drawHits = () => { counter.textContent = trT('you are visitor № ', 'tu es le visiteur nº ') + String(hits).padStart(6, '0'); };
+      drawHits();
+      dI(() => {
+        if (Math.random() < 0.5) return;
+        hits++;
+        drawHits();
+        playTone(1318.51, 'sine', 0.05, 0, 0.025);
+        if (hits === 341) showToast(trT('№ 341 — the sacred wall number!! ✨', 'nº 341 — le chiffre sacré du mur !! ✨'));
+      }, 22000);
+      const tapeTarget = document.querySelector('.window:not(.window-closed):not(.window-minimized)') || document.querySelector('.profile-card');
+      if (tapeTarget) {
+        const tape = document.createElement('div');
+        tape.className = 'dream-geo-tape';
+        tape.textContent = trT('🚧 UNDER CONSTRUCTION 🚧', '🚧 EN CONSTRUCTION 🚧');
+        tape.title = trT("(they've been 'almost done' since 1998)", '(c\'est « presque fini » depuis 1998)');
+        const r = tapeTarget.getBoundingClientRect();
+        tape.style.left = (r.left + r.width / 2 - 110) + 'px';
+        tape.style.top = (r.top + 14) + 'px';
+        document.body.appendChild(tape);
+        dN(tape);
+      }
+      dT(() => {
+        dreamDlg({
+          title: trT('📖 guestbook.cgi', '📖 livredor.cgi'),
+          force: true,
+          lines: [trT('sign my guestbook?? pretty please?? everyone cool from 1998 did', 'tu signes mon livre d\'or ?? s\'il te plaîîît ?? tous les gens cool de 1998 l\'ont fait')],
+          buttons: [
+            [trT('sign ♡', 'signer ♡'), () => {
+              playSparkleSound();
+              gainFollowers(2);
+              cheatFall(['✒️', '♡', '✦'], 12);
+              showToast(trT('guestbook entry #341: "cool site!! how do I stop the music" (you can\'t)', 'entrée nº 341 : « super site !! comment on coupe la musique » (impossible)'));
+            }],
+            [trT('lurk', 'rôder'), () => {
+              showToast(trT('noted in the guestbook anyway: "a mysterious lurker ♡"', 'noté quand même dans le livre d\'or : « un·e rôdeur·se mystérieux·se ♡ »'));
+            }]
+          ]
+        });
+      }, resumed ? 30000 : 80000);
+      // the sacred geocities cursor trail (mouse only; reduced-motion exempt)
+      if (!REDUCED_MOTION && window.matchMedia('(pointer: fine)').matches) {
+        let lastTrail = 0;
+        const trail = (e) => {
+          const now = Date.now();
+          if (now - lastTrail < 90) return;
+          lastTrail = now;
+          const s = document.createElement('span');
+          s.className = 'trail-sparkle';
+          s.textContent = Math.random() < 0.6 ? '✦' : '♡';
+          s.style.left = (e.clientX + 6) + 'px';
+          s.style.top = (e.clientY + 8) + 'px';
+          s.style.color = ['#ff8fc7', '#6cc4f5', '#ffe98a'][Math.floor(Math.random() * 3)];
+          document.body.appendChild(s);
+          s.addEventListener('animationend', () => s.remove());
+        };
+        document.addEventListener('mousemove', trail);
+        if (dreamWorld) dreamWorld.flags.geoTrail = trail;
+      }
+      // the midi that cannot be stopped (twice)
+      const midi = dreamBadge('', 'dream-geo-midi');
+      const title = document.createElement('span');
+      title.textContent = trT('♬ now playing: slime_anthem.mid', '♬ lecture : slime_anthem.mid');
+      const stopB = document.createElement('button');
+      stopB.type = 'button';
+      stopB.textContent = trT('■ stop', '■ stop');
+      midi.textContent = '';
+      midi.appendChild(title); midi.appendChild(stopB);
+      const NOTES = [659.25, 783.99, 880, 783.99, 659.25, 523.25, 659.25, 880];
+      let tempo = 170;
+      const jingle = () => { if (dreamWorld && !dreamWorld.flags.midiOff) NOTES.forEach((f, i) => playTone(f, 'square', 0.12, i * (tempo / 1000), 0.02)); };
+      dT(jingle, 3000);
+      const midiIv = dI(jingle, 26000);
+      let stops = 0;
+      stopB.addEventListener('click', () => {
+        stops++;
+        if (stops === 1) {
+          tempo = 120;
+          jingle();
+          title.textContent = trT('♬♬ now playing HARDER: slime_anthem.mid', '♬♬ lecture PLUS FORT : slime_anthem.mid');
+          showToast(trT('you cannot stop the midi. the midi stops YOU.', 'on n\'arrête pas le midi. c\'est le midi qui T\'arrête.'));
+        } else {
+          if (dreamWorld) dreamWorld.flags.midiOff = true;
+          clearInterval(midiIv);
+          title.textContent = trT('♬ (fine.)', '♬ (bon, d\'accord.)');
+          playTone(262, 'sine', 0.4, 0, 0.03);
+        }
+      });
+      const ring = dreamBadge('', 'dream-geo-ring');
+      ['← prev', 'SLIME WEBRING', 'next →'].forEach((tx, i) => {
+        const el = document.createElement(i === 1 ? 'span' : 'button');
+        if (i !== 1) {
+          el.type = 'button';
+          el.addEventListener('click', () => { playDreamPop(); showToast(trT('the webring is a circle of one (me) ♡', 'le webring est un cercle d\'une seule personne (moi) ♡')); });
+        }
+        el.textContent = tx;
+        ring.appendChild(el);
+      });
+    },
+    exit() {
+      if (dreamWorld && dreamWorld.flags.geoTrail) document.removeEventListener('mousemove', dreamWorld.flags.geoTrail);
+    }
+  };
+
+  // ---- dream 6/7: the BLUE DREAM OF DEATH (everything crashed, nothing broke) ----
+  const DW_BSOD_ERRS = [
+    'DREAM_EXCEPTION_NOT_HANDLED (it was a hug)',
+    'IRQL_NOT_LESS_OR_CUTE',
+    'CRITICAL_PROCESS_SNORED',
+    'PAGE_FAULT_IN_NONPAGED_DREAM (the page was napping)',
+    'KMODE_EXCEPTION: too many feelings in kernel space'
+  ];
+  const DREAM_BSOD = {
+    id: 'bsod', cls: 'dream-bsod', icon: '💙',
+    name: ['BLUE DREAM OF DEATH — 0% complete', 'ÉCRAN BLEU DU RÊVE — 0 % effectué'],
+    onset: ["zzz… oh no… I dreamed a segfault… everybody stay calm…", "zzz… oh non… j'ai rêvé un segfault… que tout le monde reste calme…"],
+    sfx: playDreamSad,
+    flavor: [
+      ["zzz… collecting error info… it's all hearts…", "zzz… collecte des erreurs… ce ne sont que des cœurs…"],
+      ["mmh… the crash is cozy… don't reboot me…", "mmh… le crash est douillet… ne me redémarre pas…"],
+      ["zzz… kernel panic… kernel calm… kernel nap…", "zzz… panique du noyau… calme du noyau… sieste du noyau…"]
+    ],
+    wake: ["*reboot noise* …I'm BACK. uptime: reset. cuteness: preserved. who filed the crash report?? it just says '♡'", "*bruit de redémarrage* …je suis LÀ. uptime : remis à zéro. mignonnerie : intacte. qui a rempli le rapport de crash ?? il dit juste « ♡ »"],
+    build() {
+      const head = document.createElement('div');
+      head.className = 'dream-bsod-head';
+      head.innerHTML = '<div class="dream-bsod-face">:(</div><div class="dream-bsod-text"></div>';
+      document.body.appendChild(head);
+      dN(head);
+      const txt = head.querySelector('.dream-bsod-text');
+      const draw = () => {
+        if (!dreamWorld) return;
+        const pct = Math.min(99, Math.round(((Date.now() - (dreamWorld.until - dreamWorld.total)) / dreamWorld.total) * 100));
+        txt.textContent = trT(
+          'your slime ran into a dream and needs a nap. we\'re just collecting some cuteness: ' + pct + '% complete',
+          'ton slime a rencontré un rêve et a besoin d\'une sieste. collecte de mignonnerie en cours : ' + pct + ' % effectué'
+        );
+      };
+      draw();
+      dI(draw, 10000);
+      // the "QR code" (it's just my face)
+      const qr = document.createElement('div');
+      qr.className = 'dream-bsod-qr';
+      const px = document.createElement('div');
+      px.className = 'dream-bsod-qr-px';
+      const FACE = '0011110001111110110110111111111111011011111001110111111000111100'; // 8×8 slime, hand-dithered
+      FACE.split('').forEach((b) => {
+        const c = document.createElement('span');
+        if (b === '1') c.classList.add('on');
+        px.appendChild(c);
+      });
+      const cap = document.createElement('small');
+      cap.textContent = trT('scan for more info (it\'s just my face)', 'scanne pour plus d\'infos (c\'est juste mon visage)');
+      qr.appendChild(px); qr.appendChild(cap);
+      head.appendChild(qr);
+      const errBox = document.createElement('div');
+      errBox.className = 'dream-bsod-errs';
+      head.appendChild(errBox);
+      dI(() => {
+        if (!dreamWorld || Math.random() < 0.4) return;
+        const line = document.createElement('div');
+        line.textContent = '⚠ ' + DW_BSOD_ERRS[Math.floor(Math.random() * DW_BSOD_ERRS.length)];
+        errBox.appendChild(line);
+        while (errBox.children.length > 3) errBox.removeChild(errBox.firstChild);
+        playTone(330, 'sine', 0.12, 0, 0.03);
+      }, 45000);
+      let anyKeys = 0;
+      const anyKey = () => {
+        if (!dreamWorld || anyKeys >= 3) return;
+        const now = Date.now();
+        if (now - (dreamWorld.flags.bsodKeyAt || 0) < 25000) return;
+        dreamWorld.flags.bsodKeyAt = now;
+        anyKeys++;
+        showToast(trT('press any key to continue… no, not that one ♡', 'appuie sur une touche pour continuer… non, pas celle-là ♡'));
+      };
+      document.addEventListener('keydown', anyKey);
+      if (dreamWorld) dreamWorld.flags.bsodAnyKey = anyKey;
+      try { termLine('kernel: panic averted — rebooted with hugs (uptime preserved, feelings intact)', 't-dim'); } catch (e) { /* core dumped (gently) */ }
+    },
+    exit() {
+      if (dreamWorld && dreamWorld.flags.bsodAnyKey) document.removeEventListener('keydown', dreamWorld.flags.bsodAnyKey);
+    }
+  };
+
+  // ---- dream 7/7: SLIME/370 — the mainframe dream (est. 1970) ----
+  const DW_AMBER_SLIPS = [
+    'JOB \'CUDDLE\' — COMPLETE · CPU TIME: 0.03s · HUGS OUT: 3',
+    'PAYROLL RUN: 1 slime · 47 merged PRs · paid in boba',
+    'BATCH #341: dreams processed. results by morning.',
+    'SYSLOG: 56 years uptime. one (1) nap. this one.'
+  ];
+  function dwAmberPrint() {
+    if (!dreamWorld) return;
+    const p = document.getElementById('dream-amber-printer');
+    if (!p) return;
+    playDreamPrinter();
+    const slip = document.createElement('div');
+    slip.className = 'dream-amber-slip';
+    const art = document.createElement('pre');
+    art.textContent = ' ▄▄▄▄▄\n▐ ◠ ◠ ▌\n▐  ▿  ▌\n ▀▀▀▀▀';
+    const line = document.createElement('div');
+    line.textContent = DW_AMBER_SLIPS[Math.floor(Math.random() * DW_AMBER_SLIPS.length)];
+    slip.appendChild(art); slip.appendChild(line);
+    p.appendChild(slip);
+    setTimeout(() => slip.classList.add('dream-amber-slip-fly'), 4200);
+    setTimeout(() => slip.remove(), 6600);
+  }
+  const DREAM_AMBER = {
+    id: 'amber', cls: 'dream-amber', icon: '📠',
+    name: ['SLIME/370 — mainframe dream (est. 1970)', 'SLIME/370 — rêve mainframe (depuis 1970)'],
+    onset: ["zzz… submitting my nap… as a batch job…", "zzz… je soumets ma sieste… en traitement par lots…"],
+    sfx: playDreamHum,
+    flavor: [
+      ["zzz… 80 columns are enough… for any feeling…", "zzz… 80 colonnes suffisent… à tous les sentiments…"],
+      ["mmh… my dreams are batch-processed… results by morning…", "mmh… mes rêves sont traités par lots… résultats au matin…"],
+      ["zzz… COBOL will outlive us all… respectfully…", "zzz… COBOL nous survivra à tous… respectueusement…"]
+    ],
+    wake: ["*whirr* …the mainframe says my nap COMPILED. first try. 1970 was built different ♡", "*vrombissement* …le mainframe dit que ma sieste a COMPILÉ. du premier coup. 1970, c'était du solide ♡"],
+    build(resumed) {
+      dreamBadge(trT('📠 SLIME/370 — est. 1970 · uptime: 56 yrs (one nap: this one)', '📠 SLIME/370 — depuis 1970 · uptime : 56 ans (une sieste : celle-ci)'));
+      const printer = document.createElement('div');
+      printer.id = 'dream-amber-printer';
+      printer.innerHTML = '<span class="dream-amber-printer-ico">🖨</span>';
+      document.body.appendChild(printer);
+      dN(printer);
+      dT(dwAmberPrint, resumed ? 8000 : 24000);
+      dI(() => { if (Math.random() < 0.7) dwAmberPrint(); }, 85000);
+      dI(() => {
+        if (!dreamWorld || Math.random() < 0.55) return;
+        dreamCritter({ emoji: '🎫', cls: 'dream-punchcard', ms: 16000, y: 120 + Math.random() * 120, label: ['punch card № 341 — do not fold', 'carte perforée nº 341 — ne pas plier'] });
+      }, 95000);
+      dT(() => {
+        dreamDlg({
+          title: 'MAINFRAME NOTICE',
+          lines: [trT('this dream is written in COBOL. it will outlive us all.', 'ce rêve est écrit en COBOL. il nous survivra à tous.')],
+          buttons: [[trT('RESPECT', 'RESPECT'), (d) => {
+            const r = d.getBoundingClientRect();
+            swProp(r.left + 40, r.top - 30, '+10 RESPECT');
+            playSparkleSound();
+          }]]
+        });
+      }, 90000);
+      try { termLine('JCL: //DREAM JOB (CUDDLE),CLASS=A — submitted 1974, still running, still warm', 't-dim'); } catch (e) { /* abend? never heard of her */ }
+    }
+  };
+
+  const DREAM_WORLDS = [DREAM_95, DREAM_SCP, DREAM_MATRIX, DREAM_GB, DREAM_GEO, DREAM_BSOD, DREAM_AMBER];
+
+  function dreamPick(forceId) {
+    if (forceId) return DREAM_WORLDS.find((w) => w.id === forceId) || null;
+    const last = store.get('yos-dream-last', null);
+    const fresh = DREAM_WORLDS.filter((w) => w.id !== last);
+    return fresh[Math.floor(Math.random() * fresh.length)];
+  }
+
+  /* ---- the ritual: waddle to center stage, spin, swallow the site ---- */
+  function startDreamWalk(forceW) {
+    const w = forceW || dreamPick();
+    if (!w || dreamWorld) return;
+    sleepwalkActive = true;
+    achvUnlock('dreamwatcher');
+    const habitatRect = (typeof liveOpen !== 'undefined' && liveOpen && slimeBody)
+      ? slimeBody.getBoundingClientRect()
+      : slimeHabitat.getBoundingClientRect();
+    swEl = document.createElement('div');
+    swEl.className = 'sleepwalker';
+    swEl.setAttribute('aria-hidden', 'true');
+    const img = document.createElement('img');
+    img.src = (OUTFIT_FRAMES && typeof OUTFIT_FRAMES.sleep === 'string' && OUTFIT_FRAMES.sleep) || 'assets/slime_night_sleep.png';
+    img.alt = '';
+    const bub = document.createElement('div');
+    bub.className = 'sw-bubble';
+    swEl.appendChild(img);
+    swEl.appendChild(bub);
+    document.body.appendChild(swEl);
+    const from = { x: habitatRect.left + habitatRect.width / 2 - 36, y: habitatRect.top + habitatRect.height / 2 - 32 };
+    const to = { x: window.innerWidth / 2 - 36, y: window.innerHeight * 0.36 };
+    swEl.style.left = from.x + 'px';
+    swEl.style.top = from.y + 'px';
+    bub.textContent = trT(...w.onset);
+    swEl.classList.add('sw-talking');
+    playTone(262, 'sine', 0.4, 0, 0.03);
+    const t0 = Date.now();
+    const walkMs = 3200;
+    let tick = 0;
+    const glide = setInterval(() => {
+      if (!swEl) { clearInterval(glide); sleepwalkActive = false; return; } // woken mid-ritual
+      const p = Math.min(1, (Date.now() - t0) / walkMs);
+      const ease = p * p * (3 - 2 * p);
+      swEl.style.left = (from.x + (to.x - from.x) * ease) + 'px';
+      swEl.style.top = (from.y + (to.y - from.y) * ease + Math.sin(p * 14) * 5) + 'px';
+      if ((tick++ & 7) === 0) swTrailDot(parseFloat(swEl.style.left) + 50 + (Math.random() - 0.5) * 14, parseFloat(swEl.style.top) + 42);
+      if (p >= 1) {
+        clearInterval(glide);
+        // the spin: reality wobbles first, asks questions later
+        if (swEl) {
+          swEl.classList.add('sw-dream-spin');
+          swSparkleAt(to.x + 36, to.y + 20, 8);
+          const bb = swEl.querySelector('.sw-bubble');
+          if (bb) bb.textContent = trT('zzz… the dream is getting… BIG…', 'zzz… le rêve devient… GRAND…');
+        }
+        setTimeout(() => {
+          if (!swEl) { sleepwalkActive = false; return; }
+          try { w.sfx(); } catch (e) { /* silent dreams are legal */ }
+          dreamFlashIn(w);
+          setTimeout(() => {
+            swFinish(false);
+            dreamBegin(w);
+          }, 700);
+        }, 1200);
+      }
+    }, 40);
+  }
+
+  function dreamBegin(w, remainMs, resumed) {
+    if (dreamWorld) return;
+    const dur = remainMs || (10 + Math.random() * 5) * 60000; // the requested 10–15 min
+    dreamWorld = { id: w.id, w, until: Date.now() + dur, total: remainMs ? 15 * 60000 : dur, timers: [], nodes: [], flags: {} };
+    document.documentElement.classList.add('dreaming', w.cls);
+    store.set('yos-dream', { id: w.id, until: dreamWorld.until });
+    store.set('yos-dream-last', w.id);
+    const seen = store.get('yos-dreams-seen', {});
+    if (!seen[w.id]) { seen[w.id] = 1; store.set('yos-dreams-seen', seen); }
+    achvUnlock('dreamland');
+    if (Object.keys(seen).length >= DREAM_WORLDS.length) achvUnlock('dreamtour');
+    try { w.build(!!resumed); } catch (e) { /* a half-built dream is still a dream */ }
+    dreamNarrator(!!resumed);
+    dT(() => dreamEnd('timer'), dur);
+  }
+
+  /* ---- the narrator: countdown bubbles from the habitat, as ordered ---- */
+  const DREAM_TICK_LINES = [
+    ["zzz… ⏳ {m} min left in this dream… it's a good one…", "zzz… ⏳ encore {m} min de rêve… il est réussi celui-là…"],
+    ["*snore* …dream holding steady… {m} min of magic left… do not wake…", "*ronfle* …rêve stable… {m} min de magie restantes… ne pas réveiller…"],
+    ["zzz… the dream says {m} more minutes… the dream is very persuasive…", "zzz… le rêve dit encore {m} minutes… le rêve est très persuasif…"]
+  ];
+  function dreamNarrator(resumed) {
+    if (!dreamWorld) return;
+    const w = dreamWorld.w;
+    dT(() => {
+      if (!dreamWorld) return;
+      dreamSay([
+        '💭 dreaming of ' + w.name[0] + '!! the whole site came WITH me… ⏳ ~' + dreamMinLeft() + ' min — knock on my screen to pop it early ♡',
+        '💭 je rêve de ' + w.name[1] + ' !! tout le site est venu AVEC moi… ⏳ ~' + dreamMinLeft() + ' min — toque sur mon écran pour le faire éclater ♡'
+      ], 7800);
+    }, resumed ? 2500 : 6500);
+    dreamWorld.flags.lastTick = Date.now();
+    dI(() => {
+      if (!dreamWorld) return;
+      const left = dreamWorld.until - Date.now();
+      const now = Date.now();
+      if (left <= 15000) {
+        if (!dreamWorld.flags.saidFinal) {
+          dreamWorld.flags.saidFinal = true;
+          dreamSay(["zzz… 3… 2… 1½… (dream math)…", "zzz… 3… 2… 1½… (maths de rêve)…"], 5000);
+        }
+        return;
+      }
+      if (left <= 70000) {
+        if (!dreamWorld.flags.saidMinute) {
+          dreamWorld.flags.saidMinute = true;
+          dreamSay(["zzz… ⏳ last minute of the dream… quick, look at everything again…", "zzz… ⏳ dernière minute du rêve… vite, re-regarde tout…"], 5200);
+        }
+        return;
+      }
+      if (now - dreamWorld.flags.lastTick < 58000) return;
+      dreamWorld.flags.lastTick = now;
+      const m = dreamMinLeft();
+      if (Math.random() < 0.5 && w.flavor.length) {
+        const f = w.flavor[Math.floor(Math.random() * w.flavor.length)];
+        dreamSay([f[0] + ' (⏳ ' + m + ' min)', f[1] + ' (⏳ ' + m + ' min)'], 4600);
+      } else {
+        const tpl = DREAM_TICK_LINES[Math.floor(Math.random() * DREAM_TICK_LINES.length)];
+        dreamSay([tpl[0].replace('{m}', m), tpl[1].replace('{m}', m)], 4600);
+      }
+      playTone(262, 'sine', 0.3, 0, 0.02);
+    }, 8000);
+  }
+
+  function dreamEnd(reason) {
+    if (!dreamWorld || dreamEnding) return;
+    dreamEnding = true;
+    const w = dreamWorld.w;
+    dreamWorld.timers.forEach((t) => { clearTimeout(t); clearInterval(t); });
+    if (w.exit) { try { w.exit(); } catch (e) { /* the dream keeps its secrets */ } }
+    dreamWorld.nodes.forEach((n) => { try { n.remove(); } catch (e) { /* already gone */ } });
+    document.querySelectorAll('.dream-dlg, .scp-lock, .dream-geo-tape, .dream-slippy, .dream-gb-tetro, .dream-amber-slip').forEach((n) => n.remove());
+    document.querySelectorAll('.scp-locked-body').forEach((n) => n.classList.remove('scp-locked-body'));
+    document.documentElement.classList.remove('dreaming', w.cls);
+    store.set('yos-dream', null);
+    store.set('yos-dream-cd', Date.now() + 6 * 60000); // one reality bend per while
+    dreamWorld = null;
+    if (reason === 'timer') {
+      cheatFall(['💭', '✦', '♡'], 16);
+      playStartupChime();
+      ghostAppear(0, false);
+      showBubble(trT(...w.wake), 6800);
+      try {
+        const r = slimeBody.getBoundingClientRect();
+        swProp(r.left + r.width / 2 - 66, Math.max(8, r.top - 46), trT('DREAM — COMPLETE 💭', 'RÊVE — TERMINÉ 💭'), true);
+      } catch (e) { /* the feeling stands */ }
+    } else if (reason === 'wake' || reason === 'redpill') {
+      playDreamPop();
+      if (!REDUCED_MOTION) {
+        const f = document.createElement('div');
+        f.className = 'dream-flash dream-pop-flash';
+        document.body.appendChild(f);
+        setTimeout(() => f.remove(), 900);
+      }
+      achvUnlock('dreamwake');
+      ghostAppear(0, false);
+      showBubble(reason === 'redpill'
+        ? trT('🔴 *gasp* how deep does the pixel-hole go— oh. bedroom. it goes to my bedroom ♡', '🔴 *sursaut* jusqu\'où va le terrier de pixels— ah. la chambre. il va jusqu\'à ma chambre ♡')
+        : trT('HUH?! who— what— …you POPPED my dream?! …fair. it was getting weird in there ♡', 'HEIN ?! qui— quoi— …tu as ÉCLATÉ mon rêve ?! …ok, juste. ça devenait bizarre là-dedans ♡'), 6200);
+      burstAtSlime(['💭', '💥', '♡'], 7);
+    } else {
+      // quiet teardown (sunrise, theme flip): dreams evaporate politely
+      showToast(trT('☀ the dream evaporated', '☀ le rêve s\'est évaporé'));
+    }
+    dreamEnding = false;
+    // gremlin hour resumes its parade the moment the stage is clear
+    if (swTricksterOn() && resolvedTheme() === 'dark') {
+      if (sleepwalkTimer) clearTimeout(sleepwalkTimer);
+      sleepwalkTimer = setTimeout(() => { if (ghostHidden()) startSleepwalk(); }, 30000);
+    }
+  }
+
+  function dreamResume() {
+    if (dreamWorld) return;
+    const saved = store.get('yos-dream', null);
+    if (!saved || !saved.id) return;
+    const remain = saved.until - Date.now();
+    const w = DREAM_WORLDS.find((x) => x.id === saved.id);
+    if (!w || remain < 30000 || document.body.classList.contains('terminal-only')) {
+      store.set('yos-dream', null);
+      return;
+    }
+    dreamBegin(w, remain, true);
+  }
+
+  /* ---- gremlin merch: the sticky note (peelable, signed, dated) ---- */
+  var swStickyAt = 0;
+  function swStickyNote(target) {
+    if (Date.now() - swStickyAt < 60000) return; // one note a minute; glue is precious
+    if (document.querySelector('.sw-sticky')) return;
+    swStickyAt = Date.now();
+    const r = target.getBoundingClientRect();
+    const n = document.createElement('button');
+    n.type = 'button';
+    n.className = 'sw-sticky';
+    const msg = swScenePick([
+      ['zzz was here ♡', 'zzz est passé ici ♡'],
+      ['do NOT read this note. (you did. hi ♡)', 'ne lis PAS ce mot. (tu l\'as lu. coucou ♡)'],
+      ['inspected. certified cute. —the dream', 'inspecté. certifié mignon. —le rêve'],
+      ['TODO: dream about this again', 'TODO : re-rêver de ça']
+    ]);
+    n.innerHTML = '<span>' + trT(...msg) + '</span><small>— 💤 gremlin dept.</small>';
+    n.style.left = Math.max(8, Math.min(window.innerWidth - 150, r.left + r.width / 2 + 20)) + 'px';
+    n.style.top = Math.max(60, Math.min(window.innerHeight - 140, r.top + 8)) + 'px';
+    n.style.setProperty('--peel-rot', (Math.random() * 10 - 5).toFixed(1) + 'deg');
+    n.addEventListener('click', () => {
+      n.classList.add('sw-sticky-peel');
+      playDreamPop();
+      gainFollowers(1);
+      setTimeout(() => n.remove(), 700);
+    }, { once: true });
+    document.body.appendChild(n);
+    setTimeout(() => { if (n.isConnected) { n.classList.add('sw-sticky-fade'); setTimeout(() => n.remove(), 1200); } }, 100000);
   }
 
   var nightFirstTimer = null;
@@ -5907,7 +7381,11 @@ document.addEventListener('DOMContentLoaded', () => {
       // v5.2: if a dream curfew is pending (or expired while the lights
       // were on), nightfall is when the lift ceremony gets its audience
       swScheduleLift();
+      // v6.0: a dream world interrupted by a reload picks itself back up
+      dreamResume();
     } else {
+      // sunrise: dream worlds evaporate before the lights come on
+      if (dreamActive()) dreamEnd('quiet');
       if (nightLoopTimer) clearTimeout(nightLoopTimer);
       if (nightRetireTimer) clearTimeout(nightRetireTimer);
       if (nightFirstTimer) clearTimeout(nightFirstTimer);
