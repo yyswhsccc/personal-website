@@ -1189,6 +1189,7 @@ document.addEventListener('DOMContentLoaded', () => {
     speechBubble.classList.remove('show-bubble');
     if (speechBubble._marquee) { clearInterval(speechBubble._marquee); speechBubble._marquee = null; }
     speechBubble._busy = false;
+    speechBubble.scrollLeft = 0; // park the tape at the start for the next speaker
     const q = speechBubble._queued;
     speechBubble._queued = null;
     if (q) showBubble(q.text, q.duration, q.allow); // the waiter takes the mic
@@ -1217,6 +1218,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // clock-based hide drifted under load and cut long lines mid-scroll.)
     requestAnimationFrame(() => {
       if (speechBubble.textContent !== text) return; // a newer line took the mic
+      // re-zero AFTER layout: the pre-rAF reset can silently no-op while
+      // the bubble (or an ancestor) is mid-transition/hidden, and a line
+      // that opens already half-scrolled reads like a missing first half
+      speechBubble.scrollLeft = 0;
       const over = speechBubble.scrollWidth - speechBubble.clientWidth;
       if (over > 8) {
         speechBubble._busy = true;
@@ -2265,9 +2270,9 @@ document.addEventListener('DOMContentLoaded', () => {
     },
     {
       k: ['curfew', 'sleepwalk', 'sleepwalking', 'dream world', 'why quiet', 'gremlin', '宵禁', '梦游', '捣蛋', 'couvre-feu', 'somnambule', 'gremlin'],
-      a: 'ah, the DREAM CURFEW — yongshan\'s house rule ♡ here\'s the deal: in dark mode I sleepwalk, and my dreams… leak. sometimes onto the whole website. so after one arcade ambush I\'m under a 30-minute quiet-dream curfew — HER idea, so visitors get real time to explore everything she built. BUT: the first 7 minutes after curfew lifts are GREMLIN HOUR (100% sleepwalks, dreams everywhere, occasionally the entire site falls into one of my seven dream worlds for 10–15 minutes). if that happens: enjoy it, watch my countdown bubbles, and knock on my screen to pop the dream early ♡',
-      zh: '啊，「梦境宵禁」——yongshan 定的家规 ♡ 是这样：暗色模式下我会梦游，而我的梦……会漏出来，有时候漏满整个网站。所以每次梦游突袭街机之后，我要接受 30 分钟的安静梦宵禁——这是她的主意，为了让访客有充足时间探索她做的所有东西。但是！宵禁解除后的前 7 分钟是捣蛋鬼时间（100% 梦游，到处都是梦，偶尔整个网站会掉进我的七个梦境世界之一，持续 10–15 分钟）。真发生了的话：好好享受，看我的倒计时气泡，敲敲我的屏幕就能提前戳破梦境 ♡',
-      fr: 'ah, le COUVRE-FEU DES RÊVES — la règle maison de yongshan ♡ le principe : en mode nuit je suis somnambule, et mes rêves… fuient. parfois sur tout le site. donc après une embuscade d\'arcade, je subis 30 minutes de rêves calmes — SON idée, pour que les visiteurs aient le temps d\'explorer tout ce qu\'elle a construit. MAIS : les 7 premières minutes après la levée, c\'est L\'HEURE DU GREMLIN (100 % de somnambulisme, des rêves partout, et parfois le site entier tombe dans un de mes sept mondes oniriques pendant 10–15 minutes). si ça arrive : profite, suis mes bulles de compte à rebours, et toque sur mon écran pour faire éclater le rêve ♡'
+      a: 'ah, the DREAM CURFEW — yongshan\'s house rule ♡ here\'s the deal: in dark mode I sleepwalk, and my dreams… leak. sometimes onto the whole website. so after one arcade ambush I\'m under a 30-minute quiet-dream curfew — HER idea, so visitors get real time to explore everything she built. (and the clock only ticks while you\'re actually browsing — parking the tab doesn\'t count, nice try ♡) BUT: the first 7 minutes after curfew lifts are GREMLIN HOUR (100% sleepwalks, dreams everywhere, occasionally the entire site falls into one of my seven dream worlds for 10–15 minutes). if that happens: enjoy it, watch my countdown bubbles, and knock on my screen to pop the dream early ♡',
+      zh: '啊，「梦境宵禁」——yongshan 定的家规 ♡ 是这样：暗色模式下我会梦游，而我的梦……会漏出来，有时候漏满整个网站。所以每次梦游突袭街机之后，我要接受 30 分钟的安静梦宵禁——这是她的主意，为了让访客有充足时间探索她做的所有东西。（而且时钟只在你真的在逛的时候才走，挂机不算哦 ♡）但是！宵禁解除后的前 7 分钟是捣蛋鬼时间（100% 梦游，到处都是梦，偶尔整个网站会掉进我的七个梦境世界之一，持续 10–15 分钟）。真发生了的话：好好享受，看我的倒计时气泡，敲敲我的屏幕就能提前戳破梦境 ♡',
+      fr: 'ah, le COUVRE-FEU DES RÊVES — la règle maison de yongshan ♡ le principe : en mode nuit je suis somnambule, et mes rêves… fuient. parfois sur tout le site. donc après une embuscade d\'arcade, je subis 30 minutes de rêves calmes — SON idée, pour que les visiteurs aient le temps d\'explorer tout ce qu\'elle a construit. (et l\'horloge ne tourne que quand tu navigues vraiment — laisser l\'onglet ouvert ne compte pas, bien tenté ♡) MAIS : les 7 premières minutes après la levée, c\'est L\'HEURE DU GREMLIN (100 % de somnambulisme, des rêves partout, et parfois le site entier tombe dans un de mes sept mondes oniriques pendant 10–15 minutes). si ça arrive : profite, suis mes bulles de compte à rebours, et toque sur mon écran pour faire éclater le rêve ♡'
     },
     {
       k: ['salary', 'pay', 'compensation', 'rate', '薪资', '工资', '报价', 'salaire'],
@@ -3130,6 +3135,8 @@ document.addEventListener('DOMContentLoaded', () => {
       case 'barrel': cheatBarrel(); achvUnlock('barrel'); break;
       case 'zerg': cheatZerg(); achvUnlock('zergling'); break;
       case 'matrix': cheatMatrix(); achvUnlock('neo'); break;
+      case 'sunset': duskCeremony(true); break;
+      case 'sunrise': dawnCeremony(true); break;
       case 'wxsnow': cheatWx('snow'); break;
       case 'wxrain': cheatWx('rain'); break;
       case 'wxsun': cheatWx('clear'); break;
@@ -3256,6 +3263,8 @@ document.addEventListener('DOMContentLoaded', () => {
     'barrel roll':        ['🛢 fine. one roll.', '🛢 bon. un seul tonneau.', 'barrel'],
     'flip':               ['🤸 wheee.', '🤸 wouiii.', 'barrel'],
     'matrix':             ['🐇 follow the pink rabbit.', '🐇 suis le lapin rose.', 'matrix'],
+    'sunset':             ['🌇 the 9PM ceremony, on demand.', '🌇 la cérémonie de 21h, à la demande.', 'sunset'],
+    'sunrise':            ['🌅 the goose handles the honking.', '🌅 l\'oie s\'occupe du klaxon.', 'sunrise'],
     'red pill':           ['💊 you chose truth. it is written in katakana.', '💊 tu as choisi la vérité. elle est écrite en katakana.', 'matrix'],
     'blue pill':          ['💊 you wake up in your bed and believe whatever the slime wants you to believe.', '💊 tu te réveilles dans ton lit et crois ce que le slime veut.', 'none'],
     'wake up neo':        ['📟 knock knock.', '📟 toc toc.', 'matrix'],
@@ -3396,7 +3405,7 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   const SPELL_STOPWORDS = new Set(['the', 'a', 'an', 'of', 'to', 'is', 'it', 'for', 'in', 'on', 'at', 'me', 'my', 'are', 'and', 'do', 'this', 'that', 'there', 'no', 'us', 'be', 'le', 'la', 'les', 'de', 'du', 'un', 'une', 'et']);
-  const SPELL_RESERVED = ['open', 'kill', 'theme', 'lang', 'cat', 'man', 'ask', 'search', 'echo', 'sudo', 'pet', 'rm', 'exit', 'hint', 'cheats', 'secrets', 'help', 'clear', 'ls', 'whoami', 'neofetch', 'repos', 'contact', 'like', 'ps', 'top', 'hall', 'sleepwalk', 'dream'];
+  const SPELL_RESERVED = ['open', 'kill', 'theme', 'lang', 'cat', 'man', 'ask', 'search', 'echo', 'sudo', 'pet', 'rm', 'exit', 'hint', 'cheats', 'secrets', 'help', 'clear', 'ls', 'whoami', 'neofetch', 'repos', 'contact', 'like', 'ps', 'top', 'hall', 'sleepwalk', 'dream', 'tarot'];
 
   function spellNorm(s) { return String(s).toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim(); }
   function spellToks(s) { return spellNorm(s).split(' ').filter((w) => w && !SPELL_STOPWORDS.has(w)); }
@@ -5033,6 +5042,21 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       return;
     }
+    if (cmd === 'tarot') {
+      // divination-only: the wizard deals from the FULL 78 right here in
+      // the shell. no mechanical effect outside the arcade — fate keeps
+      // the receipts for slime_run.exe. `tarot <0-77>` deals a specific
+      // card, for scholars of the deck.
+      const idx = args[0] !== undefined && !isNaN(parseInt(args[0], 10)) ? Math.abs(parseInt(args[0], 10)) % TAROT.length : Math.floor(Math.random() * TAROT.length);
+      const card = TAROT[idx];
+      const upright = Math.random() < 0.55;
+      termLine(trT('🔮 the wizard obliges… (' + TAROT.length + ' cards in the deck)', '🔮 le mage s\'exécute… (' + TAROT.length + ' cartes au paquet)'), 't-accent');
+      tarotReveal(card, upright, () => {
+        termLine(`${trT(...card.n)}${upright ? '' : trT(' (reversed)', ' (renversée)')} — ${trT(...(upright ? card.up : card.dn).t)}`, 't-ok');
+        termLine(trT('(inside slime_run.exe this would have DONE something ♡)', '(dans slime_run.exe, ça aurait EU un effet ♡)'), 't-dim');
+      });
+      return;
+    }
     if (cmd === 'dream') {
       // the hidden dream valve: seven worlds, one shell. not in `help` —
       // finding it IS the achievement (spiritually)
@@ -5315,15 +5339,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function resolvedTheme() {
     if (themePref === 'auto') {
-      // auto, repaired: if the visitor's SYSTEM says dark, follow it —
-      // that is an explicit signal, and systems set to auto-switch raise
-      // it at night exactly when they should. otherwise (system is light
-      // or unreadable) the visitor's own clock decides: 21:00–08:00 is
-      // night here, whatever the OS thinks. (a web page cannot ask "is
-      // your OS set to auto?" — prefers-color-scheme only exposes the
-      // CURRENT value — so dark-wins + clock is the honest whole of it.)
+      // auto, re-repaired: the visitor's CLOCK is the only authority —
+      // 21:00–08:00 is night, everything else is day. (v73 let a dark
+      // OS override the clock; on always-dark systems that meant the
+      // site never saw daylight again — noon reopened to midnight mode.
+      // anyone who truly wants all-dark has the 🌙 toggle.)
       try {
-        if (darkMQ.matches) return 'dark';
         const hr = new Date().getHours();
         if (typeof hr === 'number' && hr >= 0 && hr <= 23) return (hr >= 21 || hr < 8) ? 'dark' : 'light';
       } catch (e) { /* clockless devices exist, apparently */ }
@@ -5594,11 +5615,32 @@ document.addEventListener('DOMContentLoaded', () => {
      WRITES IT DOWN in its dream journal, forever: sleepwalks drop to
      50%, and only 1-in-4 ever dreams of the arcade again. the other 3
      go do things. real things. dreams respect boundaries. */
-  var swCurfewUntil = store.get('yos-sw-curfew', 0);
+  /* ---- v6.1: the curfew clock only ticks while YOU are here ----
+     30 minutes of ACTIVE time — tab visible AND some input in the last
+     75s — accumulated across visits. parking the tab overnight serves
+     exactly zero seconds; the slime is patient, not gullible. stored
+     as milliseconds still owed ('yos-sw-curfew-left'). */
+  var swCurfewLeft = store.get('yos-sw-curfew-left', null);
+  if (typeof swCurfewLeft !== 'number' || !(swCurfewLeft >= 0)) {
+    // migrate the v5.2 wall-clock deadline: whatever it still owed
+    const legacy = store.get('yos-sw-curfew', 0);
+    swCurfewLeft = (legacy && legacy > Date.now()) ? Math.min(30 * 60000, legacy - Date.now()) : 0;
+    store.set('yos-sw-curfew-left', swCurfewLeft);
+    store.set('yos-sw-curfew', 0);
+  }
   var swAverse = store.get('yos-sw-averse', false);
   var swPostCurfew = false; // set by the lift: the NEXT ambush is on probation
   var swRejectUntil = 0;    // closing the arcade before this = "no thanks"
-  var swCurfewTimer = null;
+  var swCurfewTicker = null;
+  var swLiftDone = false;   // one ceremony per served curfew
+  var swLastInputAt = Date.now();
+  (function swWatchActivity() {
+    let last = 0;
+    const mark = () => { const n = Date.now(); if (n - last > 1000) { last = n; swLastInputAt = n; } };
+    ['pointerdown', 'pointermove', 'keydown', 'wheel', 'touchstart', 'scroll'].forEach((evName) =>
+      document.addEventListener(evName, mark, { passive: true, capture: true }));
+  })();
+  function swVisitorEngaged() { return !document.hidden && Date.now() - swLastInputAt < 75000; }
 
   /* ---- v6.0: GREMLIN HOUR 😈 ----
      the first 7 minutes after a curfew lifts belong to the gremlin.
@@ -5608,16 +5650,8 @@ document.addEventListener('DOMContentLoaded', () => {
      gremlin. survives reloads — localStorage remembers mischief. */
   var swTrickUntil = store.get('yos-sw-trick', 0);
 
-  function swTricksterOn() {
-    if (swCurfewOn()) return false;
-    // an expired-but-not-yet-lifted curfew counts: gremlin hour begins
-    // the instant the clock runs out, even if the ceremony is running
-    // late (throttled tabs) — otherwise a walk could sneak an arcade
-    // ambush into the gap and assassinate the whole party
-    if (swCurfewUntil) return true;
-    return Date.now() < swTrickUntil;
-  }
-  function swCurfewOn() { return Date.now() < swCurfewUntil; }
+  function swTricksterOn() { return !swCurfewOn() && Date.now() < swTrickUntil; }
+  function swCurfewOn() { return swCurfewLeft > 0; }
   // how often a sleep turns into a walk at all (gremlin hour: ALWAYS)
   function swWalkChance() {
     if (swTricksterOn()) return 1;
@@ -5638,13 +5672,14 @@ document.addEventListener('DOMContentLoaded', () => {
      "📜 règle de la maison signée yongshan : après UN rêve d'arcade, couvre-feu des rêves de 30 min… pour que TU puisses explorer le reste de son site en paix !! (j'ai signé le formulaire. avec mon visage.)"],
     ["📜 yongshan's law: one arcade ambush per half hour, MAX. she says the site has like 40 other rooms and you deserve to see them without me yelling PLAY WITH ME ♡",
      "📜 la loi de yongshan : une embuscade d'arcade par demi-heure, MAXI. elle dit que le site a genre 40 autres pièces et que tu mérites de les voir sans que je crie JOUE AVEC MOI ♡"],
-    ["📜 the curfew is yongshan's idea: 30 whole minutes of quiet dreams so you can wander her whole site… she calls it 'boundaries'. I call it 'so long'. both are correct 💤",
-     "📜 le couvre-feu, c'est l'idée de yongshan : 30 minutes de rêves calmes pour que tu explores tout son site… elle appelle ça « des limites ». moi « une éternité ». les deux sont vrais 💤"]
+    ["📜 the curfew is yongshan's idea: 30 whole minutes of quiet dreams so you can wander her whole site… and the clock only ticks while YOU'RE actually here!! no serving my sentence to an empty room 💤",
+     "📜 le couvre-feu, c'est l'idée de yongshan : 30 minutes de rêves calmes pour que tu explores tout son site… et l'horloge ne tourne que quand TU es vraiment là !! pas question de purger ma peine devant une salle vide 💤"]
   ];
 
   function swStartCurfew() {
-    swCurfewUntil = Date.now() + 30 * 60 * 1000;
-    store.set('yos-sw-curfew', swCurfewUntil);
+    swCurfewLeft = 30 * 60 * 1000; // 30 ACTIVE minutes, not 30 parked ones
+    store.set('yos-sw-curfew-left', swCurfewLeft);
+    swLiftDone = false;
     swScheduleLift();
     // the accused reads the house rule to the audience, from bed,
     // right after the dive settles (allowWhileAway: it IS asleep)
@@ -5656,11 +5691,26 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function swScheduleLift() {
-    if (swCurfewTimer) clearTimeout(swCurfewTimer);
-    if (!swCurfewUntil) return;
-    // if the curfew ran out while the visitor was away, lift it a few
-    // beats after nightfall — the bedtime announcement goes first
-    swCurfewTimer = setTimeout(swCurfewLift, Math.max(swCurfewUntil - Date.now(), 4000));
+    // v6.1: no wall-clock alarm anymore — a 5s ticker meters out the
+    // sentence only while the visitor is actually engaged. the lift
+    // fires the instant the last active second is served.
+    if (swCurfewTicker) clearInterval(swCurfewTicker);
+    if (!swCurfewOn()) return;
+    let lastTick = Date.now();
+    swCurfewTicker = setInterval(() => {
+      const now = Date.now();
+      const dt = Math.min(now - lastTick, 20000); // throttled tabs can't lump-sum the time
+      lastTick = now;
+      if (!swCurfewOn()) { clearInterval(swCurfewTicker); swCurfewTicker = null; return; }
+      if (!swVisitorEngaged()) return; // parked tab = clock frozen
+      swCurfewLeft = Math.max(0, swCurfewLeft - dt);
+      store.set('yos-sw-curfew-left', swCurfewLeft);
+      if (!swCurfewOn()) {
+        clearInterval(swCurfewTicker);
+        swCurfewTicker = null;
+        swCurfewLift();
+      }
+    }, 5000);
   }
 
   const SW_LIFT_LINES = [
@@ -5676,10 +5726,9 @@ document.addEventListener('DOMContentLoaded', () => {
   ];
 
   function swCurfewLift() {
-    if (!swCurfewUntil) return; // nothing to lift
-    if (swCurfewOn()) { swScheduleLift(); return; } // fired early — retry, never die
-    swCurfewUntil = 0;
-    store.set('yos-sw-curfew', 0);
+    if (swCurfewOn()) { swScheduleLift(); return; } // still owes active minutes
+    if (swLiftDone) return; // one ceremony per curfew
+    swLiftDone = true;
     swPostCurfew = true; // the next arcade ambush is on probation
     // v6.0: GREMLIN HOUR opens the moment the curfew door does — state
     // first (reload-proof), ceremony only if there's an audience
@@ -5724,6 +5773,9 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }, 5600);
   }
+
+  // boot: resume any half-served curfew — active time in ANY theme counts
+  swScheduleLift();
 
   function swArcadeRejected() {
     swRejectUntil = 0;
@@ -7218,6 +7270,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const dur = remainMs || (10 + Math.random() * 5) * 60000; // the requested 10–15 min
     dreamWorld = { id: w.id, w, until: Date.now() + dur, total: remainMs ? 15 * 60000 : dur, timers: [], nodes: [], flags: {} };
     document.documentElement.classList.add('dreaming', w.cls);
+    try { gSyncDreamSkin(); } catch (e) { /* the arcade dreams later */ }
     store.set('yos-dream', { id: w.id, until: dreamWorld.until });
     store.set('yos-dream-last', w.id);
     const seen = store.get('yos-dreams-seen', {});
@@ -7288,6 +7341,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.dream-dlg, .scp-lock, .dream-geo-tape, .dream-slippy, .dream-gb-tetro, .dream-amber-slip').forEach((n) => n.remove());
     document.querySelectorAll('.scp-locked-body').forEach((n) => n.classList.remove('scp-locked-body'));
     document.documentElement.classList.remove('dreaming', w.cls);
+    try { gSyncDreamSkin(); } catch (e) { /* the arcade wakes later */ }
     store.set('yos-dream', null);
     store.set('yos-dream-cd', Date.now() + 6 * 60000); // one reality bend per while
     dreamWorld = null;
@@ -7408,7 +7462,159 @@ document.addEventListener('DOMContentLoaded', () => {
     themePref = pref;
     store.set('yos-theme', pref);
     applyTheme();
+    scheduleSkyFlips(); // auto mode books its 21:00 / 08:00 theatre slots
   }
+
+  /* =====================================================
+     v6.1 — THE 9PM CEREMONY 🌙 (and the 8AM goose)
+     in auto mode the clock flips the lights at 21:00 and
+     08:00 — and a flip deserves THEATRE. at dusk the slime
+     shuffles in, reads yongshan's quiet-hours decree, and
+     pulls the BIG SWITCH; at dawn a goose handles the
+     honking. hidden cheats `sunset` / `sunrise` replay
+     them on demand (and flip the theme for real).
+     ===================================================== */
+  var skyFlipTimers = [];
+  var skyCineBusy = false;
+
+  function scheduleSkyFlips() {
+    skyFlipTimers.forEach(clearTimeout);
+    skyFlipTimers = [];
+    if (themePref !== 'auto') return;
+    const now = new Date();
+    const msTo = (h) => {
+      const d = new Date(now);
+      d.setHours(h, 0, 2, 0); // :02 — land firmly inside the new hour
+      if (d <= now) d.setDate(d.getDate() + 1);
+      return d.getTime() - now.getTime();
+    };
+    skyFlipTimers.push(setTimeout(() => skyFlipNow(true), msTo(21)));
+    skyFlipTimers.push(setTimeout(() => skyFlipNow(false), msTo(8)));
+  }
+
+  function skyFlipNow(toDark) {
+    scheduleSkyFlips(); // re-book tomorrow FIRST — theatre may misbehave
+    if (themePref !== 'auto') return;
+    const want = toDark ? 'dark' : 'light';
+    if (resolvedTheme() !== want) return; // the clock knows best
+    const have = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+    if (have === want) return; // a visibility handler already flipped it
+    if (document.hidden || document.body.classList.contains('terminal-only') || REDUCED_MOTION || skyCineBusy) {
+      applyTheme(); // no audience / no motion budget: flip quietly
+      return;
+    }
+    if (toDark) duskCeremony(false);
+    else dawnCeremony(false);
+  }
+
+  function cineEl(cls, parent, text) {
+    const el = document.createElement('div');
+    el.className = cls;
+    if (text != null) el.textContent = text;
+    (parent || document.body).appendChild(el);
+    return el;
+  }
+
+  const DUSK_DECREES = [
+    ["*yawn* 9PM!! quiet-hours decree, signed yongshan: LIGHTS OUT ♡", "*bâille* 21h !! décret des heures calmes, signé yongshan : EXTINCTION DES FEUX ♡"],
+    ["it's 9PM… my legally mandated bedtime… the sun has been dismissed 📜", "il est 21h… mon coucher légalement obligatoire… le soleil est congédié 📜"],
+    ["9PM sharp. yongshan's rule: night mode = cozy mode. objections? too late ♡", "21h pile. règle de yongshan : mode nuit = mode cocon. des objections ? trop tard ♡"]
+  ];
+  const DUSK_GOODNIGHTS = [
+    ["goodnight!! the site is MINE n— zzz ♡", "bonne nuit !! le site est à MOI mainten— zzz ♡"],
+    ["*tucks self in* wake me if the wifi has nightmares ♡", "*se borde tout seul* réveillez-moi si le wifi fait des cauchemars ♡"]
+  ];
+
+  function duskCeremony(force) {
+    if (skyCineBusy) return;
+    if (REDUCED_MOTION) { if (force) setThemePref('dark'); else applyTheme(); return; }
+    skyCineBusy = true;
+    const cine = cineEl('sky-cine dusk-cine');
+    const sky = cineEl('dusk-sky', cine);
+    const sun = cineEl('dusk-sun', cine);
+    // the big switch: a wall plate with one very important lever
+    const sw = cineEl('dusk-switch', cine);
+    sw.innerHTML = '<span class="dusk-switch-label">DAY</span><span class="dusk-switch-lever"></span><span class="dusk-switch-label">NITE</span>';
+    // the officiant, in its little nightcap
+    const slime = cineEl('dusk-slime', cine);
+    const simg = document.createElement('img');
+    simg.src = (OUTFIT_FRAMES && typeof OUTFIT_FRAMES.sleep === 'string' && OUTFIT_FRAMES.sleep) || 'assets/slime_night_sleep.png';
+    simg.alt = '';
+    slime.appendChild(simg);
+    const bub = cineEl('dusk-bubble', slime);
+    const say = (pair, ms) => { bub.textContent = trT(...pair); bub.classList.add('is-on'); playTone(523, 'sine', 0.1, 0, 0.03); if (ms) setTimeout(() => bub.classList.remove('is-on'), ms); };
+    playTone(392, 'sine', 0.5, 0, 0.04); // dusk settles in E-flat-ish calm
+    setTimeout(() => say(DUSK_DECREES[Math.floor(Math.random() * DUSK_DECREES.length)], 2600), 600);
+    // 3.2s: the officiant reaches the switch and PULLS
+    setTimeout(() => {
+      slime.classList.add('dusk-slime-pull');
+      sw.classList.add('is-off');
+      playTone(180, 'square', 0.06, 0, 0.08);
+      playTone(90, 'square', 0.09, 0.06, 0.08); // CLICK. (a load-bearing click)
+      const wipe = cineEl('dusk-wipe', cine);
+      const r = sw.getBoundingClientRect();
+      wipe.style.setProperty('--wx', (r.left + r.width / 2) + 'px');
+      wipe.style.setProperty('--wy', (r.top + r.height / 2) + 'px');
+      // the wipe covers the screen — swap reality underneath it
+      setTimeout(() => {
+        if (force) setThemePref('dark'); else applyTheme();
+        [784, 659, 523, 392].forEach((f, i) => playTone(f, 'sine', 0.4, i * 0.16, 0.035)); // a 4-note lullaby
+      }, 480);
+      // stars clock in one by one, each with its little plink
+      for (let i = 0; i < 5; i++) {
+        setTimeout(() => {
+          const st = cineEl('dusk-star', cine, i === 4 ? '🌙' : '✦');
+          st.style.left = (12 + Math.random() * 76) + '%';
+          st.style.top = (6 + Math.random() * 30) + '%';
+          playTone(1046 + i * 120, 'triangle', 0.12, 0, 0.03);
+        }, 900 + i * 260);
+      }
+    }, 3200);
+    setTimeout(() => say(DUSK_GOODNIGHTS[Math.floor(Math.random() * DUSK_GOODNIGHTS.length)], 2400), 5600);
+    setTimeout(() => { cine.classList.add('sky-cine-out'); }, 7400);
+    setTimeout(() => { cine.remove(); skyCineBusy = false; }, 8300);
+  }
+
+  function dawnCeremony(force) {
+    if (skyCineBusy) return;
+    if (REDUCED_MOTION) { if (force) setThemePref('light'); else applyTheme(); return; }
+    skyCineBusy = true;
+    const cine = cineEl('sky-cine dawn-cine');
+    const slime = cineEl('dusk-slime dawn-slime', cine);
+    const simg = document.createElement('img');
+    simg.src = (OUTFIT_FRAMES && typeof OUTFIT_FRAMES.sleep === 'string' && OUTFIT_FRAMES.sleep) || 'assets/slime_night_sleep.png';
+    simg.alt = '';
+    slime.appendChild(simg);
+    const bub = cineEl('dusk-bubble', slime);
+    // 0.5s: the alarm clock (it has feathers and zero mercy)
+    setTimeout(() => {
+      const goose = cineEl('dawn-goose', cine, '🪿');
+      playTone(392, 'sawtooth', 0.16, 0, 0.07);
+      playTone(311, 'sawtooth', 0.22, 0.16, 0.07); // HONK. HONK.
+      setTimeout(() => goose.remove(), 2600);
+    }, 500);
+    setTimeout(() => {
+      slime.classList.add('dawn-jolt');
+      simg.src = 'assets/slime_pet_cutout.png';
+      bub.textContent = trT('HONK?! …morning. lights ON — daylight is yongshan\'s productivity law ☀ (I\'ll nap anyway)', 'HONK ?! …le matin. lumières ALLUMÉES — la lumière du jour, c\'est la loi productivité de yongshan ☀ (je referai la sieste quand même)');
+      bub.classList.add('is-on');
+    }, 1400);
+    setTimeout(() => {
+      const wipe = cineEl('dawn-wipe', cine);
+      wipe.style.setProperty('--wx', '50vw');
+      wipe.style.setProperty('--wy', '18vh');
+      setTimeout(() => {
+        if (force) setThemePref('light'); else applyTheme();
+        playStartupChime();
+      }, 420);
+      const sun = cineEl('dawn-sun', cine);
+      sun.textContent = '☀';
+    }, 2600);
+    setTimeout(() => { cine.classList.add('sky-cine-out'); }, 5000);
+    setTimeout(() => { cine.remove(); skyCineBusy = false; }, 5900);
+  }
+
+  scheduleSkyFlips(); // boot: book tonight's show
 
   const themeToggleBtn = document.getElementById('btn-theme-toggle');
   if (themeToggleBtn) {
@@ -8423,6 +8629,79 @@ document.addEventListener('DOMContentLoaded', () => {
     };
   }
 
+  /* ---- v6.1: the runner falls into the dream too 🌌 ----
+     while a dream world holds the site, the arcade is INSIDE the
+     dream: palette (free, via the CSS vars above), sky doodads,
+     monsters, projectiles and backdrops all re-costume per world. */
+  var gDreamSkin = null;
+  const G_DREAM_IDS = ['win95', 'scp', 'matrix', 'gameboy', 'geo', 'bsod', 'amber'];
+  function gSyncDreamSkin() {
+    const c = document.documentElement.classList;
+    gDreamSkin = G_DREAM_IDS.find((id) => c.contains('dream-' + id)) || null;
+    gRefreshTheme(); // the canvas palette follows the dream's CSS vars
+  }
+  const G_SKY_GLYPHS = {
+    win95: ['⊞', '✕'], scp: ['⚠', '█'], matrix: ['ｱ', '0'], gameboy: ['▲', '■'],
+    geo: ['★', '✧'], bsod: [':(', '▓'], amber: ['♦', '▚']
+  };
+
+  // one backdrop pass per frame, drawn under everything else
+  function gDrawDreamBg(g2) {
+    if (!gDreamSkin) return;
+    const f = GAME.frame;
+    if (gDreamSkin === 'matrix') {
+      g2.font = "10px monospace";
+      for (let i = 0; i < 6; i++) {
+        const x = 30 + i * 80;
+        const y = (f * 1.6 + i * 53) % (G_H + 30) - 10;
+        g2.fillStyle = 'rgba(61, 255, 124, 0.28)';
+        g2.fillText(String((i * 7 + (f >> 4)) % 2), x, y);
+        g2.fillStyle = 'rgba(61, 255, 124, 0.14)';
+        g2.fillText(String((i * 3 + (f >> 4)) % 2), x, y - 12);
+      }
+    } else if (gDreamSkin === 'win95') {
+      for (let i = 0; i < 2; i++) { // ghost dialogs drifting like clouds
+        const x = ((i * 260 + 60 - f * 0.25) % (G_W + 120) + (G_W + 120)) % (G_W + 120) - 60;
+        const y = 16 + i * 26;
+        g2.fillStyle = 'rgba(223, 223, 223, 0.28)';
+        g2.fillRect(x, y, 54, 22);
+        g2.fillStyle = 'rgba(0, 0, 128, 0.4)';
+        g2.fillRect(x, y, 54, 6);
+      }
+    } else if (gDreamSkin === 'scp') {
+      g2.fillStyle = 'rgba(255, 210, 63, 0.5)';
+      for (let x = -12; x < G_W + 12; x += 16) g2.fillRect(x + (f % 16), 0, 8, 4); // hazard tape sky
+      if ((f >> 5) % 2) { g2.fillStyle = '#ff5252'; g2.fillRect(G_W - 14, 10, 4, 4); } // the camera blinks
+    } else if (gDreamSkin === 'gameboy') {
+      g2.fillStyle = 'rgba(15, 56, 15, 0.25)';
+      for (let i = 0; i < 2; i++) { // chunky DMG clouds
+        const x = ((i * 240 + 90 - f * 0.2) % (G_W + 100) + (G_W + 100)) % (G_W + 100) - 50;
+        g2.fillRect(x, 18 + i * 22, 40, 8);
+        g2.fillRect(x + 8, 12 + i * 22, 24, 8);
+      }
+    } else if (gDreamSkin === 'geo') {
+      for (let i = 0; i < 8; i++) { // a starfield, tiled like it's 1998
+        if (((f >> 3) + i) % 4 === 0) continue; // twinkle
+        g2.fillStyle = ['#ffe98a', '#ff8fc7', '#8fd4fa', '#ffffff'][i % 4];
+        g2.fillRect((i * 61 + 17) % G_W, (i * 37 + 9) % 90, 2, 2);
+      }
+    } else if (gDreamSkin === 'bsod') {
+      g2.font = "9px monospace";
+      g2.fillStyle = 'rgba(255, 255, 255, 0.22)';
+      for (let i = 0; i < 3; i++) {
+        g2.fillText(':(', (i * 170 + 40) % G_W, (f * 0.8 + i * 47) % 100);
+      }
+    } else if (gDreamSkin === 'amber') {
+      const band = (f * 0.7) % (G_H + 40) - 20; // a phosphor refresh band
+      const grad = g2.createLinearGradient(0, band - 14, 0, band + 14);
+      grad.addColorStop(0, 'rgba(255, 176, 0, 0)');
+      grad.addColorStop(0.5, 'rgba(255, 176, 0, 0.10)');
+      grad.addColorStop(1, 'rgba(255, 176, 0, 0)');
+      g2.fillStyle = grad;
+      g2.fillRect(0, band - 14, G_W, 28);
+    }
+  }
+
   const GAME = {
     state: 'idle',            // idle | run | over
     y: 0, vy: 0,              // slime height above ground
@@ -8488,6 +8767,13 @@ document.addEventListener('DOMContentLoaded', () => {
     GAME.invUntil = 0;
     GAME.adUsed = false; // one ad-revive per run
     GAME.nm = null; GAME.nmPx = null; // nightmares don't survive a reboot
+    // a run started inside a dream announces its stage (once, proudly)
+    if (gDreamSkin) {
+      try {
+        const w = DREAM_WORLDS.find((d) => d.id === gDreamSkin);
+        if (w) GAME.toast = { text: w.icon + ' ' + trT('dream stage: ' + w.name[0], 'niveau de rêve : ' + w.name[1]), ttl: 150 };
+      } catch (e) { /* stageless, still fun */ }
+    }
     if (typeof liveAway === 'function') liveAway(false);
     const rcam = document.getElementById('game-reaction-cam');
     if (rcam) rcam.classList.remove('cam-ad-dock');
@@ -8704,17 +8990,97 @@ document.addEventListener('DOMContentLoaded', () => {
     if (ghosted) g2.globalAlpha = 1;
   }
 
+  // every dream world sends its own monsters (the hitboxes never change —
+  // costumes only, physics is neutral territory)
+  const G_FLY_LABELS = { win95: '✕!', scp: 'SCP', matrix: '010', gameboy: '404', geo: 'GIF', bsod: ':(', amber: 'JCL' };
+
   function gDrawObstacle(g2, o) {
     const yTop = o.fly ? G_GROUND - 58 : G_GROUND - o.h - (o.jy || 0);
+    const skin = gDreamSkin;
     if (o.fly) {
-      // a floating "404" gremlin
-      g2.fillStyle = gTheme.purple;
+      // a floating gremlin, re-labeled by whatever the slime is dreaming
+      g2.fillStyle = skin === 'scp' ? '#141414' : skin === 'bsod' ? '#051a86' : gTheme.purple;
       g2.fillRect(o.x, yTop, o.w, 16);
-      g2.fillStyle = '#ffffff';
+      if (skin === 'scp') { g2.strokeStyle = '#ffd23f'; g2.lineWidth = 1; g2.strokeRect(o.x + 0.5, yTop + 0.5, o.w - 1, 15); }
+      g2.fillStyle = skin === 'matrix' ? '#3dff7c' : '#ffffff';
       g2.font = "11px 'Jersey 25', 'VT323', monospace";
-      g2.fillText('404', o.x + 4, yTop + 12);
+      g2.fillText(G_FLY_LABELS[skin] || '404', o.x + 4, yTop + 12);
+    } else if (skin === 'win95') {
+      // a runaway error dialog with legs (OK. OK. OK.)
+      g2.fillStyle = '#dfdfdf';
+      g2.fillRect(o.x, yTop, o.w, o.h);
+      g2.fillStyle = '#000080';
+      g2.fillRect(o.x, yTop, o.w, 4);
+      g2.fillStyle = '#101010';
+      g2.fillRect(o.x + 3, yTop + o.h * 0.4, 3, 3);
+      g2.fillRect(o.x + o.w - 6, yTop + o.h * 0.4, 3, 3);
+      g2.fillRect(o.x + o.w - 5, yTop + 1, 3, 2); // its tiny ✕ button
+      gDrawObstacleLegs(g2, o, '#404040');
+    } else if (skin === 'scp') {
+      // a redaction blob — one (1) eye cleared for release
+      g2.fillStyle = '#0a0a0a';
+      g2.fillRect(o.x, yTop, o.w, o.h);
+      g2.fillStyle = '#ffd23f';
+      g2.fillRect(o.x, yTop, o.w, 2);
+      g2.fillStyle = '#ffffff';
+      g2.fillRect(o.x + o.w / 2 - 2, yTop + o.h * 0.35, 4, 4);
+      gDrawObstacleLegs(g2, o, '#ffd23f');
+    } else if (skin === 'matrix') {
+      // a glyph bug: mostly rain, slightly rude
+      g2.strokeStyle = '#3dff7c';
+      g2.lineWidth = 2;
+      g2.strokeRect(o.x + 1, yTop + 1, o.w - 2, o.h - 2);
+      g2.fillStyle = '#3dff7c';
+      g2.font = "10px monospace";
+      g2.fillText(String((GAME.frame >> 3) % 2), o.x + o.w / 2 - 3, yTop + o.h * 0.6);
+      gDrawObstacleLegs(g2, o, '#3dff7c');
+    } else if (skin === 'gameboy') {
+      // a DMG brick with an attitude (4 shades, 0 mercy)
+      g2.fillStyle = '#306230';
+      g2.fillRect(o.x, yTop, o.w, o.h);
+      g2.fillStyle = '#0f380f';
+      for (let bx = 0; bx < o.w - 3; bx += 6) g2.fillRect(o.x + 1 + bx, yTop + 2, 3, 2);
+      g2.fillStyle = '#9bbc0f';
+      g2.fillRect(o.x + 3, yTop + o.h * 0.4, 3, 3);
+      g2.fillRect(o.x + o.w - 6, yTop + o.h * 0.4, 3, 3);
+      gDrawObstacleLegs(g2, o, '#0f380f');
+    } else if (skin === 'geo') {
+      // an UNDER CONSTRUCTION cone (since 1998)
+      g2.fillStyle = '#f7d308';
+      g2.fillRect(o.x + o.w * 0.25, yTop, o.w * 0.5, o.h);
+      g2.fillRect(o.x, yTop + o.h - 4, o.w, 4);
+      g2.fillStyle = '#141414';
+      g2.fillRect(o.x + o.w * 0.25, yTop + o.h * 0.35, o.w * 0.5, 3);
+      g2.fillStyle = '#ffffff';
+      g2.fillRect(o.x + o.w / 2 - 3, yTop + o.h * 0.15, 2, 2);
+      g2.fillRect(o.x + o.w / 2 + 2, yTop + o.h * 0.15, 2, 2);
+      gDrawObstacleLegs(g2, o, '#141414');
+    } else if (skin === 'bsod') {
+      // a small window having a very bad day
+      g2.fillStyle = '#1136c8';
+      g2.fillRect(o.x, yTop, o.w, o.h);
+      g2.strokeStyle = '#ffffff';
+      g2.lineWidth = 1;
+      g2.strokeRect(o.x + 0.5, yTop + 0.5, o.w - 1, o.h - 1);
+      g2.fillStyle = '#ffffff';
+      g2.font = "9px monospace";
+      g2.fillText(':(', o.x + o.w / 2 - 4, yTop + o.h * 0.6);
+      gDrawObstacleLegs(g2, o, '#8ab4ff');
+    } else if (skin === 'amber') {
+      // an escaped punch card (do not fold, staple, or pet)
+      g2.fillStyle = '#fdf6d8';
+      g2.fillRect(o.x, yTop, o.w, o.h);
+      g2.fillStyle = '#161006';
+      for (let hy = 3; hy < o.h - 2; hy += 5) {
+        for (let hx = 2; hx < o.w - 2; hx += 5) {
+          if ((hx + hy + o.w) % 3 === 0) g2.fillRect(o.x + hx, yTop + hy, 2, 3);
+        }
+      }
+      g2.fillStyle = '#7a5200';
+      g2.fillRect(o.x, yTop, o.w, 2);
+      gDrawObstacleLegs(g2, o, '#7a5200');
     } else {
-      // a pixel bug with little legs
+      // home reality: the pixel bug with little legs
       g2.fillStyle = gTheme.pink;
       g2.fillRect(o.x, yTop, o.w, o.h);
       g2.fillStyle = gTheme.purple;
@@ -8722,11 +9088,15 @@ document.addEventListener('DOMContentLoaded', () => {
       g2.fillStyle = '#ffffff';
       g2.fillRect(o.x + 3, yTop + o.h * 0.35, 3, 3);
       g2.fillRect(o.x + o.w - 6, yTop + o.h * 0.35, 3, 3);
-      g2.fillStyle = gTheme.ink;
-      const legPhase = Math.floor(GAME.frame / 4) % 2;
-      for (let i = 0; i < 3; i++) {
-        g2.fillRect(o.x + 2 + i * ((o.w - 6) / 2), G_GROUND - (legPhase === i % 2 ? 3 : 1), 2, legPhase === i % 2 ? 3 : 1);
-      }
+      gDrawObstacleLegs(g2, o, gTheme.ink);
+    }
+  }
+
+  function gDrawObstacleLegs(g2, o, col) {
+    g2.fillStyle = col;
+    const legPhase = Math.floor(GAME.frame / 4) % 2;
+    for (let i = 0; i < 3; i++) {
+      g2.fillRect(o.x + 2 + i * ((o.w - 6) / 2), G_GROUND - (legPhase === i % 2 ? 3 : 1), 2, legPhase === i % 2 ? 3 : 1);
     }
   }
 
@@ -8760,9 +9130,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const wxRainy = wxKind === 'rain' || wxKind === 'thunder' || wxKind === 'sleet';
     const wxSnowy = wxKind === 'snow' || wxKind === 'blizzard' || wxKind === 'hail';
 
-    // parallax hearts drifting in the sky
+    // the dream's backdrop pass goes under everything
+    gDrawDreamBg(g2);
+
+    // parallax hearts drifting in the sky (dream worlds send their own sky mail)
     if (GAME.clouds.length < 4 && Math.random() < 0.02) {
-      GAME.clouds.push({ x: G_W + 20, y: 14 + Math.random() * 60, c: Math.random() < 0.5 ? '♡' : '✦' });
+      const glyphs = (gDreamSkin && G_SKY_GLYPHS[gDreamSkin]) || ['♡', '✦'];
+      GAME.clouds.push({ x: G_W + 20, y: 14 + Math.random() * 60, c: glyphs[Math.random() < 0.5 ? 0 : 1] });
     }
     g2.font = "13px 'Jersey 25', 'VT323', monospace";
     GAME.clouds.forEach((cl) => {
@@ -8796,7 +9170,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const sy = (i * 37 + Math.floor(GAME.frame / 3)) % G_GROUND;
         g2.fillRect(sx, sy, 2, 2);
       }
-    } else if (wxKind === 'clear') {
+    } else if (wxKind === 'clear' && !gDreamSkin) { // dream skies employ their own weather
       const wxHr = new Date().getHours();
       if (wxHr >= 7 && wxHr < 19) { // a tiny sun clocks in for the day shift
         g2.fillStyle = '#ffe98a';
@@ -9065,7 +9439,18 @@ document.addEventListener('DOMContentLoaded', () => {
     GAME.obs.forEach((o) => gDrawObstacle(g2, o));
 
     if (GAME.pickup) gDrawMat(g2, G_MATS.wand, GAME.pickup.x, G_GROUND + G_SLIME_S - 4 - 18, 2);
-    GAME.shots.forEach((sh) => gDrawMat(g2, G_MATS.heart, sh.x, sh.y, 2));
+    GAME.shots.forEach((sh) => {
+      // every dream re-arms the slime: same ballistics, new bullets
+      if (!gDreamSkin) { gDrawMat(g2, G_MATS.heart, sh.x, sh.y, 2); return; }
+      g2.font = "12px 'Jersey 25', 'VT323', monospace";
+      if (gDreamSkin === 'win95') { g2.fillStyle = '#000080'; g2.fillText('►', sh.x, sh.y + 10); }
+      else if (gDreamSkin === 'scp') { g2.fillStyle = '#ffd23f'; g2.fillText('⚠', sh.x, sh.y + 10); }
+      else if (gDreamSkin === 'matrix') { g2.fillStyle = '#3dff7c'; g2.fillText(String((sh.x >> 3) % 2), sh.x, sh.y + 10); }
+      else if (gDreamSkin === 'gameboy') { g2.fillStyle = '#0f380f'; g2.fillRect(sh.x, sh.y + 2, 7, 7); }
+      else if (gDreamSkin === 'geo') { g2.fillStyle = '#ffe98a'; g2.fillText('★', sh.x, sh.y + 10); }
+      else if (gDreamSkin === 'bsod') { g2.fillStyle = '#ffffff'; g2.fillRect(sh.x, sh.y + 2, 8, 6); g2.fillStyle = '#1136c8'; g2.fillRect(sh.x + 2, sh.y + 4, 4, 2); }
+      else { g2.fillStyle = '#ffb000'; g2.fillRect(sh.x, sh.y + 4, 9, 3); }
+    });
     if (GAME.boss) {
       const bs = GAME.boss;
       if (bs.flash % 2 === 0) {
@@ -9314,24 +9699,440 @@ document.addEventListener('DOMContentLoaded', () => {
     { icon: '🧋', name: ["the Boba Spirit", "l'Esprit du Bubble Tea"], pitch: ['fortune settles at the bottom. you must drink the whole cup first.', 'la fortune se dépose au fond. il faut d\'abord boire toute la tasse.'], bf: ["pearls of fortune settle at your bottom.", "des perles de fortune se déposent au fond de toi."], rf: ["your straw shall bend. today.", "ta paille pliera. aujourd'hui même."] }
   ];
 
-  // ---------- tarot deck (traditional meaning → cute mechanics) ----------
-  const TAROT = [
-    { n: ["The Fool", "Le Mat"], up: { t: ["a fresh start! speed resets, +1 ♥ of optimism", "un nouveau départ ! vitesse réinitialisée, +1 ♥ d'optimisme"], fx: () => { GAME.speed = 3.4; fxLife(1); } }, dn: { t: ["you leap before looking: floaty jumps, -5 coins", "tu sautes sans regarder : sauts flottants, -5 pièces"], fx: () => { setMod('jump', 1.4, 12); fxCoins(-5); } } },
-    { n: ["The Magician", "Le Bateleur"], up: { t: ["as above, so below: a wand appears ♥", "ce qui est en haut est en bas : une baguette apparaît ♥"], fx: () => gGiveWeapon('heart_wand', true) }, dn: { t: ["sleight of hand… your weapon vanishes", "tour de passe-passe… ton arme disparaît"], fx: () => { GAME.weapon = null; } } },
-    { n: ["The Lovers", "L'Amoureux"], up: { t: ["union! +2 fans at home, +40 score", "union ! +2 fans à la maison, +40 points"], fx: () => { gainFollowers(2); fxScore(40); } }, dn: { t: ["it's complicated: coins split 50/50 in the divorce", "c'est compliqué : les pièces partent moitié-moitié au divorce"], fx: () => fxCoins(-Math.ceil(GAME.coins / 2)) } },
-    { n: ["The Tower", "La Maison Dieu"], up: { t: ["glorious collapse: bugs wiped, +fever from the rubble", "effondrement glorieux : bugs balayés, +fièvre dans les gravats"], fx: () => { fxClearBugs(); fxFever(6); } }, dn: { t: ["the tower lands on your wallet: -12 coins", "la tour atterrit sur ton portefeuille : -12 pièces"], fx: () => fxCoins(-12) } },
-    { n: ["Wheel of Fortune", "La Roue de Fortune"], up: { t: ["the wheel spins UP: +100 score, +8 coins", "la roue tourne VERS LE HAUT : +100 points, +8 pièces"], fx: () => { fxScore(100); fxCoins(8); } }, dn: { t: ["the wheel spins… into cardio: speed +20% (10s)", "la roue tourne… vers le cardio : vitesse +20 % (10 s)"], fx: () => setMod('speed', 1.2, 10) } },
-    { n: ["The Star", "L'Étoile"], up: { t: ["hope glitters: invincible 8s ✨", "l'espoir scintille : invincible 8 s ✨"], fx: () => fxInvincible(8) }, dn: { t: ["you wished on a satellite: +3 coins, mild embarrassment", "tu as fait un vœu sur un satellite : +3 pièces, gêne légère"], fx: () => fxCoins(3) } },
-    { n: ["The Moon", "La Lune"], up: { t: ["dreamy double-vision: luck ×1.4 for 18s", "double vision rêveuse : chance ×1,4 pendant 18 s"], fx: () => setMod('luck', 1.4, 18) }, dn: { t: ["night confusion: uwu mode, 15s", "confusion nocturne : mode uwu, 15 s"], fx: () => setMod('uwu', 1, 15) } },
-    { n: ["The Sun", "Le Soleil"], up: { t: ["everything golden: +60 score, +6 coins, tiny halo", "tout est doré : +60 points, +6 pièces, petite auréole"], fx: () => { fxScore(60); fxCoins(6); setMod('halo', 1, 25) } }, dn: { t: ["sunburn: CHONK +30% for 8s", "coup de soleil : CHONK +30 % pendant 8 s"], fx: () => setMod('size', 1.3, 8) } },
-    { n: ["Death", "L'Arcane sans nom"], up: { t: ["transformation: score composts into coins (+15)", "transformation : le score se composte en pièces (+15)"], fx: () => { fxScore(-80); fxCoins(15); } }, dn: { t: ["change resists you: -1 ♥, +1 dramatic gasp", "le changement te résiste : -1 ♥, +1 halètement dramatique"], fx: () => gSoftHit() } },
-    { n: ["The Hermit", "L'Ermite"], up: { t: ["wise slowness: world -20% for 12s", "lenteur sage : le monde -20 % pendant 12 s"], fx: () => setMod('speed', 0.8, 12) }, dn: { t: ["too much alone time: your weapon ghosts you", "trop de solitude : ton arme te ghoste"], fx: () => { GAME.weapon = null; } } },
-    { n: ["Strength", "La Force"], up: { t: ["gentle power: shots pierce hearts +bugs melt (+wand)", "puissance douce : une baguette, et les bugs fondent"], fx: () => gGiveWeapon('bubble_blaster', true) }, dn: { t: ["you flexed too hard: jumps -20% (10s)", "tu as trop forcé : sauts -20 % (10 s)"], fx: () => setMod('jump', 0.8, 10) } },
-    { n: ["The Hanged Man", "Le Pendu"], up: { t: ["new perspective: +80 score for doing nothing", "nouvelle perspective : +80 points pour n'avoir rien fait"], fx: () => fxScore(80) }, dn: { t: ["upside-down wallet: coins drip out (10s)", "portefeuille à l'envers : les pièces gouttent (10 s)"], fx: () => setMod('drain', 1, 10) } },
-    { n: ["Temperance", "Tempérance"], up: { t: ["perfect balance: coins and score equalize kindly (+30 both)", "équilibre parfait : +30 points et +5 pièces, en douceur"], fx: () => { fxScore(30); fxCoins(5); } }, dn: { t: ["you mixed boba with coffee: speed jitters ±15%", "tu as mélangé boba et café : vitesse qui tremble ±15 %"], fx: () => setMod('speed', 1.15, 8) } },
-    { n: ["The Devil", "Le Diable"], up: { t: ["a deal: +200 score… for -1 ♥. he smiles.", "un pacte : +200 points… contre -1 ♥. il sourit."], fx: () => { fxScore(200); gSoftHit(); } }, dn: { t: ["you decline his contract: +20 dignity (score)", "tu refuses son contrat : +20 de dignité (points)"], fx: () => fxScore(20) } },
-    { n: ["The World", "Le Monde"], up: { t: ["completion!! +120 score, +10 coins, fever ✨", "accomplissement !! +120 points, +10 pièces, fièvre ✨"], fx: () => { fxScore(120); fxCoins(10); fxFever(5); } }, dn: { t: ["the world is still loading… everything pauses politely (3s i-frames)", "le monde charge encore… tout s'arrête poliment (3 s d'i-frames)"], fx: () => fxInvincible(3) } }
+  /* =====================================================
+     the FULL 78-card slime tarot 🃏 (v6.1)
+     every card has a hand-specced pixel face (Waite-parody
+     frame, computer-lore scenes, slime monogram where Pixie
+     Smith signed hers) and its own reveal animation — see
+     tarotReveal() below. majors are bespoke; minors follow
+     the four suits of the digital realm:
+       ⚡ Wands  = power rods (energy, hype, shipping)
+       🧋 Cups   = boba (feelings, fans, comfort)
+       ⌨ Swords = data-pillars (logic, bugs, DRAMA)
+       ⛁ Coins  = pixel coins (score, money, loot)
+     ===================================================== */
+  // majors: art = { bg, it: [item…], fx } — items are
+  // ['slime',x%,y%,scale,accEmoji,anim] | ['e',emoji,x,y,scale,anim] |
+  // ['pil',x,y,h,anim] | ['rod',x,y] | ['cup',x,y] | ['coin',x,y] |
+  // ['txt',string,x,y]
+  const TAROT_MAJORS = [
+    { n: ["The Fool", "Le Mat"], rn: '0', art: { bg: 'day', it: [['slime', 30, 38, 1, '🎒', 'walk'], ['e', '☁️', 62, 66, 1.4, 'bob'], ['txt', '404', 62, 66], ['e', '🌸', 12, 78, 0.8, 'sway']], fx: 'sparkle' },
+      up: { t: ["a fresh start! speed resets, +1 ♥ of optimism", "un nouveau départ ! vitesse réinitialisée, +1 ♥ d'optimisme"], fx: () => { GAME.speed = 3.4; fxLife(1); } },
+      dn: { t: ["you leap before looking: floaty jumps, -5 coins", "tu sautes sans regarder : sauts flottants, -5 pièces"], fx: () => { setMod('jump', 1.4, 12); fxCoins(-5); } } },
+    { n: ["The Magician", "Le Bateleur"], rn: 'I', art: { bg: 'gold', it: [['slime', 50, 42, 1.1, '🧙', 'bob'], ['txt', '∞', 50, 12], ['e', '⌘', 26, 76, 0.9, 'flicker'], ['e', '⌥', 50, 80, 0.9, 'flicker'], ['e', '⇧', 74, 76, 0.9, 'flicker']], fx: 'sparkle' },
+      up: { t: ["as above, so below: a wand appears ♥", "ce qui est en haut est en bas : une baguette apparaît ♥"], fx: () => gGiveWeapon('heart_wand', true) },
+      dn: { t: ["sleight of hand… your weapon vanishes", "tour de passe-passe… ton arme disparaît"], fx: () => { GAME.weapon = null; } } },
+    { n: ["The High Priestess", "La Papesse"], rn: 'II', art: { bg: 'night', it: [['pil', 18, 30, 52, 'glow'], ['pil', 82, 30, 52, 'glow'], ['txt', '0', 18, 24], ['txt', '1', 82, 24], ['slime', 50, 48, 1, '🌙', 'bob'], ['e', '📜', 50, 78, 0.9, 'sway'], ['txt', '.env', 50, 88]] },
+      up: { t: ["she lets you read the .env: luck ×1.5 for 20s", "elle te laisse lire le .env : chance ×1,5 pendant 20 s"], fx: () => setMod('luck', 1.5, 20) },
+      dn: { t: ["the scroll is under NDA: -4 coins in legal fees", "le parchemin est sous NDA : -4 pièces de frais juridiques"], fx: () => fxCoins(-4) } },
+    { n: ["The Empress", "L'Impératrice"], rn: 'III', art: { bg: 'day', it: [['slime', 50, 40, 1.15, '👑', 'bob'], ['e', '🌱', 22, 78, 0.9, 'sprout'], ['e', '🌱', 50, 82, 0.9, 'sprout'], ['e', '🌱', 78, 78, 0.9, 'sprout'], ['e', '🌷', 12, 30, 0.8, 'sway']], fx: 'sparkle' },
+      up: { t: ["the garden provides: +1 ♥ and +2 fans", "le jardin pourvoit : +1 ♥ et +2 fans"], fx: () => { fxLife(1); gainFollowers(2); } },
+      dn: { t: ["overwatered: the track goes muddy, speed -15% (8s)", "trop arrosé : la piste devient boueuse, vitesse -15 % (8 s)"], fx: () => setMod('speed', 0.85, 8) } },
+    { n: ["The Emperor", "L'Empereur"], rn: 'IV', art: { bg: 'storm', it: [['pil', 30, 55, 34, 'none'], ['pil', 70, 55, 34, 'none'], ['pil', 50, 62, 30, 'none'], ['slime', 50, 34, 1.1, '👑', 'none'], ['e', '🖥️', 20, 20, 0.8, 'flicker']] },
+      up: { t: ["order!! the empire of uptime pays +80 score", "l'ordre !! l'empire de l'uptime verse +80 points"], fx: () => fxScore(80) },
+      dn: { t: ["bureaucracy: -8 coins of required paperwork", "bureaucratie : -8 pièces de formulaires obligatoires"], fx: () => fxCoins(-8) } },
+    { n: ["The Hierophant", "Le Pape"], rn: 'V', art: { bg: 'gold', it: [['slime', 50, 34, 1.15, '🎓', 'bob'], ['slime', 30, 74, 0.65, '', 'bob'], ['slime', 70, 74, 0.65, '', 'bob'], ['txt', 'LGTM', 50, 12]] },
+      up: { t: ["the elder blesses your PR: all bugs cleared ✨", "l'ancien bénit ta PR : tous les bugs balayés ✨"], fx: () => fxClearBugs() },
+      dn: { t: ["a meeting that could've been an email: uwu mode 12s", "une réunion qui aurait pu être un mail : mode uwu 12 s"], fx: () => setMod('uwu', 1, 12) } },
+    { n: ["The Lovers", "L'Amoureux"], rn: 'VI', art: { bg: 'day', it: [['slime', 32, 52, 1, '', 'lean'], ['slime', 68, 52, 1, '', 'leanl'], ['e', '💞', 50, 24, 1.2, 'pulse'], ['txt', 'pair.programming()', 50, 86]], fx: 'sparkle' },
+      up: { t: ["union! +2 fans at home, +40 score", "union ! +2 fans à la maison, +40 points"], fx: () => { gainFollowers(2); fxScore(40); } },
+      dn: { t: ["it's complicated: coins split 50/50 in the divorce", "c'est compliqué : les pièces partent moitié-moitié au divorce"], fx: () => fxCoins(-Math.ceil(GAME.coins / 2)) } },
+    { n: ["The Chariot", "Le Chariot"], rn: 'VII', art: { bg: 'day', it: [['slime', 46, 40, 1.1, '🏁', 'shake'], ['e', '🪑', 46, 66, 1.3, 'shake'], ['e', '💨', 16, 60, 1, 'dash'], ['e', '💨', 20, 76, 0.8, 'dash']] },
+      up: { t: ["office-chair drift!! speed +25% and rainbow fever (8s)", "drift de chaise de bureau !! vitesse +25 % et fièvre (8 s)"], fx: () => { setMod('speed', 1.25, 8); fxFever(8); } },
+      dn: { t: ["the chair has opinions: it rolls backwards, -40 score", "la chaise a des opinions : elle recule, -40 points"], fx: () => fxScore(-40) } },
+    { n: ["Strength", "La Force"], rn: 'VIII', art: { bg: 'day', it: [['slime', 36, 44, 1, '🌸', 'bob'], ['e', '💻', 66, 56, 1.4, 'chomp'], ['txt', 'gently…', 50, 86]] },
+      up: { t: ["gentle power: shots pierce hearts + bugs melt (+wand)", "puissance douce : une baguette, et les bugs fondent"], fx: () => gGiveWeapon('bubble_blaster', true) },
+      dn: { t: ["you flexed too hard: jumps -20% (10s)", "tu as trop forcé : sauts -20 % (10 s)"], fx: () => setMod('jump', 0.8, 10) } },
+    { n: ["The Hermit", "L'Ermite"], rn: 'IX', art: { bg: 'night', it: [['slime', 50, 42, 1, '🧢', 'bob'], ['e', '🏮', 66, 34, 1, 'glowpulse'], ['txt', '$ _', 30, 78]] },
+      up: { t: ["wise slowness: world -20% for 12s", "lenteur sage : le monde -20 % pendant 12 s"], fx: () => setMod('speed', 0.8, 12) },
+      dn: { t: ["too much alone time: your weapon ghosts you", "trop de solitude : ton arme te ghoste"], fx: () => { GAME.weapon = null; } } },
+    { n: ["Wheel of Fortune", "La Roue de Fortune"], rn: 'X', art: { bg: 'gold', it: [['e', '🌀', 50, 42, 2.2, 'spin'], ['slime', 78, 68, 0.7, '', 'cling'], ['txt', 'loading…', 50, 86]], fx: 'sparkle' },
+      up: { t: ["the wheel spins UP: +100 score, +8 coins", "la roue tourne VERS LE HAUT : +100 points, +8 pièces"], fx: () => { fxScore(100); fxCoins(8); } },
+      dn: { t: ["the wheel spins… into cardio: speed +20% (10s)", "la roue tourne… vers le cardio : vitesse +20 % (10 s)"], fx: () => setMod('speed', 1.2, 10) } },
+    { n: ["Justice", "La Justice"], rn: 'XI', art: { bg: 'gold', it: [['e', '⚖️', 50, 34, 1.6, 'tilt'], ['e', '🐛', 30, 62, 0.9, 'bob'], ['e', '✨', 70, 58, 0.9, 'pulse'], ['slime', 50, 76, 0.8, '⚖️', 'none']] },
+      up: { t: ["verdict: balanced. +40 score, +4 coins, zero appeals", "verdict : équilibré. +40 points, +4 pièces, zéro appel"], fx: () => { fxScore(40); fxCoins(4); } },
+      dn: { t: ["guilty of deploying on friday: -8 coins fine", "coupable d'un déploiement un vendredi : -8 pièces d'amende"], fx: () => fxCoins(-8) } },
+    { n: ["The Hanged Man", "Le Pendu"], rn: 'XII', art: { bg: 'night', it: [['e', '🔌', 50, 8, 1, 'none'], ['slime', 50, 40, 1, '', 'hang'], ['e', '✨', 30, 70, 0.8, 'pulse'], ['txt', 'new perspective', 50, 88]] },
+      up: { t: ["new perspective: +80 score for doing nothing", "nouvelle perspective : +80 points pour n'avoir rien fait"], fx: () => fxScore(80) },
+      dn: { t: ["upside-down wallet: coins drip out (10s)", "portefeuille à l'envers : les pièces gouttent (10 s)"], fx: () => setMod('drain', 1, 10) } },
+    { n: ["Death", "L'Arcane sans nom"], rn: 'XIII', art: { bg: 'storm', it: [['slime', 50, 42, 1.1, '💀', 'bob'], ['txt', 'rebooting…', 50, 74], ['e', '🌹', 22, 76, 0.8, 'sway']], fx: 'scan' },
+      up: { t: ["transformation: score composts into coins (+15)", "transformation : le score se composte en pièces (+15)"], fx: () => { fxScore(-80); fxCoins(15); } },
+      dn: { t: ["change resists you: -1 ♥, +1 dramatic gasp", "le changement te résiste : -1 ♥, +1 halètement dramatique"], fx: () => gSoftHit() } },
+    { n: ["Temperance", "Tempérance"], rn: 'XIV', art: { bg: 'day', it: [['slime', 50, 36, 1.1, '😇', 'bob'], ['cup', 32, 72], ['cup', 68, 72], ['e', '💧', 50, 62, 0.8, 'pour']] },
+      up: { t: ["perfect balance: coins and score equalize kindly (+30/+5)", "équilibre parfait : +30 points et +5 pièces, en douceur"], fx: () => { fxScore(30); fxCoins(5); } },
+      dn: { t: ["you mixed boba with coffee: speed jitters ±15%", "tu as mélangé boba et café : vitesse qui tremble ±15 %"], fx: () => setMod('speed', 1.15, 8) } },
+    { n: ["The Devil", "Le Diable"], rn: 'XV', art: { bg: 'void', it: [['slime', 50, 34, 1.2, '😈', 'loom'], ['slime', 30, 76, 0.6, '⛓️', 'bob'], ['slime', 70, 76, 0.6, '⛓️', 'bob'], ['txt', 'EULA §666', 50, 90]], fx: 'flash' },
+      up: { t: ["a deal: +200 score… for -1 ♥. he smiles.", "un pacte : +200 points… contre -1 ♥. il sourit."], fx: () => { fxScore(200); gSoftHit(); } },
+      dn: { t: ["you decline his contract: +20 dignity (score)", "tu refuses son contrat : +20 de dignité (points)"], fx: () => fxScore(20) } },
+    { n: ["The Tower", "La Maison Dieu"], rn: 'XVI', art: { bg: 'storm', it: [['pil', 50, 30, 58, 'wobble'], ['e', '⚡', 50, 6, 1.4, 'strike'], ['slime', 24, 72, 0.7, '', 'fall'], ['slime', 76, 76, 0.7, '', 'fall'], ['txt', 'prod is down', 50, 92]], fx: 'flash' },
+      up: { t: ["glorious collapse: bugs wiped, +fever from the rubble", "effondrement glorieux : bugs balayés, +fièvre dans les gravats"], fx: () => { fxClearBugs(); fxFever(6); } },
+      dn: { t: ["the tower lands on your wallet: -12 coins", "la tour atterrit sur ton portefeuille : -12 pièces"], fx: () => fxCoins(-12) } },
+    { n: ["The Star", "L'Étoile"], rn: 'XVII', art: { bg: 'night', it: [['e', '⭐', 50, 16, 1.5, 'pulse'], ['slime', 42, 52, 1, '', 'bob'], ['e', '💧', 58, 72, 0.8, 'pour'], ['txt', '★ starred!!', 50, 88]], fx: 'sparkle' },
+      up: { t: ["hope glitters: invincible 8s ✨", "l'espoir scintille : invincible 8 s ✨"], fx: () => fxInvincible(8) },
+      dn: { t: ["you wished on a satellite: +3 coins, mild embarrassment", "tu as fait un vœu sur un satellite : +3 pièces, gêne légère"], fx: () => fxCoins(3) } },
+    { n: ["The Moon", "La Lune"], rn: 'XVIII', art: { bg: 'night', it: [['e', '🌙', 50, 16, 1.5, 'glowpulse'], ['slime', 28, 62, 0.8, '', 'howl'], ['slime', 72, 62, 0.8, '', 'howl'], ['e', '🦞', 50, 84, 0.8, 'crawlup']] },
+      up: { t: ["dreamy double-vision: luck ×1.4 for 18s", "double vision rêveuse : chance ×1,4 pendant 18 s"], fx: () => setMod('luck', 1.4, 18) },
+      dn: { t: ["night confusion: uwu mode, 15s", "confusion nocturne : mode uwu, 15 s"], fx: () => setMod('uwu', 1, 15) } },
+    { n: ["The Sun", "Le Soleil"], rn: 'XIX', art: { bg: 'gold', it: [['e', '☀️', 50, 16, 1.6, 'spinSlow'], ['slime', 50, 56, 1.1, '😎', 'bob'], ['e', '🌻', 20, 78, 0.9, 'sway'], ['e', '🌻', 80, 78, 0.9, 'sway']], fx: 'sparkle' },
+      up: { t: ["everything golden: +60 score, +6 coins, tiny halo", "tout est doré : +60 points, +6 pièces, petite auréole"], fx: () => { fxScore(60); fxCoins(6); setMod('halo', 1, 25); } },
+      dn: { t: ["sunburn: CHONK +30% for 8s", "coup de soleil : CHONK +30 % pendant 8 s"], fx: () => setMod('size', 1.3, 8) } },
+    { n: ["Judgement", "Le Jugement"], rn: 'XX', art: { bg: 'gold', it: [['slime', 50, 20, 0.9, '🎺', 'bob'], ['e', '🖥️', 30, 74, 1, 'riseup'], ['e', '🖥️', 70, 74, 1, 'riseup'], ['txt', 'APPROVED ✓', 50, 90]] },
+      up: { t: ["the review passes: +1 ♥ resurrected, +50 score", "la review passe : +1 ♥ ressuscité, +50 points"], fx: () => { fxLife(1); fxScore(50); } },
+      dn: { t: ["'changes requested' — -30 score, character growth", "« changements demandés » — -30 points, croissance personnelle"], fx: () => fxScore(-30) } },
+    { n: ["The World", "Le Monde"], rn: 'XXI', art: { bg: 'day', it: [['e', '🌍', 50, 40, 1.8, 'spinSlow'], ['slime', 50, 40, 0.8, '🎉', 'orbit'], ['txt', 'deploy: 100%', 50, 88]], fx: 'sparkle' },
+      up: { t: ["completion!! +120 score, +10 coins, fever ✨", "accomplissement !! +120 points, +10 pièces, fièvre ✨"], fx: () => { fxScore(120); fxCoins(10); fxFever(5); } },
+      dn: { t: ["the world is still loading… everything pauses politely (3s i-frames)", "le monde charge encore… tout s'arrête poliment (3 s d'i-frames)"], fx: () => fxInvincible(3) } }
   ];
+
+  // minors: 4 suits × 14 ranks, every rank hand-joked (EN/FR), effects
+  // riffing on the traditional meanings. u/d = upright/reversed text.
+  const T_RANKS = [['Ace', 'As'], ['Two', 'Deux'], ['Three', 'Trois'], ['Four', 'Quatre'], ['Five', 'Cinq'], ['Six', 'Six'], ['Seven', 'Sept'], ['Eight', 'Huit'], ['Nine', 'Neuf'], ['Ten', 'Dix'], ['Page', 'Valet'], ['Knight', 'Cavalier'], ['Queen', 'Reine'], ['King', 'Roi']];
+  const T_SUITS = {
+    wands: {
+      nm: ['Wands', 'Bâtons'], of: ['of Wands', 'de Bâtons'], pip: 'rod', motif: [523, 659, 784],
+      ranks: [
+        { u: ["a fresh cable, FULLY charged: speed +15%, sparks of fever", "un câble neuf, chargé À BLOC : vitesse +15 %, étincelles de fièvre"], uf: () => { setMod('speed', 1.15, 12); fxFever(4); }, d: ["plugged in backwards: floaty jumps (10s)", "branché à l'envers : sauts flottants (10 s)"], df: () => setMod('jump', 1.35, 10) },
+        { u: ["two rods, one decision: ship it. +40 score", "deux bâtons, une décision : on livre. +40 points"], uf: () => fxScore(40), d: ["decision fatigue: jumps -15% (8s)", "fatigue décisionnelle : sauts -15 % (8 s)"], df: () => setMod('jump', 0.85, 8) },
+        { u: ["three bars of signal on the summit: luck ×1.3 (15s)", "trois barres de réseau au sommet : chance ×1,3 (15 s)"], uf: () => setMod('luck', 1.3, 15), d: ["roaming fees: -4 coins", "frais d'itinérance : -4 pièces"], df: () => fxCoins(-4) },
+        { u: ["four rods = a LAN-party gazebo!! +60 score, +4 coins", "quatre bâtons = un kiosque à LAN party !! +60 points, +4 pièces"], uf: () => { fxScore(60); fxCoins(4); }, d: ["party snacks: CHONK +20% (8s)", "les snacks de la fête : CHONK +20 % (8 s)"], df: () => setMod('size', 1.2, 8) },
+        { u: ["you WIN the merge conflict: +50 score", "tu GAGNES le conflit de merge : +50 points"], uf: () => fxScore(50), d: ["rebase gone feral: world +15% faster (8s)", "rebase devenu sauvage : monde +15 % plus rapide (8 s)"], df: () => setMod('speed', 1.15, 8) },
+        { u: ["the demo WORKED. victory fever (6s)", "la démo a MARCHÉ. fièvre de la victoire (6 s)"], uf: () => fxFever(6), d: ["someone unplugged the router mid-applause: -3 coins", "quelqu'un a débranché le routeur en pleins applaudissements : -3 pièces"], df: () => fxCoins(-3) },
+        { u: ["defending main branch from the high ground: 4s invincible", "tu défends la branche main depuis les hauteurs : 4 s invincible"], uf: () => fxInvincible(4), d: ["seven force-pushes at once: jumps -15% (8s)", "sept force-push d'un coup : sauts -15 % (8 s)"], df: () => setMod('jump', 0.85, 8) },
+        { u: ["eight packets in flight, zero loss: speed +25% (8s)", "huit paquets en vol, zéro perte : vitesse +25 % (8 s)"], uf: () => setMod('speed', 1.25, 8), d: ["packets arrive shuffled: uwu mode (10s)", "les paquets arrivent mélangés : mode uwu (10 s)"], df: () => setMod('uwu', 1, 10) },
+        { u: ["battle-scarred but STILL online: +1 ♥ of pure uptime", "cabossé mais TOUJOURS en ligne : +1 ♥ d'uptime pur"], uf: () => fxLife(1), d: ["paranoia jog: world +15% (8s)", "jogging de paranoïa : monde +15 % (8 s)"], df: () => setMod('speed', 1.15, 8) },
+        { u: ["carrying all ten cables at once: +80 overtime score", "porter les dix câbles d'un coup : +80 points d'heures sup"], uf: () => fxScore(80), d: ["heavy load: CHONK +30% (10s)", "charge lourde : CHONK +30 % (10 s)"], df: () => setMod('size', 1.3, 10) },
+        { u: ["an excitable USB stick brings news: +30 score, +3 coins", "une clé USB surexcitée apporte des nouvelles : +30 points, +3 pièces"], uf: () => { fxScore(30); fxCoins(3); }, d: ["it's in upside down. all three times. floaty 8s", "insérée à l'envers. les trois fois. flottant 8 s"], df: () => setMod('jump', 1.3, 8) },
+        { u: ["knight of the rolling chair: speed +30% (10s)", "cavalier de la chaise à roulettes : vitesse +30 % (10 s)"], uf: () => setMod('speed', 1.3, 10), d: ["overshot the desk: -20 score", "a dépassé le bureau : -20 points"], df: () => fxScore(-20) },
+        { u: ["queen of hotspots shares her wifi: +2 fans, +40 score", "la reine des hotspots partage son wifi : +2 fans, +40 points"], uf: () => { gainFollowers(2); fxScore(40); }, d: ["she buys boba for EVERYONE: -5 coins (worth it)", "elle paie le boba à TOUT LE MONDE : -5 pièces (ça les vaut)"], df: () => fxCoins(-5) },
+        { u: ["the king of power management: fever + speed (8s)", "le roi de la gestion d'énergie : fièvre + vitesse (8 s)"], uf: () => { fxFever(8); setMod('speed', 1.15, 8); }, d: ["royal battery drain: coins leak (8s)", "drain royal de batterie : les pièces fuient (8 s)"], df: () => setMod('drain', 1, 8) }
+      ]
+    },
+    cups: {
+      nm: ['Cups', 'Coupes'], of: ['of Cups', 'de Coupes'], pip: 'cup', motif: [392, 494, 587],
+      ranks: [
+        { u: ["the first sip of a fresh boba: +1 ♥, obviously", "la première gorgée d'un boba frais : +1 ♥, évidemment"], uf: () => fxLife(1), d: ["brain freeze: uwu mode (8s)", "gel de cerveau : mode uwu (8 s)"], df: () => setMod('uwu', 1, 8) },
+        { u: ["two cups clink: pair programming!! +2 fans", "deux coupes trinquent : pair programming !! +2 fans"], uf: () => gainFollowers(2), d: ["one cup was decaf. betrayal: -3 coins", "une des deux était déca. trahison : -3 pièces"], df: () => fxCoins(-3) },
+        { u: ["three cups toast: standup finished EARLY. +50 score", "trois coupes trinquent : le standup a fini EN AVANCE. +50 points"], uf: () => fxScore(50), d: ["the third wheel spills: -4 coins", "la troisième roue renverse tout : -4 pièces"], df: () => fxCoins(-4) },
+        { u: ["contemplating a fourth boba (yes): luck ×1.3 (12s)", "tu contemples un quatrième boba (oui) : chance ×1,3 (12 s)"], uf: () => setMod('luck', 1.3, 12), d: ["contemplation overrun: world -15% (8s)", "contemplation prolongée : monde -15 % (8 s)"], df: () => setMod('speed', 0.85, 8) },
+        { u: ["three cups spilled… but TWO survive: +3 salvage coins", "trois coupes renversées… mais DEUX survivent : +3 pièces sauvées"], uf: () => fxCoins(3), d: ["the pearls roll under the fridge forever: -6 coins", "les perles roulent sous le frigo pour toujours : -6 pièces"], df: () => fxCoins(-6) },
+        { u: ["an old save file loads: pure nostalgia, +60 score", "une vieille sauvegarde se charge : nostalgie pure, +60 points"], uf: () => fxScore(60), d: ["you talk to it in baby voice: uwu 12s", "tu lui parles en voix de bébé : uwu 12 s"], df: () => setMod('uwu', 1, 12) },
+        { u: ["seven imaginary flavors on the menu: luck ×1.4 (10s)", "sept parfums imaginaires au menu : chance ×1,4 (10 s)"], uf: () => setMod('luck', 1.4, 10), d: ["choice paralysis: floaty jumps (10s)", "paralysie du choix : sauts flottants (10 s)"], df: () => setMod('jump', 1.3, 10) },
+        { u: ["you leave 8 full cups to touch grass: 5s invincible", "tu abandonnes 8 coupes pleines pour toucher de l'herbe : 5 s invincible"], uf: () => fxInvincible(5), d: ["you left the tab open: -5 coins", "tu as laissé l'addition ouverte : -5 pièces"], df: () => fxCoins(-5) },
+        { u: ["the wish cup grants: +8 coins of contentment", "la coupe à vœux exauce : +8 pièces de contentement"], uf: () => fxCoins(8), d: ["nine cups is a LOT of boba: CHONK +25% (8s)", "neuf coupes ça fait BEAUCOUP de boba : CHONK +25 % (8 s)"], df: () => setMod('size', 1.25, 8) },
+        { u: ["a rainbow over the family server rack: +1 ♥, +1 fan", "un arc-en-ciel au-dessus du rack familial : +1 ♥, +1 fan"], uf: () => { fxLife(1); gainFollowers(1); }, d: ["the rainbow was a 302 redirect: -2 coins", "l'arc-en-ciel était une redirection 302 : -2 pièces"], df: () => fxCoins(-2) },
+        { u: ["a fish in your mug says hi: luck ×1.35 (15s)", "un poisson dans ta tasse te dit bonjour : chance ×1,35 (15 s)"], uf: () => setMod('luck', 1.35, 15), d: ["you said hi BACK. uwu 10s", "tu as répondu bonjour. uwu 10 s"], df: () => setMod('uwu', 1, 10) },
+        { u: ["a knight delivers boba, romantically slowly: +40, luck ×1.2", "un cavalier livre le boba, romantiquement lentement : +40, chance ×1,2"], uf: () => { fxScore(40); setMod('luck', 1.2, 12); }, d: ["romantically slow = cold pearls: world -15% (8s)", "romantiquement lent = perles froides : monde -15 % (8 s)"], df: () => setMod('speed', 0.85, 8) },
+        { u: ["the queen of comfort prescribes: +1 emotional-support ♥", "la reine du réconfort prescrit : +1 ♥ de soutien émotionnel"], uf: () => fxLife(1), d: ["comfort spending: -4 coins", "dépenses réconfort : -4 pièces"], df: () => fxCoins(-4) },
+        { u: ["the king stays calm in a sea of spills: 6s invincible", "le roi reste calme dans une mer d'éclaboussures : 6 s invincible"], uf: () => fxInvincible(6), d: ["the royal tab: coins leak (6s)", "l'addition royale : les pièces fuient (6 s)"], df: () => setMod('drain', 1, 6) }
+      ]
+    },
+    swords: {
+      nm: ['Swords', 'Épées'], of: ['of Swords', 'd\'Épées'], pip: 'pillar', motif: [659, 831, 988],
+      ranks: [
+        { u: ["ONE clean thought: the root cause!! all bugs cleared", "UNE pensée claire : la cause racine !! tous les bugs balayés"], uf: () => fxClearBugs(), d: ["overthinking the root cause of overthinking: uwu 10s", "sur-analyse de la cause racine de la sur-analyse : uwu 10 s"], df: () => setMod('uwu', 1, 10) },
+        { u: ["blindfolded between two Stack Overflow answers: +30 for choosing at all", "les yeux bandés entre deux réponses Stack Overflow : +30 pour avoir choisi"], uf: () => fxScore(30), d: ["indecision: jumps -15% (8s)", "indécision : sauts -15 % (8 s)"], df: () => setMod('jump', 0.85, 8) },
+        { u: ["'works on my machine' — the heartbreak heals: +20 dignity", "« ça marche sur ma machine » — le cœur guérit : +20 de dignité"], uf: () => fxScore(20), d: ["it does NOT work on their machine: -1 ♥ (dramatic)", "ça ne marche PAS sur leur machine : -1 ♥ (dramatique)"], df: () => gSoftHit() },
+        { u: ["resting inside /* a comment block */: 4s invincible", "au repos dans /* un bloc de commentaires */ : 4 s invincible"], uf: () => fxInvincible(4), d: ["overslept in the comment: world -20% (6s)", "trop dormi dans le commentaire : monde -20 % (6 s)"], df: () => setMod('speed', 0.8, 6) },
+        { u: ["you won the argument: +40 score (the room is empty)", "tu as gagné le débat : +40 points (la salle est vide)"], uf: () => fxScore(40), d: ["apology boba for everyone: -6 coins", "boba d'excuses pour tout le monde : -6 pièces"], df: () => fxCoins(-6) },
+        { u: ["ferrying the code to a calmer branch: smooth +15% speed (10s)", "le code vogue vers une branche plus calme : +15 % de vitesse fluide (10 s)"], uf: () => setMod('speed', 1.15, 10), d: ["choppy waters: -3 coins fell overboard", "eaux agitées : -3 pièces par-dessus bord"], df: () => fxCoins(-3) },
+        { u: ["sneaking five functions out of prod: +5 heist coins", "tu exfiltres cinq fonctions de la prod : +5 pièces de casse"], uf: () => fxCoins(5), d: ["the pager goes off: world +15% (6s)", "le bipeur sonne : monde +15 % (6 s)"], df: () => setMod('speed', 1.15, 6) },
+        { u: ["the cage of eight light-pillars has a gap: 5s invincible escape", "la cage aux huit piliers de lumière a une faille : évasion invincible 5 s"], uf: () => fxInvincible(5), d: ["trapped by your own regex: uwu 12s", "piégé·e par ta propre regex : uwu 12 s"], df: () => setMod('uwu', 1, 12) },
+        { u: ["the 3am worry compiles by morning: +50 score", "l'angoisse de 3h compile au matin : +50 points"], uf: () => fxScore(50), d: ["sleep debt: world -15% (8s)", "dette de sommeil : monde -15 % (8 s)"], df: () => setMod('speed', 0.85, 8) },
+        { u: ["ten pillars in the back, MAXIMUM drama — respawn wiser: +60", "dix piliers dans le dos, drame MAXIMAL — respawn plus sage : +60"], uf: () => fxScore(60), d: ["perishing theatrically: -1 ♥ (the crowd applauds)", "périr théâtralement : -1 ♥ (la foule applaudit)"], df: () => gSoftHit() },
+        { u: ["the page reads the logs UPSIDE DOWN and finds it: luck ×1.3", "le valet lit les logs À L'ENVERS et trouve : chance ×1,3"], uf: () => setMod('luck', 1.3, 12), d: ["spoilers in the logs: -3 coins", "des spoilers dans les logs : -3 pièces"], df: () => fxCoins(-3) },
+        { u: ["the knight charges INTO the code review: speed +25% (8s)", "le cavalier charge DANS la code review : vitesse +25 % (8 s)"], uf: () => setMod('speed', 1.25, 8), d: ["47 review comments: -20 score", "47 commentaires de review : -20 points"], df: () => fxScore(-20) },
+        { u: ["the queen sees through every excuse: bugs cleared", "la reine voit à travers chaque excuse : bugs balayés"], uf: () => fxClearBugs(), d: ["politely scolded: uwu 10s", "grondé·e poliment : uwu 10 s"], df: () => setMod('uwu', 1, 10) },
+        { u: ["the king of cold logic (warm heart, encrypted): +70 score", "le roi de la logique froide (cœur chaud, chiffré) : +70 points"], uf: () => fxScore(70), d: ["royal decree: coins taxed at the gate (6s)", "décret royal : pièces taxées à la porte (6 s)"], df: () => setMod('drain', 1, 6) }
+      ]
+    },
+    coins: {
+      nm: ['Pentacles', 'Deniers'], of: ['of Pentacles', 'de Deniers'], pip: 'coin', motif: [587, 740, 880],
+      ranks: [
+        { u: ["a coin so fresh it SQUEAKS: +10 coins", "une pièce si neuve qu'elle COUINE : +10 pièces"], uf: () => fxCoins(10), d: ["minting fee: -2 coins", "frais de frappe : -2 pièces"], df: () => fxCoins(-2) },
+        { u: ["juggling two budgets flawlessly: +4 coins", "jongler avec deux budgets sans faute : +4 pièces"], uf: () => fxCoins(4), d: ["a budget slips: -3 coins", "un budget glisse : -3 pièces"], df: () => fxCoins(-3) },
+        { u: ["three coins fund the guild (open source!!): +30 score, +3 coins", "trois pièces financent la guilde (open source !!) : +30 points, +3 pièces"], uf: () => { fxScore(30); fxCoins(3); }, d: ["donation guilt: -3 coins", "culpabilité du don : -3 pièces"], df: () => fxCoins(-3) },
+        { u: ["sitting ON the coins (security): +6 coins", "assis·e SUR les pièces (sécurité) : +6 pièces"], uf: () => fxCoins(6), d: ["heavy pockets: world -15% (8s)", "poches lourdes : monde -15 % (8 s)"], df: () => setMod('speed', 0.85, 8) },
+        { u: ["a stranger shares their login at the paywall: +4 coins", "quelqu'un partage ses identifiants devant le paywall : +4 pièces"], uf: () => fxCoins(4), d: ["the subscription renewed itself: -6 coins", "l'abonnement s'est renouvelé tout seul : -6 pièces"], df: () => fxCoins(-6) },
+        { u: ["charity commit: coins flow to the little ones: +5 coins, +1 fan", "commit caritatif : les pièces vont aux petits : +5 pièces, +1 fan"], uf: () => { fxCoins(5); gainFollowers(1); }, d: ["today YOU are the charity: -5 coins", "aujourd'hui c'est TOI l'œuvre de charité : -5 pièces"], df: () => fxCoins(-5) },
+        { u: ["compound interest blooms in the coin garden: +8 coins", "les intérêts composés fleurissent au jardin : +8 pièces"], uf: () => fxCoins(8), d: ["a watched pot never compiles: world -15% (8s)", "une marmite surveillée ne compile jamais : monde -15 % (8 s)"], df: () => setMod('speed', 0.85, 8) },
+        { u: ["eight PERFECT commits in a row: +50 grind score", "huit commits PARFAITS d'affilée : +50 points de farm"], uf: () => fxScore(50), d: ["repetitive strain snacks: CHONK +25% (8s)", "snacks de tendinite : CHONK +25 % (8 s)"], df: () => setMod('size', 1.25, 8) },
+        { u: ["self-made slime in a walled garden: luck ×1.4 (12s)", "slime self-made dans un jardin clos : chance ×1,4 (12 s)"], uf: () => setMod('luck', 1.4, 12), d: ["garden maintenance fees: -4 coins", "frais d'entretien du jardin : -4 pièces"], df: () => fxCoins(-4) },
+        { u: ["legacy wealth: the family monorepo pays out +12 coins", "richesse héritée : le monorepo familial verse +12 pièces"], uf: () => fxCoins(12), d: ["inheritance tax: -8 coins", "droits de succession : -8 pièces"], df: () => fxCoins(-8) },
+        { u: ["the page studies a coin like a rare bug: +3 coins, +20 score", "le valet étudie une pièce comme un bug rare : +3 pièces, +20 points"], uf: () => { fxCoins(3); fxScore(20); }, d: ["poked the coin too hard: -2 coins", "pièce triturée trop fort : -2 pièces"], df: () => fxCoins(-2) },
+        { u: ["the slowest knight, the most reliable ROI: +40 score, +4 coins", "le cavalier le plus lent, le ROI le plus fiable : +40 points, +4 pièces"], uf: () => { fxScore(40); fxCoins(4); }, d: ["reliably slow: world -15% (8s)", "fiablement lent : monde -15 % (8 s)"], df: () => setMod('speed', 0.85, 8) },
+        { u: ["the queen budgets snacks for EVERYONE: +6 coins, +1 fan", "la reine budgète des snacks pour TOUT LE MONDE : +6 pièces, +1 fan"], uf: () => { fxCoins(6); gainFollowers(1); }, d: ["the snack budget was you: -5 coins", "le budget snacks, c'était toi : -5 pièces"], df: () => fxCoins(-5) },
+        { u: ["the king touches grass; it turns to gold: +15 coins", "le roi touche de l'herbe ; elle devient de l'or : +15 pièces"], uf: () => fxCoins(15), d: ["property tax on the grass: -10 coins", "taxe foncière sur l'herbe : -10 pièces"], df: () => fxCoins(-10) }
+      ]
+    }
+  };
+
+  const TAROT = (() => {
+    const deck = TAROT_MAJORS.slice();
+    Object.keys(T_SUITS).forEach((sid) => {
+      const s = T_SUITS[sid];
+      s.ranks.forEach((r, i) => {
+        deck.push({
+          n: [`${T_RANKS[i][0]} ${s.of[0]}`, `${T_RANKS[i][1]} ${s.of[1]}`],
+          rn: i < 10 ? String(i + 1) : T_RANKS[i][0][0] + (i === 11 ? 'n' : ''), // A…10, P, Kn, Q, K
+          art: { suit: sid, rank: i + 1 },
+          up: { t: r.u, fx: r.uf },
+          dn: { t: r.d, fx: r.df }
+        });
+      });
+    });
+    return deck; // all 78 — the wizard finally owns a complete deck
+  })();
+
+  /* ---------- the tarot reveal theatre 🔮 ----------
+     the pick used to resolve into a toast that other toasts trampled.
+     now: the chosen card levitates out of the canvas as REAL DOM,
+     glows, flips in 3D, plays its face's little pixel scene to the
+     end while a subtitle types out the fate — then the runner gets
+     you back. skippable after a second (click / ␣). */
+  var tarotRevealEl = null;
+
+  const T_PIP_LAYOUT = [
+    [], [[50, 48]], [[50, 26], [50, 70]], [[50, 22], [30, 70], [70, 70]],
+    [[30, 26], [70, 26], [30, 72], [70, 72]],
+    [[30, 24], [70, 24], [50, 48], [30, 74], [70, 74]],
+    [[32, 22], [68, 22], [32, 48], [68, 48], [32, 74], [68, 74]],
+    [[32, 20], [68, 20], [50, 36], [32, 54], [68, 54], [50, 72], [50, 86]],
+    [[32, 20], [68, 20], [32, 42], [68, 42], [32, 64], [68, 64], [32, 86], [68, 86]],
+    [[30, 20], [50, 20], [70, 20], [30, 48], [50, 48], [70, 48], [30, 76], [50, 76], [70, 76]],
+    [[32, 16], [68, 16], [32, 38], [68, 38], [32, 60], [68, 60], [32, 82], [68, 82], [50, 27], [50, 71]]
+  ];
+  const T_COURT_ACC = ['🧢', '🪑', '👒', '👑']; // page, knight (chair-mounted), queen, king
+
+  function tarotPipEl(kind, big) {
+    const p = document.createElement('div');
+    p.className = 't-pip t-pip-' + kind + (big ? ' t-pip-big' : '');
+    if (kind === 'cup') p.textContent = '🧋';
+    else if (kind === 'pillar') p.innerHTML = '<i>' + (Math.random() < 0.5 ? '0' : '1') + '</i><i>' + Math.floor(Math.random() * 10) + '</i>';
+    else if (kind === 'coin') p.innerHTML = '<b>★</b>';
+    return p;
+  }
+
+  function tarotPlace(el, x, y, s) {
+    el.style.left = x + '%';
+    el.style.top = y + '%';
+    if (s && s !== 1) el.style.setProperty('--t-s', s);
+    return el;
+  }
+
+  function tarotSlimeEl(acc, anim, s) {
+    const a = document.createElement('div');
+    a.className = 't-actor t-a-' + (anim || 'bob');
+    const img = document.createElement('img');
+    img.src = 'assets/slime_pet_cutout.png';
+    img.alt = '';
+    a.appendChild(img);
+    if (acc) {
+      const hat = document.createElement('span');
+      hat.className = 't-actor-acc';
+      hat.textContent = acc;
+      a.appendChild(hat);
+    }
+    if (s && s !== 1) a.style.setProperty('--t-s', s);
+    return a;
+  }
+
+  function tarotBuildScene(card, upright) {
+    const sc = document.createElement('div');
+    const art = card.art || {};
+    sc.className = 'tarot-scene t-bg-' + (art.bg || (art.suit ? { wands: 'gold', cups: 'day', swords: 'night', coins: 'gold' }[art.suit] : 'day'));
+    if (!upright) sc.classList.add('t-rev');
+    if (art.fx) sc.classList.add('t-fx-' + art.fx);
+
+    if (art.suit) { // ---- minor arcana: pips + cameos, Waite-style ----
+      const suit = T_SUITS[art.suit];
+      const r = art.rank;
+      if (r <= 10) {
+        if (art.suit === 'swords' && r === 8) {
+          // the famous cage: eight numeric light-pillars, one polite prisoner
+          for (let i = 0; i < 8; i++) {
+            const ang = (i / 8) * Math.PI * 2;
+            sc.appendChild(tarotPlace(tarotPipEl('pillar'), 50 + Math.cos(ang) * 32, 52 + Math.sin(ang) * 30));
+          }
+          sc.appendChild(tarotPlace(tarotSlimeEl('🙈', 'shiver', 0.9), 50, 52));
+        } else if (art.suit === 'swords' && r === 3) {
+          const heart = document.createElement('span');
+          heart.className = 't-bigheart';
+          heart.textContent = '💗';
+          sc.appendChild(tarotPlace(heart, 50, 46));
+          for (let i = 0; i < 3; i++) {
+            const pl = tarotPipEl('pillar');
+            pl.style.setProperty('--t-rot', (-30 + i * 30) + 'deg');
+            sc.appendChild(tarotPlace(pl, 38 + i * 12, 30));
+          }
+          const bandaid = document.createElement('span');
+          bandaid.className = 't-cap';
+          bandaid.textContent = '🩹 try/catch applied';
+          sc.appendChild(tarotPlace(bandaid, 50, 84));
+        } else if (art.suit === 'swords' && r === 10) {
+          sc.appendChild(tarotPlace(tarotSlimeEl('', 'flat', 1.1), 50, 72));
+          for (let i = 0; i < 10; i++) {
+            const pl = tarotPipEl('pillar');
+            pl.classList.add('t-pip-mini');
+            pl.style.setProperty('--t-rot', (-24 + Math.random() * 48) + 'deg');
+            sc.appendChild(tarotPlace(pl, 22 + i * 6, 52));
+          }
+          const cap = document.createElement('span');
+          cap.className = 't-cap';
+          cap.textContent = "(it's fine.)";
+          sc.appendChild(tarotPlace(cap, 50, 90));
+        } else {
+          if (art.suit === 'cups' && r === 10) {
+            const rb = document.createElement('div');
+            rb.className = 't-rainbow';
+            sc.appendChild(tarotPlace(rb, 50, 20));
+          }
+          const layout = T_PIP_LAYOUT[r];
+          layout.forEach((pos, i) => {
+            const pip = tarotPipEl(suit.pip, r === 1);
+            pip.style.animationDelay = (i * 0.12) + 's';
+            sc.appendChild(tarotPlace(pip, pos[0], pos[1]));
+          });
+          if (r === 1) sc.appendChild(tarotPlace(tarotSlimeEl('🤲', 'bob', 0.7), 50, 84));
+          else sc.appendChild(tarotPlace(tarotSlimeEl('', ['bob', 'walk', 'lean', 'shiver'][r % 4], 0.6), r % 2 ? 82 : 18, 84));
+        }
+      } else { // courts: one royal slime, one oversized emblem
+        sc.appendChild(tarotPlace(tarotSlimeEl(T_COURT_ACC[r - 11], r === 12 ? 'shake' : 'bob', 1.35), 50, 46));
+        const pip = tarotPipEl(suit.pip, true);
+        sc.appendChild(tarotPlace(pip, 50, 82));
+        if (r === 12) sc.appendChild(tarotPlace((() => { const d = document.createElement('span'); d.className = 't-cap'; d.textContent = '💨'; return d; })(), 22, 60));
+      }
+    } else if (art.it) { // ---- major arcana: bespoke pixel dioramas ----
+      art.it.forEach((spec) => {
+        const k = spec[0];
+        if (k === 'slime') sc.appendChild(tarotPlace(tarotSlimeEl(spec[4], spec[5], spec[3]), spec[1], spec[2]));
+        else if (k === 'e') {
+          const el = document.createElement('span');
+          el.className = 't-emo t-a-' + (spec[5] || 'bob');
+          el.textContent = spec[1];
+          if (spec[4] && spec[4] !== 1) el.style.setProperty('--t-s', spec[4]);
+          sc.appendChild(tarotPlace(el, spec[2], spec[3]));
+        } else if (k === 'pil') {
+          const pl = tarotPipEl('pillar');
+          pl.style.height = spec[3] + '%';
+          if (spec[4]) pl.classList.add('t-a-' + spec[4]);
+          sc.appendChild(tarotPlace(pl, spec[1], spec[2]));
+        } else if (k === 'rod' || k === 'cup' || k === 'coin') {
+          sc.appendChild(tarotPlace(tarotPipEl(k), spec[1], spec[2]));
+        } else if (k === 'txt') {
+          const cp = document.createElement('span');
+          cp.className = 't-cap';
+          cp.textContent = spec[1];
+          sc.appendChild(tarotPlace(cp, spec[2], spec[3]));
+        }
+      });
+    }
+    return sc;
+  }
+
+  function tarotReveal(card, upright, done) {
+    if (tarotRevealEl) { try { tarotRevealEl.remove(); } catch (e) { /* stage fright */ } tarotRevealEl = null; }
+    const o = upright ? card.up : card.dn;
+    const veil = document.createElement('div');
+    veil.className = 'tarot-veil';
+    const stage = document.createElement('div');
+    stage.className = 'tarot-stage';
+    const flip = document.createElement('div');
+    flip.className = 'tarot-flip';
+    const back = document.createElement('div');
+    back.className = 'tarot-cardback';
+    back.innerHTML = '<span>✦</span>';
+    const face = document.createElement('div');
+    face.className = 'tarot-cardface';
+    const frame = document.createElement('div');
+    frame.className = 'tarot-frame';
+    const rn = document.createElement('div');
+    rn.className = 'tarot-rn';
+    rn.textContent = card.rn || '✦';
+    const title = document.createElement('div');
+    title.className = 'tarot-title';
+    title.textContent = trT(...card.n) + (upright ? '' : trT(' (reversed)', ' (renversée)'));
+    const sig = document.createElement('div');
+    sig.className = 'tarot-sig';
+    sig.textContent = '~slime ♡'; // where Pixie signed hers, ours signs its
+    const scene = tarotBuildScene(card, upright);
+    frame.appendChild(rn);
+    frame.appendChild(scene);
+    frame.appendChild(sig);
+    frame.appendChild(title);
+    face.appendChild(frame);
+    flip.appendChild(back);
+    flip.appendChild(face);
+    stage.appendChild(flip);
+    const sub = document.createElement('div');
+    sub.className = 'tarot-sub';
+    const subName = document.createElement('div');
+    subName.className = 'tarot-sub-name';
+    const subFx = document.createElement('div');
+    subFx.className = 'tarot-sub-fx';
+    sub.appendChild(subName);
+    sub.appendChild(subFx);
+    const hint = document.createElement('div');
+    hint.className = 'tarot-skiphint';
+    hint.textContent = trT('(click / ␣ to continue)', '(clic / ␣ pour continuer)');
+    veil.appendChild(stage);
+    veil.appendChild(sub);
+    veil.appendChild(hint);
+    document.body.appendChild(veil);
+    tarotRevealEl = veil;
+
+    let finished = false;
+    let typeIv = null;
+    const bornAt = Date.now();
+    const onKey = (e) => {
+      if (e.code === 'Space' || e.code === 'Enter' || e.code === 'Escape') { e.preventDefault(); e.stopPropagation(); tryFinish(); }
+    };
+    const finish = () => {
+      if (finished) return;
+      finished = true;
+      document.removeEventListener('keydown', onKey, true);
+      if (typeIv) clearInterval(typeIv);
+      veil.classList.add('tarot-out');
+      setTimeout(() => { veil.remove(); if (tarotRevealEl === veil) tarotRevealEl = null; done(); }, 420);
+    };
+    const tryFinish = () => { if (Date.now() - bornAt > 1200) finish(); };
+    veil.addEventListener('pointerdown', tryFinish);
+    document.addEventListener('keydown', onKey, true);
+
+    if (REDUCED_MOTION) {
+      flip.classList.add('is-flipped');
+      subName.textContent = trT(...card.n) + (upright ? '' : trT(' (reversed)', ' (renversée)'));
+      subFx.textContent = '✨ ' + trT(...o.t);
+      setTimeout(finish, 2600);
+      setTimeout(() => { if (!finished) finish(); }, 12000);
+      return;
+    }
+
+    // t≈0.15s: the chosen back levitates and charges up
+    setTimeout(() => { stage.classList.add('is-charge'); playTone(880, 'sine', 0.3, 0, 0.04); playTone(1174.66, 'sine', 0.3, 0.15, 0.04); }, 150);
+    // t≈1.0s: THE FLIP (each suit hums its own little motif)
+    setTimeout(() => {
+      flip.classList.add('is-flipped');
+      const motif = card.art && card.art.suit ? T_SUITS[card.art.suit].motif : [523.25, 659.25, 783.99, 1046.5];
+      motif.forEach((f, i) => playTone(f, 'triangle', 0.22, i * 0.12, 0.05));
+      if (!upright) playTone(220, 'sine', 0.35, motif.length * 0.12, 0.04); // reversed = one low aside
+    }, 1000);
+    // t≈1.6s: subtitles — name lands, fate types itself out
+    setTimeout(() => {
+      subName.textContent = trT(...card.n) + (upright ? '' : trT(' (reversed)', ' (renversée)'));
+      const full = '✨ ' + trT(...o.t);
+      let i = 0;
+      typeIv = setInterval(() => {
+        if (finished) { clearInterval(typeIv); return; }
+        i += 2;
+        subFx.textContent = full.slice(0, i);
+        if (i % 6 === 0) playTone(1568, 'square', 0.02, 0, 0.012);
+        if (i >= full.length) { subFx.textContent = full; clearInterval(typeIv); typeIv = null; }
+      }, 34);
+    }, 1650);
+    // the face's little scene gets played to the end, as decreed
+    setTimeout(finish, 6200);
+    setTimeout(() => { if (!finished) finish(); }, 12000); // fuse: fate may never softlock the runner
+  }
 
   const WIZ_TAUNTS = [
     ["that one? interesting choice…", "celle-là ? choix intéressant…"],
@@ -11258,8 +12059,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const upright = gStateHash('side' + ev.sel) % 100 < 55;
     GAME.decisions.push('tarot:' + card.n[0] + (upright ? ':up' : ':dn'));
     const o = upright ? card.up : card.dn;
-    o.fx();
-    gEndEvent([`${card.n[0]}${upright ? '' : ' (reversed)'} — ${o.t[0]}`, `${card.n[1]}${upright ? '' : ' (renversée)'} — ${o.t[1]}`]);
+    // v6.1: the runner holds its breath while the card plays its whole
+    // scene — the effect lands when the curtain falls, never buried
+    // under someone else's toast
+    GAME.event = { type: 'tarotReveal' };
+    playSparkleSound();
+    tarotReveal(card, upright, () => {
+      try { o.fx(); } catch (e) { /* fate fumbled; the run continues */ }
+      gEndEvent(null, null); // the subtitle already narrated the outcome
+    });
   }
 
   function gEventTap(x, y) {
@@ -11477,6 +12285,10 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         g2.fillText('🧙 ' + L(ev.taunt) + '  ' + L(["(←/→ choose · ␣ pick)", "(←/→ choisir · ␣ tirer)"]), 20, 112);
       }
+    } else if (ev.type === 'tarotReveal') {
+      // the real show is DOM — the canvas just keeps the seat warm
+      g2.fillStyle = '#ffe98a';
+      g2.fillText('🔮 ' + L(["the card rises from the deck…", "la carte s'élève du paquet…"]), 20, 22);
     } else if (ev.type === 'interview') {
       g2.fillText('🧚 ' + L(["a tiny HR fairy saw you smiling just now…", "une petite fée RH t'a vu sourire à l'instant…"]), 20, 22);
       g2.fillStyle = gTheme.pink;

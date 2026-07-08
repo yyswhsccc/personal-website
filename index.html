@@ -51,15 +51,11 @@
         if (pref === 'incognito') pref = 'dark'; // spy mode retired
         var dark;
         if (pref === 'auto') {
-          // MUST mirror resolvedTheme() in script.js exactly: a dark
-          // system wins (auto-switching systems raise it at night);
-          // otherwise the visitor's clock — 21:00–08:00 is night.
-          if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-            dark = true;
-          } else {
-            var hr = new Date().getHours();
-            dark = (typeof hr === 'number' && hr >= 0 && hr <= 23) ? (hr >= 21 || hr < 8) : false;
-          }
+          // MUST mirror resolvedTheme() in script.js exactly: the clock
+          // is the ONLY authority — 21:00–08:00 is night. (an always-dark
+          // OS used to trap the site in midnight mode forever.)
+          var hr = new Date().getHours();
+          dark = (typeof hr === 'number' && hr >= 0 && hr <= 23) ? (hr >= 21 || hr < 8) : false;
         } else {
           dark = pref === 'dark';
         }
@@ -107,7 +103,7 @@
     })();
   </script>
 
-  <link rel="stylesheet" href="style.css?v=74">
+  <link rel="stylesheet" href="style.css?v=75">
 <script>/* wrist-sized screens get the wrist edition */(function(){try{if(screen.width<=340&&screen.height<=430)location.replace('watch.html');}catch(e){}})();</script>
 </head>
 <body>
@@ -1470,6 +1466,6 @@
   <div id="email-toast" class="toast-hidden" role="status" aria-live="polite">Email copied to clipboard! ♡</div>
 
   <script src="i18n.js?v=70"></script>
-  <script src="script.js?v=74"></script>
+  <script src="script.js?v=75"></script>
 </body>
 </html>
