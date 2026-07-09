@@ -10196,21 +10196,19 @@ document.addEventListener('DOMContentLoaded', () => {
     for (let yy = 0; yy < h; yy++) for (let xx = (yy + (off || 0)) % 2; xx < w; xx += 2) g.fillRect(x + xx, y + yy, 1, 1);
   }
   // ---- sprite library (chars index into TP) ----
-  const TPM_SLIME = [ // the protagonist, 14×12 — now with a highlight, blush, drip and outline
-    '...kkkkkkkk...',
-    '..kssspppssk..',
-    '.ksspppppppsk.',
-    'kspppppppppsk.',
-    'kpppwwppppppk',
-    'kppkkppppkkppk',
-    'kppkwppppkwppk',
-    'kpppppppppppk',
-    'kppPPpkkkpPPpk',
-    'kspppppppppsk.',
-    '.kspppppppsk..',
-    '..kkkkkkkkk...'
+  const TPM_SLIME = [ // the protagonist, 14×10 — the site's own soft round blob, untouched
+    '..pppppppppp..',
+    '.pppsspppppsp.',
+    'pppppppppppppp',
+    'ppkkpppppkkppp',
+    'ppkkpppppkkppp',
+    'pppppppppppppp',
+    'pPPppkkkppPPpp',
+    'pppppppppppppp',
+    '.pppppppppppp.',
+    '..pppppppppp..'
   ];
-  const TPM_TINY = ['..kkkk..', '.ksppsk.', 'kpppppk', 'kpkppkk', 'kpppppk', '.kkkkk.']; // 8×6 background slime, ink-edged
+  const TPM_TINY = ['..pppp..', '.pkppkp.', 'pppppppp', 'pPppppPp', '.pppppp.']; // 8×5 background slime
   const TPM_CUP = [ // boba chalice 10×12
     '.llllllll.',
     'l.kkkkkk.l',
@@ -10349,11 +10347,66 @@ document.addEventListener('DOMContentLoaded', () => {
     bands.forEach((c, i) => tpx(g, A.x, A.y + (A.h / 4) * i, A.w, A.h / 4 + 1, c));
     tpDither(g, A.x, A.y + A.h / 4 - 2, A.w, 4, bands[1], f);
     tpDither(g, A.x, A.y + A.h / 2 - 2, A.w, 4, bands[2], f + 1);
-    if (kind === 'night' || kind === 'storm' || kind === 'void') {
-      for (let i = 0; i < 9; i++) {
-        if (((f >> 1) + i) % 3 === 0) continue; // twinkle
-        tpx(g, A.x + (i * 31 + 7) % A.w, A.y + (i * 13 + 3) % (A.h / 2), 1, 1, i % 2 ? TP.g : TP.w);
+    tpDither(g, A.x, A.y + (A.h * 3) / 4 - 2, A.w, 4, bands[3], f);
+    // ---- v6.3: every sky is FURNISHED now (the user asked for scenery) ----
+    if (kind === 'day') {
+      // two lazy clouds drifting on different lanes + a pair of flapping birds
+      const cx1 = A.x + ((f * 0.7 + 10) % (A.w + 30)) - 15;
+      const cx2 = A.x + ((f * 0.4 + 55) % (A.w + 30)) - 15;
+      tpCloud(g, cx1, A.y + 8, 18);
+      tpCloud(g, cx2, A.y + 22, 13);
+      const by = A.y + 14 + (f % 2);
+      [[A.x + 20, by], [A.x + 30, by + 4]].forEach(([bx, byy]) => {
+        tpx(g, bx, byy + (f % 2), 2, 1, TP.k); tpx(g, bx + 3, byy + (f % 2), 2, 1, TP.k); tpx(g, bx + 2, byy + 1, 1, 1, TP.k);
+      });
+      // distant lilac hills on the horizon, behind everything
+      for (let hx = 0; hx < A.w; hx += 3) {
+        const hh = 6 + Math.round(Math.sin((hx / A.w) * Math.PI * 2.2) * 4);
+        tpx(g, A.x + hx, A.y + A.h - 22 - hh, 3, hh, '#d6c2f0');
       }
+    } else if (kind === 'gold') {
+      // godrays fanning from the top corner + floating dust motes
+      for (let i = 0; i < 4; i++) {
+        for (let s = 0; s < A.h; s += 3) {
+          const rx = A.x + 6 + i * 6 + Math.round(s * (0.4 + i * 0.22));
+          if (rx < A.x + A.w - 1 && (s + f) % 6 < 3) tpx(g, rx, A.y + s, 1, 2, 'rgba(255,255,255,0.35)');
+        }
+      }
+      for (let i = 0; i < 6; i++) tpx(g, A.x + (i * 17 + f * 2) % A.w, A.y + (i * 23 + f) % (A.h - 30), 1, 1, i % 2 ? TP.w : '#fff3c4');
+      for (let hx = 0; hx < A.w; hx += 3) { // warm hills too
+        const hh = 5 + Math.round(Math.sin((hx / A.w) * Math.PI * 1.8 + 1) * 3);
+        tpx(g, A.x + hx, A.y + A.h - 22 - hh, 3, hh, '#f5c96a');
+      }
+    } else if (kind === 'night') {
+      for (let i = 0; i < 14; i++) {
+        if (((f >> 1) + i) % 4 === 0) continue; // twinkle
+        const big = i % 5 === 0;
+        const sx = A.x + (i * 23 + 7) % A.w, sy = A.y + (i * 17 + 3) % (A.h * 0.6);
+        tpx(g, sx, sy, 1, 1, i % 2 ? TP.g : TP.w);
+        if (big) { tpx(g, sx - 1, sy, 3, 1, 'rgba(255,233,138,0.35)'); tpx(g, sx, sy - 1, 1, 3, 'rgba(255,233,138,0.35)'); }
+      }
+      if (f % 14 < 2) { // a shooting star, twice a minute-ish
+        const sx = A.x + 12 + ((f * 7) % (A.w - 30));
+        for (let i = 0; i < 5; i++) tpx(g, sx + i * 2, A.y + 8 + i, 2, 1, i ? 'rgba(255,255,255,' + (0.7 - i * 0.13) + ')' : TP.w);
+      }
+    } else if (kind === 'storm') {
+      // brooding cloud bank + slanted rain
+      for (let i = 0; i < 4; i++) tpx(g, A.x + i * 22 - 4, A.y + 2 + (i % 2) * 3, 26, 6, 'rgba(20,14,44,0.75)');
+      tpDither(g, A.x, A.y + 8, A.w, 4, 'rgba(20,14,44,0.5)', f);
+      for (let i = 0; i < 10; i++) {
+        const rx = A.x + (i * 19 + f * 3) % A.w;
+        const ry = A.y + 12 + (i * 29 + f * 5) % (A.h - 40);
+        tpx(g, rx, ry, 1, 4, 'rgba(180,190,230,0.4)');
+      }
+      for (let i = 0; i < 6; i++) { if (((f >> 1) + i) % 3 === 0) continue; tpx(g, A.x + (i * 31 + 7) % A.w, A.y + (i * 13 + 3) % (A.h / 2), 1, 1, TP.d); }
+    } else if (kind === 'void') {
+      // slow occult drift: dust spiraling toward the middle + a faint ring
+      for (let i = 0; i < 10; i++) {
+        const a = (i / 10) * Math.PI * 2 + f * 0.12;
+        const rr = 18 + ((i * 7 + f) % 22);
+        tpx(g, A.x + A.w / 2 + Math.cos(a) * rr, A.y + A.h / 2 + Math.sin(a) * rr * 0.7, 1, 1, i % 2 ? '#7a3d68' : '#4a1240');
+      }
+      for (let i = 0; i < 6; i++) { if (((f >> 1) + i) % 3 === 0) continue; tpx(g, A.x + (i * 29 + 9) % A.w, A.y + (i * 19 + 5) % (A.h / 2), 1, 1, TP.v); }
     }
   }
   function tpGround(g, kind, f) {
@@ -10367,15 +10420,22 @@ document.addEventListener('DOMContentLoaded', () => {
       for (let i = 0; i < 3; i++) tpx(g, A.x + (i * 29 + 12) % A.w, gy + 9 + (i % 2) * 4, 2, 2, i % 2 ? TP.p : TP.g); // wildflowers
     } else if (kind === 'water') {
       tpx(g, A.x, gy, A.w, 22, '#5fa8dc');
+      tpx(g, A.x, gy, A.w, 1, '#c9ecff'); // the bright waterline
       tpDither(g, A.x, gy + 2, A.w, 20, '#8fd4fa', f); // shimmering, politely
+      for (let i = 0; i < 4; i++) tpx(g, A.x + (i * 23 + f * 2) % (A.w - 8), gy + 4 + (i % 3) * 5, 4 + (i % 2) * 3, 1, '#dff4ff'); // glints
+      tpx(g, A.x + 12, gy + 8, 6, 2, '#5db374'); tpx(g, A.x + 14, gy + 7, 2, 1, TP.p); // a lilypad with a bloom
     } else if (kind === 'sand') {
       tpx(g, A.x, gy, A.w, 22, '#ffe98a');
-      tpDither(g, A.x, gy, A.w, 22, '#f0b429', f >> 1);
+      tpx(g, A.x, gy, A.w, 2, '#fff3c4');
+      tpDither(g, A.x, gy + 2, A.w, 20, '#f0b429', f >> 1);
+      for (let i = 0; i < 5; i++) tpx(g, A.x + (i * 19 + 6) % A.w, gy + 6 + (i % 3) * 5, 2, 2, '#d8a02e'); // pebbles
     } else if (kind === 'checker') { // the classic temple floor
       for (let yy = 0; yy < 22; yy += 5) for (let xx = 0; xx < A.w; xx += 5) tpx(g, A.x + xx, gy + yy, 5, 5, ((xx + yy) / 5) % 2 ? TP.k : TP.w);
+      tpx(g, A.x, gy, A.w, 1, TP.l); // a lilac skirting line where floor meets world
     } else if (kind === 'snow') {
       tpx(g, A.x, gy, A.w, 22, '#eef4ff');
       tpDither(g, A.x, gy, A.w, 22, '#cfe0f5', f >> 1);
+      for (let i = 0; i < 4; i++) tpx(g, A.x + (i * 21 + 8) % A.w, gy + 5 + (i % 2) * 7, 3, 1, '#ffffff'); // drifts
     } else { tpx(g, A.x, gy, A.w, 22, '#4a3f6e'); }
     return gy;
   }
@@ -10817,6 +10877,15 @@ document.addEventListener('DOMContentLoaded', () => {
     else if (T_MAJOR_PX[card.rn]) T_MAJOR_PX[card.rn](g, f);
     else { tpSky(g, 'day', f); tpSlimeAt(g, TP_ART.x + 37, TP_ART.y + 54, null); tpGround(g, 'grass', f); }
     g.restore();
+    // a fine dotted passe-partout hugging the picture (gallery manners)
+    for (let dx = 2; dx < TP_ART.w; dx += 4) {
+      tpx(g, TP_ART.x + dx, TP_ART.y + 1, 1, 1, 'rgba(201,167,245,0.55)');
+      tpx(g, TP_ART.x + dx, TP_ART.y + TP_ART.h - 2, 1, 1, 'rgba(201,167,245,0.55)');
+    }
+    for (let dy = 2; dy < TP_ART.h; dy += 4) {
+      tpx(g, TP_ART.x + 1, TP_ART.y + dy, 1, 1, 'rgba(201,167,245,0.55)');
+      tpx(g, TP_ART.x + TP_ART.w - 2, TP_ART.y + dy, 1, 1, 'rgba(201,167,245,0.55)');
+    }
     // the signature, where Pixie put hers
     g.font = '7px monospace';
     g.fillStyle = 'rgba(45,35,80,0.7)';
