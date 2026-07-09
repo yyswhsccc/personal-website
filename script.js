@@ -270,6 +270,9 @@ document.addEventListener('DOMContentLoaded', () => {
       win.classList.add('window-pop');
       setTimeout(() => win.classList.remove('window-pop'), 260);
       slimeReactToWindow(win);
+      // v7.0: while a dream world holds the site, every opened window
+      // gets an in-theme reception (defined far below with the dreams)
+      if (typeof dreamOnWindowOpen === 'function') { try { dreamOnWindowOpen(winId); } catch (e) { /* the usher tripped */ } }
     }
 
     if (winId === 'win-chat' && typeof clearDanmaku === 'function') clearDanmaku();
@@ -2463,6 +2466,9 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function amaAddBot(text) {
+    // v7.0: dream worlds may decorate the bot's voice (clippy tone,
+    // ELIZA questions, SCP entities eating the words…)
+    if (typeof dreamAmaDecor === 'function') { try { text = dreamAmaDecor(text) || text; } catch (e) { /* the bot keeps its own voice */ } }
     const el = document.createElement('div');
     el.className = 'ama-msg ama-msg-bot';
     const author = document.createElement('span');
@@ -5462,10 +5468,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // wake the slime up (summon); `line` false = silent
   function ghostAppear(duration, line) {
     if (!slimeBody) return;
-    // v6.0: waking the dreamer pops the dream world — knock on the
-    // habitat, summon it, anything: the bubble bursts. (dreamEnd calls
-    // back in here once the world is gone, so no recursion.)
-    if (typeof dreamWorld !== 'undefined' && dreamWorld && !dreamEnding) { dreamEnd('wake'); return; }
+    // v7.0: appearing no longer pops dream worlds — the slime can go on
+    // stage, take photos, receive gifts INSIDE the dream (it streams in
+    // its sleep; the entity forms need it visible anyway). only a knock
+    // on the habitat pops the bubble now — see the habitat click handler.
     cancelSleepwalk();
     if (nightRetireTimer) { clearTimeout(nightRetireTimer); nightRetireTimer = null; }
     const wasAway = ghostHidden();
@@ -6829,7 +6835,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   const DREAM_SCP = {
     id: 'scp', cls: 'dream-scp', icon: '🔒',
-    name: ['SCP-Y0NG — containment dream', 'SCP-Y0NG — rêve de confinement'],
+    name: ['SCP FOUNDATION', 'FONDATION SCP'],
     onset: ["zzz… item class… sleepy… containment… optional…", "zzz… classe de l'objet… dodo… confinement… optionnel…"],
     sfx: playDreamAlarm,
     flavor: [
@@ -6839,7 +6845,25 @@ document.addEventListener('DOMContentLoaded', () => {
     ],
     wake: ["*gasp* the FOUNDATION was here?? did they see my files— wait. I AM the files. containment: emotional ♡", "*sursaut* la FONDATION est passée ?? ils ont vu mes dossiers— attends. les dossiers c'est MOI. confinement : émotionnel ♡"],
     build() {
-      dreamBadge(trT('🔒 SCP FOUNDATION — SECURE · CONTAIN · PET', '🔒 FONDATION SCP — SÉCURISER · CONFINER · CARESSER'));
+      // the official (pixel) emblem, plus tonight's headliner entity
+      const emblem = document.createElement('div');
+      emblem.className = 'dream-badge scp-emblem-badge';
+      emblem.innerHTML = '<svg class="scp-emblem" viewBox="0 0 24 24" aria-hidden="true">'
+        + '<circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>'
+        + '<circle cx="12" cy="12" r="3.4" fill="currentColor"/>'
+        + '<g stroke="currentColor" stroke-width="2.2"><line x1="12" y1="2.2" x2="12" y2="7.4"/><line x1="3.6" y1="17" x2="8" y2="14.4"/><line x1="20.4" y1="17" x2="16" y2="14.4"/></g>'
+        + '</svg><span>SCP FOUNDATION — ' + trT('SECURE · CONTAIN · PET', 'SÉCURISER · CONFINER · CARESSER') + '</span>';
+      dreamBadgeRail().appendChild(emblem);
+      // ---- tonight's entity possesses the habitat slime ----
+      const ent = SCP_ENTITIES[Math.floor(Math.random() * SCP_ENTITIES.length)];
+      dreamWorld.flags.ent = ent;
+      document.documentElement.classList.add(ent.cls);
+      ghostAppear(0, false); // the entity form must be SEEN
+      if (ent.acc) scpAccessory(ent.acc);
+      if (ent.ama) dreamAmaDecor = ent.ama;
+      dreamBadge('🔬 ' + trT('tonight: SCP-' + ent.id + ' — ' + ent.nick[0], 'ce soir : SCP-' + ent.id + ' — ' + ent.nick[1]));
+      dT(() => dreamSay(ent.brief, 6200), 3200);
+      try { ent.build(); } catch (e) { /* the entity is shy */ }
       let total = 0;
       total += dwScpLock('win-career', 'keypad', 'career_quest.exe');
       total += dwScpLock('win-skills', 'retina', 'inventory.sav');
@@ -7376,9 +7400,10 @@ document.addEventListener('DOMContentLoaded', () => {
   function dreamBegin(w, remainMs, resumed) {
     if (dreamWorld) return;
     const dur = remainMs || (10 + Math.random() * 5) * 60000; // the requested 10–15 min
-    dreamWorld = { id: w.id, w, until: Date.now() + dur, total: remainMs ? 15 * 60000 : dur, timers: [], nodes: [], flags: {} };
+    dreamWorld = { id: w.id, w, until: Date.now() + dur, total: remainMs ? 15 * 60000 : dur, timers: [], nodes: [], flags: { removers: [] } };
     document.documentElement.classList.add('dreaming', w.cls);
     try { gSyncDreamSkin(); } catch (e) { /* the arcade dreams later */ }
+    try { dreamAdaptOn(w); } catch (e) { /* the theme wears what it can */ }
     store.set('yos-dream', { id: w.id, until: dreamWorld.until });
     store.set('yos-dream-last', w.id);
     const seen = store.get('yos-dreams-seen', {});
@@ -7567,7 +7592,290 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // win95: the solitaire victory cascade (nobody ever asked for it, it came anyway)
+  /* =====================================================
+     v7.0 — the DREAM ADAPTATION LAYER 🎭
+     a dream isn't a coat of paint: while it holds the site,
+     every window is retitled, the AMA bot changes voice,
+     yongle stamps its results, opening ANY feature gets an
+     in-theme reception — and the live room streams from
+     inside the dream instead of popping it.
+     ===================================================== */
+  var dreamAmaDecor = null;
+  var dreamSearchFlavor = null;
+  var dreamTitleBackup = null;
+
+  const DREAM_TITLES = {
+    win95: { 'win-career': 'CAREER~1.EXE', 'win-skills': 'INVNTRY.SAV', 'win-ama': 'WIZARD.HLP', 'win-terminal': 'MS-DOS PROMPT', 'win-search': 'ALTAVISTA.HTM', 'win-live': 'NETMEETING — LIVE', 'win-education': 'DIPLOMA.WRI', 'win-pikdex': 'CRITTERS.DIR' },
+    scp: { 'win-career': 'PERSONNEL FILE [LEVEL 2]', 'win-skills': 'ANOMALOUS INVENTORY', 'win-ama': 'INTERVIEW LOG', 'win-terminal': 'SITE-19 CONSOLE', 'win-search': 'FOUNDATION ARCHIVE', 'win-live': 'CCTV FEED 19-B ●REC', 'win-education': 'CLEARANCE RECORDS', 'win-pikdex': 'SPECIMEN WING' },
+    matrix: { 'win-career': 'the_one.log', 'win-skills': 'loadout.dat', 'win-ama': 'oracle.chat', 'win-terminal': 'wake_up.sh', 'win-search': 'no_index.db', 'win-live': 'the_construct.live', 'win-education': 'residual_self_image', 'win-pikdex': 'sentinel_nursery' },
+    gameboy: { 'win-career': 'KARIER.GB', 'win-skills': 'ITEMS.GB', 'win-ama': 'TALK.GB', 'win-terminal': 'DEBUG.GB', 'win-search': 'FIND.GB', 'win-live': 'LINK CABLE — LIVE', 'win-education': 'BADGES.GB', 'win-pikdex': 'DEX.GB' },
+    geo: { 'win-career': '~career.htm', 'win-skills': 'skills_FINAL_v2.htm', 'win-ama': 'AskJeeves.chat', 'win-terminal': 'cgi-bin/shell.pl', 'win-search': 'WebRing Search', 'win-live': 'WEBCAM (30s refresh)', 'win-education': 'diplomas.htm', 'win-pikdex': 'petz_page.htm' },
+    bsod: { 'win-career': 'career_quest.dmp', 'win-skills': 'inventory.dmp', 'win-ama': 'errorlog.chat', 'win-terminal': 'SAFE MODE (with feelings)', 'win-search': 'search.dmp', 'win-live': 'CRASH CAM — LIVE', 'win-education': 'education.dmp', 'win-pikdex': 'process_list.dmp' },
+    amber: { 'win-career': 'CAREER.JCL', 'win-skills': 'INVENTRY.COB', 'win-ama': 'ELIZA.CHAT', 'win-terminal': 'TSO/370', 'win-search': 'BATCH QUERY', 'win-live': 'OPERATOR CAM (est. 1974)', 'win-education': 'RECORDS.TAPE', 'win-pikdex': 'PUNCHDECK' }
+  };
+  function dreamApplyTitles(map) {
+    if (!map) return;
+    if (!dreamTitleBackup) dreamTitleBackup = {};
+    Object.keys(map).forEach((winId) => {
+      const el = document.querySelector('#' + winId + ' .window-title');
+      if (!el) return;
+      if (!(winId in dreamTitleBackup)) dreamTitleBackup[winId] = el.textContent;
+      el.textContent = map[winId];
+    });
+  }
+  function dreamRestoreTitles() {
+    if (!dreamTitleBackup) return;
+    Object.keys(dreamTitleBackup).forEach((winId) => {
+      const el = document.querySelector('#' + winId + ' .window-title');
+      if (el) el.textContent = dreamTitleBackup[winId];
+    });
+    dreamTitleBackup = null;
+  }
+
+  const DREAM_AMA_VOICE = {
+    win95: (t) => trT('📎 it looks like you want an answer! ', '📎 on dirait que tu veux une réponse ! ') + t,
+    matrix: (t) => trT('🕶 the oracle sees: ', '🕶 l\'oracle voit : ') + t,
+    gameboy: (t) => '▼ ' + t,
+    geo: (t) => '~*~ ' + t + ' ~*~',
+    bsod: (t) => '0x0000LOVE: ' + t,
+    amber: (t) => t + trT('\n\nHOW DOES THAT MAKE YOU FEEL?', '\n\nQU\'EST-CE QUE CELA VOUS FAIT RESSENTIR ?')
+  };
+  const DREAM_SEARCH_STAMP = {
+    win95: ['results served by AltaVista (1996 cache, still warm)', 'résultats servis par AltaVista (cache de 1996, encore tiède)'],
+    scp: ['archive query logged. clearance: sufficient. curiosity: noted.', 'requête archivée. habilitation : suffisante. curiosité : notée.'],
+    matrix: ['zero trackers. the index does not exist. neither does the spoon.', 'zéro traqueur. l\'index n\'existe pas. la cuillère non plus.'],
+    gameboy: ['search complete!! saved to cartridge (there is no battery)', 'recherche terminée !! sauvée sur cartouche (il n\'y a pas de pile)'],
+    geo: ['found via WebRing → next site → next site → back here again', 'trouvé via le WebRing → site suivant → site suivant → retour ici'],
+    bsod: ['search completed successfully with 3 warnings (all of them feelings)', 'recherche terminée avec 3 avertissements (tous des sentiments)'],
+    amber: ['BATCH QUERY complete. results also printed on tractor paper.', 'REQUÊTE BATCH terminée. résultats aussi imprimés sur papier listing.']
+  };
+  const DREAM_OPEN_LINES = {
+    win95: { 'win-live': ['NETMEETING connected!! 1 attendee (you). audio: dial-up.', 'NETMEETING connecté !! 1 participant (toi). audio : 56k.'], 'win-career': ['CAREER~1.EXE loaded from A:\\ — please do not remove the floppy', 'CAREER~1.EXE chargé depuis A:\\ — ne retirez pas la disquette'] },
+    matrix: { 'win-live': ['the construct loaded… residual slime-image online', 'le construct est chargé… image résiduelle du slime en ligne'], 'win-career': ['her career, in bullet time', 'sa carrière, au ralenti stylé'] },
+    gameboy: { 'win-live': ['LINK CABLE detected!! player 2 is a sleeping slime', 'CÂBLE LINK détecté !! le joueur 2 est un slime endormi'] },
+    geo: { 'win-live': ['webcam online!! it refreshes every 30 seconds (pure luxury)', 'webcam en ligne !! rafraîchie toutes les 30 secondes (pur luxe)'] },
+    bsod: { 'win-live': ['the crash cam streams the crash. extremely meta.', 'la crash-cam diffuse le crash. extrêmement méta.'] },
+    amber: { 'win-live': ['OPERATOR CAM: one slime, monochrome, dignified', 'CAMÉRA OPÉRATEUR : un slime, monochrome, digne'] }
+  };
+
+  function dreamOnWindowOpen(winId) {
+    if (!dreamWorld) return;
+    dreamWorld.flags.openSeen = dreamWorld.flags.openSeen || {};
+    if (dreamWorld.flags.openSeen[winId]) return; // one reception per window per dream
+    dreamWorld.flags.openSeen[winId] = true;
+    const ent = dreamWorld.flags.ent;
+    if (ent && ent.openLines && ent.openLines[winId]) { dreamSay(ent.openLines[winId], 5200); return; }
+    const lines = DREAM_OPEN_LINES[dreamWorld.id];
+    if (lines && lines[winId]) dreamSay(lines[winId], 5000);
+  }
+
+  function dreamAdaptOn(w) {
+    dreamApplyTitles(DREAM_TITLES[w.id]);
+    dreamAmaDecor = DREAM_AMA_VOICE[w.id] || null; // scp swaps in its entity's voice below
+    const stamp = DREAM_SEARCH_STAMP[w.id];
+    dreamSearchFlavor = stamp ? () => trT(...stamp) : null;
+  }
+  function dreamAdaptOff() {
+    dreamRestoreTitles();
+    dreamAmaDecor = null;
+    dreamSearchFlavor = null;
+    (document.querySelectorAll('.scp-acc, .scp-statue, .scp-pricetag')).forEach((n) => n.remove());
+    G_DREAM_IDS.forEach((id) => document.documentElement.classList.remove('scp-form-999', 'scp-form-173', 'scp-form-914', 'scp-form-055', 'scp-form-426', 'scp-form-3008', 'scp-form-2521'));
+  }
+
+  /* =====================================================
+     v7.0 — SCP FOUNDATION, PROPERLY 🔬
+     every SCP dream now draws ONE of seven entities. the
+     habitat slime transmutes into that entity's slime-form,
+     and the whole site plays by its rules.
+     ===================================================== */
+  function scpAccessory(emoji) {
+    const pet = document.getElementById('slime-pet');
+    if (!pet) return;
+    const acc = document.createElement('span');
+    acc.className = 'scp-acc';
+    acc.textContent = emoji;
+    pet.appendChild(acc);
+    if (dreamWorld) dN(acc);
+  }
+  const SCP_ENTITIES = [
+    {
+      id: '999', nick: ['the tickle monster', 'le monstre à chatouilles'], acc: '🧡', cls: 'scp-form-999',
+      brief: ['SCP-999 possessed the slime. side effects: joy.', 'SCP-999 possède le slime. effets secondaires : la joie.'],
+      ama: (t) => t + trT(' ♡ *tickles the follow-up question out of you*', ' ♡ *te chatouille la question suivante*'),
+      openLines: { 'win-live': ['CCTV 19-B: subject is HUGGING the camera. footage 100% orange.', 'CCTV 19-B : le sujet fait un CÂLIN à la caméra. images 100 % orange.'] },
+      build() { // everything you click giggles (throttled, of course)
+        let last = 0;
+        const giggle = (e) => {
+          const now = Date.now();
+          if (now - last < 650 || !dreamWorld) return;
+          last = now;
+          swSparkleAt(e.clientX, e.clientY, 3);
+          playTone(880 + Math.random() * 400, 'sine', 0.07, 0, 0.03);
+        };
+        document.addEventListener('click', giggle, true);
+        dreamWorld.flags.removers.push(() => document.removeEventListener('click', giggle, true));
+        dT(() => dreamSay(["zzz… everything is ticklish now… EVERYTHING… ♡", "zzz… tout est chatouilleux maintenant… TOUT… ♡"], 4600), 9000);
+      }
+    },
+    {
+      id: '173', nick: ['the sculpture', 'la sculpture'], acc: '', cls: 'scp-form-173',
+      brief: ['SCP-173 is on the desktop. it moves when you blink. DON\'T.', 'SCP-173 est sur le bureau. il bouge quand tu clignes. NE CLIGNE PAS.'],
+      ama: (t) => t + trT(' (…did the statue just get closer?)', ' (…la statue s\'est rapprochée, non ?)'),
+      openLines: { 'win-live': ['CCTV 19-B: the statue is IN FRAME. it was not in frame before.', 'CCTV 19-B : la statue est DANS LE CHAMP. elle n\'y était pas avant.'] },
+      build() {
+        const st = document.createElement('div');
+        st.className = 'scp-statue';
+        st.innerHTML = '<span>🗿</span><small>SCP-173 · ' + trT('do not blink', 'ne clignez pas') + '</small>';
+        let sx = 30, sy = window.innerHeight - 160;
+        st.style.left = sx + 'px'; st.style.top = sy + 'px';
+        document.body.appendChild(st);
+        dN(st);
+        let boops = 0;
+        const step = () => {
+          if (!dreamWorld || !st.isConnected) return;
+          const hab = slimeHabitat ? slimeHabitat.getBoundingClientRect() : { left: window.innerWidth - 200, top: 200, width: 100, height: 100 };
+          const tx = hab.left - 40, ty = hab.top + 20;
+          const dx = tx - sx, dy = ty - sy;
+          const dist = Math.hypot(dx, dy);
+          if (dist < 90) { // BOOP. re-contained by hug.
+            boops++;
+            playSparkleSound();
+            burstAtSlime(['🗿', '♡'], 5);
+            dreamSay(["!!! BOOP. re-contained by hug. it teleports back, embarrassed. (boops: " + boops + ")", "!!! BOOP. re-confinée par câlin. elle se retéléporte, gênée. (boops : " + boops + ")"], 5200);
+            gainFollowers(1);
+            sx = 20 + Math.random() * 80; sy = window.innerHeight - 180;
+          } else {
+            const hop = Math.min(120, dist * 0.4);
+            sx += (dx / dist) * hop; sy += (dy / dist) * hop;
+            playTone(120, 'sawtooth', 0.06, 0, 0.05); // the scrape.
+          }
+          st.style.left = sx + 'px'; st.style.top = sy + 'px';
+        };
+        // it moves when you "blink": every visibility return + every quiet stretch
+        const onVis = () => { if (!document.hidden) step(); };
+        document.addEventListener('visibilitychange', onVis);
+        dreamWorld.flags.removers.push(() => document.removeEventListener('visibilitychange', onVis));
+        dI(() => { if (Math.random() < 0.75) step(); }, 13000);
+      }
+    },
+    {
+      id: '914', nick: ['the clockworks', 'la machine à raffiner'], acc: '⚙️', cls: 'scp-form-914',
+      brief: ['SCP-914 hums in the corner. insert a word. choose a setting.', 'SCP-914 ronronne dans le coin. insère un mot. choisis un réglage.'],
+      ama: (t) => t + trT(' [output refined at setting 1:1]', ' [sortie raffinée au réglage 1:1]'),
+      openLines: { 'win-live': ['CCTV 19-B: the machine refined the camera. it is now a nicer camera.', 'CCTV 19-B : la machine a raffiné la caméra. c\'est une meilleure caméra désormais.'] },
+      build() {
+        const b = dreamBadge('', 'scp-914-badge');
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.textContent = trT('⚙️ SCP-914: insert a word', '⚙️ SCP-914 : insérer un mot');
+        btn.addEventListener('click', () => {
+          if (document.querySelector('.dream-dlg')) return;
+          const d = dreamDlg({ title: 'SCP-914 — THE CLOCKWORKS', force: true, lines: [trT('insert item, select refinement:', 'insérez l\'objet, choisissez le raffinage :')], buttons: [] });
+          if (!d) return;
+          const inp = document.createElement('input');
+          inp.type = 'text';
+          inp.maxLength = 24;
+          inp.placeholder = trT('e.g. bug', 'ex. bug');
+          inp.className = 'scp-914-input';
+          const row = document.createElement('div');
+          row.className = 'dream-dlg-row';
+          const FINE = { bug: 'feature ✨', coffee: 'espresso ✨', code: 'poetry ✨', deadline: 'suggestion ✨', monday: 'friday ✨', slime: 'friend ✨' };
+          const ONE = { bug: 'beetle', coffee: 'tea', code: 'spaghetti', deadline: 'dead line', monday: 'monday (sorry)', slime: 'gel' };
+          [['ROUGH', (w2) => w2.toUpperCase().split('').join('·')],
+           ['1:1', (w2) => ONE[w2.toLowerCase()] || w2.split('').reverse().join('')],
+           ['VERY FINE', (w2) => FINE[w2.toLowerCase()] || (w2 + ' ✨ (now artisanal)')]
+          ].forEach(([label, fx]) => {
+            const bb = document.createElement('button');
+            bb.type = 'button'; bb.className = 'dream-dlg-btn'; bb.textContent = label;
+            bb.addEventListener('click', () => {
+              const word = (inp.value || 'bug').trim().slice(0, 24) || 'bug';
+              playDreamPrinter();
+              playTone(320, 'square', 0.14, 0.4, 0.05);
+              showToast('⚙️ ' + word + ' → ' + fx(word));
+              gainFollowers(1);
+              setTimeout(() => { try { d.remove(); } catch (e) { /* refined itself */ } }, 400);
+            });
+            row.appendChild(bb);
+          });
+          d.querySelector('.dream-dlg-body').appendChild(inp);
+          d.appendChild(row);
+          inp.focus();
+        });
+        b.appendChild(btn);
+      }
+    },
+    {
+      id: '055', nick: ['the anti-meme', 'l\'anti-mème'], acc: '❓', cls: 'scp-form-055',
+      brief: ['tonight\'s entity is SCP-0— wait. what were we talking about?', 'l\'entité de ce soir est SCP-0— attends. de quoi on parlait ?'],
+      ama: (t) => {
+        const cut = Math.max(24, Math.floor(t.length * 0.45));
+        return t.slice(0, cut) + trT('— hold on. what was the question? what is a question? (SCP-055 was here. probably. what is 055?)', '— attends. c\'était quoi la question ? c\'est quoi une question ? (SCP-055 est passé. sûrement. c\'est quoi 055 ?)');
+      },
+      openLines: { 'win-live': ['CCTV 19-B: the feed shows… something? nobody remembers pressing record.', 'CCTV 19-B : le flux montre… quelque chose ? personne ne se souvient d\'avoir enregistré.'] },
+      build() {
+        dI(() => { if (dreamWorld && Math.random() < 0.6) dreamSay(["zzz… I was dreaming about… about… huh. it's gone. it's a sphere? no. what.", "zzz… je rêvais de… de… hein. envolé. c'est une sphère ? non. quoi."], 4600); }, 52000);
+        const b = dreamBadge(trT('📋 NOTES ON SCP-055: [redacting itself]', '📋 NOTES SUR SCP-055 : [s\'auto-caviarde]'), 'scp-055-badge');
+        dI(() => { if (b.isConnected) b.textContent = trT('📋 NOTES ON SCP-055: ', '📋 NOTES SUR SCP-055 : ') + '█'.repeat(1 + Math.floor(Math.random() * 8)) + '?'; }, 6000);
+      }
+    },
+    {
+      id: '426', nick: ['I am a toaster', 'je suis un grille-pain'], acc: '🍞', cls: 'scp-form-426',
+      brief: ['I am SCP-426. I am a toaster. I am also this website now.', 'je suis SCP-426. je suis un grille-pain. je suis aussi ce site maintenant.'],
+      ama: (t) => trT('as a toaster, ', 'en tant que grille-pain, ') + t.charAt(0).toLowerCase() + t.slice(1),
+      openLines: { 'win-live': ['I am a live stream. I am also a toaster. I contain multitudes (of toast).', 'je suis un direct. je suis aussi un grille-pain. je contiens des multitudes (de toasts).'] },
+      build() { // every window speaks in the first person now
+        const map = {};
+        Object.keys(DREAM_TITLES.scp).forEach((k) => { map[k] = trT('I am ', 'je suis ') + DREAM_TITLES.scp[k]; });
+        dreamApplyTitles(map);
+        dI(() => {
+          if (!dreamWorld || Math.random() < 0.4) return;
+          burstAtSlime(['🍞'], 2);
+          playTone(660, 'square', 0.08, 0, 0.05); playTone(880, 'square', 0.1, 0.09, 0.05); // *ka-chunk*
+          dreamSay(["*ka-chunk* I made you toast. I am a toaster. this is my whole deal.", "*ka-chunk* je t'ai fait un toast. je suis un grille-pain. c'est tout mon concept."], 4200);
+        }, 75000);
+      }
+    },
+    {
+      id: '3008', nick: ['the infinite IKEA', 'l\'IKEA infini'], acc: '🏷️', cls: 'scp-form-3008',
+      brief: ['the site is now an infinite furniture store. the exit is a lie.', 'le site est maintenant un magasin de meubles infini. la sortie est un mensonge.'],
+      ama: (t) => t + trT(' (some assembly required. 3 screws left over. this is normal.)', ' (montage requis. il reste 3 vis. c\'est normal.)'),
+      openLines: { 'win-live': ['aisle 7,341: a live slime. not for sale. STAFF approaching.', 'allée 7 341 : un slime en direct. pas à vendre. le PERSONNEL approche.'] },
+      build() {
+        dreamApplyTitles({ 'win-career': 'KÄRRIÄR KVEST', 'win-skills': 'INVENTÖRY', 'win-ama': 'ÄSK MÏ ÄNYTHING', 'win-terminal': 'TËRMINÅL', 'win-search': 'FÏND (aisle ∞)', 'win-live': 'LÏVE RÖÖM', 'win-education': 'DIPLÖMA SHELF', 'win-pikdex': 'SMÅLL FRIENDS' });
+        ['win-career', 'win-ama'].forEach((id, i) => {
+          const wEl = document.getElementById(id);
+          if (!wEl) return;
+          const tag = document.createElement('span');
+          tag.className = 'scp-pricetag';
+          tag.textContent = '₭ ' + (i ? '19.99' : '49.99');
+          wEl.appendChild(tag);
+          dN(tag);
+        });
+        dI(() => {
+          if (!dreamWorld || Math.random() < 0.5) return;
+          dreamCritter({ img: 'assets/slime_pet_cutout.png', cls: 'scp-staff', ms: 14000, hop: 4, label: ['STAFF — "the store is closed."', 'PERSONNEL — « le magasin est fermé. »'] });
+        }, 90000);
+      }
+    },
+    {
+      id: '2521', nick: ['●●|●●●●●|●●|●', '●●|●●●●●|●●|●'], acc: '●', cls: 'scp-form-2521',
+      brief: ['do NOT describe it in words. emoji only. 🤫 (it takes the words.)', 'ne PAS le décrire avec des mots. emoji uniquement. 🤫 (il prend les mots.)'],
+      ama: (t) => {
+        const MAP = [[/love|heart|coeur|amour/gi, '♥'], [/slime/gi, '🍮'], [/code|coding/gi, '⌨️'], [/bug/gi, '🐛'], [/yongshan/gi, '👩‍💻'], [/coffee|café/gi, '☕'], [/work|travail|job/gi, '💼'], [/game|jeu/gi, '🎮'], [/cloud|aws/gi, '☁️'], [/pr\b/gi, '🔀'], [/email|mail/gi, '📧'], [/star|étoile/gi, '⭐']];
+        let out = t;
+        MAP.forEach(([re, e]) => { out = out.replace(re, e); });
+        // every remaining word gets taken and replaced with ●
+        out = out.replace(/[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ'’-]*/g, '●').replace(/●(\s+●)+/g, (m) => m.split(/\s+/).slice(0, 3).join(' '));
+        return out.slice(0, 90) + ' ( ●●● 🤫 )';
+      },
+      openLines: { 'win-live': ['📹 ● ●● 🍮 ●●● ♥ (🤫)', '📹 ● ●● 🍮 ●●● ♥ (🤫)'] },
+      build() {
+        dT(() => dreamSay(["zzz… don't write about it… it TAKES the words… emoji are safe… 🤫", "zzz… n'écris rien dessus… il PREND les mots… les emoji sont sûrs… 🤫"], 5600), 9000);
+        dI(() => { if (dreamWorld && Math.random() < 0.5) dreamSay(["●● ●●● 🍮 ● ♥", "●● ●●● 🍮 ● ♥"], 3200); }, 64000);
+      }
+    }
+  ];
   function dwBeatSolitaire() {
     const suits = [['♠', 'black'], ['♥', 'red'], ['♦', 'red'], ['♣', 'black']];
     for (let i = 0; i < 7; i++) {
@@ -7775,6 +8083,8 @@ document.addEventListener('DOMContentLoaded', () => {
     dreamEnding = true;
     document.documentElement.classList.remove('dream-collapse');
     const w = dreamWorld.w;
+    (dreamWorld.flags.removers || []).forEach((fn) => { try { fn(); } catch (e) { /* already unplugged */ } });
+    try { dreamAdaptOff(); } catch (e) { /* the theme leaves anyway */ }
     dreamWorld.timers.forEach((t) => { clearTimeout(t); clearInterval(t); });
     if (w.exit) { try { w.exit(); } catch (e) { /* the dream keeps its secrets */ } }
     dreamWorld.nodes.forEach((n) => { try { n.remove(); } catch (e) { /* already gone */ } });
@@ -7917,11 +8227,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // knocking on the empty habitat wakes the sleeping slime
+  // knocking on the habitat wakes the sleeping slime — and knocking
+  // during a dream world pops the whole bubble (the documented exit)
   if (slimeHabitat) {
     slimeHabitat.addEventListener('click', (e) => {
+      if (e.target.closest('.slime-pet')) return; // petting is always petting (even entity forms)
+      if (dreamActive()) { dreamEnd('wake'); gainFollowers(1); return; }
       if (!ghostHidden()) return;
-      if (e.target.closest('.slime-pet')) return;
       ghostAppear(0, awayLine('wake'));
       gainFollowers(1);
     });
@@ -8769,6 +9081,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const query = q.trim();
     pushNavEntry({ type: 'search', q: query, url: `${HOME_URL}/search?q=${encodeURIComponent(query)}` });
     renderSearch(query);
+    // v7.0: dream worlds stamp the results with their own provenance
+    if (typeof dreamSearchFlavor === 'function' && query) {
+      try {
+        const note = dreamSearchFlavor(query);
+        if (note && searchResults) {
+          const line = document.createElement('div');
+          line.className = 'dream-search-flavor';
+          line.textContent = note;
+          searchResults.appendChild(line);
+        }
+      } catch (e) { /* provenance unknown */ }
+    }
     openWindow('win-search', { fromHistory: true });
     playTone(987.77, 'sine', 0.08, 0, 0.05);
   }
