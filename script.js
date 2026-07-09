@@ -5385,7 +5385,15 @@ document.addEventListener('DOMContentLoaded', () => {
     else document.documentElement.setAttribute('data-theme', th);
 
     const themeBtn = document.getElementById('btn-theme-toggle');
-    if (themeBtn) themeBtn.textContent = th === 'dark' ? '🌞' : '🌙';
+    // 🌗 = auto (following the clock), 🌞 = forced light, 🌙 = forced dark
+    if (themeBtn) {
+      themeBtn.textContent = themePref === 'auto' ? '🌗' : (th === 'dark' ? '🌞' : '🌙');
+      themeBtn.title = themePref === 'auto'
+        ? trT('theme: AUTO (clock) — click to force light', 'thème : AUTO (horloge) — clic pour forcer clair')
+        : th === 'dark'
+          ? trT('theme: DARK — click for AUTO', 'thème : SOMBRE — clic pour AUTO')
+          : trT('theme: LIGHT — click for dark', 'thème : CLAIR — clic pour sombre');
+    }
 
     if (th === 'dark') { buildNightSky(); nsShootStart(); }
     else { nsShootStop(); if (typeof scheduleGameInvite === 'function') scheduleGameInvite(); }
@@ -5833,6 +5841,22 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   function swScenePick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 
+  // v6.2: sleepwalkers are ticklish (science). first poke pays a fan.
+  function swMakeTicklish(el) {
+    let tickled = 0;
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (tickled++ > 4) return; // it IS asleep. have mercy.
+      swSparkleAt(e.clientX, e.clientY, 4);
+      playDreamPop();
+      if (tickled === 1) gainFollowers(1);
+      const bb = el.querySelector('.sw-bubble');
+      if (bb) bb.textContent = tickled < 3
+        ? trT('!!! ticklish… even asleep… ♡', '!!! chatouilleux… même endormi… ♡')
+        : trT('zzz… lawsuit… pending…', 'zzz… plainte… en cours…');
+    });
+  }
+
   /* ---- v5.2 arrival scenes: the tour got a SHOW ----
      the sleepwalker doesn't just open a window anymore — it DOES
      something there, still fast asleep. every act touches the real
@@ -5841,7 +5865,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const bit = swScenePick([
       ['$ sudo dream --apply hugs', ['dream.service: 1 hug deployed to prod ♡ (zero downtime)', 'dream.service : 1 câlin déployé en prod ♡ (zéro coupure)'], 't-ok'],
       ['$ git commit -m "zzz"', ['[dreams 5f1eep] 1 file changed, ∞ feelings inserted ♡', '[rêves 5f1eep] 1 fichier modifié, ∞ sentiments insérés ♡'], 't-ok'],
-      ['$ whoami', ['a slime. asleep. still typing. honestly impressive', 'un slime. endormi. qui tape quand même. franchement impressionnant'], 't-dim']
+      ['$ whoami', ['a slime. asleep. still typing. honestly impressive', 'un slime. endormi. qui tape quand même. franchement impressionnant'], 't-dim'],
+      ['$ git blame feelings.js', ['author: you (3 min ago) — "it was like this when I got here"', 'auteur : toi (il y a 3 min) — « c\'était déjà comme ça en arrivant »'], 't-dim'],
+      ['$ cowsay zzz', ['< zzz > …the cow is also asleep. respect.', '< zzz > …la vache dort aussi. respect.'], 't-ok'],
+      ['$ uptime', ['awake: 0 days 0:00 — personal best ♡', 'éveillé : 0 jour 0:00 — record personnel ♡'], 't-dim']
     ]);
     setTimeout(() => swSay(["zzz… lemme just… type one thing…", "zzz… je vais juste… taper un truc…"]), 500);
     setTimeout(() => termLine(bit[0], 't-cmd'), 1400);
@@ -6123,13 +6150,37 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => swSay(["zzz… top 5%… of nappers… too…", "zzz… top 5 %… des siesteurs… aussi…"]), 2400);
   }
 
+  // v6.2: the sleepwalker googles in its sleep (results not guaranteed)
+  function swSceneSearch() {
+    const q = swScenePick([
+      ['how to become CEO of naps', 'comment devenir PDG des siestes'],
+      ['do firewalls feel warm', 'les pare-feu sont-ils chauds'],
+      ['is it legal to marry a boba', 'peut-on légalement épouser un boba'],
+      ['why is my human awake at 3am', 'pourquoi mon humain est debout à 3h du matin'],
+      ['am I a bug or a feature (asking for me)', 'suis-je un bug ou une feature (je demande pour moi)']
+    ]);
+    setTimeout(() => swSay(["zzz… just need to search one tiny thing…", "zzz… je dois juste chercher un tout petit truc…"]), 500);
+    setTimeout(() => { try { performSearch(trT(...q)); } catch (e) { /* the engine sleeps in */ } }, 1700);
+    setTimeout(() => swSay(["zzz… zero results… the internet is a coward…", "zzz… zéro résultat… internet est un lâche…"]), 3800);
+    return 6400;
+  }
+  // …and takes attendance in the meadow (all 72, plus itself: 73)
+  function swScenePikdex() {
+    setTimeout(() => swSay(["zzz… meadow headcount… very official…", "zzz… recensement de la prairie… très officiel…"]), 600);
+    setTimeout(() => { try { if (typeof pikParade === 'function') pikParade(); } catch (e) { /* the squad naps */ } playSparkleSound(); }, 1900);
+    setTimeout(() => swSay(["zzz… all 72 accounted for… plus me… 73…", "zzz… les 72 sont là… plus moi… 73…"]), 3900);
+    return 6400;
+  }
+
   const SW_TARGETS = [
     { sel: '[data-window="win-career"]', line: ["zzz… 47 merged PRs… all mine… well. hers…", "zzz… 47 PR fusionnées… toutes à moi… enfin. à elle…"], scene: swSceneCareer },
     { sel: '[data-window="win-skills"]', line: ["zzz… Python level five… so shiny…", "zzz… Python niveau cinq… ça brille…"], scene: swSceneSkills },
     { sel: '[data-window="win-ama"]', line: ["zzz… ask the bot… it knows… everything about her…", "zzz… demande au bot… il sait… tout sur elle…"], scene: swSceneAma },
     { sel: '[data-window="win-terminal"]', line: ["zzz… sudo… hire… yongshan…", "zzz… sudo… hire… yongshan…"], scene: swSceneTerminal },
     { sel: '#chip-fanwall', line: ["zzz… so many fans… need… more fans…", "zzz… tant de fans… il en faut… plus…"], scene: swSceneFanwall },
-    { sel: '[data-window="win-education"]', line: ["zzz… top five percent… of dreams…", "zzz… top cinq pour cent… des rêves…"], scene: swSceneEducation }
+    { sel: '[data-window="win-education"]', line: ["zzz… top five percent… of dreams…", "zzz… top cinq pour cent… des rêves…"], scene: swSceneEducation },
+    { sel: '#address-form', line: ["zzz… gotta google… something urgent…", "zzz… je dois googler… un truc urgent…"], scene: swSceneSearch },
+    { sel: '[data-window="win-pikdex"]', line: ["zzz… roll call… tiny friends…", "zzz… à l'appel… petits amis…"], scene: swScenePikdex }
   ];
   const SW_GAME_LINE = ["zzz… I hear… an arcade… must… participate…", "zzz… j'entends… une borne d'arcade… je dois… participer…"];
 
@@ -6199,6 +6250,7 @@ document.addEventListener('DOMContentLoaded', () => {
     swEl.appendChild(img);
     swEl.appendChild(bub);
     document.body.appendChild(swEl);
+    swMakeTicklish(swEl);
 
     const from = { x: habitatRect.left + habitatRect.width / 2 - 36, y: habitatRect.top + habitatRect.height / 2 - 32 };
     const tr = target.getBoundingClientRect();
@@ -6270,9 +6322,16 @@ document.addEventListener('DOMContentLoaded', () => {
       // scenes may return their own curtain time (the AMA show runs long)
       let hold = scene ? 5600 : 3600;
       if (scene) { try { const h = scene(target); if (typeof h === 'number' && h > 0) hold = h; } catch (e) { /* dream logic */ } }
-      // v6.0: 1-in-4 walks ALSO slap a sticky note near the scene of the
-      // crime — signed, dated, peelable (the gremlin wants credit)
-      if (Math.random() < 0.25) { try { swStickyNote(target); } catch (e) { /* glue failure */ } }
+      // v6.2: the gremlin's merch table grew — sticky notes, crayon
+      // graffiti, or the room quietly leaning 0.35° (it will deny it)
+      const bonus = Math.random();
+      if (bonus < 0.22) { try { swStickyNote(target); } catch (e) { /* glue failure */ } }
+      else if (bonus < 0.38) { try { swGraffiti(target); } catch (e) { /* crayon failure */ } }
+      else if (bonus < 0.45 && !REDUCED_MOTION && !document.body.classList.contains('sw-tilt')) {
+        document.body.classList.add('sw-tilt');
+        setTimeout(() => showBubble(trT('…did the room just lean? no? cool. cool cool cool.', '…la pièce vient de pencher, non ? non ? cool. très très cool.'), 4200, true), 2600);
+        setTimeout(() => document.body.classList.remove('sw-tilt'), 25000);
+      }
       setTimeout(() => swFinish(false), hold);
     }
   }
@@ -7226,6 +7285,7 @@ document.addEventListener('DOMContentLoaded', () => {
     swEl.appendChild(img);
     swEl.appendChild(bub);
     document.body.appendChild(swEl);
+    swMakeTicklish(swEl);
     const from = { x: habitatRect.left + habitatRect.width / 2 - 36, y: habitatRect.top + habitatRect.height / 2 - 32 };
     const to = { x: window.innerWidth / 2 - 36, y: window.innerHeight * 0.36 };
     swEl.style.left = from.x + 'px';
@@ -7279,7 +7339,169 @@ document.addEventListener('DOMContentLoaded', () => {
     if (Object.keys(seen).length >= DREAM_WORLDS.length) achvUnlock('dreamtour');
     try { w.build(!!resumed); } catch (e) { /* a half-built dream is still a dream */ }
     dreamNarrator(!!resumed);
+    // v6.2: every world keeps a signature set-piece on a loop, so a
+    // 10–15 min dream never runs out of surprises
+    dT(dreamSignatureBeat, resumed ? 12000 : 26000);
+    dI(dreamSignatureBeat, 48000);
     dT(() => dreamEnd('timer'), dur);
+  }
+
+  /* ---- v6.2: per-world signature beats (the dream keeps performing) ---- */
+  function dreamSignatureBeat() {
+    if (!dreamWorld || REDUCED_MOTION) return;
+    if (Math.random() < 0.28) return; // it's a dream, not a metronome
+    const id = dreamWorld.id;
+    if (id === 'win95') dwBeatSolitaire();
+    else if (id === 'scp') dwBeatAnomaly();
+    else if (id === 'matrix') dwBeatDejavu();
+    else if (id === 'gameboy') dwBeatWildBug();
+    else if (id === 'geo') dwBeatMillionth();
+    else if (id === 'bsod') dwBeatErrorReport();
+    else if (id === 'amber') dwBeatFortune();
+  }
+
+  // win95: the solitaire victory cascade (nobody ever asked for it, it came anyway)
+  function dwBeatSolitaire() {
+    const suits = [['♠', 'black'], ['♥', 'red'], ['♦', 'red'], ['♣', 'black']];
+    for (let i = 0; i < 7; i++) {
+      dT(() => {
+        if (!dreamWorld) return;
+        const s = suits[i % 4];
+        const card = document.createElement('div');
+        card.className = 'dream-sol-card ' + s[1];
+        card.textContent = s[0];
+        const startX = 30 + Math.random() * 120;
+        card.style.left = startX + 'px';
+        card.style.top = '90px';
+        document.body.appendChild(card);
+        dN(card);
+        const t0 = Date.now();
+        const vx = 3 + Math.random() * 3, dur2 = 2600;
+        let vy = -(3 + Math.random() * 4);
+        let x = startX, y = 90;
+        const iv = dI(() => {
+          const p = (Date.now() - t0);
+          vy += 0.4; x += vx; y += vy;
+          if (y > window.innerHeight - 60) { y = window.innerHeight - 60; vy *= -0.62; }
+          card.style.left = x + 'px'; card.style.top = y + 'px';
+          if (p > dur2 || x > window.innerWidth) { clearInterval(iv); card.remove(); }
+        }, 32);
+        playTone(523 + i * 60, 'triangle', 0.08, 0, 0.03);
+      }, i * 180);
+    }
+    dreamSay(["zzz… you WON solitaire… you didn't play… doesn't matter… CASCADE…", "zzz… tu as GAGNÉ au solitaire… tu n'as pas joué… peu importe… CASCADE…"], 4200);
+  }
+
+  // scp: an anomaly gets loose and parades across the desktop
+  function dwBeatAnomaly() {
+    const pick = swScenePick([
+      { e: '🗿', l: ['SCP-173 · do NOT blink (I did. it waved.)', 'SCP-173 · ne PAS cligner (j\'ai cligné. il a fait coucou.)'] },
+      { e: '🚪', l: ['SCP-005 · it opens ANY door. even sad ones.', 'SCP-005 · ouvre N\'IMPORTE quelle porte. même les tristes.'] },
+      { e: '🧽', l: ['SCP-999 · the tickle monster (class: SAFE, extremely)', 'SCP-999 · le monstre à chatouilles (classe : SAFE, extrêmement)'] },
+      { e: '📎', l: ['SCP-CLIP · it just wants to help. forever.', 'SCP-CLIP · il veut juste aider. pour toujours.'] }
+    ]);
+    dreamCritter({ emoji: pick.e, cls: 'dream-scp999', hop: 5, ms: 12000, label: pick.l,
+      onClick: (c) => { playSparkleSound(); gainFollowers(1); burstAtSlime(['🧡', '✦'], 4); const bb = c.querySelector('.dream-critter-bubble'); if (bb) bb.textContent = trT('re-contained ♡ (with a hug)', 're-confiné ♡ (avec un câlin)'); } });
+    dreamSay(["zzz… containment breach… it's fine… it's cute… mostly cute…", "zzz… brèche de confinement… tout va bien… c'est mignon… surtout mignon…"], 4000);
+  }
+
+  // matrix: a déjà vu — the same black cat crosses twice (they changed something)
+  function dwBeatDejavu() {
+    dreamCritter({ emoji: '🐈‍⬛', cls: 'dream-rabbit', ms: 5000, y: window.innerHeight - 140, label: ['a black cat…', 'un chat noir…'] });
+    dT(() => {
+      if (!dreamWorld) return;
+      dreamCritter({ emoji: '🐈‍⬛', cls: 'dream-rabbit', ms: 5000, y: window.innerHeight - 140, label: ['…déjà vu. they changed something.', '…déjà vu. ils ont changé un truc.'] });
+      playGlitchSound();
+      dreamSay(["zzz… whoa… déjà vu… a glitch in the meadow…", "zzz… whoa… déjà vu… un glitch dans la prairie…"], 3800);
+    }, 5200);
+  }
+
+  // gameboy: A WILD BUG APPEARED — a tiny turn-based battle box
+  function dwBeatWildBug() {
+    if (document.querySelector('.dream-dlg')) return;
+    let hp = 3;
+    const box = dreamDlg({
+      title: trT('a wild BUG appeared!', 'un BUG sauvage apparaît !'),
+      force: true, x: window.innerWidth / 2 - 150, y: 96,
+      lines: [trT('BUG lv.404  ♥♥♥', 'BUG niv.404  ♥♥♥'), trT('> it uses INFINITE LOOP…', '> il lance BOUCLE INFINIE…')],
+      buttons: [
+        [trT('🐛 SQUASH', '🐛 ÉCRASER'), (d) => {
+          hp--;
+          playTone(880, 'square', 0.06, 0, 0.05);
+          const body = d.querySelector('.dream-dlg-body');
+          if (hp > 0) { if (body) body.children[0].textContent = trT('BUG lv.404  ' + '♥'.repeat(hp), 'BUG niv.404  ' + '♥'.repeat(hp)); }
+          else {
+            achvUnlock('dreamscp'); // (reuse: any dream feat is a feat)
+            cheatFall(['💥', '⭐', '🪙'], 14); playFanfare(); gainFollowers(2);
+            if (body) { body.children[0].textContent = trT('BUG fainted!! +2 fans, +XP', 'le BUG s\'évanouit !! +2 fans, +XP'); if (body.children[1]) body.children[1].textContent = trT('> it dropped a coin ♡', '> il a lâché une pièce ♡'); }
+            dT(() => { try { d.remove(); } catch (e) { /* fled */ } }, 1800);
+          }
+        }, true],
+        [trT('🥎 CATCH', '🥎 CAPTURER'), (d) => { playDreamPop(); gainFollowers(1); const body = d.querySelector('.dream-dlg-body'); if (body && body.children[1]) body.children[1].textContent = trT('> gotcha!! it joins the meadow ♡', '> attrapé !! il rejoint la prairie ♡'); dT(() => { try { d.remove(); } catch (e) {} }, 1600); }]
+      ]
+    });
+    if (box) playDreamGB();
+    dreamSay(["zzz… a WILD one… quick, pick a button…", "zzz… un BUG sauvage… vite, choisis un bouton…"], 3600);
+  }
+
+  // geo: the 1,000,000th visitor prize (it's you, it's always you)
+  function dwBeatMillionth() {
+    if (document.querySelector('.dream-dlg')) return;
+    const d = dreamDlg({
+      title: trT('🎉 CONGRATULATIONS!!!', '🎉 FÉLICITATIONS !!!'),
+      cls: 'dream-geo-flashdlg', force: true,
+      lines: [trT('you are visitor № 1,000,000!!!', 'tu es le visiteur nº 1 000 000 !!!'), trT('claim your FREE pixel trophy (100% real)', 'réclame ton trophée pixel GRATUIT (100 % réel)')],
+      buttons: [
+        [trT('CLAIM ✨', 'RÉCLAMER ✨'), () => { cheatFall(['🏆', '✨', '🎊'], 22); playFanfare(); gainFollowers(3); showToast(trT('🏆 trophy claimed!! it is worth exactly 0 coins and infinite joy', '🏆 trophée réclamé !! il vaut exactement 0 pièce et une joie infinie')); }],
+        [trT('(suspicious)', '(suspect)'), () => { showToast(trT('smart. it was a banner. but the trophy was real ♡', 'malin. c\'était une bannière. mais le trophée était réel ♡')); gainFollowers(1); }]
+      ]
+    });
+    if (d) playTone(1318, 'square', 0.1, 0, 0.04);
+    dreamSay(["zzz… a MILLION visitors… and the millionth is… you… again…", "zzz… un MILLION de visiteurs… et le millionième c'est… toi… encore…"], 4000);
+  }
+
+  // bsod: a Windows Error Reporting slime collects your feelings
+  function dwBeatErrorReport() {
+    if (document.querySelector('.dream-dlg')) return;
+    dreamDlg({
+      title: trT('slime has stopped working', 'slime a cessé de fonctionner'),
+      force: true,
+      lines: [trT('Windows is checking for a solution to the problem…', 'Windows recherche une solution au problème…'), trT('(the problem is that it loves you too much)', '(le problème, c\'est qu\'il t\'aime trop)')],
+      buttons: [
+        [trT('send report ♡', 'envoyer le rapport ♡'), () => { for (let i = 0; i < 10; i++) dT(() => { const s = document.createElement('span'); s.className = 'ama-fx ama-fx-fall'; s.textContent = '♥'; s.style.left = (window.innerWidth / 2 - 100 + Math.random() * 200) + 'px'; s.style.top = '120px'; document.body.appendChild(s); dN(s); s.addEventListener('animationend', () => s.remove()); }, i * 120); playStartupChime(); gainFollowers(1); showToast(trT('report sent. it just said "♥" 47 times.', 'rapport envoyé. il disait juste « ♥ » 47 fois.')); }],
+        [trT("don't send", 'ne pas envoyer'), () => showToast(trT('the feelings stay local. very private of you ♡', 'les sentiments restent en local. très respectueux ♡'))]
+      ]
+    });
+    playDreamSad();
+    dreamSay(["zzz… collecting error info… it's all hearts… still…", "zzz… collecte des erreurs… ce ne sont que des cœurs… toujours…"], 4000);
+  }
+
+  // amber: the batch printer spits a fortune-cookie payslip you can read
+  function dwBeatFortune() {
+    const fortunes = [
+      ['JOB #FORTUNE COMPLETE · "you will refactor something you love"', 'JOB #FORTUNE TERMINÉ · « tu refactoreras une chose que tu aimes »'],
+      ['JOB #FORTUNE COMPLETE · "a merge conflict resolves in your favor"', 'JOB #FORTUNE TERMINÉ · « un conflit de merge tourne en ta faveur »'],
+      ['JOB #FORTUNE COMPLETE · "lucky numbers: 0, 1, 0, 1, 1, 0"', 'JOB #FORTUNE TERMINÉ · « chiffres chance : 0, 1, 0, 1, 1, 0 »'],
+      ['JOB #FORTUNE COMPLETE · "the bug was inside you all along (it was a feature)"', 'JOB #FORTUNE TERMINÉ · « le bug était en toi (c\'était une feature) »']
+    ];
+    try {
+      const p = document.getElementById('dream-amber-printer');
+      if (p) {
+        playDreamPrinter();
+        const slip = document.createElement('div');
+        slip.className = 'dream-amber-slip';
+        const art = document.createElement('pre');
+        art.textContent = ' _______\n|¤ ¤ ¤ ¤|\n| FORTUNE|';
+        const line = document.createElement('div');
+        line.textContent = trT(...swScenePick(fortunes));
+        slip.appendChild(art); slip.appendChild(line);
+        p.appendChild(slip);
+        dN(slip);
+        dT(() => slip.classList.add('dream-amber-slip-fly'), 5200);
+        dT(() => slip.remove(), 7600);
+      }
+    } catch (e) { /* the mainframe is shy */ }
+    dreamSay(["zzz… batch job FORTUNE… compiled… printing your destiny…", "zzz… job par lots FORTUNE… compilé… j'imprime ton destin…"], 4200);
   }
 
   /* ---- the narrator: countdown bubbles from the habitat, as ordered ---- */
@@ -7391,6 +7613,35 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     dreamBegin(w, remain, true);
+  }
+
+  /* ---- gremlin merch: crayon graffiti (click to clean, if you must) ---- */
+  var swGraffitiAt = 0;
+  function swGraffiti(target) {
+    if (Date.now() - swGraffitiAt < 90000 || document.querySelector('.sw-graffiti')) return;
+    swGraffitiAt = Date.now();
+    const r = target.getBoundingClientRect();
+    const w = 130, h = 72;
+    const el = document.createElement('div');
+    el.className = 'sw-graffiti';
+    let d = 'M 8 ' + (18 + Math.random() * 34).toFixed(0);
+    let px2 = 8;
+    while (px2 < w - 14) {
+      px2 += 14 + Math.random() * 14;
+      d += ' Q ' + (px2 - 9).toFixed(0) + ' ' + (Math.random() * h).toFixed(0) + ', ' + px2.toFixed(0) + ' ' + (10 + Math.random() * (h - 20)).toFixed(0);
+    }
+    el.innerHTML = '<svg width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + ' ' + h + '"><path d="' + d + '" fill="none" stroke="#ff8fc7" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="' + d + '" fill="none" stroke="#ffd23f" stroke-width="2" stroke-linecap="round" stroke-dasharray="3 7"/></svg><small>' + trT('art. do not remove ♡', 'de l\'art. ne pas retirer ♡') + '</small>';
+    el.style.left = Math.max(8, Math.min(window.innerWidth - w - 12, r.left + r.width / 2 - w / 2 + (Math.random() - 0.5) * 60)) + 'px';
+    el.style.top = Math.max(70, Math.min(window.innerHeight - h - 90, r.top + 30)) + 'px';
+    el.addEventListener('click', () => {
+      el.classList.add('sw-graffiti-fade');
+      playDreamPop();
+      gainFollowers(1);
+      showToast(trT('🧽 art removed. the artist will hear about this.', '🧽 œuvre retirée. l\'artiste en sera informé.'));
+      setTimeout(() => el.remove(), 1000);
+    }, { once: true });
+    document.body.appendChild(el);
+    setTimeout(() => { if (el.isConnected) { el.classList.add('sw-graffiti-fade'); setTimeout(() => el.remove(), 1200); } }, 120000);
   }
 
   /* ---- gremlin merch: the sticky note (peelable, signed, dated) ---- */
@@ -7620,12 +7871,29 @@ document.addEventListener('DOMContentLoaded', () => {
   if (themeToggleBtn) {
     themeToggleBtn.addEventListener('click', () => {
       playSparkleSound();
-      const goingDark = resolvedTheme() !== 'dark';
-      setThemePref(goingDark ? 'dark' : 'light');
-      showToast(t(goingDark ? 'toast.dark' : 'toast.light'));
-      if (!pet.sleeping && !pet.busy) {
-        showBubble(goingDark ? (yosLang === 'fr' ? 'mode minuit !! les néons ♡' : 'midnight mode!! neon time ♡') : (yosLang === 'fr' ? 'le soleil ! mes pixels bronzent' : 'sunlight! my pixels are tanning'), 2200);
+      // v6.2: a 3-WAY cycle so AUTO is always reachable again. the old
+      // 2-way toggle locked you into dark/light forever — one accidental
+      // tap and the site could never follow the clock again (that's why
+      // it stayed dark all afternoon). order: light → dark → auto → …
+      const next = themePref === 'light' ? 'dark' : themePref === 'dark' ? 'auto' : 'light';
+      setThemePref(next);
+      const nowDark = resolvedTheme() === 'dark';
+      if (next === 'auto') {
+        showToast(trT('🌗 theme: AUTO — follows the clock (light 8am, dark 9pm)', '🌗 thème : AUTO — suit l\'horloge (clair 8h, sombre 21h)'));
+        if (!pet.sleeping && !pet.busy) showBubble(trT('auto mode!! I sleep at 9, wake at 8 ♡', 'mode auto !! je dors à 21h, réveil à 8h ♡'), 2400);
+      } else {
+        showToast(t(next === 'dark' ? 'toast.dark' : 'toast.light'));
+        if (!pet.sleeping && !pet.busy) {
+          showBubble(nowDark ? (yosLang === 'fr' ? 'mode minuit !! les néons ♡' : 'midnight mode!! neon time ♡') : (yosLang === 'fr' ? 'le soleil ! mes pixels bronzent' : 'sunlight! my pixels are tanning'), 2200);
+        }
       }
+    });
+    // long-press / right-click jumps straight back to AUTO — the escape hatch
+    themeToggleBtn.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      setThemePref('auto');
+      playSparkleSound();
+      showToast(trT('🌗 theme: AUTO — back on the clock ♡', '🌗 thème : AUTO — de retour sur l\'horloge ♡'));
     });
   }
 
@@ -9546,8 +9814,19 @@ document.addEventListener('DOMContentLoaded', () => {
       g2.fillStyle = gTheme.pink;
       g2.fillText('♡', G_W / 2, 78);
     } else if (GAME.state === 'over') {
+      // a dark plate + soft glow behind GAME OVER so it never melts into
+      // whatever pastel (or dream) sky is behind it
+      const goTxt = t('game.over');
+      const gtw = g2.measureText(goTxt).width;
+      g2.fillStyle = 'rgba(20, 2, 14, 0.55)';
+      for (let rr = 5; rr >= 1; rr--) { g2.globalAlpha = 0.16; g2.fillRect(G_W / 2 - gtw / 2 - 6 - rr, 62 - 15 - rr, gtw + 12 + rr * 2, 22 + rr * 2); }
+      g2.globalAlpha = 1;
+      g2.fillStyle = 'rgba(20, 2, 14, 0.62)';
+      g2.fillRect(G_W / 2 - gtw / 2 - 8, 48, gtw + 16, 20);
+      g2.fillStyle = '#14020e';
+      g2.fillText(goTxt, G_W / 2 + 1, 63); // ink drop-shadow
       g2.fillStyle = gTheme.pink;
-      g2.fillText(t('game.over'), G_W / 2, 62);
+      g2.fillText(goTxt, G_W / 2, 62);
       if (!GAME.adUsed) {
         // hot-pink chip: readable on every theme, impossible to miss
         const offer = trT('📺 [A] watch a lil ad → revive ♡', '📺 [A] mini pub → résurrection ♡');
@@ -9565,7 +9844,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } else if (GAME.state === 'run' && (GAME.itvPause || GAME.escPause)) {
       // intermission: the run is frozen, the in-house ads carry the show
       GAME.adT = (GAME.adT || 0) + 1;
-      if (GAME.adT >= AD_FRAMES) { GAME.adT = 0; GAME.adSkit = ((GAME.adSkit || 0) + 1) % AD_SKITS.length; }
+      if (GAME.adT >= AD_FRAMES) { GAME.adT = 0; GAME.adSkit = ((GAME.adSkit || 0) + 1) % gAdPool().length; }
       gDrawAd(g2, true);
     }
     g2.textAlign = 'left';
@@ -9883,6 +10162,668 @@ document.addEventListener('DOMContentLoaded', () => {
     return deck; // all 78 — the wizard finally owns a complete deck
   })();
 
+  /* =====================================================
+     the PIXEL BRUSH 🖌 — every tarot face is now painted
+     live on a 100×170 canvas: frame, ornaments, scene,
+     animation. traditional Waite compositions, redrawn in
+     the site's own palette, with computer jokes worked in.
+     (only the Swords keep their digit light-pillars — by
+     commission.)
+     ===================================================== */
+  const TP = {
+    k: '#2d2350', w: '#fffdf7', c: '#fff3e2', p: '#ff8fc7', P: '#f0509f',
+    l: '#c9a7f5', v: '#9a6fe0', b: '#8fd4fa', B: '#5fa8dc', g: '#ffd23f',
+    G: '#f0b429', m: '#7ee0a3', M: '#3dff7c', n: '#16093e', N: '#2d1b5e',
+    r: '#ff5252', o: '#ff9a3d', t: '#8a5a2e', T: '#5e3a1e', e: '#0f380f',
+    s: '#ffe4f2', d: '#c9c9d9', D: '#8a8fa0'
+  };
+  function tpx(g, x, y, w, h, c) { g.fillStyle = c; g.fillRect(Math.round(x), Math.round(y), Math.max(1, Math.round(w)), Math.max(1, Math.round(h))); }
+  // paint a string-matrix sprite; pal remaps chars → TP keys, '.'=skip
+  function tpMat(g, mat, x, y, pal, flip, s) {
+    s = s || 1;
+    for (let r = 0; r < mat.length; r++) {
+      const row = mat[r];
+      for (let c2 = 0; c2 < row.length; c2++) {
+        const ch = row[flip ? row.length - 1 - c2 : c2];
+        if (ch === '.') continue;
+        const col = TP[(pal && pal[ch]) || ch];
+        if (col) tpx(g, x + c2 * s, y + r * s, s, s, col);
+      }
+    }
+  }
+  function tpDither(g, x, y, w, h, c, off) {
+    g.fillStyle = c;
+    for (let yy = 0; yy < h; yy++) for (let xx = (yy + (off || 0)) % 2; xx < w; xx += 2) g.fillRect(x + xx, y + yy, 1, 1);
+  }
+  // ---- sprite library (chars index into TP) ----
+  const TPM_SLIME = [ // the protagonist, 14×12 — now with a highlight, blush, drip and outline
+    '...kkkkkkkk...',
+    '..kssspppssk..',
+    '.ksspppppppsk.',
+    'kspppppppppsk.',
+    'kpppwwppppppk',
+    'kppkkppppkkppk',
+    'kppkwppppkwppk',
+    'kpppppppppppk',
+    'kppPPpkkkpPPpk',
+    'kspppppppppsk.',
+    '.kspppppppsk..',
+    '..kkkkkkkkk...'
+  ];
+  const TPM_TINY = ['..kkkk..', '.ksppsk.', 'kpppppk', 'kpkppkk', 'kpppppk', '.kkkkk.']; // 8×6 background slime, ink-edged
+  const TPM_CUP = [ // boba chalice 10×12
+    '.llllllll.',
+    'l.kkkkkk.l',
+    '.wwwwwwww.',
+    '.wpppppgw.',
+    '.wppppppw.',
+    '.wkpkpkpw.',
+    '.wwwwwwww.',
+    '..w....w..',
+    '...wwww...',
+    '...wwww...',
+    '..wwwwww..',
+    '..........'
+  ];
+  const TPM_COIN = [ // pentacle→pixel coin 11×11
+    '...ggggg...',
+    '..gGGGGGg..',
+    '.gGGgGgGGg.',
+    'gGGGgggGGGg',
+    'gGGggGggGGg',
+    'gGgggggggGg',
+    'gGGggGggGGg',
+    'gGGGgggGGGg',
+    '.gGGgGgGGg.',
+    '..gGGGGGg..',
+    '...ggggg...'
+  ];
+  const TPM_WAND = [ // living power-rod: staff, sprout, plug prongs 7×16
+    '..k.k..',
+    '..t.t..',
+    '.ttttt.',
+    '.tttmt.',
+    '..ttm..',
+    '.mttt..',
+    '.mmtt..',
+    '..ttt..',
+    '..ttt..',
+    '..ttt..',
+    '..ttt..',
+    '.mttt..',
+    'mmtttm.',
+    '..tttmm',
+    '..ttt..',
+    '..ttt..'
+  ];
+  const TPM_HAND = [ // the cloud-hand of the aces 16×12 (ink-edged so it reads on any sky)
+    '....dddddddd....',
+    '..ddwwwwwwwwdd..',
+    '.dwwwwwwwwwwwwd.',
+    'dwwwwwwwwwwwwwwd',
+    '.kssssssssk.....',
+    '.kssssssssssk...',
+    '..ksssssssssssk.',
+    '..ksssssssssssk.',
+    '...kssssssssk...',
+    '....kssssssk....',
+    '.....kssssk.....',
+    '......kkkk......'
+  ];
+  const TPM_TOWER = [ // 12×24 brick tower (crown optional)
+    '.gg.g..g.gg.',
+    '.gggggggggg.',
+    '..DDDDDDDD..',
+    '..DdDDdDDd..',
+    '..DDDDDDDD..',
+    '..DDkkDDDD..',
+    '..DDkkDDDD..',
+    '..DdDDdDDd..',
+    '..DDDDDDDD..',
+    '..DDDDkkDD..',
+    '..DDDDkkDD..',
+    '..DdDDdDDd..',
+    '..DDDDDDDD..',
+    '..DDDDDDDD..',
+    '..DDkkDDDD..',
+    '..DDkkDDDD..',
+    '..DdDDdDDd..',
+    '..DDDDDDDD..',
+    '..DDDDDDDD..',
+    '..DDDDkkDD..',
+    '..DDDDkkDD..',
+    '..DdDDdDDd..',
+    '..DDDDDDDD..',
+    '..DDDDDDDD..'
+  ];
+  const TPM_CHAIR = [ // the office chariot 14×12
+    '..kkkkkkkkk...',
+    '..kppppppppk..',
+    '..kppppppppk..',
+    '..kppppppppk..',
+    '..kkkkkkkkkk..',
+    '......kk......',
+    '......kk......',
+    '..kkkkkkkkkk..',
+    '..k...kk...k..',
+    '..k...kk...k..',
+    '.kk...kk...kk.',
+    'kk....kk....kk'
+  ];
+  const TPM_LAPTOP = [ // 16×10, jaws open (Strength tames it)
+    'kkkkkkkkkkkkkk..',
+    'kbbbbbbbbbbbbk..',
+    'kbwbwbwbwbwbbk..',
+    'kbbbbbbbbbbbbk..',
+    'kkkkkkkkkkkkkk..',
+    '.kwkwkwkwkwkwkk.',
+    '..kkkkkkkkkkkkkk',
+    '................',
+    '................',
+    '................'
+  ];
+  const TPM_MONITOR = [ // 12×10 rising at Judgement
+    'kkkkkkkkkkkk',
+    'kbbbbbbbbbbk',
+    'kbkkbbbbkkbk',
+    'kbbbbbbbbbbk',
+    'kbbkkkkkbbbk',
+    'kbbbbbbbbbbk',
+    'kkkkkkkkkkkk',
+    '....kkkk....',
+    '..kkkkkkkk..',
+    '............'
+  ];
+  const TPM_CRAB = ['r..r..r..r', '.rr.rr.rr.', '.rrrrrrrr.', 'rrkrrrrkrr', '.rrrrrrrr.', 'r.r....r.r']; // 10×6
+  // ---- shared scenery ----
+  const TP_ART = { x: 6, y: 18, w: 88, h: 128 }; // the picture window
+  function tpSky(g, kind, f) {
+    const A = TP_ART;
+    const bands = {
+      day: ['#8fd4fa', '#aee2ff', '#ffe4f2', '#ffd9ec'],
+      gold: ['#ffd23f', '#ffe98a', '#fff3c4', '#fffdf7'],
+      night: ['#0d0626', '#16093e', '#2d1b5e', '#3a2a6e'],
+      storm: ['#171130', '#2c2547', '#3a3350', '#4a4266'],
+      void: ['#0c020a', '#1c0416', '#33092b', '#4a1240']
+    }[kind] || ['#8fd4fa', '#aee2ff', '#ffe4f2', '#ffd9ec'];
+    bands.forEach((c, i) => tpx(g, A.x, A.y + (A.h / 4) * i, A.w, A.h / 4 + 1, c));
+    tpDither(g, A.x, A.y + A.h / 4 - 2, A.w, 4, bands[1], f);
+    tpDither(g, A.x, A.y + A.h / 2 - 2, A.w, 4, bands[2], f + 1);
+    if (kind === 'night' || kind === 'storm' || kind === 'void') {
+      for (let i = 0; i < 9; i++) {
+        if (((f >> 1) + i) % 3 === 0) continue; // twinkle
+        tpx(g, A.x + (i * 31 + 7) % A.w, A.y + (i * 13 + 3) % (A.h / 2), 1, 1, i % 2 ? TP.g : TP.w);
+      }
+    }
+  }
+  function tpGround(g, kind, f) {
+    const A = TP_ART;
+    const gy = A.y + A.h - 22;
+    if (kind === 'grass') {
+      tpx(g, A.x, gy, A.w, 22, '#7ec98f');
+      tpx(g, A.x, gy, A.w, 2, '#a8e0b8'); // sunlit lip
+      tpDither(g, A.x, gy + 2, A.w, 4, '#5db374', f);
+      for (let i = 0; i < 9; i++) { const bx = A.x + (i * 11 + 4) % A.w; tpx(g, bx, gy + 5 + (i % 3) * 5, 1, 3, '#3d8a55'); tpx(g, bx - 1, gy + 4 + (i % 3) * 5, 1, 1, '#5db374'); } // tufts
+      for (let i = 0; i < 3; i++) tpx(g, A.x + (i * 29 + 12) % A.w, gy + 9 + (i % 2) * 4, 2, 2, i % 2 ? TP.p : TP.g); // wildflowers
+    } else if (kind === 'water') {
+      tpx(g, A.x, gy, A.w, 22, '#5fa8dc');
+      tpDither(g, A.x, gy + 2, A.w, 20, '#8fd4fa', f); // shimmering, politely
+    } else if (kind === 'sand') {
+      tpx(g, A.x, gy, A.w, 22, '#ffe98a');
+      tpDither(g, A.x, gy, A.w, 22, '#f0b429', f >> 1);
+    } else if (kind === 'checker') { // the classic temple floor
+      for (let yy = 0; yy < 22; yy += 5) for (let xx = 0; xx < A.w; xx += 5) tpx(g, A.x + xx, gy + yy, 5, 5, ((xx + yy) / 5) % 2 ? TP.k : TP.w);
+    } else if (kind === 'snow') {
+      tpx(g, A.x, gy, A.w, 22, '#eef4ff');
+      tpDither(g, A.x, gy, A.w, 22, '#cfe0f5', f >> 1);
+    } else { tpx(g, A.x, gy, A.w, 22, '#4a3f6e'); }
+    return gy;
+  }
+  function tpSun(g, cx, cy, f, face) {
+    for (let i = 0; i < 8; i++) { // rays take turns (a union rule)
+      if ((i + (f >> 1)) % 2) continue;
+      const a = (i * Math.PI) / 4;
+      tpx(g, cx + Math.cos(a) * 11 - 1, cy + Math.sin(a) * 11 - 1, 2, 2, TP.G);
+    }
+    for (let r = -7; r <= 7; r++) for (let c2 = -7; c2 <= 7; c2++) { // amber outline keeps it visible on ANY sky
+      const d = r * r + c2 * c2;
+      if (d <= 49 && d > 36) tpx(g, cx + c2, cy + r, 1, 1, TP.G);
+      else if (d <= 36) tpx(g, cx + c2, cy + r, 1, 1, TP.g);
+    }
+    tpx(g, cx - 4, cy - 4, 3, 3, '#fff3c4');
+    if (face) { tpx(g, cx - 3, cy - 2, 1, 2, TP.G); tpx(g, cx + 2, cy - 2, 1, 2, TP.G); tpx(g, cx - 2, cy + 2, 4, 1, TP.G); }
+  }
+  function tpMoon(g, cx, cy, f) {
+    for (let r = -6; r <= 6; r++) for (let c2 = -6; c2 <= 6; c2++) if (r * r + c2 * c2 <= 36) tpx(g, cx + c2, cy + r, 1, 1, TP.g);
+    for (let r = -5; r <= 5; r++) for (let c2 = -5; c2 <= 5; c2++) if (r * r + (c2 + 3) * (c2 + 3) <= 22) tpx(g, cx + c2 + 5, cy + r, 1, 1, '#fff3c4');
+    tpx(g, cx - 3, cy - 1, 1, 1, TP.G); tpx(g, cx - 1, cy + 2, 2, 1, TP.G);
+    if (f % 2) tpx(g, cx - 8, cy - 8, 1, 1, TP.w);
+  }
+  function tpCloud(g, x, y, w) {
+    tpx(g, x, y + 2, w, 3, TP.w);
+    tpx(g, x + 2, y, w - 6, 3, TP.w);
+    tpDither(g, x, y + 4, w, 2, TP.d, 0);
+  }
+  // the sword suit's light curtain: NO rectangle — a soft glowing beam
+  // with a column of digits scrolling freely up its length
+  function tpPillarPx(g, x, y, h, f, digitSeed, w) {
+    w = w || 8;
+    const cx = x + w / 2;
+    // the glow: brightest at the core, feathering out (dithered, frameless)
+    tpx(g, cx - 0.5, y, 1, h, 'rgba(61,255,124,0.55)');
+    tpDither(g, cx - 2, y, 4, h, 'rgba(61,255,124,0.35)', digitSeed);
+    tpDither(g, cx - 3, y, 6, h, 'rgba(61,255,124,0.16)', digitSeed + 1);
+    // a few bright motes riding the beam
+    for (let i = 0; i < 2; i++) {
+      const my = y + ((f * 2 + i * (h / 2) + digitSeed * 7) % Math.max(4, h));
+      tpx(g, cx - 1 + (i % 2), my, 1, 1, TP.w);
+    }
+    // free-floating digits, each scrolling at its own pace — no cage
+    g.font = '7px monospace';
+    for (let i = 0; i < 3; i++) {
+      const dy = y + ((f * (1 + i * 0.6) + digitSeed * 5 + i * (h / 3)) % Math.max(8, h - 2));
+      const bright = i === (f >> 3) % 3;
+      g.fillStyle = bright ? '#d6ffe6' : 'rgba(61,255,124,0.85)';
+      g.fillText(String((digitSeed + i + (f >> 2)) % 2), cx - 2, dy);
+    }
+  }
+  function tpLightning(g, x, y, len, f) {
+    if (f % 6 >= 2) return false; // strikes in pulses
+    let cx = x;
+    for (let i = 0; i < len; i += 4) { tpx(g, cx, y + i, 2, 4, TP.g); cx += (i % 8 === 0 ? -2 : 2); }
+    return true;
+  }
+  function tpSlimeAt(g, x, y, pal, flip) { tpMat(g, TPM_SLIME, x, y, pal, flip); }
+  function tpCrown(g, x, y, s) { s = s || 1; tpx(g, x, y + 2 * s, 7 * s, 3 * s, TP.g); tpx(g, x, y, s, 2 * s, TP.g); tpx(g, x + 3 * s, y, s, 2 * s, TP.g); tpx(g, x + 6 * s, y, s, 2 * s, TP.g); }
+  function tpHalo(g, x, y) { tpx(g, x, y, 8, 1, TP.g); tpx(g, x - 1, y + 1, 1, 1, TP.g); tpx(g, x + 8, y + 1, 1, 1, TP.g); }
+  function tpNightcap(g, x, y) { tpx(g, x, y + 1, 8, 3, TP.v); tpx(g, x + 6, y, 4, 2, TP.v); tpx(g, x + 10, y, 2, 2, TP.g); }
+  function tpAceHand(g, f, drawItem) {
+    tpSky(g, 'day', f);
+    tpCloud(g, TP_ART.x + 4, TP_ART.y + 16, 24);
+    tpMat(g, TPM_HAND, TP_ART.x + 2, TP_ART.y + 22 + (f % 2), null, false, 2); // the hand arrives at 2× (it has a big gift)
+    drawItem(TP_ART.x + 46, TP_ART.y + 28);
+    for (let i = 0; i < 6; i++) { // falling yods, as tradition demands
+      const yx = TP_ART.x + 10 + i * 13, yy = TP_ART.y + 82 + (i % 3) * 8 + (f % 2) * 2;
+      tpx(g, yx, yy, 2, 2, TP.g); tpx(g, yx, yy + 2, 2, 1, TP.G);
+    }
+    tpGround(g, 'grass', f);
+  }
+
+  /* ---------- pip layouts in art-window pixels ---------- */
+  function tpPipXY(pos) {
+    return [TP_ART.x + Math.round((pos[0] / 100) * (TP_ART.w - 12)), TP_ART.y + Math.round((pos[1] / 100) * (TP_ART.h - 34)) + 4];
+  }
+
+  /* ---------- minor-suit painters ---------- */
+  function tpPaintMinor(g, suit, rank, f) {
+    if (suit === 'wands') {
+      if (rank === 1) { tpAceHand(g, f, (x, y) => tpMat(g, TPM_WAND, x - 4, y - 10, null, false, 2)); return; }
+      tpSky(g, rank >= 11 ? 'gold' : 'day', f);
+      const gy = tpGround(g, 'grass', f);
+      if (rank <= 10) {
+        T_PIP_LAYOUT[rank].forEach((p, i) => { const [x, y] = tpPipXY(p); tpMat(g, TPM_WAND, x, y - (i % 2 && f % 2 ? 1 : 0), null); });
+        tpMat(g, TPM_TINY, TP_ART.x + (rank % 2 ? 8 : 66), gy - 5, null);
+      } else tpCourt(g, suit, rank, f, gy);
+    } else if (suit === 'cups') {
+      if (rank === 1) { tpAceHand(g, f, (x, y) => { tpMat(g, TPM_CUP, x - 6, y - 4, null, false, 2); for (let i = 0; i < 5; i++) tpx(g, x - 4 + i * 5, y - 9 - (f % 2) * 2, 2, 3, TP.b); }); return; }
+      tpSky(g, rank >= 11 ? 'gold' : 'day', f);
+      const gy = tpGround(g, rank === 5 ? 'water' : 'grass', f);
+      if (rank === 10) { // the rainbow over the family rack
+        for (let a = 0; a <= 20; a++) {
+          const rx = TP_ART.x + 14 + a * 3, ry = TP_ART.y + 34 - Math.round(Math.sin((a / 20) * Math.PI) * 22);
+          tpx(g, rx, ry, 3, 2, TP.P); tpx(g, rx, ry + 2, 3, 2, TP.g); tpx(g, rx, ry + 4, 3, 2, TP.b);
+        }
+        for (let i = 0; i < 5; i++) tpMat(g, TPM_CUP, TP_ART.x + 8 + i * 15, TP_ART.y + 44 + (i % 2) * 3, null);
+        tpSlimeAt(g, TP_ART.x + 18, gy - 9, null);
+        tpSlimeAt(g, TP_ART.x + 52, gy - 9, null, true);
+        tpMat(g, TPM_TINY, TP_ART.x + 38, gy - 4, null);
+        return;
+      }
+      if (rank <= 10) {
+        T_PIP_LAYOUT[rank].forEach((p) => { const [x, y] = tpPipXY(p); tpMat(g, TPM_CUP, x, y, null); });
+        tpMat(g, TPM_TINY, TP_ART.x + (rank % 2 ? 64 : 10), gy - 5, null, rank % 2 === 0);
+      } else tpCourt(g, suit, rank, f, gy);
+    } else if (suit === 'swords') {
+      tpSky(g, 'night', f);
+      const gy = tpGround(g, rank === 10 ? 'sand' : 'checker', f);
+      if (rank === 10) tpx(g, TP_ART.x, TP_ART.y + TP_ART.h / 2 - 6, TP_ART.w, 5, TP.r); // dawn of maximum drama
+      if (rank === 1) { tpAceHand(g, f, (x, y) => { tpPillarPx(g, x - 2, y - 6, 42, f, 1, 12); tpCrown(g, x - 4, y - 16, 2); }); return; }
+      if (rank === 3) {
+        for (let r = -8; r <= 8; r++) for (let c2 = -10; c2 <= 10; c2++) {
+          const hx = Math.abs(c2) - 5;
+          if (r < 3 && (hx * hx + (r + 3) * (r + 3) <= 22 || (Math.abs(c2) <= 9 - r && r > -2))) tpx(g, TP_ART.x + 44 + c2, TP_ART.y + 44 + r, 1, 1, TP.P);
+        }
+        [-18, 0, 18].forEach((dx, i) => tpPillarPx(g, TP_ART.x + 40 + dx, TP_ART.y + 20 + (i === 1 ? 0 : 6), 30, f, i));
+        for (let i = 0; i < 4; i++) tpx(g, TP_ART.x + 12 + i * 20, TP_ART.y + 14 + ((f + i) % 3) * 4, 1, 3, TP.b); // rain
+        return;
+      }
+      if (rank === 8) {
+        for (let i = 0; i < 8; i++) {
+          const a = (i / 8) * Math.PI * 2;
+          tpPillarPx(g, TP_ART.x + 40 + Math.cos(a) * 28, TP_ART.y + 52 + Math.sin(a) * 34 - 12, 26, f, i);
+        }
+        tpSlimeAt(g, TP_ART.x + 37, TP_ART.y + 48, null);
+        tpx(g, TP_ART.x + 39, TP_ART.y + 51, 10, 2, TP.k); // the (very polite) blindfold
+        return;
+      }
+      if (rank === 10) {
+        tpSlimeAt(g, TP_ART.x + 34, gy - 8, null);
+        for (let i = 0; i < 10; i++) tpPillarPx(g, TP_ART.x + 10 + i * 7, gy - 22 - (i % 3) * 3, 14, f, i);
+        return;
+      }
+      if (rank <= 10) {
+        T_PIP_LAYOUT[rank].forEach((p, i) => { const [x, y] = tpPipXY(p); tpPillarPx(g, x, y, 22, f, i); });
+        tpMat(g, TPM_TINY, TP_ART.x + (rank % 2 ? 66 : 8), gy - 5, null);
+      } else tpCourt(g, suit, rank, f, gy);
+    } else { // coins
+      if (rank === 1) { tpAceHand(g, f, (x, y) => tpMat(g, TPM_COIN, x - 6, y - 2, null, false, 2)); return; }
+      tpSky(g, rank >= 11 ? 'gold' : 'day', f);
+      const gy = tpGround(g, rank === 5 ? 'snow' : 'grass', f);
+      if (rank === 5) { // outside the paywall, in the snow
+        tpx(g, TP_ART.x + 30, TP_ART.y + 22, 28, 44, TP.N);
+        for (let yy = 0; yy < 5; yy++) for (let xx = 0; xx < 3; xx++) tpx(g, TP_ART.x + 33 + xx * 8, TP_ART.y + 25 + yy * 8, 6, 6, (xx + yy) % 2 ? TP.g : TP.o);
+        g.font = '7px monospace'; g.fillStyle = TP.k; g.fillText('$', TP_ART.x + 41, TP_ART.y + 48);
+        tpSlimeAt(g, TP_ART.x + 6, gy - 9, null);
+        tpMat(g, TPM_TINY, TP_ART.x + 68, gy - 5, null, true);
+        for (let i = 0; i < 6; i++) tpx(g, TP_ART.x + (i * 17 + f * 2) % TP_ART.w, TP_ART.y + (i * 23 + f) % (TP_ART.h - 30), 1, 1, TP.w);
+        return;
+      }
+      if (rank <= 10) {
+        if (rank >= 9) for (let i = 0; i < 5; i++) tpx(g, TP_ART.x + 6 + i * 17, TP_ART.y + 16, 2, 30 + (i % 2) * 8, '#5db374'); // garden vines
+        T_PIP_LAYOUT[rank].forEach((p) => { const [x, y] = tpPipXY(p); tpMat(g, TPM_COIN, x, y, null); });
+        tpMat(g, TPM_TINY, TP_ART.x + (rank % 2 ? 10 : 64), gy - 5, null);
+      } else tpCourt(g, suit, rank, f, gy);
+    }
+  }
+  // courts: one 2× royal slime + regalia + an oversized suit emblem
+  function tpCourt(g, suit, rank, f, gy) {
+    const cx = TP_ART.x + 18, cy = TP_ART.y + 36 + (f % 2);
+    if (rank === 12) { // the knight and its office-chariot, both at parade scale
+      tpMat(g, TPM_CHAIR, cx + 2, cy + 20, null, false, 2);
+      tpMat(g, TPM_SLIME, cx + 4, cy, null, false, 2);
+      for (let i = 0; i < 4; i++) tpx(g, cx - 8 - i * 5, cy + 30 + i * 2, 4, 2, TP.d); // speed lines
+    } else {
+      if (rank >= 13) { // a throne worthy of the tax bracket
+        tpx(g, cx - 4, cy - 8, 44, 48, rank === 13 ? TP.l : TP.v);
+        tpx(g, cx - 1, cy - 5, 38, 42, TP.c);
+        tpx(g, cx + 2, cy - 12, 4, 6, TP.g); tpx(g, cx + 30, cy - 12, 4, 6, TP.g); // finials
+      }
+      tpMat(g, TPM_SLIME, cx + 4, cy + 4, rank === 13 ? { P: 'p' } : null, false, 2);
+      if (rank === 11) { tpx(g, cx + 8, cy - 2, 16, 4, TP.b); tpx(g, cx + 20, cy - 4, 6, 4, TP.B); } // page's cap
+      if (rank === 13) { tpCrown(g, cx + 10, cy - 8, 2); tpx(g, cx + 16, cy - 10, 3, 2, TP.p); } // queen's crown wears a bow
+      if (rank === 14) tpCrown(g, cx + 10, cy - 10, 2);
+    }
+    const ex = TP_ART.x + 64, ey = TP_ART.y + 72;
+    if (suit === 'wands') tpMat(g, TPM_WAND, ex, ey - 10, null);
+    else if (suit === 'cups') tpMat(g, TPM_CUP, ex, ey - 4, null);
+    else if (suit === 'swords') tpPillarPx(g, ex, ey - 8, 30, f, rank);
+    else tpMat(g, TPM_COIN, ex, ey - 2, null);
+  }
+
+  /* ---------- the 22 major paintings (Waite, but softer) ---------- */
+  const T_MAJOR_PX = {
+    '0': (g, f) => { // the Fool: one step from the ledge, zero worries
+      tpSky(g, 'day', f); tpSun(g, TP_ART.x + 74, TP_ART.y + 14, f);
+      const gy = tpGround(g, 'grass', f);
+      tpx(g, TP_ART.x + 52, gy - 14, 36, 36, '#5db374'); // the cliff
+      tpx(g, TP_ART.x + 52, gy - 14, 2, 36, '#3d8a55');
+      tpCloud(g, TP_ART.x + 56, gy + 4, 16); g.font = '6px monospace'; g.fillStyle = TP.v; g.fillText('404', TP_ART.x + 59, gy + 10);
+      tpSlimeAt(g, TP_ART.x + 40, gy - 24 - (f % 2), null); // mid-skip at the edge
+      tpx(g, TP_ART.x + 54, gy - 30, 1, 8, TP.t); tpx(g, TP_ART.x + 53, gy - 32, 4, 3, TP.p); // the bindle
+      tpMat(g, TPM_TINY, TP_ART.x + 26, gy - 5, { p: 'w', P: 'p' }); // the little white dog-slime, barking
+    },
+    'I': (g, f) => { // the Magician: all four suits on the desk
+      tpSky(g, 'gold', f);
+      const gy = tpGround(g, 'grass', f);
+      tpx(g, TP_ART.x + 14, gy - 18, 60, 4, TP.t); tpx(g, TP_ART.x + 16, gy - 14, 3, 14, TP.T); tpx(g, TP_ART.x + 68, gy - 14, 3, 14, TP.T);
+      tpMat(g, TPM_CUP, TP_ART.x + 20, gy - 31, null); tpMat(g, TPM_COIN, TP_ART.x + 36, gy - 29, null);
+      tpPillarPx(g, TP_ART.x + 52, gy - 40, 20, f, 2); tpMat(g, TPM_WAND, TP_ART.x + 64, gy - 35, null);
+      tpSlimeAt(g, TP_ART.x + 36, TP_ART.y + 26, null);
+      tpx(g, TP_ART.x + 33, TP_ART.y + 22, 2, 8, TP.t); // the raised wand
+      tpx(g, TP_ART.x + 41, TP_ART.y + 12, 4, 2, TP.k); tpx(g, TP_ART.x + 39, TP_ART.y + 13, 2, 1, TP.k); tpx(g, TP_ART.x + 45, TP_ART.y + 13, 2, 1, TP.k); // ∞
+    },
+    'II': (g, f) => { // the High Priestess between 0 and 1
+      tpSky(g, 'night', f);
+      tpGround(g, 'checker', f);
+      tpx(g, TP_ART.x + 8, TP_ART.y + 16, 12, 76, TP.k); tpx(g, TP_ART.x + 68, TP_ART.y + 16, 12, 76, TP.w);
+      g.font = '8px monospace'; g.fillStyle = TP.w; g.fillText('0', TP_ART.x + 11, TP_ART.y + 30);
+      g.fillStyle = TP.k; g.fillText('1', TP_ART.x + 71, TP_ART.y + 30);
+      tpSlimeAt(g, TP_ART.x + 37, TP_ART.y + 52 + (f % 2), { p: 'l', P: 'v' });
+      tpMoon(g, TP_ART.x + 44, TP_ART.y + 36, f);
+      tpx(g, TP_ART.x + 36, TP_ART.y + 66, 16, 8, TP.c); g.font = '6px monospace'; g.fillStyle = TP.k; g.fillText('.env', TP_ART.x + 37, TP_ART.y + 72);
+    },
+    'III': (g, f) => { // the Empress in her sprout garden
+      tpSky(g, 'day', f); tpSun(g, TP_ART.x + 16, TP_ART.y + 12, f);
+      const gy = tpGround(g, 'grass', f);
+      for (let i = 0; i < 6; i++) { tpx(g, TP_ART.x + 8 + i * 14, gy - 8, 1, 8, '#3d8a55'); tpx(g, TP_ART.x + 7 + i * 14, gy - 10, 3, 3, TP.g); } // wheat
+      tpx(g, TP_ART.x + 30, TP_ART.y + 52, 30, 22, TP.p); tpDither(g, TP_ART.x + 30, TP_ART.y + 52, 30, 22, TP.P, f); // cushion throne
+      tpSlimeAt(g, TP_ART.x + 38, TP_ART.y + 44, null); tpCrown(g, TP_ART.x + 41, TP_ART.y + 38);
+      tpx(g, TP_ART.x + 12, TP_ART.y + 60, 8, 8, TP.s); tpx(g, TP_ART.x + 14, TP_ART.y + 62, 4, 4, TP.P); // the heart shield
+    },
+    'IV': (g, f) => { // the Emperor of uptime
+      tpSky(g, 'storm', f);
+      const gy = tpGround(g, 'sand', f);
+      tpMat(g, TPM_TOWER, TP_ART.x + 4, gy - 40, { g: 'D' }); tpMat(g, TPM_TOWER, TP_ART.x + 72, gy - 40, { g: 'D' }); // server racks flank the throne
+      tpx(g, TP_ART.x + 28, TP_ART.y + 46, 32, 34, TP.D); tpx(g, TP_ART.x + 30, TP_ART.y + 48, 28, 30, '#a8adbe');
+      tpSlimeAt(g, TP_ART.x + 37, TP_ART.y + 50, null); tpCrown(g, TP_ART.x + 40, TP_ART.y + 44);
+      tpx(g, TP_ART.x + 34, TP_ART.y + 56, 2, 10, TP.g); // the scepter
+      if (f % 4 < 2) tpx(g, TP_ART.x + 14, gy - 36, 2, 2, TP.M); // rack LEDs
+    },
+    'V': (g, f) => { // the Hierophant approves the PR
+      tpSky(g, 'gold', f);
+      tpGround(g, 'checker', f);
+      tpx(g, TP_ART.x + 30, TP_ART.y + 34, 28, 44, TP.l);
+      tpSlimeAt(g, TP_ART.x + 37, TP_ART.y + 38, null);
+      tpx(g, TP_ART.x + 38, TP_ART.y + 32, 12, 3, TP.k); tpx(g, TP_ART.x + 48, TP_ART.y + 34, 3, 2, TP.g); // the grad cap
+      tpMat(g, TPM_TINY, TP_ART.x + 18, TP_ART.y + 88, null); tpMat(g, TPM_TINY, TP_ART.x + 60, TP_ART.y + 88, null, true);
+      tpx(g, TP_ART.x + 38, TP_ART.y + 84, 5, 4, TP.d); tpx(g, TP_ART.x + 46, TP_ART.y + 84, 5, 4, TP.d); // crossed ⌘ keycaps
+      g.font = '6px monospace'; g.fillStyle = TP.k; g.fillText('⌘', TP_ART.x + 39, TP_ART.y + 88); g.fillText('⌘', TP_ART.x + 47, TP_ART.y + 88);
+    },
+    'VI': (g, f) => { // the Lovers pair-program under the angel cloud
+      tpSky(g, 'day', f); tpSun(g, TP_ART.x + 44, TP_ART.y + 10, f);
+      const gy = tpGround(g, 'grass', f);
+      tpCloud(g, TP_ART.x + 30, TP_ART.y + 22, 28); tpMat(g, TPM_TINY, TP_ART.x + 40, TP_ART.y + 18, { p: 'g', P: 'G' }); // the gold angel
+      tpx(g, TP_ART.x + 12, gy - 30, 3, 30, TP.T); for (let i = 0; i < 5; i++) tpx(g, TP_ART.x + 6 + (i % 3) * 6, gy - 36 + Math.floor(i / 3) * 5, 5, 5, '#5db374'); // the tree
+      tpx(g, TP_ART.x + 9, gy - 33, 2, 2, TP.r); tpx(g, TP_ART.x + 17, gy - 28, 2, 2, TP.r); // forbidden apples (unmerged)
+      tpx(g, TP_ART.x + 14, gy - 24 + (f % 2), 2, 6, TP.m); // the tiny merge-conflict serpent
+      tpSlimeAt(g, TP_ART.x + 26, gy - 12, null); tpSlimeAt(g, TP_ART.x + 50, gy - 12, null, true);
+      if (f % 2) { tpx(g, TP_ART.x + 43, gy - 20, 2, 2, TP.P); tpx(g, TP_ART.x + 46, gy - 20, 2, 2, TP.P); tpx(g, TP_ART.x + 44, gy - 18, 3, 2, TP.P); } // a shy heart
+    },
+    'VII': (g, f) => { // the Chariot (it swivels)
+      tpSky(g, 'day', f);
+      const gy = tpGround(g, 'sand', f);
+      for (let i = 0; i < 6; i++) tpx(g, TP_ART.x + 10 + i * 13, TP_ART.y + 12, 1, 1, TP.g); // star canopy
+      tpMat(g, TPM_CHAIR, TP_ART.x + 34, gy - 22 + (f % 2), null);
+      tpSlimeAt(g, TP_ART.x + 34, gy - 32 + (f % 2), null);
+      tpMat(g, TPM_TINY, TP_ART.x + 14, gy - 6, { p: 'l', P: 'v' }); tpMat(g, TPM_TINY, TP_ART.x + 62, gy - 6, { p: 'b', P: 'B' }, true); // the two loyal steeds
+      for (let i = 0; i < 3; i++) tpx(g, TP_ART.x + 24 - i * 5 - (f % 2) * 2, gy - 16 + i * 2, 4, 1, TP.d); // speed
+    },
+    'VIII': (g, f) => { // Strength closes the laptop gently
+      tpSky(g, 'day', f); tpSun(g, TP_ART.x + 76, TP_ART.y + 12, f);
+      const gy = tpGround(g, 'grass', f);
+      tpSlimeAt(g, TP_ART.x + 18, gy - 22, null);
+      tpx(g, TP_ART.x + 20, gy - 26, 2, 2, TP.P); tpx(g, TP_ART.x + 25, gy - 27, 2, 2, TP.P); // flower crown dots
+      tpMat(g, TPM_LAPTOP, TP_ART.x + 44, gy - 18 - (f % 2) * 2, null); // the jaws, mid-yawn
+      tpx(g, TP_ART.x + 34, gy - 16, 10, 1, TP.s); // the gentle paw
+      tpx(g, TP_ART.x + 20, TP_ART.y + 24, 4, 2, TP.k); tpx(g, TP_ART.x + 18, TP_ART.y + 25, 2, 1, TP.k); tpx(g, TP_ART.x + 24, TP_ART.y + 25, 2, 1, TP.k); // ∞
+    },
+    'IX': (g, f) => { // the Hermit greps alone, lantern up
+      tpSky(g, 'night', f);
+      tpx(g, TP_ART.x, TP_ART.y + 70, TP_ART.w, 36, '#4a4266'); tpx(g, TP_ART.x + 20, TP_ART.y + 58, 48, 14, '#5a5276'); // the peak
+      tpSlimeAt(g, TP_ART.x + 34, TP_ART.y + 44, { p: 'v', P: 'N' });
+      tpx(g, TP_ART.x + 52, TP_ART.y + 40, 8, 10, TP.G); tpx(g, TP_ART.x + 54, TP_ART.y + 43, 4, 4, f % 2 ? TP.g : TP.w); // the lantern breathes
+      tpx(g, TP_ART.x + 28, TP_ART.y + 42, 2, 18, TP.t);
+      g.font = '7px monospace'; g.fillStyle = TP.M; g.fillText('$ grep hope', TP_ART.x + 16, TP_ART.y + 100 + (f % 2 ? 0 : 0));
+      if (f % 2) g.fillText('_', TP_ART.x + 66, TP_ART.y + 100);
+    },
+    'X': (g, f) => { // the Wheel is a loading spinner (it never resolves)
+      tpSky(g, 'gold', f);
+      const cx = TP_ART.x + 44, cy = TP_ART.y + 52;
+      for (let i = 0; i < 12; i++) {
+        const a = ((i + f) % 12) / 12 * Math.PI * 2;
+        const bright = i < 4;
+        tpx(g, cx + Math.cos(a) * 20 - 2, cy + Math.sin(a) * 20 - 2, 4, 4, bright ? TP.P : TP.l);
+      }
+      tpx(g, cx - 5, cy - 5, 10, 10, TP.c); g.font = '6px monospace'; g.fillStyle = TP.k; g.fillText('99%', cx - 6, cy + 3);
+      tpCloud(g, TP_ART.x + 6, TP_ART.y + 20, 16); tpCloud(g, TP_ART.x + 62, TP_ART.y + 26, 18);
+      tpMat(g, TPM_TINY, TP_ART.x + 8, TP_ART.y + 14, null); tpMat(g, TPM_TINY, TP_ART.x + 66, TP_ART.y + 20, null, true); // corner scholars
+      tpGround(g, 'grass', f);
+    },
+    'XI': (g, f) => { // Justice weighs bug vs feature
+      tpSky(g, 'gold', f);
+      tpGround(g, 'checker', f);
+      tpx(g, TP_ART.x + 12, TP_ART.y + 16, 6, 74, TP.l); tpx(g, TP_ART.x + 70, TP_ART.y + 16, 6, 74, TP.l);
+      tpSlimeAt(g, TP_ART.x + 37, TP_ART.y + 40, null); tpCrown(g, TP_ART.x + 40, TP_ART.y + 34);
+      const tilt = f % 4 < 2 ? 2 : -2;
+      tpx(g, TP_ART.x + 26, TP_ART.y + 62, 36, 2, TP.G); // the beam
+      tpx(g, TP_ART.x + 24, TP_ART.y + 64 + tilt, 10, 6, TP.c); tpx(g, TP_ART.x + 56, TP_ART.y + 64 - tilt, 10, 6, TP.c);
+      tpx(g, TP_ART.x + 27, TP_ART.y + 66 + tilt, 4, 3, TP.m); // the bug
+      tpx(g, TP_ART.x + 59, TP_ART.y + 66 - tilt, 4, 3, TP.g); // the feature
+    },
+    'XII': (g, f) => { // the Hanged Man dangles from a USB cable, enlightened
+      tpSky(g, 'night', f);
+      tpx(g, TP_ART.x + 10, TP_ART.y + 12, 68, 4, TP.T); // the beam
+      tpx(g, TP_ART.x + 42, TP_ART.y + 16, 3, 14, TP.d); tpx(g, TP_ART.x + 41, TP_ART.y + 16, 5, 4, TP.D); // USB plug + cable
+      g.save(); g.translate(TP_ART.x + 51, TP_ART.y + 44 + (f % 2)); g.rotate(Math.PI);
+      tpSlimeAt(g, -7, -5, null);
+      g.restore();
+      tpHalo(g, TP_ART.x + 40, TP_ART.y + 50); // the halo hangs low (physics)
+      for (let i = 0; i < 3; i++) tpx(g, TP_ART.x + 20 + i * 24, TP_ART.y + 74 + ((f + i) % 2), 1, 1, TP.g);
+      tpGround(g, 'grass', f);
+    },
+    'XIII': (g, f) => { // Death is just a reboot in a hoodie
+      tpSky(g, 'storm', f);
+      const gy = tpGround(g, 'sand', f);
+      tpSun(g, TP_ART.x + 44, gy - 2, f); // the sun rises anyway, between far towers
+      tpx(g, TP_ART.x + 6, gy - 18, 8, 18, TP.D); tpx(g, TP_ART.x + 74, gy - 18, 8, 18, TP.D);
+      tpSlimeAt(g, TP_ART.x + 34, TP_ART.y + 40, { p: 'N', P: 'v', s: 'N' }); // the hoodie form
+      tpx(g, TP_ART.x + 30, TP_ART.y + 36, 2, 14, TP.d); tpx(g, TP_ART.x + 26, TP_ART.y + 36, 6, 2, TP.w); // cursor-scythe
+      tpx(g, TP_ART.x + 52, TP_ART.y + 56, 6, 8, TP.w); tpx(g, TP_ART.x + 54, TP_ART.y + 58, 2, 2, TP.P); // the white rose banner
+      tpCrown(g, TP_ART.x + 14, TP_ART.y + 88); // a fallen crown
+      g.font = '6px monospace'; g.fillStyle = TP.w; g.fillText('rebooting' + ('...'.slice(0, (f % 3) + 1)), TP_ART.x + 26, TP_ART.y + 100);
+    },
+    'XIV': (g, f) => { // Temperance pours boba between cups (zero spills)
+      tpSky(g, 'day', f);
+      const gy = tpGround(g, 'water', f);
+      tpSlimeAt(g, TP_ART.x + 34, TP_ART.y + 34, null);
+      tpx(g, TP_ART.x + 28, TP_ART.y + 32, 6, 8, TP.s); tpx(g, TP_ART.x + 48, TP_ART.y + 32, 6, 8, TP.s); // wings
+      tpMat(g, TPM_CUP, TP_ART.x + 22, TP_ART.y + 58, null); tpMat(g, TPM_CUP, TP_ART.x + 52, TP_ART.y + 62, null);
+      for (let i = 0; i < 4; i++) tpx(g, TP_ART.x + 34 + i * 4, TP_ART.y + 56 + i * 2 + (f % 2), 2, 2, TP.b); // the impossible diagonal pour
+      tpx(g, TP_ART.x + 44, gy + 4, 8, 3, '#e8b95a'); // one foot on the shore, as prescribed
+      tpSun(g, TP_ART.x + 76, TP_ART.y + 14, f);
+    },
+    'XV': (g, f) => { // the Devil runs RGB (the chains are subscriptions)
+      tpSky(g, 'void', f);
+      const rgb = [TP.r, TP.M, TP.b][f % 3];
+      tpx(g, TP_ART.x + 26, TP_ART.y + 56, 36, 20, '#0c020a'); // the black cube
+      tpSlimeAt(g, TP_ART.x + 34, TP_ART.y + 34, { p: rgb === TP.r ? 'r' : rgb === TP.M ? 'M' : 'b', P: 'k' });
+      tpx(g, TP_ART.x + 34, TP_ART.y + 30, 3, 4, rgb); tpx(g, TP_ART.x + 47, TP_ART.y + 30, 3, 4, rgb); // the horns cycle
+      for (let i = 0; i < 3; i++) { tpx(g, TP_ART.x + 26 - i * 3, TP_ART.y + 22 + i * 2, 2, 1, TP.d); tpx(g, TP_ART.x + 58 + i * 3, TP_ART.y + 22 + i * 2, 2, 1, TP.d); } // inverted wifi
+      tpMat(g, TPM_TINY, TP_ART.x + 16, TP_ART.y + 84, null); tpMat(g, TPM_TINY, TP_ART.x + 62, TP_ART.y + 84, null, true);
+      for (let i = 0; i < 4; i++) { tpx(g, TP_ART.x + 24 + i * 2, TP_ART.y + 80 - i, 1, 1, TP.d); tpx(g, TP_ART.x + 66 - i * 2, TP_ART.y + 80 - i, 1, 1, TP.d); } // the chains
+      g.font = '6px monospace'; g.fillStyle = TP.d; g.fillText('EULA §666', TP_ART.x + 28, TP_ART.y + 104);
+    },
+    'XVI': (g, f) => { // the Tower: prod goes down beautifully
+      tpSky(g, 'storm', f);
+      const gy = tpGround(g, 'sand', f);
+      const wob = f % 4 < 2 ? 0 : 1;
+      tpMat(g, TPM_TOWER, TP_ART.x + 38 + wob, TP_ART.y + 22, null);
+      if (tpLightning(g, TP_ART.x + 46, TP_ART.y + 2, 22, f)) { tpx(g, TP_ART.x + 36, TP_ART.y + 18, 16, 3, TP.g); } // the strike
+      tpCrown(g, TP_ART.x + 24 - (f % 3) * 2, TP_ART.y + 18 + (f % 3) * 3); // the crown, departing
+      if (f % 2) { tpx(g, TP_ART.x + 42, TP_ART.y + 30, 3, 3, TP.o); tpx(g, TP_ART.x + 46, TP_ART.y + 40, 3, 3, TP.r); } // window fires
+      g.save(); g.translate(TP_ART.x + 22, TP_ART.y + 58 + (f % 3) * 4); g.rotate(Math.PI); tpMat(g, TPM_TINY, -4, -3, null); g.restore();
+      g.save(); g.translate(TP_ART.x + 70, TP_ART.y + 64 + (f % 3) * 4); g.rotate(Math.PI); tpMat(g, TPM_TINY, -4, -3, null); g.restore();
+    },
+    'XVII': (g, f) => { // the Star (the one you wish on AND the one on github)
+      tpSky(g, 'night', f);
+      const gy = tpGround(g, 'water', f);
+      const cx = TP_ART.x + 44, cy = TP_ART.y + 20;
+      for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4; tpx(g, cx + Math.cos(a) * (7 + (f % 2)), cy + Math.sin(a) * (7 + (f % 2)), 2, 2, TP.g); }
+      tpx(g, cx - 2, cy - 2, 4, 4, '#fff3c4'); // the big one
+      for (let i = 0; i < 7; i++) tpx(g, TP_ART.x + 8 + i * 11, TP_ART.y + 8 + (i % 3) * 5, 1, 1, TP.w); // her seven understudies
+      tpSlimeAt(g, TP_ART.x + 30, gy - 20, null);
+      tpx(g, TP_ART.x + 24, gy - 12, 4, 5, TP.c); tpx(g, TP_ART.x + 46, gy - 10, 4, 5, TP.c); // two jugs
+      for (let i = 0; i < 3; i++) { tpx(g, TP_ART.x + 25, gy - 7 + i * 3 + (f % 2), 1, 2, TP.b); tpx(g, TP_ART.x + 48, gy - 5 + i * 2 + (f % 2), 1, 2, TP.b); }
+      tpMat(g, TPM_TINY, TP_ART.x + 64, gy - 24, { p: 'm', P: 'e' }); // the ibis (local variant)
+    },
+    'XVIII': (g, f) => { // the Moon: two towers, two howlers, one crab
+      tpSky(g, 'night', f);
+      const gy = tpGround(g, 'water', f);
+      tpMoon(g, TP_ART.x + 44, TP_ART.y + 18, f);
+      tpx(g, TP_ART.x + 8, TP_ART.y + 40, 10, 44, TP.N); tpx(g, TP_ART.x + 70, TP_ART.y + 40, 10, 44, TP.N);
+      tpx(g, TP_ART.x + 22, TP_ART.y + 88, 44, 3, '#e8b95a'); // the winding path (abridged)
+      tpMat(g, TPM_TINY, TP_ART.x + 22, TP_ART.y + 76 - (f % 2) * 2, { p: 'l', P: 'v' }); tpMat(g, TPM_TINY, TP_ART.x + 58, TP_ART.y + 76 - (f % 2) * 2, { p: 'v', P: 'N' }, true); // howling duet
+      tpMat(g, TPM_CRAB, TP_ART.x + 38, gy + 6 - (f % 3), null); // the crab commits to the bit
+      for (let i = 0; i < 4; i++) tpx(g, TP_ART.x + 16 + i * 18, TP_ART.y + 34 + ((f + i) % 3) * 2, 1, 1, TP.g); // falling dew
+    },
+    'XIX': (g, f) => { // the Sun: maximum serotonin
+      tpSky(g, 'day', f);
+      const gy = tpGround(g, 'grass', f);
+      tpSun(g, TP_ART.x + 44, TP_ART.y + 20, f, true);
+      tpx(g, TP_ART.x + 6, gy - 26, 76, 6, '#c9885a'); for (let i = 0; i < 9; i++) tpx(g, TP_ART.x + 8 + i * 8, gy - 24, 6, 2, '#a8663d'); // the wall
+      for (let i = 0; i < 4; i++) { tpx(g, TP_ART.x + 10 + i * 20, gy - 34, 2, 8, '#3d8a55'); tpSun(g, TP_ART.x + 11 + i * 20, gy - 38, f + i); } // sunflowers borrow the sun renderer (thrifty)
+      tpMat(g, TPM_TINY, TP_ART.x + 36, gy - 14, { p: 'w', P: 'p' }); // the white steed
+      tpSlimeAt(g, TP_ART.x + 34, gy - 22 - (f % 2), null); // the joyrider
+      tpx(g, TP_ART.x + 48, gy - 20, 10, 2, TP.r); // the red banner streams
+    },
+    'XX': (g, f) => { // Judgement: the review passes, the monitors rise
+      tpSky(g, 'day', f);
+      tpCloud(g, TP_ART.x + 26, TP_ART.y + 10, 36);
+      tpMat(g, TPM_TINY, TP_ART.x + 40, TP_ART.y + 6, { p: 'g', P: 'G' });
+      tpx(g, TP_ART.x + 48, TP_ART.y + 8, 8, 2, TP.G); tpx(g, TP_ART.x + 56, TP_ART.y + 6, 3, 6, TP.g); // the trumpet + APPROVED flag
+      const gy = tpGround(g, 'water', f);
+      const rise = (f % 4) < 2 ? 0 : -1;
+      tpMat(g, TPM_MONITOR, TP_ART.x + 12, TP_ART.y + 70 + rise, null);
+      tpMat(g, TPM_MONITOR, TP_ART.x + 38, TP_ART.y + 66 + rise, null);
+      tpMat(g, TPM_MONITOR, TP_ART.x + 64, TP_ART.y + 70 + rise, null);
+      g.font = '6px monospace'; g.fillStyle = TP.k; g.fillText('✓', TP_ART.x + 58, TP_ART.y + 12);
+    },
+    'XXI': (g, f) => { // the World: CI is green, everyone dances
+      tpSky(g, 'day', f);
+      const cx = TP_ART.x + 44, cy = TP_ART.y + 54;
+      for (let i = 0; i < 20; i++) { const a = (i / 20) * Math.PI * 2; tpx(g, cx + Math.cos(a) * 30, cy + Math.sin(a) * 36, 3, 3, i % 2 ? '#5db374' : '#7ec98f'); } // the wreath
+      tpx(g, cx - 5, cy - 42, 10, 8, TP.m); g.font = '6px monospace'; g.fillStyle = TP.e; g.fillText('CI✓', cx - 5, cy - 36); // the badge crowns it
+      tpSlimeAt(g, cx - 7, cy - 6 - (f % 2) * 2, null); // mid-twirl
+      tpx(g, cx - 12, cy - 10 + (f % 2) * 2, 2, 8, TP.t); tpx(g, cx + 10, cy - 10 - (f % 2) * 2, 2, 8, TP.t); // two batons
+      tpMat(g, TPM_CUP, TP_ART.x + 2, TP_ART.y + 2, null); tpMat(g, TPM_COIN, TP_ART.x + 76, TP_ART.y + 2, null); // the four corners
+      tpMat(g, TPM_WAND, TP_ART.x + 2, TP_ART.y + 106, null); tpPillarPx(g, TP_ART.x + 78, TP_ART.y + 104, 18, f, 3);
+      tpGround(g, 'grass', f);
+    }
+  };
+
+  /* ---------- frame chrome + dispatch ---------- */
+  function tarotPaintCard(card, upright, cv, f) {
+    const g = cv.getContext('2d');
+    g.imageSmoothingEnabled = false;
+    // the frame: ink ring, cream mat, corner hearts, title bands
+    tpx(g, 0, 0, 100, 170, TP.k);
+    tpx(g, 2, 2, 96, 166, TP.w);
+    tpx(g, 4, 4, 92, 162, TP.c);
+    [[3, 3], [93, 3], [3, 163], [93, 163]].forEach(([hx, hy], i) => { // corner hearts, one winks
+      const on = (f + i) % 8 !== 0;
+      tpx(g, hx, hy + 1, 2, 2, on ? TP.P : TP.g); tpx(g, hx + 2, hy, 2, 2, on ? TP.P : TP.g); tpx(g, hx + 1, hy + 3, 2, 1, on ? TP.P : TP.g);
+    });
+    tpx(g, 6, 6, 88, 10, TP.w); tpx(g, 6, 16, 88, 1, TP.k);           // numeral band
+    tpx(g, 6, 148, 88, 16, TP.w); tpx(g, 6, 147, 88, 1, TP.k);        // title band
+    tpx(g, TP_ART.x - 1, TP_ART.y - 1, TP_ART.w + 2, TP_ART.h + 2, TP.k); // art bezel
+    // the picture, possibly upside down (a reversal reverses)
+    g.save();
+    g.beginPath();
+    g.rect(TP_ART.x, TP_ART.y, TP_ART.w, TP_ART.h);
+    g.clip();
+    if (!upright) { g.translate(TP_ART.x * 2 + TP_ART.w, TP_ART.y * 2 + TP_ART.h); g.rotate(Math.PI); }
+    const art = card.art || {};
+    if (art.suit) tpPaintMinor(g, art.suit, art.rank, f);
+    else if (T_MAJOR_PX[card.rn]) T_MAJOR_PX[card.rn](g, f);
+    else { tpSky(g, 'day', f); tpSlimeAt(g, TP_ART.x + 37, TP_ART.y + 54, null); tpGround(g, 'grass', f); }
+    g.restore();
+    // the signature, where Pixie put hers
+    g.font = '7px monospace';
+    g.fillStyle = 'rgba(45,35,80,0.7)';
+    g.fillText('~slime', 70, 144);
+    tpx(g, 92, 139, 2, 2, TP.P);
+  }
+
   /* ---------- the tarot reveal theatre 🔮 ----------
      the pick used to resolve into a toast that other toasts trampled.
      now: the chosen card levitates out of the canvas as REAL DOM,
@@ -10043,23 +10984,64 @@ document.addEventListener('DOMContentLoaded', () => {
     back.innerHTML = '<span>✦</span>';
     const face = document.createElement('div');
     face.className = 'tarot-cardface';
-    const frame = document.createElement('div');
-    frame.className = 'tarot-frame';
+    // v6.2: the face is PAINTED — 100×170 logical pixels, frame and all,
+    // re-brushed every 160ms so the little scenes actually live
+    const cv = document.createElement('canvas');
+    cv.className = 'tarot-px';
+    cv.width = 100;
+    cv.height = 170;
+    face.appendChild(cv);
     const rn = document.createElement('div');
     rn.className = 'tarot-rn';
     rn.textContent = card.rn || '✦';
     const title = document.createElement('div');
     title.className = 'tarot-title';
     title.textContent = trT(...card.n) + (upright ? '' : trT(' (reversed)', ' (renversée)'));
-    const sig = document.createElement('div');
-    sig.className = 'tarot-sig';
-    sig.textContent = '~slime ♡'; // where Pixie signed hers, ours signs its
-    const scene = tarotBuildScene(card, upright);
-    frame.appendChild(rn);
-    frame.appendChild(scene);
-    frame.appendChild(sig);
-    frame.appendChild(title);
-    face.appendChild(frame);
+    face.appendChild(rn);
+    face.appendChild(title);
+    // joke labels ride along as crisp DOM chips over the painted art
+    (card.art && card.art.it ? card.art.it : []).forEach((spec) => {
+      if (spec[0] !== 'txt') return;
+      const cap = document.createElement('span');
+      cap.className = 't-cap';
+      cap.textContent = spec[1];
+      cap.style.left = ((6 + (spec[2] / 100) * 88)) + '%';
+      cap.style.top = (((18 + (spec[3] / 100) * 128) / 170) * 100) + '%';
+      face.appendChild(cap);
+    });
+    let pxFrame = 0;
+    let pxIv = null;
+    const paint = () => { try { tarotPaintCard(card, upright, cv, pxFrame++); } catch (e) { /* a smudged frame is still a frame */ } };
+    paint();
+    if (!REDUCED_MOTION) pxIv = setInterval(paint, 160);
+    // v6.2: the card is INTERACTIVE — poke it (after the flip) for a
+    // themed flourish. it stops the exit for that click, so you can play
+    let pokes = 0;
+    cv.addEventListener('pointerdown', (e) => {
+      if (!flip.classList.contains('is-flipped') || pokes >= 8) return;
+      e.stopPropagation();
+      pokes++;
+      const suit = (card.art && card.art.suit) || 'major';
+      const burst = { wands: ['⚡', '✦', '🔥'], cups: ['🧋', '♡', '💧'], swords: ['0', '1', '✦'], coins: ['⛁', '★', '✨'], major: ['✦', '♡', '⭐'] }[suit];
+      for (let i = 0; i < 5; i++) {
+        const s = document.createElement('span');
+        s.className = 'tarot-poke';
+        s.textContent = burst[i % burst.length];
+        s.style.left = e.clientX + 'px';
+        s.style.top = e.clientY + 'px';
+        s.style.setProperty('--pk-x', ((Math.random() - 0.5) * 90).toFixed(0) + 'px');
+        s.style.setProperty('--pk-y', (-30 - Math.random() * 60).toFixed(0) + 'px');
+        veil.appendChild(s);
+        s.addEventListener('animationend', () => s.remove());
+      }
+      stage.classList.remove('tarot-wiggle'); void stage.offsetWidth; stage.classList.add('tarot-wiggle');
+      const suitMotif = suit === 'major' ? [880, 1174] : T_SUITS[suit].motif;
+      playTone(suitMotif[pokes % suitMotif.length], 'triangle', 0.09, 0, 0.05);
+      if (pokes === 6) { // reward the persistent
+        try { gainFollowers(1); } catch (er) { /* offline hearts */ }
+        subFx.textContent = trT('✦ (the card giggled. +1 fan for curiosity ♡)', '✦ (la carte a gloussé. +1 fan pour la curiosité ♡)');
+      }
+    });
     flip.appendChild(back);
     flip.appendChild(face);
     stage.appendChild(flip);
@@ -10091,6 +11073,7 @@ document.addEventListener('DOMContentLoaded', () => {
       finished = true;
       document.removeEventListener('keydown', onKey, true);
       if (typeIv) clearInterval(typeIv);
+      if (pxIv) clearInterval(pxIv);
       veil.classList.add('tarot-out');
       setTimeout(() => { veil.remove(); if (tarotRevealEl === veil) tarotRevealEl = null; done(); }, 420);
     };
@@ -10307,12 +11290,70 @@ document.addEventListener('DOMContentLoaded', () => {
   ];
   const AD_FRAMES = 900; // 15s at 60fps
 
+  /* ---- v6.2: the sponsors dream along 📺 ----
+     every dream world brings its own ad buyers. same airtime,
+     same revive, completely different capitalism. */
+  const AD_SKITS_DREAM = {
+    win95: [
+      { brand: 'DOWNLOAD MORE RAM™', tint: '#dfdfdf', accent: '#000080', prop: 'phone',
+        lines: [["free RAM!! shipped on a floppy!!", "de la RAM gratuite !! livrée sur disquette !!"], ["(the floppy holds 1.44MB of RAM. it's the thought.)", "(la disquette contient 1,44 Mo de RAM. c'est l'intention.)"]] },
+      { brand: 'Slippy Life Coaching', tint: '#ffffcc', accent: '#f0b429', prop: 'tv',
+        lines: [["it looks like you're trying to LIVE.", "on dirait que tu essaies de VIVRE."], ["would you like help with that? (say yes) ♡", "veux-tu de l'aide pour ça ? (dis oui) ♡"]] }
+    ],
+    scp: [
+      { brand: '[REDACTED] COLA', tint: '#16171c', accent: '#ffd23f', prop: 'cup', ink: '#ffd23f', sub: '#9aa3ad',
+        lines: [["tastes like ████ and hugs", "goût de ████ et de câlins"], ["side effects: [DATA EXPUNGED] (it's giggling)", "effets secondaires : [DONNÉES SUPPRIMÉES] (ça glousse)"]] },
+      { brand: 'O5 INSURANCE', tint: '#101014', accent: '#c62828', prop: 'tv', ink: '#e8eaee', sub: '#9aa3ad',
+        lines: [["covers containment breaches AND heartbreak", "couvre les brèches de confinement ET les chagrins"], ["premiums payable in [REDACTED]", "primes payables en [CENSURÉ]"]] }
+    ],
+    matrix: [
+      { brand: 'PILL COMBO MEAL', tint: '#010a04', accent: '#3dff7c', prop: 'cup', ink: '#3dff7c', sub: '#12a350',
+        lines: [["one red, one blue, fries included", "une rouge, une bleue, frites incluses"], ["(the fries are also a simulation)", "(les frites aussi sont une simulation)"]] },
+      { brand: 'KUNG FU DOWNLOADS', tint: '#03130a', accent: '#2bff8f', prop: 'phone', ink: '#2bff8f', sub: '#12a350',
+        lines: [["'I know kung fu' in 10 seconds!!", "« je connais le kung-fu » en 10 secondes !!"], ["CSS module sold separately (it's harder)", "module CSS vendu séparément (c'est plus dur)"]] }
+    ],
+    gameboy: [
+      { brand: 'PRO CARTRIDGE BLOWING', tint: '#9bbc0f', accent: '#0f380f', prop: 'phone', ink: '#0f380f', sub: '#306230',
+        lines: [["certified technicians. certified lungs.", "techniciens certifiés. poumons certifiés."], ["fixes 60% of everything, every time", "répare 60 % de tout, à chaque fois"]] },
+      { brand: 'AA BATTERY SPA', tint: '#8bac0f', accent: '#306230', prop: 'cup', ink: '#0f380f', sub: '#306230',
+        lines: [["tired batteries deserve rest too", "les piles fatiguées méritent du repos aussi"], ["(rubbing them warm counts as a massage)", "(les frotter pour les réchauffer compte comme un massage)"]] }
+    ],
+    geo: [
+      { brand: 'PUNCH THE MONKEY', tint: '#05010f', accent: '#ff2fae', prop: 'tv', ink: '#7cfc00', sub: '#c9a7f5',
+        lines: [["WIN a free modem!!! (you won't)", "GAGNE un modem gratuit !!! (tu ne gagneras pas)"], ["100% of winners are the banner itself", "100 % des gagnants sont la bannière elle-même"]] },
+      { brand: 'GUESTBOOK DELUXE', tint: '#140a2e', accent: '#41e0ff', prop: 'phone', ink: '#ffe9ff', sub: '#c9a7f5',
+        lines: [["now with GLITTER TEXT!!", "maintenant avec du TEXTE À PAILLETTES !!"], ["your entry will be cherished for 10,000 years", "ton mot sera chéri pendant 10 000 ans"]] }
+    ],
+    bsod: [
+      { brand: 'CTRL+ALT+HUG', tint: '#0a23a8', accent: '#8ab4ff', prop: 'tv', ink: '#ffffff', sub: '#c6d2ff',
+        lines: [["the three-finger salute, but affectionate", "le salut à trois doigts, version affectueuse"], ["resolves 0 crashes. resolves ALL feelings.", "résout 0 crash. résout TOUS les sentiments."]] },
+      { brand: 'ERROR REPORT SPA', tint: '#0c28bd', accent: '#ffffff', prop: 'cup', ink: '#ffffff', sub: '#c6d2ff',
+        lines: [["your reports deserve a vacation too", "tes rapports d'erreur méritent aussi des vacances"], ["they are read by nobody, lovingly", "ils sont lus par personne, avec amour"]] }
+    ],
+    amber: [
+      { brand: 'COBOL BOOTCAMP', tint: '#0d0800', accent: '#ffb000', prop: 'tv', ink: '#ffb000', sub: '#c98a10',
+        lines: [["est. 1959. still hiring. FOREVER hiring.", "depuis 1959. recrute encore. recrute POUR TOUJOURS."], ["graduates outlive their employers", "les diplômés survivent à leurs employeurs"]] },
+      { brand: 'PUNCH CARD GYM', tint: '#161006', accent: '#ffd23f', prop: 'phone', ink: '#ffd23f', sub: '#c98a10',
+        lines: [["80 columns. 80 reps. no folding.", "80 colonnes. 80 répétitions. ne pas plier."], ["(do not staple the trainer)", "(ne pas agrafer le coach)"]] }
+    ]
+  };
+  function gAdPool() { return (gDreamSkin && AD_SKITS_DREAM[gDreamSkin]) || AD_SKITS; }
+  const AD_FINALE_DREAM = {
+    win95: ['♡ this ad slot is for rent (256 colors max) ♡', '♡ cet espace pub est à louer (256 couleurs max) ♡'],
+    scp: ['♡ [THIS AD SLOT IS REDACTED — inquire within] ♡', '♡ [CET ESPACE PUB EST CENSURÉ — se renseigner] ♡'],
+    matrix: ['♡ this ad slot is a simulation (rent it anyway) ♡', '♡ cet espace pub est une simulation (louez-le quand même) ♡'],
+    gameboy: ['♡ this ad slot fits in 8KB ♡', '♡ cet espace pub tient dans 8 Ko ♡'],
+    geo: ['♡ this ad slot is UNDER CONSTRUCTION since 1998 ♡', '♡ cet espace pub est EN CONSTRUCTION depuis 1998 ♡'],
+    bsod: ['♡ this ad slot ran into a problem (still for rent) ♡', '♡ cet espace pub a rencontré un problème (toujours à louer) ♡'],
+    amber: ['♡ this ad slot has 56 years of uptime ♡', '♡ cet espace pub affiche 56 ans d\'uptime ♡']
+  };
+
   function gAdStart() {
     if (GAME.state !== 'over' || GAME.adUsed || GAME.event) return;
     GAME.adUsed = true;
     GAME.state = 'ad';
     GAME.adT = 0;
-    GAME.adSkit = Math.floor(Math.random() * AD_SKITS.length);
+    GAME.adSkit = Math.floor(Math.random() * gAdPool().length);
     // the reaction cam ducks to the bottom-right so the ⏳ countdown stays visible
     const adCam = document.getElementById('game-reaction-cam');
     if (adCam) adCam.classList.add('cam-ad-dock');
@@ -10385,7 +11426,10 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function gDrawAd(g2, loopMode) {
-    const skit = AD_SKITS[GAME.adSkit || 0];
+    const pool = gAdPool();
+    const skit = pool[(GAME.adSkit || 0) % pool.length];
+    const inkC = skit.ink || '#14020e';
+    const subC = skit.sub || '#5a3d6e';
     const tLeft = Math.ceil((AD_FRAMES - GAME.adT) / 60);
     const scene = GAME.adT < 300 ? 0 : GAME.adT < 600 ? 1 : 2;
     // the ad covers the whole screen
@@ -10420,21 +11464,22 @@ document.addEventListener('DOMContentLoaded', () => {
       g2.fillText(msg, G_W / 2, 31);
     }
     if (scene < 2) {
-      g2.fillStyle = '#14020e';
+      g2.fillStyle = inkC;
       g2.font = "22px 'Jersey 25', 'VT323', monospace";
       g2.fillText(skit.brand, G_W / 2, 42);
       g2.font = "13px 'Jersey 25', 'VT323', monospace";
-      g2.fillStyle = '#5a3d6e';
+      g2.fillStyle = subC;
       g2.fillText(trT(skit.lines[scene][0], skit.lines[scene][1]), G_W / 2, G_H - 34);
       gAdProp(g2, skit.prop, G_W / 2 + 66, 78, skit.accent);
       gAdActor(g2, G_W / 2 - 50, 84, GAME.adT * 0.12);
     } else {
       // the grand finale: a very sincere sublet offer
-      g2.fillStyle = '#14020e';
+      g2.fillStyle = inkC;
       g2.font = "18px 'Jersey 25', 'VT323', monospace";
-      g2.fillText(trT('♡ this ad slot is for rent ♡', '♡ cet espace pub est à louer ♡'), G_W / 2, 44);
+      const finale = (gDreamSkin && AD_FINALE_DREAM[gDreamSkin]) || ['♡ this ad slot is for rent ♡', '♡ cet espace pub est à louer ♡'];
+      g2.fillText(trT(finale[0], finale[1]), G_W / 2, 44);
       g2.font = "12px 'Jersey 25', 'VT323', monospace";
-      g2.fillStyle = '#5a3d6e';
+      g2.fillStyle = subC;
       g2.fillText('yuyongshan573@gmail.com', G_W / 2, 62);
       g2.fillText(trT('(serious brands only. payment in boba accepted)', '(marques sérieuses uniquement. paiement en boba accepté)'), G_W / 2, G_H - 34);
       gAdActor(g2, G_W / 2, 90, GAME.adT * 0.12);

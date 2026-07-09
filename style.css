@@ -6683,17 +6683,26 @@ html[data-theme="dark"] .cloud-save {
 }
 .pik-card-btn:not(:disabled):active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
 .pik-card-btn:disabled { opacity: 0.55; cursor: var(--cursor-arrow); }
-/* midnight: a dimmed dark-on-dark yellow was unreadable — the disabled
-   button now glows softly instead of sulking invisibly */
+/* midnight: pale-yellow text on pale-yellow was unreadable on BOTH the
+   enabled and disabled buttons — dark mode gets bright yellow, dark ink,
+   and a soft white halo so the label always pops off the panel */
+html[data-theme="dark"] .pik-card-btn {
+  background: #ffd428;
+  color: #3a2c00;
+  border-color: #fff;
+  box-shadow:
+    0 0 0 2px rgba(255, 255, 255, 0.4),
+    0 0 12px rgba(255, 210, 40, 0.35),
+    3px 3px 0 rgba(0, 0, 0, 0.5);
+}
 html[data-theme="dark"] .pik-card-btn:disabled {
   opacity: 1;
-  background: #ffd428;
+  background: #ffde5a;
   color: #4a3800;
-  border-color: #fff;
-  text-shadow: 0 0 6px rgba(255, 255, 255, 0.85), 0 0 12px rgba(255, 255, 255, 0.45);
+  text-shadow: 0 0 6px rgba(255, 255, 255, 0.9), 0 0 12px rgba(255, 255, 255, 0.5);
   box-shadow:
-    0 0 0 2px rgba(255, 255, 255, 0.55),
-    0 0 14px rgba(255, 255, 255, 0.35),
+    0 0 0 2px rgba(255, 255, 255, 0.6),
+    0 0 16px rgba(255, 255, 255, 0.4),
     3px 3px 0 rgba(0, 0, 0, 0.45);
 }
 
@@ -9858,3 +9867,121 @@ html[data-theme="dark"].dream-amber .window-title { color: #ffd23f; text-shadow:
   .tarot-stage { transform: none; filter: none; }
   .tarot-flip { transition: none; }
 }
+
+/* ---- v6.2: the face is a live pixel painting now ---- */
+.tarot-cardface {
+  padding: 0;
+  background: #2d2350;
+  border: none;
+  box-shadow: 0 0 0 2px #2d2350, 0 14px 34px rgba(0, 0, 0, 0.55);
+}
+.tarot-px {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+.tarot-cardface .tarot-rn {
+  position: absolute;
+  top: 2.6%;
+  left: 8%;
+  right: 8%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  font-size: 1rem;
+  letter-spacing: 5px;
+}
+.tarot-cardface .tarot-title {
+  position: absolute;
+  bottom: 2.2%;
+  left: 7%;
+  right: 7%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  font-size: 0.88rem;
+}
+.tarot-cardface .t-cap { z-index: 4; }
+.tarot-px { cursor: var(--cursor-heart); }
+.tarot-wiggle { animation: tarot-wiggle 0.4s ease; }
+@keyframes tarot-wiggle {
+  25% { transform: scale(1.05) rotate(-2deg); }
+  60% { transform: scale(1.03) rotate(2deg); }
+}
+.tarot-poke {
+  position: fixed;
+  z-index: 99475;
+  pointer-events: none;
+  font-family: var(--font-pixel);
+  font-size: 1.1rem;
+  color: #ffe6f4;
+  text-shadow: 0 0 8px rgba(255, 143, 199, 0.9);
+  transform: translate(-50%, -50%);
+  animation: tarot-poke 0.9s ease-out forwards;
+}
+@keyframes tarot-poke {
+  from { opacity: 1; transform: translate(-50%, -50%); }
+  to { opacity: 0; transform: translate(calc(-50% + var(--pk-x, 0px)), calc(-50% + var(--pk-y, -40px))) scale(0.6); }
+}
+
+/* while a dream world holds the site, the desktop mini-danmaku yields
+   its corner to the dream badges (they were fighting over it) */
+html.dreaming #mini-danmaku { display: none !important; }
+
+/* the sleepwalker is ticklish now */
+.sleepwalker { pointer-events: auto; cursor: var(--cursor-heart); }
+.sleepwalker.sw-fading { pointer-events: none; }
+
+/* gremlin crayon graffiti (click to clean, if you must) */
+.sw-graffiti {
+  position: fixed;
+  z-index: 2635;
+  pointer-events: auto;
+  cursor: var(--cursor-heart);
+  filter: drop-shadow(1px 2px 0 rgba(0, 0, 0, 0.2));
+  animation: sw-sticky-slap 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: opacity 1s;
+}
+.sw-graffiti small {
+  position: absolute;
+  bottom: -14px;
+  left: 8px;
+  font-family: var(--font-pixel);
+  font-size: 0.62rem;
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--ink);
+  padding: 0 4px;
+  white-space: nowrap;
+}
+.sw-graffiti-fade { opacity: 0; }
+
+/* the room leans 0.35deg and gaslights you about it */
+body.sw-tilt { transform: rotate(0.35deg); transition: transform 1.2s ease; }
+body { transition: transform 1.2s ease; }
+
+/* win95 dream: solitaire victory cards */
+.dream-sol-card {
+  position: fixed;
+  z-index: 2660;
+  width: 34px;
+  height: 46px;
+  background: #fffdf7;
+  border: 2px solid #101010;
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.35);
+  font-family: var(--font-pixel);
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+.dream-sol-card.red { color: #c62828; }
+.dream-sol-card.black { color: #101010; }
+
+/* geo dream: the 1,000,000th-visitor dialog will not stop flashing */
+.dream-geo-flashdlg .dream-dlg-bar { animation: dream-geo-flash 0.6s steps(1) infinite; }
+@keyframes dream-geo-flash { 50% { background: #ffd23f; color: #1c0230; } }
