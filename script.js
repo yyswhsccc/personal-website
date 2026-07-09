@@ -7698,6 +7698,8 @@ document.addEventListener('DOMContentLoaded', () => {
     dreamWorld.flags.openSeen = dreamWorld.flags.openSeen || {};
     if (dreamWorld.flags.openSeen[winId]) return; // one reception per window per dream
     dreamWorld.flags.openSeen[winId] = true;
+    // v84.1: the shell greets you with its own typed dream-onset scene
+    if (winId === 'win-terminal') dT(() => dsShellBanner(dreamWorld && dreamWorld.id), 350);
     const ent = dreamWorld.flags.ent;
     if (ent && ent.openLines && ent.openLines[winId]) { dreamSay(ent.openLines[winId], 5200); return; }
     const lines = DREAM_OPEN_LINES[dreamWorld.id];
@@ -7714,6 +7716,16 @@ document.addEventListener('DOMContentLoaded', () => {
     if (pr && DS_PS1[w.id]) {
       if (dreamPromptBackup === null) dreamPromptBackup = pr.textContent;
       pr.textContent = DS_PS1[w.id];
+    }
+    // v84.1: terminal already open when the dream lands? it types its
+    // onset scene right away (and won't repeat it on reopen)
+    const tw = document.getElementById('win-terminal');
+    if (tw && !tw.classList.contains('window-closed') && dreamWorld) {
+      dreamWorld.flags.openSeen = dreamWorld.flags.openSeen || {};
+      if (!dreamWorld.flags.openSeen['win-terminal']) {
+        dreamWorld.flags.openSeen['win-terminal'] = true;
+        dT(() => dsShellBanner(w.id), 900);
+      }
     }
   }
   function dreamAdaptOff() {
@@ -7790,21 +7802,108 @@ document.addEventListener('DOMContentLoaded', () => {
     termLine(trT(pick[0], pick[1]).split('{c}').join(cmd), 't-err');
     const f = dreamWorld.flags;
     f.dsDenied = (f.dsDenied || 0) + 1;
-    const always = cmd === 'help' || cmd === 'cheats' || cmd === 'hint' || cmd === 'secrets' || cmd === 'ls';
-    if (always || f.dsDenied <= 2 || Math.random() < 0.4) {
-      dsL('(the waking shell sleeps during dreams — `' + sh.list + '` speaks the 21 words this world understands)',
-        '(le shell éveillé dort pendant les rêves — `' + sh.list + '` révèle les 21 mots que ce monde comprend)', 't-dim');
+    if (f.dsDenied <= 3 || Math.random() < 0.4) {
+      dsL('(the waking shell sleeps during dreams — `help` explains, `' + sh.list + '` lists the 21 words this world understands)',
+        '(le shell éveillé dort pendant les rêves — `help` explique, `' + sh.list + '` liste les 21 mots que ce monde comprend)', 't-dim');
     }
   }
+  // `help` (and its waking synonyms) gets a REAL themed answer: the world
+  // explains itself, then deals the full 21-word list on the house
+  const DS_HELP = {
+    win95: ['HELP.EXE (dream build) loaded from D:\\REM — the waking commands are asleep. tonight, DOS answers to exactly these:', 'HELP.EXE (édition rêve) chargé depuis D:\\REM — les commandes éveillées dorment. cette nuit, le DOS ne répond qu\'à ceci :'],
+    scp: ['per protocol ♡-21: this console is dreaming with you, so your clearance covers these verbs and ONLY these verbs:', 'protocole ♡-21 : cette console rêve avec toi, ton habilitation couvre donc ces verbes et SEULEMENT ces verbes :'],
+    matrix: ['the operator picks up: "ok. deep breath. the old commands are simulations. here\'s what\'s REAL tonight:"', 'l\'opérateur décroche : « ok. respire. les vieilles commandes sont des simulations. voilà ce qui est RÉEL ce soir : »'],
+    gameboy: ['▼ you used HELP! it\'s super effective!! tonight\'s item menu:', '▼ tu utilises AIDE ! c\'est super efficace !! le menu objets du soir :'],
+    geo: ['jeeves dusts off the dream sitemap: "the regular pages are napping, madam/sir. tonight\'s 21 are:"', 'jeeves épousette le plan du site onirique : « les pages habituelles font la sieste. les 21 de ce soir sont : »'],
+    bsod: ['help.exe SURVIVED the crash!! it proudly lists the other survivors:', 'help.exe A SURVÉCU au plantage !! il liste fièrement les autres survivants :'],
+    amber: ['OPERATOR RESPONSE: THE DAY SHELL HAS CLOCKED OUT. NIGHT CATALOG FOLLOWS. DO NOT FOLD, SPINDLE, OR MUTILATE.', 'RÉPONSE OPÉRATEUR : LE SHELL DE JOUR A POINTÉ SA SORTIE. CATALOGUE DE NUIT CI-DESSOUS. NE PAS PLIER, EMBROCHER NI MUTILER.']
+  };
   function dreamShellRun(cmd) {
     if (!dreamWorld) return false;
     const sh = DREAM_SHELL[dreamWorld.id];
     if (!sh) return false;
     const c = sh.cmds[cmd];
+    if (!c && (cmd === 'help' || cmd === 'man' || cmd === 'hint' || cmd === 'cheats' || cmd === 'secrets' || cmd === '?')) {
+      const h = DS_HELP[dreamWorld.id];
+      if (h) dsL(h[0], h[1], 't-accent');
+      try { sh.cmds[sh.list].fx(); } catch (e) { /* the catalog jammed */ }
+      return true;
+    }
     if (!c) { dreamShellDeny(sh, cmd); return true; }
     const first = dsMark(dreamWorld.id, cmd);
     try { c.fx(first); } catch (e) { dsL('…the dream stuttered. say it again.', '…le rêve a bégayé. redis-le.', 't-err'); }
     return true;
+  }
+
+  // ---- the terminal's own dream onset: a typed banner, per world ----
+  // opening the shell mid-dream greets you with a typewriter scene that
+  // explains the house rules (the old commands sleep; `help` guides you)
+  function dsTypeSeq(lines, opts) {
+    const o = opts || {};
+    if (REDUCED_MOTION) { lines.forEach((ln) => termLine(trT(ln.t[0], ln.t[1]), ln.cls || 't-accent')); return; }
+    let li = 0;
+    const nextLine = () => {
+      if (!dreamWorld || !termOut) return;
+      if (li >= lines.length) return;
+      const ln = lines[li++];
+      const el = document.createElement('span');
+      el.className = 't-line ' + (ln.cls || 't-accent');
+      termOut.appendChild(el);
+      while (termOut.children.length > 350) termOut.removeChild(termOut.firstChild);
+      const text = trT(ln.t[0], ln.t[1]);
+      let i = 0;
+      const iv = dI(() => {
+        if (!el.isConnected) { clearInterval(iv); return; }
+        el.textContent += text[i];
+        if (i % 4 === 0) playTone((o.freq || 1500) + Math.random() * 200, o.wave || 'square', 0.012, 0, 0.01);
+        termOut.scrollTop = termOut.scrollHeight;
+        if (++i >= text.length) { clearInterval(iv); dT(nextLine, 260); }
+      }, o.ms || 18);
+    };
+    nextLine();
+  }
+  const DS_BANNER = {
+    win95: { ms: 13, freq: 1600, lines: [
+      { t: ['HIMEM.SYS is testing dream memory… 640K OK. ∞K OK.', 'HIMEM.SYS teste la mémoire onirique… 640 Ko OK. ∞ Ko OK.'], cls: 't-dim' },
+      { t: ['C:\\WAKING not found — this prompt fell asleep WITH the site. your usual commands are napping in there.', 'C:\\EVEIL introuvable — cette invite s\'est endormie AVEC le site. tes commandes habituelles y font la sieste.'] },
+      { t: ['type `help` for what a dreaming DOS understands ♡', 'tape `help` pour voir ce qu\'un DOS qui rêve comprend ♡'], cls: 't-ok' }
+    ] },
+    scp: { ms: 16, freq: 1300, lines: [
+      { t: ['SITE-19 CONSOLE — MEMETIC LOCKDOWN ENGAGED.', 'CONSOLE SITE-19 — VERROUILLAGE MÉMÉTIQUE ENCLENCHÉ.'], cls: 't-err' },
+      { t: ['notice: this terminal is INSIDE the dream with you. your waking commands have been [DATA EXPUNGED] for your own safety.', 'avis : ce terminal est DANS le rêve avec toi. tes commandes éveillées ont été [DONNÉES SUPPRIMÉES] pour ta propre sécurité.'] },
+      { t: ['type `help` — your clearance covers exactly 21 words.', 'tape `help` — ton habilitation couvre exactement 21 mots.'], cls: 't-ok' }
+    ] },
+    matrix: { ms: 22, freq: 1150, lines: [
+      { t: ['wake up… no. wait. don\'t. the shell fell asleep INSIDE the Matrix.', 'réveille-toi… non. attends. surtout pas. le shell s\'est endormi DANS la Matrice.'] },
+      { t: ['every command you remember is a simulation tonight. the real ones are… different.', 'chaque commande dont tu te souviens est une simulation ce soir. les vraies sont… différentes.'], cls: 't-dim' },
+      { t: ['type `help` if you\'re ready to see how deep the shell goes.', 'tape `help` si tu es prêt·e à voir jusqu\'où va le shell.'], cls: 't-ok' }
+    ] },
+    gameboy: { ms: 15, freq: 1900, lines: [
+      { t: ['DMG BIOS v0.zZ — cartridge detected: DREAM (1989).', 'BIOS DMG v0.zZ — cartouche détectée : RÊVE (1989).'] },
+      { t: ['your usual commands live on the WAKING cartridge. it is not inserted. (blowing on the slot won\'t help. this once.)', 'tes commandes habituelles vivent sur la cartouche ÉVEIL. elle n\'est pas insérée. (souffler dessus ne servira à rien. pour une fois.)'], cls: 't-dim' },
+      { t: ['press `help` to open tonight\'s item menu ▼', 'appuie sur `help` pour ouvrir le menu objets du soir ▼'], cls: 't-ok' }
+    ] },
+    geo: { ms: 17, freq: 1500, lines: [
+      { t: ['~*~ welcome to my DREAMPAGE!! ~*~ (best viewed while asleep, 800×600)', '~*~ bienvenue sur ma PAGE DE RÊVE !! ~*~ (meilleur rendu endormi·e, en 800×600)'] },
+      { t: ['the normal shell is napping behind the UNDER CONSTRUCTION gif. its commands nap with it.', 'le shell normal fait la sieste derrière le gif EN CONSTRUCTION. ses commandes dorment avec lui.'], cls: 't-dim' },
+      { t: ['type `help` — the dream sitemap has 21 pages ☆', 'tape `help` — le plan du site onirique a 21 pages ☆'], cls: 't-ok' }
+    ] },
+    bsod: { ms: 18, freq: 1000, lines: [
+      { t: [':( the shell ran into a dream and needs to lie down for a bit.', ':( le shell a rencontré un rêve et doit s\'allonger un moment.'], cls: 't-err' },
+      { t: ['what happened: your usual commands were not saved. (they\'re fine. they\'re just elsewhere. crying softly.)', 'ce qui s\'est passé : tes commandes habituelles n\'ont pas été sauvegardées. (elles vont bien. elles sont juste ailleurs. à pleurer doucement.)'], cls: 't-dim' },
+      { t: ['type `help` to list everything that still runs. it\'s cozier than you\'d think.', 'tape `help` pour lister tout ce qui tourne encore. c\'est plus douillet que tu ne crois.'], cls: 't-ok' }
+    ] },
+    amber: { ms: 34, freq: 850, wave: 'sine', lines: [
+      { t: ['SYS370 NIGHT SHIFT — LOGON ACCEPTED AT 03:00 (DREAM TIME).', 'SYS370 ÉQUIPE DE NUIT — CONNEXION ACCEPTÉE À 03:00 (HEURE DU RÊVE).'] },
+      { t: ['THE DAY SHELL HAS CLOCKED OUT. ITS COMMANDS SLEEP IN THE TAPE VAULT (1974–PRESENT).', 'LE SHELL DE JOUR A POINTÉ SA SORTIE. SES COMMANDES DORMENT DANS LA CHAMBRE À BANDES (1974–AUJOURD\'HUI).'], cls: 't-dim' },
+      { t: ['SUBMIT `help` TO PRINT TONIGHT\'S JOB CATALOG.', 'SOUMETS `help` POUR IMPRIMER LE CATALOGUE DE NUIT.'], cls: 't-ok' }
+    ] }
+  };
+  function dsShellBanner(worldId) {
+    const b = DS_BANNER[worldId];
+    if (!b || !termOut) return;
+    termLine('');
+    dsTypeSeq(b.lines, b);
   }
 
   const DREAM_SHELL = {
@@ -10978,6 +11077,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // v84: THE CHARIOT — if fate armed it, the first 17 seconds are HERS
     GAME.chariotUntil = 0;
     GAME.chariotBowed = false;
+    GAME.chariotEventForced = false;
     try {
       if (store.get('yos-chariot', null)) {
         store.set('yos-chariot', null);
@@ -11363,7 +11463,20 @@ document.addEventListener('DOMContentLoaded', () => {
       GAME.event._born = 1;
       GAME.eventLockUntil = Date.now() + 1600;
       // v84: mid-ride, the CHARIOT reads the odds and answers for you
-      if (gChariotOn() && !GAME.event._chariot) { GAME.event._chariot = 1; try { gChariotDecide(GAME.event); } catch (e) { /* the reins slipped */ } }
+      if (gChariotOn() && !GAME.event._chariot) {
+        GAME.event._chariot = 1;
+        GAME.chariotEventForced = true; // one encounter per ride is now paid for
+        try { gChariotDecide(GAME.event); } catch (e) { /* the reins slipped */ }
+      }
+    }
+    // v84.1: a chariot ride is CONTRACTUALLY entitled to one encounter.
+    // if the regular clock hasn't produced one by ride-second 4 (boss
+    // traffic, unlucky rolls, whatever) — fate gets dragged in by the collar
+    if (gChariotOn() && GAME.state === 'run' && !GAME.chariotEventForced
+      && !GAME.event && !GAME.boss && !GAME.nm
+      && GAME.frame > GAME.chariotUntil - 13 * 60) {
+      GAME.chariotEventForced = true;
+      try { gStartEvent(); } catch (e) { /* fate called in sick */ }
     }
     // …and after its 17 unstoppable seconds, it bows out (once, politely)
     if (GAME.chariotUntil && GAME.frame >= GAME.chariotUntil && !GAME.chariotBowed) {
@@ -16456,10 +16569,14 @@ document.addEventListener('DOMContentLoaded', () => {
   var gInviteRetryTimer = null;
   function scheduleGameInvite(delay) {
     if (gInviteShownThisVisit) return;
+    // v84.1: veterans know where the arcade is — a browser that has ever
+    // started a run never gets the invite popup again (it would be noise)
+    if (store.get('yos-played', null)) return;
     if (gInviteRetryTimer) clearTimeout(gInviteRetryTimer);
     gInviteRetryTimer = setTimeout(function tryShow() {
       gInviteRetryTimer = null;
       if (gInviteShownThisVisit) return;
+      if (store.get('yos-played', null)) return; // they played mid-wait — stand down
       if (document.body.classList.contains('terminal-only')) { scheduleGameInvite(12000); return; } // the door hates popups
       // light mode only: in the dark, the SLEEPWALKER is the ad — and
       // applyTheme re-arms this popup at dawn, so no 8s idle loop here
