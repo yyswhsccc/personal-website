@@ -6848,11 +6848,8 @@ document.addEventListener('DOMContentLoaded', () => {
       // the official (pixel) emblem, plus tonight's headliner entity
       const emblem = document.createElement('div');
       emblem.className = 'dream-badge scp-emblem-badge';
-      emblem.innerHTML = '<svg class="scp-emblem" viewBox="0 0 24 24" aria-hidden="true">'
-        + '<circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>'
-        + '<circle cx="12" cy="12" r="3.4" fill="currentColor"/>'
-        + '<g stroke="currentColor" stroke-width="2.2"><line x1="12" y1="2.2" x2="12" y2="7.4"/><line x1="3.6" y1="17" x2="8" y2="14.4"/><line x1="20.4" y1="17" x2="16" y2="14.4"/></g>'
-        + '</svg><span>SCP FOUNDATION — ' + trT('SECURE · CONTAIN · PET', 'SÉCURISER · CONFINER · CARESSER') + '</span>';
+      emblem.innerHTML = SCP_EMBLEM_SVG
+        + '<span>SCP FOUNDATION — ' + trT('SECURE · CONTAIN · PET', 'SÉCURISER · CONFINER · CARESSER') + '</span>';
       dreamBadgeRail().appendChild(emblem);
       // ---- tonight's entity possesses the habitat slime ----
       const ent = SCP_ENTITIES[Math.floor(Math.random() * SCP_ENTITIES.length)];
@@ -6861,8 +6858,12 @@ document.addEventListener('DOMContentLoaded', () => {
       ghostAppear(0, false); // the entity form must be SEEN
       if (ent.acc) scpAccessory(ent.acc);
       if (ent.ama) dreamAmaDecor = ent.ama;
-      dreamBadge('🔬 ' + trT('tonight: SCP-' + ent.id + ' — ' + ent.nick[0], 'ce soir : SCP-' + ent.id + ' — ' + ent.nick[1]));
-      dT(() => dreamSay(ent.brief, 6200), 3200);
+      // v82: the URGENT DISPATCH lands first — the "tonight:" badge and the
+      // entity's own hello wait until the reader has (n)acknowledged the mail
+      dT(() => scpDispatch(ent, () => {
+        dreamBadge('🔬 ' + trT('tonight: SCP-' + ent.id + ' — ' + ent.nick[0], 'ce soir : SCP-' + ent.id + ' — ' + ent.nick[1]));
+        dT(() => dreamSay(ent.brief, 6200), 500);
+      }), 1100);
       try { ent.build(); } catch (e) { /* the entity is shy */ }
       let total = 0;
       total += dwScpLock('win-career', 'keypad', 'career_quest.exe');
@@ -6870,7 +6871,7 @@ document.addEventListener('DOMContentLoaded', () => {
       total += dwScpLock('win-education', 'captcha', 'education_awards.txt');
       if (dreamWorld) { dreamWorld.flags.scpTotal = total || 1; dreamWorld.flags.scpCleared = 0; }
       try { termLine('[REDACTED] joined #containment · topic: do NOT boop the [DATA EXPUNGED]', 't-dim'); } catch (e) { /* expunged */ }
-      dT(() => dreamSay(["zzz… psst… three files went classified… the puzzles are EASY… the foundation believes in you…", "zzz… psst… trois dossiers sont passés secrets… les énigmes sont FACILES… la fondation croit en toi…"], 5200), 14000);
+      dT(() => dreamSay(["zzz… psst… three files went classified… the puzzles are EASY… the foundation believes in you…", "zzz… psst… trois dossiers sont passés secrets… les énigmes sont FACILES… la fondation croit en toi…"], 5200), 26000);
       dI(() => {
         if (!dreamWorld || Math.random() < 0.45) return;
         dreamCritter({
@@ -7698,10 +7699,292 @@ document.addEventListener('DOMContentLoaded', () => {
     pet.appendChild(acc);
     if (dreamWorld) dN(acc);
   }
+  /* ---- v82: the URGENT DISPATCH — the Foundation mails the dream a warning.
+     an envelope air-drops onto the desktop, tears open, and a typewriter
+     briefs you on tonight's escaped instance: what the Foundation is, what
+     got out, what to do about it. newcomers learn the rules; fans get the nod. */
+  const SCP_EMBLEM_SVG = '<svg class="scp-emblem" viewBox="0 0 24 24" aria-hidden="true">'
+    + '<circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>'
+    + '<circle cx="12" cy="12" r="3.4" fill="currentColor"/>'
+    + '<g stroke="currentColor" stroke-width="2.2"><line x1="12" y1="2.2" x2="12" y2="7.4"/><line x1="3.6" y1="17" x2="8" y2="14.4"/><line x1="20.4" y1="17" x2="16" y2="14.4"/></g>'
+    + '</svg>';
+
+  // a censor bar you can peek under (hover on desktop, tap on touch)
+  function scpRedact(reveal) {
+    const s = document.createElement('span');
+    s.className = 'scp-redact';
+    const bar = document.createElement('span');
+    bar.className = 'scp-redact-bar';
+    const txt = document.createElement('span');
+    txt.className = 'scp-redact-txt';
+    txt.textContent = reveal;
+    s.appendChild(bar); s.appendChild(txt);
+    s.addEventListener('click', () => s.classList.toggle('scp-redact-on'));
+    return { el: s, bar };
+  }
+
+  // types one paragraph: plain text, censor bars, and the instance number
+  // (which gets its own span so SCP-055 can keep forgetting it)
+  function scpTypeParts(p, parts, instant, done) {
+    let pi = 0, tick = 0;
+    const nextPart = () => {
+      if (!p.isConnected) return; // letter got filed mid-sentence
+      if (pi >= parts.length) { if (done) done(); return; }
+      const part = parts[pi++];
+      if (part && part.r !== undefined) { // ██████ — even the bars get typed
+        const rd = scpRedact(part.r);
+        p.appendChild(rd.el);
+        const n = part.n || Math.max(5, Math.min(11, Math.ceil(part.r.length * 0.6)));
+        if (instant) { rd.bar.textContent = '█'.repeat(n); nextPart(); return; }
+        let i = 0;
+        const iv = dI(() => {
+          if (!p.isConnected) { clearInterval(iv); return; }
+          rd.bar.textContent += '█';
+          if (++i >= n) { clearInterval(iv); nextPart(); }
+        }, 30);
+        return;
+      }
+      const isNum = part && part.num !== undefined;
+      const sink = isNum ? document.createElement('span') : document.createTextNode('');
+      if (isNum) sink.className = 'scp-num';
+      p.appendChild(sink);
+      const text = isNum ? part.num : part;
+      if (instant) { sink.textContent = text; nextPart(); return; }
+      let i = 0;
+      const iv = dI(() => {
+        if (!p.isConnected) { clearInterval(iv); return; }
+        sink.textContent += text[i];
+        if (++tick % 4 === 0) playTone(1480 + Math.random() * 340, 'square', 0.014, 0, 0.012);
+        if (++i >= text.length) { clearInterval(iv); nextPart(); }
+      }, 13);
+    };
+    nextPart();
+  }
+
+  function scpTypeLines(body, lines, instant, done) {
+    let li = 0;
+    const nextLine = () => {
+      if (!body.isConnected || !dreamWorld) return;
+      if (li >= lines.length) { if (done) done(); return; }
+      const ln = lines[li++];
+      if (ln.wait) { if (instant) nextLine(); else dT(nextLine, ln.wait); return; }
+      if (ln.act) { try { ln.act(instant); } catch (e) { /* the stamp slipped */ } nextLine(); return; }
+      const p = document.createElement('p');
+      if (ln.cls) p.className = ln.cls;
+      body.appendChild(p);
+      scpTypeParts(p, ln.t, instant, () => {
+        body.scrollTop = body.scrollHeight;
+        if (instant) nextLine(); else dT(nextLine, 190);
+      });
+    };
+    nextLine();
+  }
+
+  // THUNK. official ink hits official paper.
+  function scpStamp(letter, txt, cls, quiet) {
+    const st = document.createElement('div');
+    st.className = 'scp-stamp ' + cls;
+    st.textContent = txt;
+    letter.appendChild(st);
+    if (!quiet) {
+      if (!REDUCED_MOTION) {
+        letter.classList.add('scp-letter-thud');
+        setTimeout(() => letter.classList.remove('scp-letter-thud'), 380);
+      }
+      playTone(78, 'sawtooth', 0.16, 0, 0.09);
+      playTone(52, 'sine', 0.22, 0.05, 0.07);
+    }
+    return st;
+  }
+
+  function scpLetterAway(wrap, letter) {
+    if (REDUCED_MOTION) { wrap.remove(); return; }
+    letter.classList.add('scp-letter-away');
+    setTimeout(() => { try { wrap.remove(); } catch (e) { /* already delivered */ } }, 640);
+  }
+
+  // after first contact, the dispatch lives in the badge rail for re-reading
+  function scpMailBadge(ent, no) {
+    if (!dreamWorld || dreamWorld.flags.mailBadge) return;
+    dreamWorld.flags.mailBadge = true;
+    const b = dreamBadge('', 'scp-mail-badge');
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = '📨 ' + trT('dispatch № ' + no, 'dépêche nº ' + no);
+    btn.addEventListener('click', () => {
+      if (document.querySelector('.scp-mail-wrap')) return;
+      playDreamPrinter();
+      scpMailShow(ent, no, null, 'reopen');
+    });
+    b.appendChild(btn);
+  }
+
+  function scpDispatch(ent, onDone) {
+    if (!dreamWorld || dreamWorld.flags.dispatchUp) return;
+    dreamWorld.flags.dispatchUp = true;
+    const no = 4000 + Math.floor(Math.random() * 5999);
+    let fired = false;
+    const finish = () => {
+      if (fired) return;
+      fired = true;
+      try { if (onDone) onDone(); } catch (e) { /* the briefing continues */ }
+    };
+    if (REDUCED_MOTION) { scpMailShow(ent, no, finish, 'instant'); return; }
+    // ---- the envelope air-drops in ----
+    const wrap = document.createElement('div');
+    wrap.className = 'scp-mail-wrap';
+    document.body.appendChild(wrap);
+    dN(wrap);
+    const env = document.createElement('button');
+    env.type = 'button';
+    env.className = 'scp-envelope';
+    env.setAttribute('aria-label', trT('urgent dispatch from the SCP Foundation — open it', 'dépêche urgente de la Fondation SCP — ouvrez-la'));
+    env.innerHTML = '<span class="scp-env-flap"></span>'
+      + '<span class="scp-env-seal">' + SCP_EMBLEM_SVG + '</span>'
+      + '<span class="scp-env-addr">' + trT('TO: this desktop<br>FROM: SITE-19', 'À : ce bureau<br>DE : SITE-19') + '</span>'
+      + '<span class="scp-env-band">⚠ ' + trT('URGENT — OPEN BEFORE THE DREAM ENDS', 'URGENT — OUVRIR AVANT LA FIN DU RÊVE') + ' ⚠</span>'
+      + '<small class="scp-env-hint">' + trT('click to tear open ♡', 'clique pour décacheter ♡') + '</small>';
+    wrap.appendChild(env);
+    dT(() => { playTone(85, 'sawtooth', 0.12, 0, 0.06); playTone(58, 'sine', 0.18, 0.05, 0.05); }, 620); // the landing whump
+    let opened = false;
+    const open = () => {
+      if (opened || !wrap.isConnected || !dreamWorld) return;
+      opened = true;
+      playDreamPrinter(); // rrrrip
+      env.classList.add('scp-env-opening');
+      dT(() => { env.remove(); scpMailShow(ent, no, finish, 'type', wrap); }, 520);
+    };
+    env.addEventListener('click', open);
+    dT(open, 3600); // nobody gets stuck at the mailbox
+  }
+
+  // mode: 'type' (first contact) · 'instant' (reduced motion) · 'reopen' (badge)
+  function scpMailShow(ent, no, finish, mode, wrapIn) {
+    if (!dreamWorld) return;
+    const wrap = wrapIn || (() => {
+      const w2 = document.createElement('div');
+      w2.className = 'scp-mail-wrap';
+      document.body.appendChild(w2);
+      dN(w2);
+      return w2;
+    })();
+    const instant = mode !== 'type';
+    const letter = document.createElement('div');
+    letter.className = 'scp-letter';
+    letter.setAttribute('role', 'dialog');
+    letter.setAttribute('aria-label', trT('SCP Foundation urgent dispatch', 'dépêche urgente de la Fondation SCP'));
+    const head = document.createElement('div');
+    head.className = 'scp-letter-head';
+    head.innerHTML = SCP_EMBLEM_SVG + '<span class="scp-letter-title"><b>SCP FOUNDATION</b><small>'
+      + trT('SECURE. CONTAIN. PROTECT.', 'SÉCURISER. CONFINER. PROTÉGER.') + '</small></span>';
+    const x = document.createElement('button');
+    x.type = 'button';
+    x.className = 'scp-letter-x';
+    x.textContent = '✕';
+    x.addEventListener('click', () => {
+      playCloseSound();
+      if (mode !== 'reopen') {
+        showToast(trT('📨 filed unread. bold. the foundation respects it.', '📨 classé sans lecture. audacieux. la fondation respecte.'));
+        scpMailBadge(ent, no);
+      }
+      scpLetterAway(wrap, letter);
+      if (finish) finish();
+    });
+    head.appendChild(x);
+    letter.appendChild(head);
+    const body = document.createElement('div');
+    body.className = 'scp-letter-body';
+    letter.appendChild(body);
+    const foot = document.createElement('div');
+    foot.className = 'scp-letter-foot';
+    letter.appendChild(foot);
+    wrap.appendChild(letter);
+    // ---- the memo itself (fill-in-the-blanks, per tonight's fugitive) ----
+    const L = [
+      { cls: 'scp-l-meta', t: [trT('MEMO № ' + no + ' · SITE-19 · filed 3:00 AM (dream time)', 'MÉMO nº ' + no + ' · SITE-19 · classé 3 h 00 (heure du rêve)')] },
+      { t: [trT('to the current resident of this desktop:', 'au résident actuel de ce bureau :')] },
+      { t: [
+        trT('we are the SCP Foundation. we find the world\'s anomalies, secure them, contain them, and protect ', 'nous sommes la Fondation SCP. nous trouvons les anomalies du monde, nous les sécurisons, les confinons, et protégeons '),
+        { r: trT('you. mostly you.', 'vous. surtout vous.'), n: 7 },
+        trT(' from what it is not ready to know. our motto: SECURE. CONTAIN. PROTECT.', ' de ce qu\'il n\'est pas prêt à savoir. notre devise : SÉCURISER. CONFINER. PROTÉGER.')
+      ] },
+      { cls: 'scp-l-dim', t: [trT('(tonight\'s shift runs the softer protocol: SECURE. CONTAIN. PET.)', '(l\'équipe de nuit applique le protocole doux : SÉCURISER. CONFINER. CARESSER.)')] },
+      { wait: 340 },
+      { cls: 'scp-l-breach', t: [
+        trT('⚠ BREACH: our instance ', '⚠ BRÈCHE : notre instance '),
+        { num: 'SCP-' + ent.id },
+        trT(' — "' + ent.nick[0] + '" — has escaped into this dream.', ' — « ' + ent.nick[1] + ' » — s\'est évadée dans ce rêve.')
+      ] },
+      { act: (q) => scpStamp(letter, trT('ESCAPED', 'ÉVADÉ'), 'scp-stamp-red', q) },
+      { wait: 460 },
+      { cls: 'scp-l-see', t: [trT('IF YOU SEE: ', 'SI VOUS VOYEZ : ') + trT(...ent.notice.see)] },
+      { cls: 'scp-l-see', t: ['→ ' + trT(...ent.notice.plea)] },
+      { cls: 'scp-l-sign', t: [
+        trT('— dr. ', '— dr '),
+        { r: trT('(it\'s the intern)', '(c\'est le stagiaire)'), n: 6 },
+        trT(', dept. of pixel anomalies', ', dépt. des anomalies pixel')
+      ] }
+    ];
+    scpTypeLines(body, L, instant, () => {
+      // SCP-055 can't hold on to its own number. neither can the memo.
+      if (ent.id === '055') {
+        const numEl = body.querySelector('.scp-num');
+        if (numEl) dI(() => {
+          if (!numEl.isConnected) return;
+          const r = Math.random();
+          numEl.textContent = r < 0.4 ? 'SCP-0??' : (r < 0.7 ? 'SCP-███' : 'SCP-055');
+        }, 2600);
+      }
+      // SCP-2521 eats the memo about SCP-2521, one word at a time
+      if (ent.id === '2521') {
+        let eaten = 0;
+        dI(() => {
+          if (!body.isConnected || eaten >= 9 || Math.random() < 0.35) return;
+          const ps = body.querySelectorAll('p');
+          const p2 = ps[Math.floor(Math.random() * ps.length)];
+          const walker = document.createTreeWalker(p2, NodeFilter.SHOW_TEXT);
+          const nodes = [];
+          while (walker.nextNode()) { if (walker.currentNode.textContent.trim().length > 3) nodes.push(walker.currentNode); }
+          if (!nodes.length) return;
+          const nd = nodes[Math.floor(Math.random() * nodes.length)];
+          const words = nd.textContent.split(' ');
+          const juicy = words.map((w3, i3) => [w3, i3]).filter((wi) => wi[0].replace(/[^A-Za-zÀ-ÿ]/g, '').length > 2);
+          if (!juicy.length) return;
+          words[juicy[Math.floor(Math.random() * juicy.length)][1]] = '●';
+          nd.textContent = words.join(' ');
+          eaten++;
+          playTone(250 - eaten * 14, 'sine', 0.05, 0, 0.035); // *nibble*
+          if (eaten === 3) dreamSay(["zzz… is the letter… getting shorter…", "zzz… la lettre… rétrécit, non…"], 3600);
+        }, 5200);
+      }
+      if (mode === 'reopen') scpStamp(letter, trT('RECEIVED ♡', 'REÇU ♡'), 'scp-stamp-green', true);
+      const ack = document.createElement('button');
+      ack.type = 'button';
+      ack.className = 'scp-ack-btn';
+      ack.textContent = mode === 'reopen' ? trT('FILE IT BACK ♡', 'RECLASSER ♡') : trT('ACKNOWLEDGE ♡', 'ACCUSER RÉCEPTION ♡');
+      ack.addEventListener('click', () => {
+        if (mode === 'reopen') { playCloseSound(); scpLetterAway(wrap, letter); return; }
+        ack.disabled = true;
+        scpStamp(letter, trT('RECEIVED ♡', 'REÇU ♡'), 'scp-stamp-green');
+        playSparkleSound();
+        gainFollowers(1);
+        try {
+          const r2 = letter.getBoundingClientRect();
+          swSparkleAt(r2.left + r2.width / 2, r2.top + 50, 6);
+        } catch (e) { /* the confetti is implied */ }
+        showToast(trT('📨 dispatch № ' + no + ' acknowledged. the foundation thanks you. (the intern especially.)', '📨 dépêche nº ' + no + ' reçue. la fondation vous remercie. (le stagiaire surtout.)'));
+        scpMailBadge(ent, no);
+        dT(() => { scpLetterAway(wrap, letter); if (finish) finish(); }, 950);
+      });
+      foot.appendChild(ack);
+    });
+  }
+
   const SCP_ENTITIES = [
     {
       id: '999', nick: ['the tickle monster', 'le monstre à chatouilles'], acc: '🧡', cls: 'scp-form-999',
       brief: ['SCP-999 possessed the slime. side effects: joy.', 'SCP-999 possède le slime. effets secondaires : la joie.'],
+      notice: { see: ['everything you click starts GIGGLING. an orange glow. unsolicited joy.', 'tout ce que vous cliquez se met à GLOUSSER. une lueur orange. de la joie non sollicitée.'], plea: ['report immediately, and accept all hugs. resistance is adorable but futile.', 'signalez immédiatement, et acceptez tous les câlins. résister est adorable mais futile.'] },
       ama: (t) => t + trT(' ♡ *tickles the follow-up question out of you*', ' ♡ *te chatouille la question suivante*'),
       openLines: { 'win-live': ['CCTV 19-B: subject is HUGGING the camera. footage 100% orange.', 'CCTV 19-B : le sujet fait un CÂLIN à la caméra. images 100 % orange.'] },
       build() { // everything you click giggles (throttled, of course)
@@ -7721,6 +8004,7 @@ document.addEventListener('DOMContentLoaded', () => {
     {
       id: '173', nick: ['the sculpture', 'la sculpture'], acc: '', cls: 'scp-form-173',
       brief: ['SCP-173 is on the desktop. it moves when you blink. DON\'T.', 'SCP-173 est sur le bureau. il bouge quand tu clignes. NE CLIGNE PAS.'],
+      notice: { see: ['a statue that is CLOSER than it was. it is always closer than it was.', 'une statue PLUS PROCHE qu\'avant. elle est toujours plus proche qu\'avant.'], plea: ['report immediately, and DO NOT BLINK. (switching tabs counts as blinking. we know. we\'re sorry.)', 'signalez immédiatement, et NE CLIGNEZ PAS. (changer d\'onglet compte comme cligner. on sait. désolés.)'] },
       ama: (t) => t + trT(' (…did the statue just get closer?)', ' (…la statue s\'est rapprochée, non ?)'),
       openLines: { 'win-live': ['CCTV 19-B: the statue is IN FRAME. it was not in frame before.', 'CCTV 19-B : la statue est DANS LE CHAMP. elle n\'y était pas avant.'] },
       build() {
@@ -7762,6 +8046,7 @@ document.addEventListener('DOMContentLoaded', () => {
     {
       id: '914', nick: ['the clockworks', 'la machine à raffiner'], acc: '⚙️', cls: 'scp-form-914',
       brief: ['SCP-914 hums in the corner. insert a word. choose a setting.', 'SCP-914 ronronne dans le coin. insère un mot. choisis un réglage.'],
+      notice: { see: ['a large machine humming ROUGH / 1:1 / VERY FINE, refining your vocabulary without consent.', 'une grande machine qui fredonne GROSSIER / 1:1 / TRÈS FIN, raffinant votre vocabulaire sans permission.'], plea: ['report immediately, and do NOT insert yourself. words only. bugs come out as features.', 'signalez immédiatement, et ne vous insérez PAS dedans. mots uniquement. les bugs ressortent en features.'] },
       ama: (t) => t + trT(' [output refined at setting 1:1]', ' [sortie raffinée au réglage 1:1]'),
       openLines: { 'win-live': ['CCTV 19-B: the machine refined the camera. it is now a nicer camera.', 'CCTV 19-B : la machine a raffiné la caméra. c\'est une meilleure caméra désormais.'] },
       build() {
@@ -7808,6 +8093,7 @@ document.addEventListener('DOMContentLoaded', () => {
     {
       id: '055', nick: ['the anti-meme', 'l\'anti-mème'], acc: '❓', cls: 'scp-form-055',
       brief: ['tonight\'s entity is SCP-0— wait. what were we talking about?', 'l\'entité de ce soir est SCP-0— attends. de quoi on parlait ?'],
+      notice: { see: ['…we do not remember what you should notice. there was something. it\'s round? no. what were we saying.', '…nous ne savons plus ce que vous devriez remarquer. il y avait un truc. c\'est rond ? non. on disait quoi.'], plea: ['report immediately — IF you can remember what you were reporting. write it down. the note will not survive either.', 'signalez immédiatement — SI vous vous rappelez quoi. notez-le. la note n\'y survivra pas non plus.'] },
       ama: (t) => {
         const cut = Math.max(24, Math.floor(t.length * 0.45));
         return t.slice(0, cut) + trT('— hold on. what was the question? what is a question? (SCP-055 was here. probably. what is 055?)', '— attends. c\'était quoi la question ? c\'est quoi une question ? (SCP-055 est passé. sûrement. c\'est quoi 055 ?)');
@@ -7822,6 +8108,7 @@ document.addEventListener('DOMContentLoaded', () => {
     {
       id: '426', nick: ['I am a toaster', 'je suis un grille-pain'], acc: '🍞', cls: 'scp-form-426',
       brief: ['I am SCP-426. I am a toaster. I am also this website now.', 'je suis SCP-426. je suis un grille-pain. je suis aussi ce site maintenant.'],
+      notice: { see: ['I am easy to notice. I am a toaster. everything on this site starts talking like me.', 'je suis facile à remarquer. je suis un grille-pain. tout ce site se met à parler comme moi.'], plea: ['report me immediately. I would also like to be reported with butter.', 'signalez-moi immédiatement. j\'aimerais aussi être signalé avec du beurre.'] },
       ama: (t) => trT('as a toaster, ', 'en tant que grille-pain, ') + t.charAt(0).toLowerCase() + t.slice(1),
       openLines: { 'win-live': ['I am a live stream. I am also a toaster. I contain multitudes (of toast).', 'je suis un direct. je suis aussi un grille-pain. je contiens des multitudes (de toasts).'] },
       build() { // every window speaks in the first person now
@@ -7839,6 +8126,7 @@ document.addEventListener('DOMContentLoaded', () => {
     {
       id: '3008', nick: ['the infinite IKEA', 'l\'IKEA infini'], acc: '🏷️', cls: 'scp-form-3008',
       brief: ['the site is now an infinite furniture store. the exit is a lie.', 'le site est maintenant un magasin de meubles infini. la sortie est un mensonge.'],
+      notice: { see: ['this website gaining AISLES, price tags, and a STAFF member insisting the store is closed.', 'ce site qui gagne des RAYONS, des étiquettes de prix, et un MEMBRE DU PERSONNEL répétant que le magasin est fermé.'], plea: ['report immediately, and do not look for the exit. the exit is a display model.', 'signalez immédiatement, et ne cherchez pas la sortie. la sortie est un modèle d\'exposition.'] },
       ama: (t) => t + trT(' (some assembly required. 3 screws left over. this is normal.)', ' (montage requis. il reste 3 vis. c\'est normal.)'),
       openLines: { 'win-live': ['aisle 7,341: a live slime. not for sale. STAFF approaching.', 'allée 7 341 : un slime en direct. pas à vendre. le PERSONNEL approche.'] },
       build() {
@@ -7861,6 +8149,7 @@ document.addEventListener('DOMContentLoaded', () => {
     {
       id: '2521', nick: ['●●|●●●●●|●●|●', '●●|●●●●●|●●|●'], acc: '●', cls: 'scp-form-2521',
       brief: ['do NOT describe it in words. emoji only. 🤫 (it takes the words.)', 'ne PAS le décrire avec des mots. emoji uniquement. 🤫 (il prend les mots.)'],
+      notice: { see: ['●● ●●● ● (we cannot describe it in words. it takes them.)', '●● ●●● ● (impossible à décrire avec des mots. il les prend.)'], plea: ['report using EMOJI ONLY: 📢🍮●🤫 — do not write its name. draw it. badly, preferably.', 'signalez en EMOJI UNIQUEMENT : 📢🍮●🤫 — n\'écrivez pas son nom. dessinez-le. mal, de préférence.'] },
       ama: (t) => {
         const MAP = [[/love|heart|coeur|amour/gi, '♥'], [/slime/gi, '🍮'], [/code|coding/gi, '⌨️'], [/bug/gi, '🐛'], [/yongshan/gi, '👩‍💻'], [/coffee|café/gi, '☕'], [/work|travail|job/gi, '💼'], [/game|jeu/gi, '🎮'], [/cloud|aws/gi, '☁️'], [/pr\b/gi, '🔀'], [/email|mail/gi, '📧'], [/star|étoile/gi, '⭐']];
         let out = t;

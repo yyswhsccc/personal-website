@@ -10142,6 +10142,236 @@ html.scp-form-2521 #slime-pet img { filter: brightness(0.15) contrast(1.4) drop-
   color: #3dff7c;
   border: 2px solid #3c4048;
 }
+/* ---- v82: the URGENT DISPATCH (the foundation writes letters now) ---- */
+.scp-mail-wrap {
+  position: fixed;
+  inset: 0;
+  z-index: 2690;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+.scp-envelope {
+  pointer-events: auto;
+  position: relative;
+  width: min(340px, calc(100vw - 48px));
+  height: 190px;
+  background: var(--cream);
+  color: var(--text);
+  border: 3px solid var(--ink);
+  box-shadow: 6px 6px 0 var(--shadow);
+  cursor: pointer;
+  font-family: var(--font-pixel);
+  animation: scp-env-drop 0.9s cubic-bezier(0.22, 1.4, 0.36, 1);
+}
+@keyframes scp-env-drop {
+  0% { transform: translateY(-120vh) rotate(-14deg); }
+  70% { transform: translateY(14px) rotate(3deg); }
+  100% { transform: none; }
+}
+.scp-env-flap {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 88px;
+  background: var(--panel);
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+  filter: drop-shadow(0 2px 0 var(--ink));
+  transform-origin: top center;
+  transition: transform 0.4s ease-in;
+}
+.scp-env-seal {
+  position: absolute;
+  top: 62px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 46px;
+  height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #c62828;
+  color: #fff;
+  border: 3px solid var(--ink);
+  border-radius: 50%;
+  box-shadow: 2px 2px 0 var(--shadow);
+  z-index: 2;
+}
+.scp-env-seal .scp-emblem { width: 26px; height: 26px; animation: none; }
+.scp-env-addr {
+  position: absolute;
+  left: 14px;
+  bottom: 44px;
+  text-align: left;
+  font-size: 0.92rem;
+  line-height: 1.35;
+  letter-spacing: 0.5px;
+}
+.scp-env-band {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #c62828;
+  color: #fff;
+  font-size: 0.78rem;
+  letter-spacing: 1px;
+  padding: 4px 6px;
+  border-top: 2px solid var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  animation: scp-band-blink 1.2s steps(2) infinite;
+}
+@keyframes scp-band-blink { 50% { filter: brightness(1.3); } }
+.scp-env-hint {
+  position: absolute;
+  left: 50%;
+  bottom: -34px;
+  transform: translateX(-50%);
+  font-size: 0.8rem;
+  color: #fff;
+  text-shadow: 1px 1px 0 var(--ink);
+  white-space: nowrap;
+  animation: dream-critter-bob 1.2s ease-in-out infinite alternate;
+}
+.scp-env-opening { animation: scp-env-out 0.5s ease-in forwards; }
+.scp-env-opening .scp-env-flap { transform: rotateX(-160deg); }
+@keyframes scp-env-out {
+  to { transform: translateY(26px) scale(0.92); opacity: 0; }
+}
+.scp-letter {
+  pointer-events: auto;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: min(430px, calc(100vw - 36px));
+  max-height: min(560px, calc(100vh - 90px));
+  background: var(--cream);
+  color: var(--text);
+  border: 3px solid var(--ink);
+  box-shadow: 6px 6px 0 var(--shadow);
+  animation: scp-letter-rise 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes scp-letter-rise {
+  from { transform: translateY(70px) scale(0.72); opacity: 0; }
+}
+.scp-letter-thud { animation: scp-thud 0.34s ease-out; }
+@keyframes scp-thud {
+  20% { transform: translate(2px, 4px) rotate(0.4deg); }
+  55% { transform: translate(-2px, 1px); }
+}
+.scp-letter-away { animation: scp-letter-fly 0.6s ease-in forwards; }
+@keyframes scp-letter-fly {
+  to { transform: translate(-38vw, 40vh) scale(0.05) rotate(-10deg); opacity: 0; }
+}
+.scp-letter-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-bottom: 3px double var(--ink);
+  font-family: var(--font-pixel);
+}
+.scp-letter-head .scp-emblem { width: 30px; height: 30px; animation: t-spin 14s linear infinite; }
+.scp-letter-title { display: flex; flex-direction: column; line-height: 1.15; }
+.scp-letter-title b { font-size: 1.06rem; letter-spacing: 1.5px; }
+.scp-letter-title small { font-size: 0.72rem; opacity: 0.75; letter-spacing: 1px; }
+.scp-letter-x {
+  margin-left: auto;
+  background: var(--panel);
+  color: var(--text);
+  border: 2px solid var(--ink);
+  font-family: var(--font-pixel);
+  font-size: 0.72rem;
+  line-height: 1;
+  padding: 3px 7px;
+  box-shadow: 1px 1px 0 var(--shadow);
+  cursor: pointer;
+}
+.scp-letter-x:active { transform: translate(1px, 1px); box-shadow: none; }
+.scp-letter-body {
+  padding: 12px 14px;
+  overflow-y: auto;
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+.scp-letter-body p + p { margin-top: 8px; }
+.scp-l-meta { font-family: var(--font-pixel); font-size: 0.78rem; opacity: 0.7; letter-spacing: 0.5px; }
+.scp-l-dim { opacity: 0.7; font-size: 0.84rem; }
+.scp-l-breach { font-weight: 700; }
+.scp-l-breach .scp-num { color: #c62828; font-family: var(--font-pixel); font-size: 1.02rem; letter-spacing: 0.5px; }
+.scp-l-see {
+  background: rgba(198, 40, 40, 0.08);
+  border-left: 3px solid #c62828;
+  padding: 4px 9px;
+}
+.scp-l-sign { font-style: italic; opacity: 0.85; }
+.scp-redact { cursor: help; }
+.scp-redact-bar { color: var(--ink); letter-spacing: -1px; }
+.scp-redact-txt {
+  display: none;
+  background: #ffe27a;
+  color: #14213d;
+  padding: 0 4px;
+  font-weight: 700;
+  font-style: normal;
+}
+.scp-redact:hover .scp-redact-bar, .scp-redact-on .scp-redact-bar { display: none; }
+.scp-redact:hover .scp-redact-txt, .scp-redact-on .scp-redact-txt { display: inline; }
+.scp-stamp {
+  --stamp-rot: -11deg;
+  position: absolute;
+  top: 16px;
+  right: 14px;
+  padding: 5px 12px;
+  font-family: var(--font-pixel);
+  font-size: 1.35rem;
+  letter-spacing: 2px;
+  color: #c62828;
+  border: 4px double #c62828;
+  border-radius: 6px;
+  transform: rotate(var(--stamp-rot));
+  opacity: 0.92;
+  pointer-events: none;
+  z-index: 3;
+  animation: scp-stamp-in 0.3s cubic-bezier(0.2, 2.2, 0.5, 1);
+}
+.scp-stamp-green {
+  --stamp-rot: 7deg;
+  color: #1d8a44;
+  border-color: #1d8a44;
+  top: auto;
+  bottom: 56px;
+  right: 20px;
+}
+@keyframes scp-stamp-in {
+  from { transform: scale(2.6) rotate(var(--stamp-rot)); opacity: 0; }
+  to { transform: scale(1) rotate(var(--stamp-rot)); opacity: 0.92; }
+}
+.scp-letter-foot {
+  display: flex;
+  justify-content: center;
+  padding: 10px 12px 14px;
+}
+.scp-ack-btn {
+  font-family: var(--font-pixel);
+  font-size: 1rem;
+  background: var(--cream);
+  color: var(--text);
+  border: 2px solid var(--ink);
+  box-shadow: 3px 3px 0 var(--shadow);
+  padding: 6px 18px;
+  cursor: pointer;
+}
+.scp-ack-btn:active { transform: translate(1px, 1px); box-shadow: 1px 1px 0 var(--shadow); }
+.scp-ack-btn:disabled { opacity: 0.6; }
+@media (prefers-reduced-motion: reduce) {
+  .scp-envelope, .scp-letter, .scp-stamp, .scp-env-band, .scp-env-hint { animation: none; }
+}
+
 /* yongle provenance stamps */
 .dream-search-flavor {
   margin-top: 12px;
