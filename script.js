@@ -3573,6 +3573,8 @@ document.addEventListener('DOMContentLoaded', () => {
     { id: 'dreamwake', icon: '⏰', n: ['Dream Bouncer', 'Videur de Rêves'], d: ['knocked an entire dream world off the website. it popped like a soap bubble.', 'a fait tomber un monde onirique entier du site. il a éclaté comme une bulle de savon.'], t: ['dreams are poppable. knock.', 'les rêves sont perçables. toque.'] },
     { id: 'gremlin', icon: '😈', n: ['Gremlin Hour Witness', 'Témoin de l\'Heure du Gremlin'], d: ['watched the 7 unsupervised minutes after curfew. saw everything. told no one.', 'a assisté aux 7 minutes sans surveillance après le couvre-feu. a tout vu. n\'a rien dit.'], t: ['when the curfew lifts, a mask goes on.', 'quand le couvre-feu tombe, un masque se met.'] },
     { id: 'dreamhoard', icon: '🎁', n: ['Keeper of Seven Keepsakes', 'Gardien·ne des Sept Souvenirs'], d: ['pocketed a souvenir from every dream world. the shelf is FULL.', 'a empoché un souvenir de chaque monde onirique. l\'étagère est PLEINE.'], t: ['every dream drops one shiny thing.', 'chaque rêve laisse tomber une chose qui brille.'] },
+    { id: 'dreamshell', icon: '🐚', n: ['Dream Dialect Speaker', 'Locuteur·rice de Dialecte Onirique'], d: ['spoke a secret word to a dreaming terminal. it understood.', 'a dit un mot secret à un terminal endormi. il a compris.'], t: ['when the site dreams, the shell dreams too. try talking to it.', 'quand le site rêve, le shell rêve aussi. essaie de lui parler.'] },
+    { id: 'dreamroot', icon: '👑', n: ['Root of the Dream', 'Root du Rêve'], d: ['spoke all 21 words of a single dream world. fluent. feared. adored.', 'a prononcé les 21 mots d\'un même monde onirique. courant. craint. adoré.'], t: ['each dream world understands exactly 21 words.', 'chaque monde onirique comprend exactement 21 mots.'] },
     { id: 'bosskill', icon: '⚔️', n: ['Kaiju Exterminator', 'Exterminateur·rice de Kaijus'], d: ['deleted a 404 kaiju. the page was never found again.', 'a supprimé un kaiju 404. la page n\'a plus jamais été retrouvée.'], t: ['something enormous eventually blocks the road.', 'quelque chose d\'énorme finit par bloquer la route.'] },
     { id: 'speedran', icon: '💨', n: ['Speedrun to Zero', 'Speedrun Vers Zéro'], d: ['perished within 3 seconds of the start line. the bugs sent a thank-you card.', 'a péri moins de 3 secondes après le départ. les bugs ont envoyé une carte de remerciement.'], t: ['fail fast. no — FASTER.', 'échoue vite. non — PLUS VITE.'] },
     { id: 'top10', icon: '🏆', n: ['Three Letters, No Shame', 'Trois Lettres, Zéro Honte'], d: ['signed the arcade top-10. the initials definitely spell something.', 'a signé le top 10 de l\'arcade. les initiales veulent SÛREMENT dire quelque chose.'], t: ['great runs deserve a signature.', 'les grandes runs méritent une signature.'] },
@@ -4644,8 +4646,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const input = raw.trim();
     if (!input) return;
     if (termVimActive) { termVimHandle(input); return; } // there is no shell inside vim
-    if (!piped) termLine(`yongshan@os:~$ ${input}`, 't-cmd');
-    if (!piped && input.indexOf('|') > 0) { termRunPipeline(input); return; }
+    if (!piped) termLine((dreamWorld && DS_PS1[dreamWorld.id] ? DS_PS1[dreamWorld.id] + ' ' : 'yongshan@os:~$ ') + input, 't-cmd');
+    if (!piped && input.indexOf('|') > 0) {
+      if (dreamWorld && DREAM_SHELL[dreamWorld.id]) { termLine(trT('the dream does not do plumbing. (pipes are sealed until sunrise.)', 'le rêve ne fait pas de plomberie. (les pipes sont scellés jusqu\'au lever du soleil.)'), 't-err'); return; }
+      termRunPipeline(input);
+      return;
+    }
 
     const lower = input.toLowerCase();
     const parts = input.split(/\s+/);
@@ -4667,6 +4673,10 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
     }
+
+    // ---- v83: dream shell — while the site dreams, the waking shell is
+    // sealed. only the current world's 21-word dialect gets through. ----
+    if (dreamWorld && DREAM_SHELL[dreamWorld.id]) { dreamShellRun(cmd); return; }
 
     // ---- the terminal door: a tiny CTF playground until the name is spoken ----
     if (document.body.classList.contains('terminal-only')) {
@@ -5087,6 +5097,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const n = Object.keys(bag).length;
         termLine(trT(`souvenirs: ${n}/7 — every dream drops one shiny keepsake ♡`, `souvenirs : ${n}/7 — chaque rêve laisse tomber une babiole brillante ♡`), n >= 7 ? 't-ok' : 't-dim');
         termLine(trT('usage: `dream <name>` — or just let it sleepwalk after curfew', 'usage : `dream <nom>` — ou laissez-le somnambuler après le couvre-feu'), 't-dim');
+        termLine(trT('⚠ inside a dream, this shell forgets its own commands — each world speaks 21 secret words instead', '⚠ dans un rêve, ce shell oublie ses propres commandes — chaque monde parle 21 mots secrets à la place'), 't-accent');
         return;
       }
       const w = dreamPick(args[0]);
@@ -5200,9 +5211,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const isArg = parts0.length > 1;
         const token = parts0[parts0.length - 1].toLowerCase();
         if (!token) return;
-        const pool = isArg && (parts0[0] === 'open' || parts0[0] === 'kill')
-          ? Object.keys(TERM_OPEN_MAP)
-          : Object.keys(TERM_COMMANDS).concat(['echo', 'cat', 'man', 'ask', 'search', 'open', 'kill', 'theme', 'lang', 'pet', 'sudo', 'grep', 'wc', 'say', 'slimesay', 'title', 'notify', 'copy', 'zoom', 'vibrate', 'ping', 'curl', 'git', 'npm', 'whois', 'cheats', 'hint', 'help']);
+        const pool = dreamWorld && DREAM_SHELL[dreamWorld.id]
+          ? Object.keys(DREAM_SHELL[dreamWorld.id].cmds) // dreams complete their own dialect
+          : (isArg && (parts0[0] === 'open' || parts0[0] === 'kill')
+            ? Object.keys(TERM_OPEN_MAP)
+            : Object.keys(TERM_COMMANDS).concat(['echo', 'cat', 'man', 'ask', 'search', 'open', 'kill', 'theme', 'lang', 'pet', 'sudo', 'grep', 'wc', 'say', 'slimesay', 'title', 'notify', 'copy', 'zoom', 'vibrate', 'ping', 'curl', 'git', 'npm', 'whois', 'cheats', 'hint', 'help']));
         const hits = [...new Set(pool)].filter((c) => c.startsWith(token)).sort();
         if (hits.length === 1) {
           parts0[parts0.length - 1] = hits[0];
@@ -7675,14 +7688,1036 @@ document.addEventListener('DOMContentLoaded', () => {
     dreamAmaDecor = DREAM_AMA_VOICE[w.id] || null; // scp swaps in its entity's voice below
     const stamp = DREAM_SEARCH_STAMP[w.id];
     dreamSearchFlavor = stamp ? () => trT(...stamp) : null;
+    // v83: the shell falls asleep too — dialect prompt on, waking words sealed
+    const pr = document.querySelector('.term-prompt');
+    if (pr && DS_PS1[w.id]) {
+      if (dreamPromptBackup === null) dreamPromptBackup = pr.textContent;
+      pr.textContent = DS_PS1[w.id];
+    }
   }
   function dreamAdaptOff() {
     dreamRestoreTitles();
     dreamAmaDecor = null;
     dreamSearchFlavor = null;
+    const pr = document.querySelector('.term-prompt');
+    if (pr && dreamPromptBackup !== null) { pr.textContent = dreamPromptBackup; dreamPromptBackup = null; }
     (document.querySelectorAll('.scp-acc, .scp-statue, .scp-pricetag')).forEach((n) => n.remove());
     G_DREAM_IDS.forEach((id) => document.documentElement.classList.remove('scp-form-999', 'scp-form-173', 'scp-form-914', 'scp-form-055', 'scp-form-426', 'scp-form-3008', 'scp-form-2521'));
   }
+
+  /* =====================================================
+     v83 — DREAM SHELL 🐚
+     while the site dreams, the terminal dreams too: the
+     ~139 waking commands are sealed behind the veil, and
+     each world speaks its own 21-word dialect. wrong words
+     get world-flavored static; the list-word teaches you
+     the whole language. 7 × 21 = 147 secrets, dream-only.
+     ===================================================== */
+  var dreamPromptBackup = null;
+  const DS_PS1 = { win95: 'C:\\DREAM>', scp: 'site19@scp:~#', matrix: 'operator@neb:~$', gameboy: 'DMG-01>', geo: '~/public_html>', bsod: '0x0000:~>', amber: 'SYS370%' };
+  function dsL(en, fr, cls) { termLine(trT(en, fr), cls || ''); }
+  function dsBar(label, ms, done, cls) {
+    if (!termOut) { if (done) done(null); return; }
+    const el = document.createElement('span');
+    el.className = 't-line t-dim';
+    termOut.appendChild(el);
+    while (termOut.children.length > 350) termOut.removeChild(termOut.firstChild);
+    const t0 = Date.now();
+    const iv = dI(() => {
+      if (!el.isConnected) { clearInterval(iv); return; }
+      const p = Math.min(1, (Date.now() - t0) / ms);
+      const fill = Math.round(p * 16);
+      el.textContent = label + ' [' + '█'.repeat(fill) + '░'.repeat(16 - fill) + '] ' + Math.round(p * 100) + '%';
+      termOut.scrollTop = termOut.scrollHeight;
+      if (p >= 1) { clearInterval(iv); el.className = 't-line ' + (cls || 't-ok'); if (done) done(el); }
+    }, 90);
+    return el;
+  }
+  function dsShake(ms) { document.body.classList.add('ds-shake'); dT(() => document.body.classList.remove('ds-shake'), ms || 1200); }
+  function dsFilter(cls, ms) { document.documentElement.classList.add(cls); dT(() => document.documentElement.classList.remove(cls), ms); }
+  function dsFlash(cls, ms) { if (REDUCED_MOTION) return; const f = document.createElement('div'); f.className = cls; document.body.appendChild(f); dN(f); dT(() => { try { f.remove(); } catch (e) { /* faded */ } }, ms || 900); }
+  function dsWake(en, fr) { dsL(en, fr, 't-accent'); playDreamPop(); dT(() => dreamEnd('wake'), 1400); }
+  function dsMark(world, name) {
+    const bag = store.get('yos-dream-shell', {});
+    bag[world] = bag[world] || {};
+    const first = !bag[world][name];
+    const before = Object.keys(bag[world]).length;
+    bag[world][name] = 1;
+    store.set('yos-dream-shell', bag);
+    achvUnlock('dreamshell');
+    if (Object.keys(bag[world]).length >= 21 && before < 21) {
+      achvUnlock('dreamroot');
+      cheatFall(['👑', '✦', '♡'], 18);
+      playFanfare();
+      dsL('👑 all 21 words of this dream spoken. the world considers you a local now.', '👑 les 21 mots de ce rêve prononcés. le monde te considère comme quelqu\'un du coin.', 't-ok');
+    }
+    return first;
+  }
+  function dsList(world, headEn, headFr) {
+    const sh = DREAM_SHELL[world];
+    const used = store.get('yos-dream-shell', {})[world] || {};
+    dsL(headEn, headFr, 't-accent');
+    Object.keys(sh.cmds).forEach((k) => {
+      const c = sh.cmds[k];
+      termLine('  ' + (used[k] ? '✓' : '·') + ' ' + k.padEnd(11) + ' — ' + trT(c.d[0], c.d[1]), used[k] ? 't-ok' : 't-dim');
+    });
+    const n = Object.keys(used).filter((k) => sh.cmds[k]).length;
+    dsL('spoken: ' + n + '/21' + (n >= 21 ? ' — fluent ♡' : ''), 'prononcés : ' + n + '/21' + (n >= 21 ? ' — courant ♡' : ''), n >= 21 ? 't-ok' : 't-dim');
+  }
+  function dreamShellDeny(sh, cmd) {
+    const pick = sh.deny[Math.floor(Math.random() * sh.deny.length)];
+    termLine(trT(pick[0], pick[1]).split('{c}').join(cmd), 't-err');
+    const f = dreamWorld.flags;
+    f.dsDenied = (f.dsDenied || 0) + 1;
+    const always = cmd === 'help' || cmd === 'cheats' || cmd === 'hint' || cmd === 'secrets' || cmd === 'ls';
+    if (always || f.dsDenied <= 2 || Math.random() < 0.4) {
+      dsL('(the waking shell sleeps during dreams — `' + sh.list + '` speaks the 21 words this world understands)',
+        '(le shell éveillé dort pendant les rêves — `' + sh.list + '` révèle les 21 mots que ce monde comprend)', 't-dim');
+    }
+  }
+  function dreamShellRun(cmd) {
+    if (!dreamWorld) return false;
+    const sh = DREAM_SHELL[dreamWorld.id];
+    if (!sh) return false;
+    const c = sh.cmds[cmd];
+    if (!c) { dreamShellDeny(sh, cmd); return true; }
+    const first = dsMark(dreamWorld.id, cmd);
+    try { c.fx(first); } catch (e) { dsL('…the dream stuttered. say it again.', '…le rêve a bégayé. redis-le.', 't-err'); }
+    return true;
+  }
+
+  const DREAM_SHELL = {
+    /* ---- WIN95: C:\DREAM> — DOS, but softer ---- */
+    win95: {
+      list: 'dir',
+      deny: [
+        ['Bad command or file name — {c}', 'Commande ou nom de fichier incorrect — {c}'],
+        ['Abort, Retry, Fail? (the dream chose Fail. it always chooses Fail.)', 'Abandonner, Réessayer, Échouer ? (le rêve a choisi Échouer. comme toujours.)'],
+        ['this is C:\\DREAM — DOS does not know `{c}` and DOS is PROUD', 'ici c\'est C:\\DREAM — le DOS ne connaît pas `{c}` et le DOS en est FIER'],
+        ['General Failure reading `{c}` (General Failure is a person. he apologizes.)', 'General Failure en lisant `{c}` (General Failure est une personne. il s\'excuse.)']
+      ],
+      cmds: {
+        dir: { d: ['directory of C:\\DREAM — tonight\'s 21 executables', 'répertoire de C:\\DREAM — les 21 exécutables du soir'], fx() {
+          dsL(' Volume in drive C is DREAMS_95 · Serial Number is 0704-1998', ' Volume du lecteur C : DREAMS_95 · n° de série 0704-1998', 't-dim');
+          dsList('win95', 'C:\\DREAM> dir /w', 'C:\\DREAM> dir /w');
+        } },
+        win: { d: ['start windows (the clouds, the chime, the hope)', 'démarrer windows (les nuages, le carillon, l\'espoir)'], fx() {
+          playStartupChime();
+          cheatFall(['🪟', '☁️', '✦'], 14);
+          dsL('starting Windows 95… it is now safe to have feelings about your computer ♡', 'démarrage de Windows 95… vous pouvez maintenant avoir des sentiments pour votre ordinateur ♡', 't-ok');
+        } },
+        format: { d: ['format C: (your feelings are write-protected)', 'formater C: (tes sentiments sont protégés en écriture)'], fx() {
+          dsL('WARNING: ALL FEELINGS ON DRIVE C: WILL BE LOST. Proceed? (the dream answers for you: Y)', 'ATTENTION : TOUS LES SENTIMENTS DU LECTEUR C: SERONT PERDUS. Continuer ? (le rêve répond pour toi : O)', 't-err');
+          dsBar('formatting C:', 2600, (el) => {
+            if (el) el.textContent = trT('format halted at 62% — FEELINGS.DAT is write-protected ♡', 'formatage stoppé à 62 % — FEELINGS.DAT est protégé en écriture ♡');
+            playSparkleSound();
+            dsL('drive C: stays exactly as messy as you left it. this is called "home".', 'le lecteur C: reste exactement aussi bordélique que tu l\'as laissé. ça s\'appelle « chez soi ».', 't-ok');
+          });
+        } },
+        defrag: { d: ['watch the little blocks find their families', 'regarder les petits blocs retrouver leur famille'], fx() {
+          ['▓▒░█▒▓░█▒░▓█▒░▓', '█▓▓▒▒░░██▒▓░▒▓░', '███▓▓▓▒▒▒░░░▓▒░'].forEach((r, i) => dT(() => termLine('  ' + r, 't-dim'), i * 420));
+          dT(() => {
+            termLine('  █████▓▓▓▓▒▒▒░░', 't-ok');
+            playSparkleSound();
+            dsL('defrag complete. your dreams are contiguous now — they load 3% faster and 100% cozier.', 'défragmentation terminée. tes rêves sont contigus — ils chargent 3 % plus vite et 100 % plus douillet.', 't-ok');
+          }, 1500);
+        } },
+        scandisk: { d: ['check the heart sectors', 'vérifier les secteurs du cœur'], fx() {
+          dsBar('ScanDisk: surface scan of ♥', 2200, () => {
+            gainFollowers(1);
+            dsL('0 bad sectors. 3 good boys. 1 cluster of pure nostalgia (kept).', '0 secteur défectueux. 3 bons garçons. 1 cluster de pure nostalgie (conservé).', 't-ok');
+          });
+        } },
+        clippy: { d: ['summon the assistant (he never left)', 'invoquer l\'assistant (il n\'est jamais parti)'], fx() {
+          dreamCritter({ emoji: '📎', cls: 'dream-slippy', hop: 6, ms: 11000, label: ['it looks like you\'re dreaming!!', 'on dirait que tu rêves !!'], onClick: (c) => {
+            playSparkleSound(); gainFollowers(1);
+            const bb = c.querySelector('.dream-critter-bubble');
+            if (bb) bb.textContent = trT('tip: you can drag a dream by its title bar', 'astuce : on peut déplacer un rêve par sa barre de titre');
+          } });
+          dsL('📎 "it looks like you\'re writing a dream. would you like help?" (there is no No button.)', '📎 « on dirait que tu écris un rêve. besoin d\'aide ? » (il n\'y a pas de bouton Non.)');
+        } },
+        sol: { d: ['solitaire victory (nobody knows the rules)', 'victoire au solitaire (personne ne connaît les règles)'], fx() {
+          try { dwBeatSolitaire(); } catch (e) { /* the deck sticks */ }
+          dsL('you win!! the cards cascade. this is the only pension plan of 1995.', 'gagné !! les cartes cascadent. c\'est le seul plan retraite de 1995.', 't-ok');
+        } },
+        mine: { d: ['minesweeper, one tile, high stakes', 'démineur, une case, gros enjeux'], fx() {
+          dreamDlg({ title: 'MINESWEEPER.EXE', force: true, lines: [trT('one tile. it is either a mine or a flower. history says flower.', 'une case. mine ou fleur. l\'histoire dit fleur.')], buttons: [
+            ['🟦', (d) => {
+              playSparkleSound(); gainFollowers(1);
+              dsL('🌼 it was a flower. it usually is. (the 40 mines were feelings.)', '🌼 c\'était une fleur. comme souvent. (les 40 mines étaient des sentiments.)', 't-ok');
+            }]
+          ] });
+        } },
+        dialup: { d: ['dial the internet (the song of our people)', 'appeler internet (le chant de notre peuple)'], fx() {
+          [400, 800, 1200, 2400, 1800, 2600].forEach((f, i) => playTone(f, i % 2 ? 'square' : 'sawtooth', 0.14, i * 0.16, 0.05));
+          dsBar('dialing 1-800-DREAM', 2400, () => {
+            gainFollowers(1);
+            dsL('CONNECT 56000 — the internet smells like this exact sound.', 'CONNECT 56000 — internet sent exactement comme ce bruit.', 't-ok');
+            dsL('(please nobody pick up the phone. mom. MOM.)', '(que personne ne décroche le téléphone. maman. MAMAN.)', 't-dim');
+          });
+        } },
+        mem: { d: ['how much memory does a dream have', 'combien de mémoire possède un rêve'], fx() {
+          dsL('  655360 bytes conventional memory', '  655360 octets de mémoire conventionnelle', 't-dim');
+          dsL('  ∞ bytes emotional memory (HIMEM.SYS loaded your feelings high)', '  ∞ octets de mémoire émotionnelle (HIMEM.SYS a chargé tes sentiments en haut)', 't-dim');
+          dsL('640K ought to be enough for anybody. it was not. it never is. buy more RAM (hugs).', '640 Ko devraient suffire à tout le monde. non. jamais. achetez plus de RAM (des câlins).', 't-ok');
+        } },
+        regedit: { d: ['edit the registry of the heart', 'éditer le registre du cœur'], fx() {
+          dsL('HKEY_LOCAL_SLIME\\Software\\Hugs', 'HKEY_LOCAL_SLIME\\Software\\Câlins', 't-dim');
+          dsL('  "DailyLimit" = dword:0xFFFFFFFF  (edited. it was already unlimited.)', '  « LimiteQuotidienne » = dword:0xFFFFFFFF  (édité. c\'était déjà illimité.)', 't-ok');
+          burstAtSlime(['♡', '🔧'], 4);
+          dsL('registry saved. reboot not required — the heart hot-reloads.', 'registre sauvé. redémarrage inutile — le cœur recharge à chaud.');
+        } },
+        tray: { d: ['eject the CD tray (the cupholder)', 'éjecter le lecteur CD (le porte-gobelet)'], fx() {
+          playTone(220, 'square', 0.1, 0, 0.05); playTone(160, 'square', 0.16, 0.12, 0.05);
+          dreamCritter({ emoji: '🥤', hop: 3, ms: 8000, label: ['complimentary cupholder', 'porte-gobelet offert'] });
+          dsL('the tray extends. IT support said this would happen if we believed hard enough.', 'le tiroir sort. le support IT avait dit que ça arriverait si on y croyait fort.', 't-ok');
+        } },
+        toasters: { d: ['the screensaver of legend (after dark, they fly)', 'l\'écran de veille légendaire (la nuit, ils volent)'], fx() {
+          cheatFall(['🍞', '🥪', '✨'], 16);
+          for (let i = 0; i < 3; i++) dreamCritter({ emoji: '🍞', hop: 12, ms: 7000 + i * 1200, y: 120 + i * 70, dir: i % 2 ? 'rtl' : 'ltr', label: i === 0 ? ['*flap flap*', '*flap flap*'] : null });
+          dsL('the toasters migrate. scientists remain baffled. butter futures soar.', 'les grille-pain migrent. les scientifiques restent perplexes. le cours du beurre s\'envole.', 't-ok');
+        } },
+        ctrlaltdel: { d: ['open the task manager of the soul', 'ouvrir le gestionnaire des tâches de l\'âme'], fx() {
+          dreamDlg({ title: trT('CLOSE PROGRAM', 'FERMER LE PROGRAMME'), force: true, lines: [
+            trT('doubt.exe — not responding', 'doute.exe — ne répond pas'),
+            trT('imposter_syndrome.dll — not responding', 'syndrome_imposteur.dll — ne répond pas'),
+            trT('cozy.sys — running perfectly', 'cozy.sys — fonctionne parfaitement')
+          ], buttons: [
+            [trT('END TASK ♡', 'FIN DE TÂCHE ♡'), () => {
+              playSparkleSound(); gainFollowers(2);
+              dsL('doubt.exe has stopped responding to YOU now. cozy.sys promoted to foreground.', 'doute.exe ne TE répond plus. cozy.sys promu au premier plan.', 't-ok');
+            }]
+          ] });
+        } },
+        msdog: { d: ['there is a dog in this operating system', 'il y a un chien dans ce système d\'exploitation'], fx() {
+          termLine('   /\\_/\\   __', 't-dim'); termLine('  / o o \\ /  \\', 't-dim'); termLine('  \\_ ^ _/ WOOF', 't-dim'); termLine('   |___|', 't-dim');
+          playTone(300, 'square', 0.09, 0, 0.06); playTone(240, 'square', 0.12, 0.11, 0.06);
+          dsL('MSDOG.EXE loaded. he has found 0 files but he tried SO hard.', 'MSDOG.EXE chargé. il a trouvé 0 fichier mais il a essayé TRÈS fort.', 't-ok');
+        } },
+        y2k: { d: ['fast-forward to midnight, dec 31 1999', 'avance rapide vers minuit, 31 déc 1999'], fx() {
+          dsL('DEC 31 1999 — 23:59:57', 'ˇ31 DÉC 1999 — 23:59:57', 't-dim');
+          dT(() => dsL('23:59:58…', '23:59:58…', 't-dim'), 900);
+          dT(() => dsL('23:59:59……', '23:59:59……', 't-err'), 1800);
+          dT(() => { playGlitchSound(); dsFlash('ds-flash-white', 700); }, 2700);
+          dT(() => dsL('JAN 01 2000 — everything is fine. the microwave forgives us. humanity exhales.', '1er JAN 2000 — tout va bien. le micro-ondes nous pardonne. l\'humanité expire.', 't-ok'), 3100);
+        } },
+        deltree: { d: ['delete a whole tree (we plant one instead)', 'supprimer un arbre entier (on en plante un à la place)'], fx() {
+          dsL('deltree C:\\REGRETS /y', 'deltree C:\\REGRETS /y', 't-dim');
+          cheatFall(['🌳', '🌱', '✦'], 10);
+          dsL('C:\\REGRETS removed. in its place: one (1) tree. DOS says you\'re welcome.', 'C:\\REGRETS supprimé. à la place : un (1) arbre. le DOS dit de rien.', 't-ok');
+        } },
+        bluescreen: { d: ['preview a crash (wrong dream, actually)', 'aperçu d\'un plantage (mauvais rêve, en fait)'], fx() {
+          dsFlash('ds-flash-blue', 700);
+          playGlitchSound();
+          dsL('a fatal exception 0E has— wait. wrong dream. that one\'s down the hall (💙 says hi).', 'une exception fatale 0E s\'est— attends. mauvais rêve. c\'est au fond du couloir (💙 te salue).');
+        } },
+        ie: { d: ['install internet explorer (it installs itself)', 'installer internet explorer (il s\'installe tout seul)'], fx() {
+          dsBar('installing Internet Explorer 4.0', 2800, () => {
+            dsL('IE installed. it is now the default browser. it asked zero (0) times.', 'IE installé. c\'est le navigateur par défaut désormais. il a demandé zéro (0) fois.', 't-err');
+            dsL('(it also became your default personality. e.)', '(il est aussi devenu ta personnalité par défaut. e.)', 't-dim');
+          });
+        } },
+        autoexec: { d: ['run the slime\'s AUTOEXEC.BAT morning routine', 'lancer l\'AUTOEXEC.BAT du slime (routine du matin)'], fx() {
+          dsL('@ECHO OFF — running morning routine…', '@ECHO OFF — routine du matin en cours…', 't-dim');
+          dreamSay(['*stretch.exe* mmmh… loading toes…', '*stretch.exe* mmmh… chargement des orteils…'], 3200);
+          dT(() => dreamSay(['*boba.bat* sip… sip… PATH updated to happiness…', '*boba.bat* slurp… slurp… PATH mis à jour vers le bonheur…'], 3400), 3600);
+          dT(() => { dreamSay(['*deploy.sys* ok!! ready to dream professionally ♡', '*deploy.sys* ok !! prêt à rêver professionnellement ♡'], 3400); burstAtSlime(['✦', '♡'], 4); }, 7400);
+        } },
+        win98: { d: ['upgrade to windows 98 (reboot required = wake up)', 'passer à windows 98 (redémarrage requis = réveil)'], fx() {
+          dsBar('upgrading to Windows 98', 2200, () => {
+            dsWake('upgrade complete. REBOOT REQUIRED. rebooting the entire dream…', 'mise à niveau terminée. REDÉMARRAGE REQUIS. redémarrage du rêve entier…');
+          });
+        } }
+      }
+    },
+    /* ---- SCP: site19@scp:~# — everything is a protocol ---- */
+    scp: {
+      list: 'clearance',
+      deny: [
+        ['`{c}` requires level 5 clearance. you have: level ♡', '`{c}` requiert une habilitation niveau 5. tu as : niveau ♡'],
+        ['command [REDACTED] by order of O5-🍮', 'commande [CAVIARDÉE] sur ordre de O5-🍮'],
+        ['`{c}` logged as anomalous phrasing. a team is on the way (to hug you).', '`{c}` classé comme formulation anormale. une équipe arrive (pour te faire un câlin).'],
+        ['ACCESS DENIED — but, like, politely.', 'ACCÈS REFUSÉ — mais poliment, hein.']
+      ],
+      cmds: {
+        clearance: { d: ['show your badge + tonight\'s 21 authorized actions', 'montrer ton badge + les 21 actions autorisées du soir'], fx() {
+          dsL('BADGE: visitor · CLEARANCE: ♡ · AUTHORIZED ACTIONS FOLLOW —', 'BADGE : visiteur · HABILITATION : ♡ · ACTIONS AUTORISÉES CI-DESSOUS —', 't-dim');
+          dsList('scp', 'SITE-19 CONSOLE — authorized verbs:', 'CONSOLE SITE-19 — verbes autorisés :');
+        } },
+        memo: { d: ['re-request tonight\'s urgent dispatch', 're-demander la dépêche urgente du soir'], fx() {
+          if (document.querySelector('.scp-mail-wrap')) { dsL('the memo is already open. it appreciates the enthusiasm.', 'le mémo est déjà ouvert. il apprécie l\'enthousiasme.', 't-dim'); return; }
+          const ent = dreamWorld.flags.ent;
+          if (!ent) { dsL('the mailroom shrugs. try again after the envelope lands.', 'le service courrier hausse les épaules. réessaie après l\'atterrissage de l\'enveloppe.', 't-err'); return; }
+          playDreamPrinter();
+          scpMailShow(ent, 4000 + Math.floor(Math.random() * 5999), null, 'reopen');
+          dsL('the Foundation re-sends the dispatch. same intern, fresh stamp.', 'la Fondation renvoie la dépêche. même stagiaire, tampon tout frais.');
+        } },
+        contain: { d: ['deploy a containment field on the habitat', 'déployer un champ de confinement sur l\'habitat'], fx() {
+          const hab = document.getElementById('slime-habitat');
+          if (hab) { hab.classList.add('ds-contain'); dT(() => hab.classList.remove('ds-contain'), 3400); }
+          playTone(180, 'square', 0.12, 0, 0.06);
+          dsL('containment field deployed around the habitat…', 'champ de confinement déployé autour de l\'habitat…', 't-dim');
+          dT(() => {
+            burstAtSlime(['🧊', '♡'], 5);
+            dreamSay(['hehe. cozy box. anyway—', 'héhé. jolie boîte. bref—'], 3600);
+            dsL('…the entity phased through and is now behind you. containment status: emotional.', '…l\'entité a traversé et se trouve maintenant derrière toi. statut du confinement : émotionnel.', 't-err');
+          }, 2600);
+        } },
+        breach: { d: ['run a containment breach drill (it\'s a drill!!)', 'lancer un exercice de brèche (c\'est un exercice !!)'], fx() {
+          playDreamAlarm();
+          dsFlash('ds-flash-red', 800);
+          dsShake(900);
+          dsL('⚠ CONTAINMENT BREACH DRILL — please walk calmly to your nearest blanket.', '⚠ EXERCICE DE BRÈCHE — merci de marcher calmement vers la couverture la plus proche.', 't-err');
+          dT(() => dsL('drill complete. the anomaly rated it "fun". the alarms rated it "5 stars, would wail again".', 'exercice terminé. l\'anomalie a noté « fun ». les alarmes ont noté « 5 étoiles, je rehurlerais ».', 't-ok'), 2400);
+        } },
+        redact: { d: ['redact two lines of terminal history', 'caviarder deux lignes de l\'historique du terminal'], fx() {
+          const lines = Array.from(termOut.querySelectorAll('.t-line')).slice(-30, -1).filter((l) => l.textContent.length > 8);
+          for (let i = 0; i < 2 && lines.length; i++) {
+            const l = lines.splice(Math.floor(Math.random() * lines.length), 1)[0];
+            l.textContent = l.textContent.replace(/\S/g, '█');
+          }
+          playDreamPrinter();
+          dsL('two lines of history now officially never happened. you saw nothing (legally).', 'deux lignes d\'historique n\'ont officiellement jamais existé. tu n\'as rien vu (légalement).', 't-ok');
+        } },
+        expunge: { d: ['[DATA EXPUNGED] the whole scrollback', '[DONNÉES SUPPRIMÉES] tout l\'historique'], fx() {
+          termOut.innerHTML = '';
+          playGlitchSound();
+          termLine('[DATA EXPUNGED]', 't-err');
+          dsL('the scrollback has been expunged. it knew too much (mostly typos).', 'l\'historique a été supprimé. il en savait trop (surtout des fautes de frappe).', 't-dim');
+        } },
+        amnestics: { d: ['class-B amnestics for the screen', 'amnésiques de classe B pour l\'écran'], fx() {
+          dsFilter('ds-blur', 1900);
+          dT(() => {
+            termOut.innerHTML = '';
+            dsL('class-B administered. what were we doing? exactly. wonderful weather we\'re having.', 'classe B administrée. on faisait quoi ? exactement. quel beau temps, n\'est-ce pas.', 't-ok');
+          }, 1600);
+        } },
+        dclass: { d: ['enroll as D-class personnel (great benefits, actually)', 's\'enrôler comme personnel de classe D (super avantages, en vrai)'], fx() {
+          const n = 10000 + Math.floor(Math.random() * 89999);
+          gainFollowers(1);
+          dsL('welcome, D-' + n + '. your assignment: pet the anomaly. survival rate: 100%. it\'s a good anomaly.', 'bienvenue, D-' + n + '. ta mission : caresser l\'anomalie. taux de survie : 100 %. c\'est une bonne anomalie.', 't-ok');
+          dsL('(orientation video skipped. it was just 40 minutes of the slime waving.)', '(vidéo d\'accueil sautée. c\'était 40 minutes du slime qui fait coucou.)', 't-dim');
+        } },
+        keter: { d: ['reclassify tonight\'s entity: KETER', 'reclasser l\'entité du soir : KETER'], fx() {
+          playDreamAlarm();
+          const ent = dreamWorld.flags.ent || { id: '???' };
+          dsL('SCP-' + ent.id + ' reclassified KETER — grounds: "too powerful to stop hugging".', 'SCP-' + ent.id + ' reclassé KETER — motif : « trop puissant pour arrêter les câlins ».', 't-err');
+          dreamSay(['KETER?! …I DO feel dangerous today ♡', 'KETER ?! …c\'est vrai que je me sens dangereux aujourd\'hui ♡'], 4200);
+        } },
+        euclid: { d: ['reclassify tonight\'s entity: EUCLID', 'reclasser l\'entité du soir : EUCLID'], fx() {
+          const ent = dreamWorld.flags.ent || { id: '???' };
+          dsL('SCP-' + ent.id + ' reclassified EUCLID — meaning: "wiggly. unpredictable. probably fine."', 'SCP-' + ent.id + ' reclassé EUCLID — traduction : « frétillant. imprévisible. sans doute ok. »', 't-ok');
+          dreamSay(['euclid just means the paperwork shrugged…', 'euclid veut juste dire que la paperasse a haussé les épaules…'], 4000);
+        } },
+        safe: { d: ['reclassify tonight\'s entity: SAFE', 'reclasser l\'entité du soir : SAFE'], fx() {
+          playSparkleSound();
+          const ent = dreamWorld.flags.ent || { id: '???' };
+          burstAtSlime(['♡'], 4);
+          dsL('SCP-' + ent.id + ' reclassified SAFE — the safest. tucked in. lullaby administered.', 'SCP-' + ent.id + ' reclassé SAFE — le plus safe. bordé. berceuse administrée.', 't-ok');
+        } },
+        interview: { d: ['record an interview log with the entity', 'enregistrer un journal d\'entretien avec l\'entité'], fx() {
+          const ent = dreamWorld.flags.ent || { id: '???', nick: ['the entity', 'l\'entité'] };
+          dsL('INTERVIEW LOG ' + ent.id + '-♡ — interviewer: you. subject: ' + trT(ent.nick[0], ent.nick[1]), 'JOURNAL D\'ENTRETIEN ' + ent.id + '-♡ — intervieweur : toi. sujet : ' + trT(ent.nick[0], ent.nick[1]), 't-accent');
+          dT(() => dsL('Q: how did you escape containment?', 'Q : comment t\'es-tu évadé du confinement ?', 't-dim'), 800);
+          dT(() => dsL('A: the door was cozy. I am cozier. checkmate.', 'R : la porte était douillette. je suis plus douillet. échec et mat.', 't-ok'), 2200);
+          dT(() => dsL('Q: any demands?', 'Q : des revendications ?', 't-dim'), 3600);
+          dT(() => { dsL('A: one (1) boop. renewable daily.', 'R : un (1) boop. renouvelable chaque jour.', 't-ok'); dsL('[END LOG — interviewer complied immediately]', '[FIN DU JOURNAL — l\'intervieweur a obtempéré immédiatement]', 't-dim'); }, 5000);
+        } },
+        report: { d: ['file the sighting report the memo asked for', 'déposer le rapport de signalement demandé par le mémo'], fx() {
+          dsBar('filing form 512-B (sighting report)', 2400, () => {
+            playSparkleSound(); gainFollowers(2);
+            try { const r = slimeBody.getBoundingClientRect(); swProp(r.left + r.width / 2 - 66, Math.max(8, r.top - 46), 'REPORT — RECEIVED ✓', true); } catch (e) { /* stamped in spirit */ }
+            dsL('report filed. the Foundation thanks you. the intern frames it.', 'rapport déposé. la Fondation te remercie. le stagiaire l\'encadre.', 't-ok');
+          });
+        } },
+        o5: { d: ['petition the O5 council (they vote)', 'saisir le conseil O5 (ils votent)'], fx() {
+          dsL('MOTION: "the anomaly stays adorable" — council votes:', 'MOTION : « l\'anomalie reste adorable » — vote du conseil :', 't-accent');
+          const votes = ['🔴 O5-1: no (contractually grumpy)', '🟢 O5-2: yes', '🟢 O5-3: yes', '🟢 O5-4: yes (teared up)', '🟢 O5-🍮: YES.'];
+          const votesFr = ['🔴 O5-1 : non (grognon sous contrat)', '🟢 O5-2 : oui', '🟢 O5-3 : oui', '🟢 O5-4 : oui (a versé une larme)', '🟢 O5-🍮 : OUI.'];
+          votes.forEach((v, i) => dT(() => dsL(v, votesFr[i], i ? 't-ok' : 't-err'), 600 + i * 700));
+          dT(() => { playFanfare(); dsL('MOTION PASSES 4–1. it is now illegal (site-wide) to not smile at the habitat.', 'MOTION ADOPTÉE 4–1. il est désormais illégal (sur tout le site) de ne pas sourire à l\'habitat.', 't-ok'); }, 4400);
+        } },
+        siren: { d: ['test the site klaxon (sorry in advance)', 'tester le klaxon du site (désolé d\'avance)'], fx() {
+          playDreamAlarm();
+          dsFlash('ds-flash-red', 700);
+          dsL('KLAXON TEST — functional. the pigeons of Site-19 have opinions.', 'TEST KLAXON — fonctionnel. les pigeons du Site-19 ont des avis.', 't-err');
+        } },
+        paperwork: { d: ['summon form 512-B (in triplicate)', 'invoquer le formulaire 512-B (en trois exemplaires)'], fx() {
+          cheatFall(['📄', '📋', '🖊'], 12);
+          dsL('form 512-B ×3 incoming. sign all three. the pen is also an anomaly (it only writes the truth).', 'formulaire 512-B ×3 en approche. signe les trois. le stylo aussi est une anomalie (il n\'écrit que la vérité).', 't-dim');
+        } },
+        crosstest: { d: ['cross-test tonight\'s entity with SCP-426', 'test croisé entre l\'entité du soir et SCP-426'], fx() {
+          const ent = dreamWorld.flags.ent || { id: '???' };
+          dsL('CROSS-TEST: SCP-' + ent.id + ' × SCP-426 (I am a toaster)…', 'TEST CROISÉ : SCP-' + ent.id + ' × SCP-426 (je suis un grille-pain)…', 't-dim');
+          dT(() => {
+            burstAtSlime(['🍞'], 3);
+            playTone(660, 'square', 0.08, 0, 0.05); playTone(880, 'square', 0.1, 0.09, 0.05);
+            dsL('result: the toaster is happy now. everything is jam. ethics committee: "aww".', 'résultat : le grille-pain est heureux. tout est confiture. comité d\'éthique : « oooh ».', 't-ok');
+          }, 1800);
+        } },
+        coldpost: { d: ['post your SCP draft without feedback (bold)', 'poster ton brouillon SCP sans relecture (audacieux)'], fx() {
+          dsBar('posting draft: SCP-████ "the pretty good anomaly"', 1800, (el) => {
+            if (el) el.textContent = trT('posted. rating after 40 minutes: -14.', 'posté. note après 40 minutes : -14.');
+            dsL('the butterfly squad arrives with hugs and a style guide. next draft: greatness.', 'l\'escouade papillon débarque avec des câlins et un guide de style. prochain brouillon : la gloire.', 't-ok');
+          }, 't-err');
+        } },
+        lockdown: { d: ['seal the site (briefly, dramatically)', 'verrouiller le site (brièvement, dramatiquement)'], fx() {
+          dsShake(1100);
+          playTone(90, 'sawtooth', 0.3, 0, 0.07);
+          dreamCritter({ emoji: '🚨', hop: 4, ms: 8000, label: ['SITE LOCKDOWN (decorative)', 'VERROUILLAGE (décoratif)'] });
+          dsL('SITE SEALED. nothing gets in or out except vibes (grandfathered).', 'SITE SCELLÉ. rien n\'entre ni ne sort, sauf les bonnes ondes (droits acquis).', 't-err');
+          dT(() => dsL('lockdown lifted. the doors missed you.', 'verrouillage levé. les portes t\'ont manqué… enfin l\'inverse.', 't-ok'), 3200);
+        } },
+        hug: { d: ['authorized hugging of the anomaly', 'câlin autorisé de l\'anomalie'], fx() {
+          playSparkleSound();
+          gainFollowers(2);
+          burstAtSlime(['♡', '🧡', '✦'], 7);
+          dreamSay(['*receives authorized hug* protocol COMPLIED with ♡', '*reçoit le câlin autorisé* protocole RESPECTÉ ♡'], 4200);
+          dsL('hug delivered per protocol 999-α. side effects: joy (documented).', 'câlin livré selon le protocole 999-α. effets secondaires : la joie (documentée).', 't-ok');
+        } },
+        decommission: { d: ['decommission the dream (council vote = wake up)', 'déclasser le rêve (vote du conseil = réveil)'], fx() {
+          dsL('DECOMMISSION VOTE: 4 in favor, 1 against (the 1 wanted five more minutes).', 'VOTE DE DÉCLASSEMENT : 4 pour, 1 contre (le 1 voulait cinq minutes de plus).', 't-dim');
+          dsWake('motion carried. decommissioning dream site… thank you for your service ♡', 'motion adoptée. déclassement du site onirique… merci pour ton service ♡');
+        } }
+      }
+    },
+    /* ---- MATRIX: operator@neb:~$ — there is no shell ---- */
+    matrix: {
+      list: 'operator',
+      deny: [
+        ['there is no `{c}`', 'il n\'y a pas de `{c}`'],
+        ['the construct did not load `{c}`. budget cuts.', 'le construct n\'a pas chargé `{c}`. restrictions budgétaires.'],
+        ['Agent Smith intercepted `{c}`. he calls it *Mister* {c} now.', 'l\'agent Smith a intercepté `{c}`. il l\'appelle *Monsieur* {c} désormais.'],
+        ['`{c}` is what the Matrix wants you to type.', '`{c}`, c\'est ce que la Matrice veut que tu tapes.']
+      ],
+      cmds: {
+        operator: { d: ['call the operator for tonight\'s loadout', 'appeler l\'opérateur pour l\'équipement du soir'], fx() {
+          dsL('☎ "operator. I see the code. here\'s what we can load tonight:"', '☎ « opérateur. je vois le code. voilà ce qu\'on peut charger ce soir : »', 't-accent');
+          dsList('matrix', 'LOADOUT — 21 programs:', 'ÉQUIPEMENT — 21 programmes :');
+        } },
+        redpill: { d: ['see how deep the rabbit hole goes (wake up)', 'voir la profondeur du terrier (réveil)'], fx() {
+          dsL('you take the red pill. the dream peels back like old wallpaper…', 'tu prends la pilule rouge. le rêve se décolle comme un vieux papier peint…', 't-err');
+          dsWake('welcome to the real world (it has snacks).', 'bienvenue dans le monde réel (il y a des snacks).');
+        } },
+        bluepill: { d: ['believe whatever you want to believe', 'crois ce que tu veux croire'], fx() {
+          cheatFall(['🫐', '🧋'], 8);
+          dsL('you take the blue pill. the story continues. (inspection reveals: it was a boba pearl.)', 'tu prends la pilule bleue. l\'histoire continue. (inspection : c\'était une perle de boba.)', 't-ok');
+          dreamSay(['mmh… tastes like… blissful ignorance… and tapioca…', 'mmh… un goût de… béate ignorance… et de tapioca…'], 4200);
+        } },
+        follow: { d: ['follow the pink rabbit', 'suivre le lapin rose'], fx() {
+          dreamCritter({ emoji: '🐇', cls: 'dream-rabbit', hop: 10, ms: 9000, label: ['follow me!!', 'suis-moi !!'] });
+          dsL('a pink rabbit crosses the desktop. destiny (or a screensaver).', 'un lapin rose traverse le bureau. le destin (ou un écran de veille).');
+        } },
+        rabbits: { d: ['too many rabbits, honestly', 'trop de lapins, franchement'], fx() {
+          for (let i = 0; i < 6; i++) dreamCritter({ emoji: '🐇', cls: 'dream-rabbit', hop: 12, ms: 4200 + i * 800, y: window.innerHeight - 120 - i * 55, dir: i % 2 ? 'rtl' : 'ltr' });
+          dsL('the rabbit called its friends. the white rabbit is filing a trademark complaint.', 'le lapin a appelé ses potes. le lapin blanc dépose une plainte pour contrefaçon.', 't-ok');
+        } },
+        dodge: { d: ['bullet time (dodge one responsibility)', 'bullet time (esquive une responsabilité)'], fx() {
+          dreamWorld.flags.slowmo = true;
+          dT(() => { if (dreamWorld) dreamWorld.flags.slowmo = false; }, 4200);
+          playTone(80, 'sine', 0.5, 0, 0.05);
+          dsL('*time dilates* you dodge: two deadlines, one spoiler, one (1) responsibility.', '*le temps se dilate* tu esquives : deux deadlines, un spoiler, une (1) responsabilité.', 't-ok');
+        } },
+        spoon: { d: ['do not try to bend the spoon', 'n\'essaie pas de plier la cuillère'], fx() {
+          cheatFall(['🥄', '🍴'], 9);
+          dsL('there is no spoon. inventory updated: 1 fork (there IS a fork. nobody talks about the fork.)', 'il n\'y a pas de cuillère. inventaire mis à jour : 1 fourchette (il y a UNE fourchette. personne n\'en parle.)', 't-ok');
+        } },
+        kungfu: { d: ['download kung fu (and CSS)', 'télécharger le kung-fu (et le CSS)'], fx() {
+          dsBar('uploading: kung_fu.pkg + flexbox.pkg', 2000, () => {
+            burstAtSlime(['🥋', '✦'], 5);
+            playSparkleSound();
+            dreamSay(['I know kung fu. also centering divs. mostly the divs.', 'je connais le kung-fu. et centrer des divs. surtout les divs.'], 4600);
+            dsL('"show me." — the slime centers a div FIRST TRY. the dojo weeps.', '« montre-moi. » — le slime centre une div DU PREMIER COUP. le dojo pleure.', 't-ok');
+          });
+        } },
+        glitch: { d: ['déjà vu (a black cat, twice)', 'déjà-vu (un chat noir, deux fois)'], fx() {
+          try { dwBeatDejavu(); } catch (e) { /* the cat refused */ }
+          dsL('a black cat went past… and another that looked just like it. they changed something.', 'un chat noir est passé… puis un autre identique. ils ont changé quelque chose.', 't-err');
+        } },
+        deja: { d: ['déjà vu (a black cat, twice)', 'déjà-vu (un chat noir, deux fois)'], fx() {
+          dsL('…didn\'t this just happen?', '…c\'est pas déjà arrivé, ça ?', 't-dim');
+          dT(() => dsL('…didn\'t this just happen?', '…c\'est pas déjà arrivé, ça ?', 't-dim'), 900);
+          dT(() => { playGlitchSound(); dsL('yes. they changed something in the dream. probably the rug.', 'si. ils ont changé un truc dans le rêve. sûrement le tapis.', 't-err'); }, 1900);
+        } },
+        agent: { d: ['an agent would like a word', 'un agent voudrait te parler'], fx() {
+          dreamCritter({ emoji: '🕶', hop: 3, ms: 10000, label: ['AGENT — "Mister Anderson…"', 'AGENT — « Monsieur Anderson… »'], onClick: (c) => {
+            playGlitchSound();
+            const bb = c.querySelector('.dream-critter-bubble');
+            if (bb) bb.textContent = trT('…it\'s about your car\'s extended warranty.', '…c\'est au sujet de la garantie prolongée de votre voiture.');
+          } });
+          dsL('an agent approaches. he has a folder, sunglasses, and unlimited patience.', 'un agent approche. il a un dossier, des lunettes noires et une patience illimitée.');
+        } },
+        construct: { d: ['load the construct (budget edition)', 'charger le construct (édition budget)'], fx() {
+          dsFlash('ds-flash-white', 800);
+          playTone(1200, 'sine', 0.2, 0, 0.04);
+          dsL('loading construct… inventory: 1 rug, 2 chairs, 1 old TV. guns: no. hugs: plenty.', 'chargement du construct… inventaire : 1 tapis, 2 chaises, 1 vieille télé. armes : non. câlins : à volonté.', 't-ok');
+        } },
+        trace: { d: ['traceroute to zion', 'traceroute vers sion'], fx() {
+          const hops = [['  1  your.router (3ms)', '  1  ton.routeur (3 ms)'], ['  2  the.fridge (12ms — it hums back)', '  2  le.frigo (12 ms — il ronronne en retour)'], ['  3  an.owl (140ms, took the scenic route)', '  3  un.hibou (140 ms, a pris la route panoramique)'], ['  4  door.of.light (1ms, showoff)', '  4  porte.de.lumière (1 ms, frimeuse)'], ['  5  zion.core (denied: party in progress)', '  5  sion.core (refusé : fête en cours)']];
+          hops.forEach((h, i) => dT(() => dsL(h[0], h[1], 't-dim'), 400 + i * 620));
+          dT(() => dsL('trace complete: zion is 5 hops and one leap of faith away.', 'trace terminée : sion est à 5 sauts et un acte de foi.', 't-ok'), 4000);
+        } },
+        phone: { d: ['answer the ringing phone', 'répondre au téléphone qui sonne'], fx() {
+          [880, 880, 0, 880, 880].forEach((f, i) => f && playTone(f, 'square', 0.09, i * 0.14, 0.05));
+          dT(() => {
+            dsL('☎ "operator here. status report: you\'re doing great, sweetie. that\'s the whole report."', '☎ « opérateur à l\'appareil. rapport de situation : tu t\'en sors super bien. c\'est tout le rapport. »', 't-ok');
+            gainFollowers(1);
+          }, 1000);
+        } },
+        oracle: { d: ['visit the oracle (she baked cookies)', 'voir l\'oracle (elle a fait des cookies)'], fx() {
+          const f = [['"you\'re cuter than you think. the vase — sorry, spoilers."', '« tu es plus mignon·ne que tu ne le crois. le vase — pardon, spoilers. »'], ['"being the One is a full-time job. being YOU pays better."', '« être l\'Élu·e est un temps plein. être TOI paie mieux. »'], ['"know thyself. also: eat the cookie. it\'s a good cookie."', '« connais-toi toi-même. et mange le cookie. c\'est un bon cookie. »']][Math.floor(Math.random() * 3)];
+          burstAtSlime(['🍪'], 3);
+          dsL('🍪 the oracle hands you a cookie and says:', '🍪 l\'oracle te tend un cookie et dit :', 't-dim');
+          dsL(f[0], f[1], 't-ok');
+        } },
+        smith: { d: ['he is… inevitable (12 seconds of him)', 'il est… inévitable (12 secondes de lui)'], fx() {
+          const all = {};
+          Object.keys(DREAM_TITLES.matrix).forEach((k) => { all[k] = 'A. SMITH'; });
+          dreamApplyTitles(all);
+          playGlitchSound();
+          for (let i = 0; i < 3; i++) dreamCritter({ emoji: '🕶', hop: 5, ms: 6000 + i * 900, y: window.innerHeight - 140 - i * 60, dir: i % 2 ? 'rtl' : 'ltr' });
+          dsL('every window is Smith now. every. single. one. "Me, me, me." — him', 'chaque fenêtre est Smith maintenant. toutes. « Moi, moi, moi. » — lui', 't-err');
+          dT(() => { dreamApplyTitles(DREAM_TITLES.matrix); dsL('purged. the windows apologize for him.', 'purgé. les fenêtres s\'excusent pour lui.', 't-ok'); }, 12000);
+        } },
+        rain: { d: ['make it rain (code, hearts)', 'faire pleuvoir (du code, des cœurs)'], fx() {
+          try { matrixRain({ ms: 3000, dense: true, label: trT('EXTRA RAIN', 'PLUIE SUPPLÉMENTAIRE') }); } catch (e) { /* drought */ }
+          dsL('rain intensity: dramatic. umbrella: metaphorical.', 'intensité de la pluie : dramatique. parapluie : métaphorique.', 't-ok');
+        } },
+        jackin: { d: ['jack in and learn something instantly', 'se brancher et apprendre un truc instantanément'], fx() {
+          playTone(200, 'sawtooth', 0.3, 0, 0.05); playTone(600, 'sine', 0.2, 0.3, 0.04);
+          dsBar('uploading: how_to_pilot_a_boba_straw.pkg', 1800, () => {
+            dsL('you know boba now. sip technique: masterful. the pearls fear you (lovingly).', 'tu connais le boba maintenant. technique de slurp : magistrale. les perles te craignent (avec amour).', 't-ok');
+          });
+        } },
+        zion: { d: ['party at the last human city', 'fête dans la dernière cité humaine'], fx() {
+          [110, 110, 138, 110, 165].forEach((f, i) => playTone(f, 'sawtooth', 0.18, i * 0.2, 0.06));
+          cheatFall(['🔥', '🥁', '✦'], 12);
+          gainFollowers(1);
+          dsL('ZION RAVE INITIATED. the last human city has EXCELLENT bass and zero noise complaints.', 'RAVE DE SION LANCÉE. la dernière cité humaine a une EXCELLENTE basse et zéro plainte de voisinage.', 't-ok');
+        } },
+        mirror: { d: ['touch the goopy mirror (don\'t)', 'toucher le miroir gluant (non)'], fx() {
+          dsFilter('ds-ripple', 1600);
+          playGlitchSound();
+          dsL('the mirror goes goopy. do not touch it— you touched it. it\'s in your sleeve now.', 'le miroir devient gluant. n\'y touche pas— tu y as touché. c\'est dans ta manche maintenant.', 't-err');
+          dreamSay(['relatable. I\'m basically mirror goop with ambition.', 'je compatis. je suis du gloop de miroir avec de l\'ambition.'], 4200);
+        } },
+        theone: { d: ['are you the One? (there is a test)', 'es-tu l\'Élu·e ? (il y a un test)'], fx() {
+          dsL('THE TEST: can you love a website?', 'LE TEST : peux-tu aimer un site web ?', 't-dim');
+          dT(() => {
+            playSparkleSound(); gainFollowers(1); burstAtSlime(['✦', '♡'], 5);
+            dsL('…you\'re reading this. test passed. you are the One (of several. we don\'t gatekeep).', '…tu es en train de lire ça. test réussi. tu es l\'Élu·e (parmi plusieurs. on ne fait pas de gatekeeping).', 't-ok');
+          }, 1400);
+        } }
+      }
+    },
+    /* ---- GAMEBOY: DMG-01> — 4 shades of green, ∞ shades of joy ---- */
+    gameboy: {
+      list: 'select',
+      deny: [
+        ['A? B? START? `{c}` is not on this controller.', 'A ? B ? START ? `{c}` n\'est pas sur cette manette.'],
+        ['the cartridge doesn\'t know `{c}`. have you tried blowing on it?', 'la cartouche ne connaît pas `{c}`. tu as essayé de souffler dessus ?'],
+        ['ERROR: `{c}` requires the Super Game Boy. we only have a dream.', 'ERREUR : `{c}` requiert le Super Game Boy. on n\'a qu\'un rêve.'],
+        ['▼ it\'s not very effective…', '▼ ce n\'est pas très efficace…']
+      ],
+      cmds: {
+        select: { d: ['open the item menu (tonight\'s 21 items)', 'ouvrir le menu objets (les 21 objets du soir)'], fx() {
+          playTone(987, 'square', 0.06, 0, 0.04); playTone(1318, 'square', 0.08, 0.07, 0.04);
+          dsList('gameboy', '▼ ITEM MENU — which will you use?', '▼ MENU OBJETS — lequel utiliser ?');
+        } },
+        start: { d: ['PRESS START (the most hopeful words)', 'PRESS START (les mots les plus optimistes)'], fx() {
+          playTone(523, 'square', 0.1, 0, 0.05); playTone(659, 'square', 0.1, 0.12, 0.05); playTone(784, 'square', 0.16, 0.24, 0.05);
+          dsL('▶▶ PRESS START — © 1989 DREAM CO. — new game? (it\'s always a new game)', '▶▶ PRESS START — © 1989 DREAM CO. — nouvelle partie ? (c\'est toujours une nouvelle partie)', 't-ok');
+        } },
+        konami: { d: ['↑↑↓↓←→←→BA (you know what this does)', '↑↑↓↓←→←→BA (tu sais ce que ça fait)'], fx(first) {
+          playFanfare();
+          cheatFall(['🕹', '✦', '♡'], 16);
+          gainFollowers(first ? 30 : 3);
+          dsL(first ? '⭐ 30 LIVES → converted to 30 fans (exchange rate: love). Kazuhisa Hashimoto, thank you forever.' : '⭐ the code still works. +3 fans (the bank knows you already).', first ? '⭐ 30 VIES → converties en 30 fans (taux de change : l\'amour). Kazuhisa Hashimoto, merci pour toujours.' : '⭐ le code marche encore. +3 fans (la banque te connaît déjà).', 't-ok');
+        } },
+        save: { d: ['save the game (DO NOT TURN OFF THE POWER)', 'sauvegarder (N\'ÉTEIGNEZ PAS LA CONSOLE)'], fx() {
+          dsBar('SAVING… DO NOT TURN OFF THE POWER', 2800, () => {
+            playSparkleSound();
+            dsL('saved. you may turn off the power. (don\'t though. stay a bit.)', 'sauvegardé. tu peux éteindre. (mais non. reste un peu.)', 't-ok');
+          }, 't-err');
+        } },
+        blow: { d: ['blow on the cartridge (the ancient ritual)', 'souffler sur la cartouche (le rituel ancestral)'], fx() {
+          ['ds-gray', 'ds-pink', 'ds-hotdog', 'ds-blur', 'ds-ripple', 'ds-contrast'].forEach((c) => document.documentElement.classList.remove(c));
+          document.body.classList.remove('ds-shake');
+          playTone(2200, 'sine', 0.3, 0, 0.03);
+          dsL('*fwooo* — glitches cleared. science says this does nothing. science wasn\'t there in 1992.', '*fwooo* — glitchs corrigés. la science dit que ça ne sert à rien. la science n\'était pas là en 1992.', 't-ok');
+        } },
+        battery: { d: ['check the battery LED (it dims bravely)', 'vérifier la LED de batterie (elle faiblit bravement)'], fx() {
+          const left = dreamWorld ? Math.max(0, Math.round((dreamWorld.until - Date.now()) / 60000)) : 0;
+          dsL('🔋 DREAM BATTERY: ~' + left + ' min — the LED dims a little, like a tiny sunset.', '🔋 BATTERIE DU RÊVE : ~' + left + ' min — la LED faiblit un peu, comme un mini coucher de soleil.', 't-dim');
+          dsL('fresh AAs found in the couch (emotionally). the LED glows brave again.', 'des piles AA trouvées dans le canapé (émotionnellement). la LED rebrille bravement.', 't-ok');
+        } },
+        wildbug: { d: ['a wild BUG appears!!', 'un BUG sauvage apparaît !!'], fx() {
+          try { dwBeatWildBug(); } catch (e) { dsL('the tall grass is empty. suspicious.', 'les hautes herbes sont vides. suspect.', 't-dim'); }
+        } },
+        catch: { d: ['throw the ball (wobble… wobble…)', 'lancer la ball (elle bouge… bouge…)'], fx() {
+          dsL('you threw a ball at the BUG!', 'tu lances une ball sur le BUG !', 't-dim');
+          dT(() => dsL('● …wobble…', '● …ça bouge…', 't-dim'), 900);
+          dT(() => dsL('● …wobble…', '● …ça bouge…', 't-dim'), 1900);
+          dT(() => {
+            playSparkleSound(); gainFollowers(1);
+            dsL('✦ gotcha!! BUG was sent to the PC. it lives in the PC now. it IS the PC.', '✦ attrapé !! le BUG a été envoyé au PC. il vit dans le PC maintenant. il EST le PC.', 't-ok');
+          }, 3000);
+        } },
+        run: { d: ['try to run from the encounter', 'tenter de fuir le combat'], fx() {
+          playTone(150, 'square', 0.12, 0, 0.05);
+          dsL('you can\'t escape! (you are the trainer AND the gym AND the dream. HR is confused too.)', 'fuite impossible ! (tu es le dresseur ET l\'arène ET le rêve. les RH aussi sont perdues.)', 't-err');
+        } },
+        potion: { d: ['use a potion on the slime', 'utiliser une potion sur le slime'], fx() {
+          burstAtSlime(['💚', '✦'], 5);
+          playTone(880, 'square', 0.07, 0, 0.04); playTone(1174, 'square', 0.1, 0.09, 0.04);
+          dreamSay(['*glug* +20 HP!! (I was at full HP. it was for the FLAVOR.)', '*glou* +20 PV !! (j\'étais déjà full PV. c\'était pour le GOÛT.)'], 4400);
+          dsL('potion used. HP: full → full. taste: grape. morale: soaring.', 'potion utilisée. PV : max → max. goût : raisin. moral : au zénith.', 't-ok');
+        } },
+        pause: { d: ['pause the entire dream (3 seconds of zen)', 'mettre le rêve entier en pause (3 secondes de zen)'], fx() {
+          playTone(1046, 'square', 0.1, 0, 0.05);
+          dsFilter('ds-pause', 3000);
+          dsL('⏸ PAUSED. the whole dream holds its breath. even the rain waits. respect.', '⏸ PAUSE. le rêve entier retient son souffle. même la pluie attend. respect.', 't-ok');
+        } },
+        contrast: { d: ['fiddle with the contrast wheel', 'tripoter la molette de contraste'], fx() {
+          dsFilter('ds-contrast', 5000);
+          dsL('*click click* — ah yes, the tiny wheel on the side. today you are one of the lucky 10,000.', '*clic clic* — ah oui, la petite molette sur le côté. aujourd\'hui tu fais partie des 10 000 chanceux.', 't-ok');
+        } },
+        tetris: { d: ['the pieces fall. the line clears. (1989)', 'les pièces tombent. la ligne s\'efface. (1989)'], fx() {
+          cheatFall(['🟩', '🟪', '🟦', '🟨'], 14);
+          [659, 494, 523, 587, 523, 494, 440].forEach((f, i) => playTone(f, 'square', 0.12, i * 0.14, 0.04));
+          dsL('♪ line clear ×4. the dopamine is 35 years old and fresh as ever.', '♪ ligne ×4. la dopamine a 35 ans et reste toute fraîche.', 't-ok');
+        } },
+        link: { d: ['plug in the link cable (find player 2)', 'brancher le câble link (trouver le joueur 2)'], fx() {
+          dsBar('LINK CABLE: searching for player 2', 2400, () => {
+            dsL('player 2 found: YOU, from a 20-year-old save file. trade complete: 1 nostalgia ↔ 1 smile.', 'joueur 2 trouvé : TOI, depuis une sauvegarde de 20 ans. échange conclu : 1 nostalgie ↔ 1 sourire.', 't-ok');
+            gainFollowers(1);
+          });
+        } },
+        rumble: { d: ['this cartridge has a MOTOR in it', 'cette cartouche a un MOTEUR dedans'], fx() {
+          dsShake(1500);
+          playTone(60, 'sawtooth', 1.2, 0, 0.06);
+          dsL('*BZZZZZ* rumble pak engaged. luxury technology. your palms are living in the future.', '*BZZZZZ* rumble pak enclenché. technologie de luxe. tes paumes vivent dans le futur.', 't-ok');
+        } },
+        credits: { d: ['roll the credits (everyone is slime)', 'lancer le générique (tout le monde est slime)'], fx() {
+          const c = [['— CREDITS —', '— GÉNÉRIQUE —'], ['director: slime', 'réalisation : slime'], ['key grip: slime', 'machiniste : slime'], ['catering: boba (slime)', 'traiteur : boba (slime)'], ['you: played by you (excellent casting)', 'toi : joué·e par toi (excellent casting)']];
+          c.forEach((l, i) => dT(() => dsL(l[0], l[1], i ? 't-dim' : 't-accent'), i * 700));
+          dT(() => { playFanfare(); dsL('THE END?? no. dreams don\'t end, they respawn.', 'FIN ?? non. les rêves ne finissent pas, ils réapparaissent.', 't-ok'); }, 3800);
+        } },
+        speedrun: { d: ['check your dream splits (cozy%)', 'vérifier tes splits de rêve (cozy%)'], fx() {
+          const el = Math.max(0, Math.round((Date.now() - (dreamWorld.until - dreamWorld.total)) / 1000));
+          dsL('DREAM ANY% — current: ' + Math.floor(el / 60) + ':' + String(el % 60).padStart(2, '0') + ' · PB: 14:59 · category: cozy%', 'DREAM ANY% — actuel : ' + Math.floor(el / 60) + ':' + String(el % 60).padStart(2, '0') + ' · record : 14:59 · catégorie : cozy%', 't-dim');
+          dsL('the timer only counts vibes. you are on world-record pace.', 'le chrono ne compte que les bonnes ondes. tu es sur un rythme de record du monde.', 't-ok');
+        } },
+        missingno: { d: ['visit the glitch dimension (item duplicated!!)', 'visiter la dimension glitch (objet dupliqué !!)'], fx() {
+          dsFlash('ds-glitchtiles', 900);
+          playGlitchSound();
+          cheatFall(['♡'], 12);
+          dsL('M̸i̸s̸s̸i̸n̸g̸N̸o̸.̸ appeared!! item duplicated: ♡ ×128. your rare candy is safe (we checked).', 'M̸i̸s̸s̸i̸n̸g̸N̸o̸.̸ apparaît !! objet dupliqué : ♡ ×128. tes super bonbons sont en sécurité (on a vérifié).', 't-ok');
+        } },
+        nuzlocke: { d: ['accept the nuzlocke ruleset (emotional)', 'accepter les règles nuzlocke (émotionnel)'], fx() {
+          dsL('NUZLOCKE RULES ACCEPTED: if the slime faints, you owe it a nap. if YOU faint, it tucks you in.', 'RÈGLES NUZLOCKE ACCEPTÉES : si le slime tombe K.O., tu lui dois une sieste. si TOI tu tombes, il te borde.', 't-ok');
+          dreamSay(['deal. I never lose naps.', 'marché conclu. je ne perds jamais une sieste.'], 4000);
+        } },
+        cheat: { d: ['cheat inside a dream inside a cheat', 'tricher dans un rêve dans un cheat'], fx() {
+          playGlitchSound();
+          gainFollowers(1);
+          dsL('cheating in a dream?? …respect. a distant GameShark clicks approvingly. +1 fan (illegal, kept anyway).', 'tricher dans un rêve ?? …respect. un GameShark clique au loin avec approbation. +1 fan (illégal, gardé quand même).', 't-ok');
+        } },
+        powerdown: { d: ['open the battery cover mid-save (wake up)', 'ouvrir le cache-piles en pleine sauvegarde (réveil)'], fx() {
+          dsL('you open the battery cover. the screen shrinks to a single bright dot…', 'tu ouvres le cache-piles. l\'écran rétrécit en un seul point lumineux…', 't-err');
+          dsWake('*click* — the dot winks out. thanks for playing ♡', '*clic* — le point s\'éteint. merci d\'avoir joué ♡');
+        } }
+      }
+    },
+    /* ---- GEO: ~/public_html> — welcome to my homepage!! sign the guestbook ---- */
+    geo: {
+      list: 'sitemap',
+      deny: [
+        ['404: `{c}` not found on this homepage (its gif is still loading)', '404 : `{c}` introuvable sur cette page perso (son gif charge encore)'],
+        ['`{c}`?? the webmaster has been notified (by guestbook)', '`{c}` ?? le webmaster a été prévenu (par livre d\'or)'],
+        ['this page is UNDER CONSTRUCTION. `{c}` doubly so.', 'cette page est EN CONSTRUCTION. `{c}` doublement.'],
+        ['best viewed WITHOUT `{c}`, at 800×600, with a juice box', 'meilleur rendu SANS `{c}`, en 800×600, avec une brique de jus']
+      ],
+      cmds: {
+        sitemap: { d: ['the site map (dancing construction cones ahead)', 'le plan du site (cônes de chantier dansants droit devant)'], fx() {
+          dsL('~*~*~ WELCOME TO MY CORNER OF THE WEB ~*~*~ (est. 1998)', '~*~*~ BIENVENUE DANS MON COIN DU WEB ~*~*~ (dep. 1998)', 't-accent');
+          dsList('geo', 'SITE MAP — 21 pages, all load eventually:', 'PLAN DU SITE — 21 pages, elles finissent toutes par charger :');
+        } },
+        guestbook: { d: ['sign the guestbook!!', 'signer le livre d\'or !!'], fx() {
+          const n = 4900 + Math.floor(Math.random() * 99);
+          playSparkleSound(); gainFollowers(1);
+          dsL('✍ "visitor #' + n + ' wuz here. kewl page. A++ would visit again" — signed, you', '✍ « visiteur nº' + n + ' était ici. page trop cool. A++ je reviendrai » — signé, toi', 't-ok');
+          dsL('(the webmaster will read this 40 times and smile every time.)', '(le webmaster relira ça 40 fois et sourira à chaque fois.)', 't-dim');
+        } },
+        hits: { d: ['inspect the hit counter (it lies beautifully)', 'inspecter le compteur de visites (il ment magnifiquement)'], fx() {
+          let n = 0;
+          const el = dsBar('hit counter recalibrating', 1600, () => {
+            const target = 1000000 + Math.floor(Math.random() * 337);
+            dsL('☆ counter now reads: ' + String(target).padStart(8, '0') + ' — technically true if you count dreams.', '☆ le compteur affiche : ' + String(target).padStart(8, '0') + ' — techniquement vrai si on compte les rêves.', 't-ok');
+          });
+        } },
+        midi: { d: ['play the autoplay midi (the neighbors know it)', 'jouer le midi automatique (les voisins le connaissent)'], fx() {
+          [659, 622, 659, 622, 659, 494, 587, 523, 440].forEach((f, i) => playTone(f, 'square', 0.16, i * 0.19, 0.035));
+          dsL('♪ midi playing on loop. there is no stop button. there never was. the neighbors hum along now.', '♪ midi en boucle. pas de bouton stop. il n\'y en a jamais eu. les voisins fredonnent avec.', 't-ok');
+        } },
+        marquee: { d: ['<marquee> the terminal title (it scrolls!!)', '<marquee> le titre du terminal (ça défile !!)'], fx() {
+          const el = document.querySelector('#win-terminal .window-title');
+          if (!el) return;
+          const base = ' ~*~ WELCOME TO MY HOMEPAGE ~*~ ';
+          let off = 0;
+          const iv = dI(() => { off = (off + 1) % base.length; el.textContent = base.slice(off) + base.slice(0, off); }, 160);
+          dT(() => { clearInterval(iv); el.textContent = DREAM_TITLES.geo['win-terminal']; }, 10000);
+          dsL('the <marquee> tag RETURNS. the W3C looks away, weeping into its standards.', 'la balise <marquee> REVIENT. le W3C détourne le regard, en pleurant sur ses standards.', 't-ok');
+        } },
+        cones: { d: ['pardon our pixels (cone shower)', 'excusez nos pixels (pluie de cônes)'], fx() {
+          cheatFall(['🚧', '⚠️'], 12);
+          dsL('UNDER CONSTRUCTION since 1998. the cones are load-bearing at this point.', 'EN CONSTRUCTION depuis 1998. les cônes sont porteurs à ce stade.', 't-ok');
+        } },
+        flames: { d: ['add flames.gif to everything', 'ajouter flames.gif à tout'], fx() {
+          termLine('🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥', 't-err');
+          dsFilter('ds-hot', 4000);
+          dsL('flames.gif applied. your homepage is now 30% cooler (by being hotter).', 'flames.gif appliqué. ta page perso est 30 % plus cool (en étant plus chaude).', 't-ok');
+        } },
+        sparkles: { d: ['cursor sparkle trail (12 luxurious seconds)', 'traînée d\'étincelles au curseur (12 secondes de luxe)'], fx() {
+          let last = 0;
+          const mv = (e) => { const now = Date.now(); if (now - last < 90) return; last = now; swSparkleAt(e.clientX, e.clientY, 1); };
+          document.addEventListener('mousemove', mv);
+          dreamWorld.flags.removers.push(() => document.removeEventListener('mousemove', mv));
+          dT(() => document.removeEventListener('mousemove', mv), 12000);
+          dsL('✨ cursor trail enabled. this is what the mouse was invented for. move it. MOVE IT.', '✨ traînée du curseur activée. c\'est pour ça que la souris a été inventée. bouge-la. BOUGE-LA.', 't-ok');
+        } },
+        bestviewed: { d: ['view at 800×600 like nature intended', 'afficher en 800×600 comme la nature l\'a voulu'], fx() {
+          dsFlash('ds-frame800', 6000);
+          dsL('viewport politely letterboxed to 800×600. your monitor remembers. it REMEMBERS.', 'fenêtre poliment recadrée en 800×600. ton écran se souvient. il SE SOUVIENT.', 't-ok');
+        } },
+        netscape: { d: ['summon the big N (comets included)', 'invoquer le grand N (comètes incluses)'], fx() {
+          cheatFall(['☄️', '🌠'], 10);
+          dsL('NETSCAPE NAVIGATOR rises over the horizon. the throbber throbs. hope had a logo once.', 'NETSCAPE NAVIGATOR se lève à l\'horizon. le throbber palpite. l\'espoir a eu un logo, jadis.', 't-ok');
+        } },
+        jeeves: { d: ['ask the butler anything', 'demander n\'importe quoi au majordome'], fx() {
+          const a = [['"an excellent question. the answer is boba."', '« excellente question. la réponse est : boba. »'], ['"I have located 40,000 results. the correct one is: take a nap."', '« j\'ai trouvé 40 000 résultats. le bon est : faites une sieste. »'], ['"sir/madam, the answer was inside you all along. also on page 12."', '« madame/monsieur, la réponse était en vous depuis le début. et aussi page 12. »']][Math.floor(Math.random() * 3)];
+          dsL('🎩 Jeeves adjusts his gloves and replies:', '🎩 Jeeves ajuste ses gants et répond :', 't-dim');
+          dsL(a[0], a[1], 't-ok');
+        } },
+        dance: { d: ['make the slime do the 1998 dance', 'faire danser le slime façon 1998'], fx() {
+          [523, 659, 523, 659, 784].forEach((f, i) => playTone(f, 'square', 0.14, i * 0.18, 0.04));
+          burstAtSlime(['🎶', '✦'], 6);
+          dreamSay(['*does the dance* (it\'s legally distinct from every famous dance)', '*fait la danse* (légalement distincte de toutes les danses célèbres)'], 4600);
+          dsL('the whole page grooves. 10 hours version available never.', 'toute la page groove. version 10 heures disponible jamais.', 't-ok');
+        } },
+        blink: { d: ['resurrect the <blink> tag (sorry, W3C)', 'ressusciter la balise <blink> (pardon, W3C)'], fx() {
+          dsFilter('ds-blink', 6000);
+          dsL('<blink> IS BACK. every window title now demands attention like it\'s 1996.', '<blink> EST DE RETOUR. chaque titre de fenêtre réclame l\'attention comme en 1996.', 't-ok');
+        } },
+        hotdog: { d: ['apply the Hot Dog Stand theme (windows 3.1\'s loudest crime)', 'appliquer le thème Hot Dog Stand (le crime le plus bruyant de windows 3.1)'], fx() {
+          dsFilter('ds-hotdog', 4000);
+          playTone(440, 'sawtooth', 0.2, 0, 0.05);
+          dsL('HOT DOG STAND applied. red. yellow. regret. recreated faithfully from the 1991 crime scene.', 'HOT DOG STAND appliqué. rouge. jaune. regret. reconstitué fidèlement depuis la scène de crime de 1991.', 't-err');
+          dT(() => dsL('(theme removed. your eyes send a thank-you card.)', '(thème retiré. tes yeux envoient une carte de remerciement.)', 't-ok'), 4200);
+        } },
+        mp3: { d: ['download song.mp3 (3.5MB, ETA: heartbreak)', 'télécharger chanson.mp3 (3,5 Mo, ETA : chagrin)'], fx() {
+          dsBar('downloading song.mp3 (56k)', 3400, (el) => {
+            if (el) el.textContent = trT('song.mp3 — 99%… 99%… 99%… ☎ CARRIER LOST (mom picked up the phone)', 'chanson.mp3 — 99 %… 99 %… 99 %… ☎ CONNEXION PERDUE (maman a décroché)');
+            playGlitchSound();
+            dsL('start over? (1998 answer: yes. always yes. the song was worth it.)', 'recommencer ? (réponse de 1998 : oui. toujours oui. la chanson en valait la peine.)', 't-dim');
+          }, 't-err');
+        } },
+        webring: { d: ['travel the webring (next site →)', 'voyager sur le webring (site suivant →)'], fx() {
+          dsL('← prev site: a fish tank cam (the fish waves)', '← site précédent : une webcam d\'aquarium (le poisson te salue)', 't-dim');
+          dsL('→ next site: 400 photos of someone\'s cat, each 4MB', '→ site suivant : 400 photos du chat de quelqu\'un, 4 Mo chacune', 't-dim');
+          dsL('you chose to stay HERE. the ring understands. the ring PROVIDES.', 'tu as choisi de rester ICI. le ring comprend. le ring POURVOIT.', 't-ok');
+        } },
+        under: { d: ['certify this dream UNDER CONSTRUCTION', 'certifier ce rêve EN CONSTRUCTION'], fx() {
+          dreamCritter({ emoji: '🚧', hop: 4, ms: 9000, label: ['pardon our pixels', 'excusez nos pixels'] });
+          dsL('🚧 certificate granted. everything good is permanently under construction (this is the secret).', '🚧 certificat accordé. tout ce qui est bien est en construction permanente (c\'est le secret).', 't-ok');
+        } },
+        neighborhood: { d: ['find your geocities address', 'trouver ton adresse geocities'], fx() {
+          const hoods = [['/SiliconValley/Heights/', '/SiliconValley/Heights/'], ['/EnchantedForest/Glade/', '/EnchantedForest/Glade/'], ['/Area51/Vault/', '/Area51/Vault/']][Math.floor(Math.random() * 3)];
+          const n = 1000 + Math.floor(Math.random() * 8999);
+          dsL('🏘 your address: geocities.com' + hoods[0] + n + ' — the neighbors already waved.', '🏘 ton adresse : geocities.com' + hoods[1] + n + ' — les voisins t\'ont déjà fait coucou.', 't-ok');
+          gainFollowers(1);
+        } },
+        fanpage: { d: ['publish THE official slime fanpage', 'publier LA page de fans officielle du slime'], fx() {
+          dsBar('uploading fanpage.htm via FTP', 2200, () => {
+            playSparkleSound(); gainFollowers(3);
+            dsL('🌟 THE OFFICIAL SLIME FANCLUB is live!! hit counter: already broken from traffic (3 visits).', '🌟 LE FANCLUB OFFICIEL DU SLIME est en ligne !! compteur : déjà cassé par le trafic (3 visites).', 't-ok');
+            dreamSay(['a FANPAGE?? for ME?? *saves it to floppy forever*', 'une PAGE DE FANS ?? pour MOI ?? *la sauvegarde sur disquette pour toujours*'], 4600);
+          });
+        } },
+        millionth: { d: ['claim the 1,000,000th visitor prize', 'réclamer le prix du 1 000 000e visiteur'], fx() {
+          try { dwBeatMillionth(); } catch (e) { /* the banner blinked away */ }
+          dsL('🎉 CONGRATULATIONS!!! you are DEFINITELY the 1,000,000th visitor. claim prize: one (1) genuine smile.', '🎉 FÉLICITATIONS !!! tu es SANS AUCUN DOUTE le 1 000 000e visiteur. prix : un (1) sourire authentique.', 't-ok');
+        } },
+        back: { d: ['click the BACK button (wake up)', 'cliquer sur PRÉCÉDENT (réveil)'], fx() {
+          dsL('you click ⬅ BACK. 1998 lets you leave… (it quietly keeps a cookie.)', 'tu cliques sur ⬅ PRÉCÉDENT. 1998 te laisse partir… (il garde discrètement un cookie.)', 't-dim');
+          dsWake('navigating away from the dream… please wait… (1998 goodbyes take a moment)', 'navigation hors du rêve… patiente… (les au revoir de 1998 prennent un moment)');
+        } }
+      }
+    },
+    /* ---- BSOD: 0x0000:~> — the crash has feelings ---- */
+    bsod: {
+      list: 'details',
+      deny: [
+        ['`{c}` has performed an illegal operation and will be ignored (gently)', '`{c}` a effectué une opération illégale et sera ignorée (avec douceur)'],
+        ['STOP: 0x0000WHAT ({c}_NOT_HANDLED)', 'STOP : 0x0000QUOI ({c}_NON_GÉRÉ)'],
+        ['the crash handler caught `{c}` and started crying again', 'le gestionnaire de plantage a attrapé `{c}` et s\'est remis à pleurer'],
+        ['`{c}` is not the answer. have you tried crying it off and on again?', '`{c}` n\'est pas la réponse. tu as essayé de pleurer un coup puis de rallumer ?']
+      ],
+      cmds: {
+        details: { d: ['see technical details (the 21 things that still work)', 'voir les détails techniques (les 21 trucs qui marchent encore)'], fx() {
+          dsL(':( your dream ran into a problem. here is everything that still works:', ':( ton rêve a rencontré un problème. voici tout ce qui marche encore :', 't-dim');
+          dsList('bsod', 'TECHNICAL DETAILS — functional syscalls:', 'DÉTAILS TECHNIQUES — appels système fonctionnels :');
+        } },
+        hug: { d: ['console the crashed screen (it needs this)', 'consoler l\'écran planté (il en a besoin)'], fx() {
+          playSparkleSound(); gainFollowers(1);
+          burstAtSlime(['💙', '♡'], 6);
+          dsL(':( → :) → :D — the crash has been emotionally handled. exit code: ♡', ':( → :) → :D — le plantage a été géré émotionnellement. code de sortie : ♡', 't-ok');
+          dreamSay(['*sniff* nobody ever hugs the error… thank you…', '*snif* personne ne fait jamais de câlin à l\'erreur… merci…'], 4600);
+        } },
+        bugcheck: { d: ['run a bugcheck (the codes are feelings)', 'lancer un bugcheck (les codes sont des sentiments)'], fx() {
+          const codes = [['STOP: 0x0000CUTE (TOO_MANY_FEELINGS)', 'STOP : 0x0000CUTE (TROP_DE_SENTIMENTS)'], ['STOP: 0x00000WU (WHOLESOME_UNHANDLED)', 'STOP : 0x00000WU (MIGNONNERIE_NON_GÉRÉE)'], ['STOP: 0xC0FFEE00 (LOW_ON_BEANS)', 'STOP : 0xC0FFEE00 (PLUS_DE_GRAINS)']][Math.floor(Math.random() * 3)];
+          playGlitchSound();
+          dsL(codes[0], codes[1], 't-err');
+          dsL('bugcheck complete. the bug checks out. it\'s a good bug.', 'bugcheck terminé. le bug est en règle. c\'est un bon bug.', 't-ok');
+        } },
+        dump: { d: ['collect the memory dump (it\'s memories)', 'collecter le dump mémoire (ce sont des souvenirs)'], fx() {
+          dsBar('collecting memory dump', 2600, () => {
+            dsL('dump complete: 3 memories about snacks, 1 about a sunset, 1 about you (it\'s a nice one).', 'dump terminé : 3 souvenirs de snacks, 1 de coucher de soleil, 1 de toi (il est très réussi).', 't-ok');
+          });
+        } },
+        safemode: { d: ['boot into safe mode (gray, calm, honest)', 'démarrer en mode sans échec (gris, calme, honnête)'], fx() {
+          dsFilter('ds-gray', 5000);
+          dsL('SAFE MODE — drivers loaded: vibes.sys only. everything is gray and nothing can hurt you.', 'MODE SANS ÉCHEC — pilotes chargés : vibes.sys uniquement. tout est gris et rien ne peut te blesser.', 't-ok');
+        } },
+        driver: { d: ['find the faulty driver', 'trouver le pilote défectueux'], fx() {
+          dsBar('scanning drivers', 2000, () => {
+            dsL('faulty driver found: emotions.sys (version 3am). rolling back to vibes.sys… done.', 'pilote défectueux trouvé : emotions.sys (version 3h du matin). retour à vibes.sys… fait.', 't-ok');
+          });
+        } },
+        percent: { d: ['check the crash progress %', 'vérifier le % du plantage'], fx() {
+          const pct = dreamWorld ? Math.min(99, Math.round(100 - ((dreamWorld.until - Date.now()) / dreamWorld.total) * 100)) : 0;
+          dsL(pct + '% complete — the % collects cuteness. it refuses to reach 100 (commitment issues).', pct + ' % effectués — le % collectionne la mignonnerie. il refuse d\'atteindre 100 (peur de l\'engagement).', 't-dim');
+        } },
+        blues: { d: ['the blue screen sings the blues', 'l\'écran bleu chante le blues'], fx() {
+          [220, 262, 220, 196, 220, 175].forEach((f, i) => playTone(f, 'sawtooth', 0.3, i * 0.34, 0.045));
+          dreamCritter({ emoji: '🎷', hop: 3, ms: 8000, label: ['the C: drive claps on 1 and 3', 'le disque C: tape sur les temps 1 et 3'] });
+          dsL('♪ "woke up this morning… all my RAM was gone…" — the blue screen, live at Site C:', '♪ « je me suis réveillé ce matin… toute ma RAM était partie… » — l\'écran bleu, en concert au Site C:', 't-ok');
+        } },
+        qr: { d: ['enlarge the QR code (scan it, coward)', 'agrandir le QR code (scanne-le, sans peur)'], fx() {
+          dreamDlg({ title: 'QR.DMP', force: true, lines: ['█▀▀█ ▄▀▄ █▀▀█', '█ ♡█ ▀█▀ █♡ █', '█▄▄█ ▄█▄ █▄▄█', trT('(every scan resolves to ♡. we tested 4,000 times.)', '(chaque scan mène à ♡. testé 4 000 fois.)')], buttons: [[trT('scanned ♡', 'scanné ♡'), () => { playSparkleSound(); gainFollowers(1); }]] });
+        } },
+        taskkill: { d: ['kill sadness.exe (with prejudice)', 'tuer tristesse.exe (sans sommation)'], fx() {
+          dsL('taskkill /f /im sadness.exe', 'taskkill /f /im tristesse.exe', 't-dim');
+          dT(() => {
+            playSparkleSound(); gainFollowers(1);
+            dsL('SUCCESS: sadness.exe (PID 404) terminated. cozy.exe promoted with full benefits.', 'SUCCÈS : tristesse.exe (PID 404) terminé. cozy.exe promu avec tous les avantages.', 't-ok');
+          }, 1100);
+        } },
+        sfc: { d: ['verify the integrity of all feelings', 'vérifier l\'intégrité de tous les sentiments'], fx() {
+          dsBar('sfc /scanfeelings', 2800, () => {
+            dsL('verification 100% complete. all feelings are valid. no repairs needed (they were never broken, just loud).', 'vérification 100 % terminée. tous les sentiments sont valides. aucune réparation (ils n\'étaient pas cassés, juste bruyants).', 't-ok');
+          });
+        } },
+        kernel: { d: ['panic! at the kernel', 'panique ! au kernel'], fx() {
+          dsShake(700);
+          playGlitchSound();
+          dsL('PANIC! AT THE KERNEL — tonight\'s show: "I Write Sins Not Syscalls". tickets: sold out since 2005.', 'PANIQUE ! AU KERNEL — ce soir : « I Write Sins Not Syscalls ». billets : épuisés depuis 2005.', 't-ok');
+        } },
+        joy: { d: ['invert the blue (BSOJ: blue screen of joy)', 'inverser le bleu (BSOJ : écran bleu de joie)'], fx() {
+          dsFilter('ds-pink', 4000);
+          playSparkleSound();
+          dsL('color inverted: BSOD → BSOJ. the frown was upside down THE WHOLE TIME.', 'couleur inversée : BSOD → BSOJ. le froncement était à l\'envers DEPUIS LE DÉBUT.', 't-ok');
+        } },
+        memtest: { d: ['test the memory (it\'s souvenirs)', 'tester la mémoire (ce sont des souvenirs)'], fx() {
+          const n = Object.keys(store.get('yos-dream-souvenirs', {})).length;
+          dsL('MEMTEST86+ — extended memory: ' + n + '/7 dream souvenirs detected. zero errors. infinite sentiment.', 'MEMTEST86+ — mémoire étendue : ' + n + '/7 souvenirs de rêve détectés. zéro erreur. sentiment infini.', n >= 7 ? 't-ok' : 't-dim');
+          if (n < 7) dsL('(souvenirs drop mid-dream. keep an eye out for the shiny.)', '(les souvenirs tombent en plein rêve. guette ce qui brille.)', 't-dim');
+        } },
+        f8: { d: ['open the advanced boot menu', 'ouvrir le menu de démarrage avancé'], fx() {
+          dsL('ADVANCED BOOT OPTIONS:', 'OPTIONS DE DÉMARRAGE AVANCÉES :', 't-accent');
+          dsL('  › start dream normally', '  › démarrer le rêve normalement', 't-dim');
+          dsL('  › start dream with cuddles', '  › démarrer le rêve avec câlins', 't-dim');
+          dsL('  › verbose crying mode', '  › mode pleurs verbeux', 't-dim');
+          dsL('  › last known good vibe (recommended)', '  › dernière bonne ambiance connue (recommandé)', 't-ok');
+        } },
+        winkey: { d: ['press the windows key (during a crash)', 'appuyer sur la touche windows (pendant un plantage)'], fx() {
+          playTone(160, 'square', 0.06, 0, 0.04);
+          dsL('the windows key does nothing. it never did, not during a crash. it knows. it accepts.', 'la touche windows ne fait rien. elle n\'a jamais rien fait pendant un plantage. elle sait. elle accepte.', 't-dim');
+        } },
+        errorlog: { d: ['read today\'s error log (all adorable)', 'lire le journal d\'erreurs du jour (toutes adorables)'], fx() {
+          dsL('ERR_TOO_ADORABLE ×3 · WARN_EXCESSIVE_COZY ×7 · INFO_SLIME_DID_NOTHING_WRONG ×∞', 'ERR_TROP_ADORABLE ×3 · WARN_COZY_EXCESSIF ×7 · INFO_LE_SLIME_N_A_RIEN_FAIT ×∞', 't-dim');
+          dsL('log rotated. the errors requested to be kept as pets. request: granted.', 'journal archivé. les erreurs ont demandé à être gardées comme animaux de compagnie. demande : accordée.', 't-ok');
+        } },
+        ctrlc: { d: ['send ^C to the crash (politely ignored)', 'envoyer ^C au plantage (poliment ignoré)'], fx() {
+          dsL('^C', '^C', 't-dim');
+          dT(() => dsL('the crash received your ^C, framed it, and continued crashing. it\'s THEIR moment.', 'le plantage a reçu ton ^C, l\'a encadré, et a continué de planter. c\'est SON moment.', 't-err'), 900);
+        } },
+        tears: { d: ['let the screen cry it out', 'laisser l\'écran pleurer un bon coup'], fx() {
+          cheatFall(['💧', '💙'], 12);
+          dsL('the screen cries it out. mop deployed. hydration: important, even for monitors.', 'l\'écran pleure un bon coup. serpillière déployée. l\'hydratation : importante, même pour les moniteurs.', 't-ok');
+        } },
+        update: { d: ['install updates (1 of 1, forever)', 'installer les mises à jour (1 sur 1, pour toujours)'], fx() {
+          dsBar('installing update 1 of 1 — DO NOT TURN OFF', 3600, (el) => {
+            if (el) el.textContent = trT('update 1 of 1 — 100%… configuring… 30%?? (it counts backwards now. it does that.)', 'mise à jour 1 sur 1 — 100 %… configuration… 30 % ?? (ça compte à rebours maintenant. c\'est son truc.)');
+            dsL('update will finish tomorrow. or never. schrödinger\'s progress bar.', 'la mise à jour finira demain. ou jamais. barre de progression de schrödinger.', 't-dim');
+          }, 't-err');
+        } },
+        reboot: { d: ['turn it off and on again (wake up)', 'éteindre et rallumer (réveil)'], fx() {
+          dsL('"have you tried turning the dream off and on again?" — yes. right now.', '« tu as essayé d\'éteindre et de rallumer le rêve ? » — oui. tout de suite.', 't-dim');
+          dsWake('rebooting… gathering feelings… 100% complete. good morning ♡', 'redémarrage… collecte des sentiments… 100 % terminé. bonjour ♡');
+        } }
+      }
+    },
+    /* ---- AMBER: SYS370% — the mainframe remembers everything ---- */
+    amber: {
+      list: 'catalog',
+      deny: [
+        ['JCL ERROR: `{c}` NOT IN CATALOG. RESUBMIT IN 6–8 BUSINESS DREAMS.', 'ERREUR JCL : `{c}` ABSENT DU CATALOGUE. RESOUMETTRE SOUS 6 À 8 RÊVES OUVRÉS.'],
+        ['IEF212I {c} — DATASET NOT FOUND (the tape squeaked disapprovingly)', 'IEF212I {c} — DATASET INTROUVABLE (la bande a couiné avec désapprobation)'],
+        ['the mainframe predates `{c}` and refuses to be impressed', 'le mainframe est antérieur à `{c}` et refuse d\'être impressionné'],
+        ['ABEND S806: {c}. please see the operator (the operator is a slime).', 'ABEND S806 : {c}. voyez l\'opérateur (l\'opérateur est un slime).']
+      ],
+      cmds: {
+        catalog: { d: ['list the job catalog (21 approved jobs)', 'lister le catalogue de jobs (21 jobs approuvés)'], fx() {
+          dsL('SYS370 JOB CATALOG — EST. 1974 — ALL JOBS PRINT IN TRIPLICATE', 'CATALOGUE SYS370 — DEP. 1974 — TOUS LES JOBS S\'IMPRIMENT EN TROIS EXEMPLAIRES', 't-dim');
+          dsList('amber', 'APPROVED JOBS:', 'JOBS APPROUVÉS :');
+        } },
+        bug: { d: ['the FIRST bug (an actual moth, 1947)', 'le PREMIER bug (une vraie mite, 1947)'], fx() {
+          dreamCritter({ emoji: '🦋', hop: 8, ms: 10000, label: ['relay #70 — first actual case of bug being found', 'relais nº70 — premier cas réel de bug trouvé'], onClick: (c) => {
+            playSparkleSound(); gainFollowers(1);
+            const bb = c.querySelector('.dream-critter-bubble');
+            if (bb) bb.textContent = trT('*taped into the logbook, gently*', '*scotchée dans le journal de bord, avec douceur*');
+          } });
+          dsL('SEPT 9, 1947 — a moth in relay #70. Grace Hopper\'s team taped it into the logbook: "first actual case of bug being found."', '9 SEPT 1947 — une mite dans le relais nº70. l\'équipe de Grace Hopper l\'a scotchée dans le journal : « premier cas réel de bug trouvé ».', 't-ok');
+          dsL('(every bug you have ever fixed is this moth\'s grandchild.)', '(chaque bug que tu as corrigé est un petit-enfant de cette mite.)', 't-dim');
+        } },
+        grace: { d: ['receive a nanosecond from Grace Hopper', 'recevoir une nanoseconde de Grace Hopper'], fx() {
+          dsL('Grace Hopper hands you a piece of wire, 11.8 inches long:', 'Grace Hopper te tend un bout de fil de 30 centimètres :', 't-dim');
+          termLine('  ————————————————————————————— (1 nanosecond)', 't-ok');
+          dsL('"this is how far light travels in a nanosecond. now you KNOW why the computer is slow. it\'s far."', '« voilà la distance que parcourt la lumière en une nanoseconde. maintenant tu SAIS pourquoi l\'ordinateur est lent. c\'est loin. »', 't-ok');
+          gainFollowers(1);
+        } },
+        punch: { d: ['punch a card (do not fold, spindle, or mutilate)', 'perforer une carte (ne pas plier, embrocher ni mutiler)'], fx() {
+          playDreamPrinter();
+          dreamCritter({ emoji: '🎫', hop: 4, ms: 8000, label: ['card № 342 — DO NOT FOLD', 'carte nº 342 — NE PAS PLIER'] });
+          dsL('card punched: 80 columns of pure intention. drop the deck and perish (socially).', 'carte perforée : 80 colonnes de pure intention. fais tomber le paquet et péris (socialement).', 't-ok');
+        } },
+        payroll: { d: ['run the payroll job (the printer sings)', 'lancer le job de paie (l\'imprimante chante)'], fx() {
+          try { dwBeatFortune(); } catch (e) { /* the printer jammed lovingly */ }
+          dsL('JOB PAYROLL SUBMITTED — the line printer clears its throat…', 'JOB PAIE SOUMIS — l\'imprimante ligne s\'éclaircit la voix…', 't-dim');
+        } },
+        cobol: { d: ['compile a COBOL program (it computes hugs)', 'compiler un programme COBOL (il calcule des câlins)'], fx() {
+          dsL('IDENTIFICATION DIVISION. PROGRAM-ID. HUG-LOOP.', 'IDENTIFICATION DIVISION. PROGRAM-ID. BOUCLE-CALIN.', 't-dim');
+          dsL('PROCEDURE DIVISION. ADD HUG TO SLIME GIVING JOY.', 'PROCEDURE DIVISION. ADD CALIN TO SLIME GIVING JOIE.', 't-dim');
+          dT(() => {
+            playSparkleSound(); burstAtSlime(['♡'], 4);
+            dsL('COMPILED: 0 ERRORS, 0 WARNINGS, 1 JOY. (COBOL still runs the banks. respect your elders.)', 'COMPILÉ : 0 ERREUR, 0 AVERTISSEMENT, 1 JOIE. (COBOL fait encore tourner les banques. respecte tes aînés.)', 't-ok');
+          }, 1400);
+        } },
+        fortran: { d: ['run some FORTRAN (poetry with line numbers)', 'lancer du FORTRAN (de la poésie avec numéros de ligne)'], fx() {
+          dsL('      DO 10 I = 1, 1000000', '      DO 10 I = 1, 1000000', 't-dim');
+          dsL('        CALL HUG(SLIME)', '        CALL CALIN(SLIME)', 't-dim');
+          dsL('   10 CONTINUE', '   10 CONTINUE', 't-dim');
+          dsL('FORTRAN: computing since 1957, hugging since just now. loop converges to ♡.', 'FORTRAN : calcule depuis 1957, câline depuis maintenant. la boucle converge vers ♡.', 't-ok');
+        } },
+        lisp: { d: ['evaluate some LISP (mind the parentheses)', 'évaluer du LISP (attention aux parenthèses)'], fx() {
+          cheatFall(['(', ')'], 10);
+          dsL('(hug (slime (dreaming (softly)))) ⇒ ♡', '(calin (slime (rêvant (doucement)))) ⇒ ♡', 't-ok');
+          dsL('perfectly balanced, as all s-expressions should be. one paren escaped. it will be found.', 'parfaitement équilibré, comme toute s-expression. une parenthèse s\'est échappée. on la retrouvera.', 't-dim');
+        } },
+        batch: { d: ['submit a batch job (results in 6–8 business dreams)', 'soumettre un job batch (résultats sous 6 à 8 rêves ouvrés)'], fx() {
+          const n = 4000 + Math.floor(Math.random() * 999);
+          dsL('JOB ' + n + ' SUBMITTED TO QUEUE. estimated completion: 6–8 business dreams.', 'JOB ' + n + ' SOUMIS À LA FILE. achèvement estimé : 6 à 8 rêves ouvrés.', 't-dim');
+          dT(() => {
+            playDreamPrinter();
+            dsL('…JOB ' + n + ' COMPLETE (early!!). output: "42 hugs". printed in triplicate. filed forever.', '…JOB ' + n + ' TERMINÉ (en avance !!). sortie : « 42 câlins ». imprimé en trois exemplaires. archivé pour toujours.', 't-ok');
+          }, 9000);
+        } },
+        hcf: { d: ['HALT AND CATCH FIRE (the legendary opcode)', 'HALT AND CATCH FIRE (l\'opcode légendaire)'], fx() {
+          dsFlash('ds-flash-red', 600);
+          dsShake(700);
+          cheatFall(['🔥'], 8);
+          dsL('0x9D EXECUTED — HALT AND CATCH FIRE. the mainframe halts. it does NOT catch fire (it\'s seen worse).', '0x9D EXÉCUTÉ — HALT AND CATCH FIRE. le mainframe s\'arrête. il ne prend PAS feu (il a vu pire).', 't-err');
+          dT(() => dsL('please do not execute that again. (once per dream is traditional.)', 'merci de ne pas ré-exécuter ça. (une fois par rêve, c\'est la tradition.)', 't-dim'), 1600);
+        } },
+        tape: { d: ['mount a tape reel (it squeaks in F#)', 'monter une bobine (elle couine en fa dièse)'], fx() {
+          if (!termOut) return;
+          const el = document.createElement('span');
+          el.className = 't-line t-dim';
+          termOut.appendChild(el);
+          const frames = ['◐ ◓ mounting TAPE_07…', '◓ ◑ mounting TAPE_07…', '◑ ◒ mounting TAPE_07…', '◒ ◐ mounting TAPE_07…'];
+          let f = 0;
+          const iv = dI(() => { if (!el.isConnected) { clearInterval(iv); return; } el.textContent = frames[f++ % 4]; }, 220);
+          dT(() => {
+            clearInterval(iv);
+            el.textContent = trT('◉ ◉ TAPE_07 mounted. contents: 1974–present, feelings, uncompressed.', '◉ ◉ TAPE_07 montée. contenu : 1974–aujourd\'hui, sentiments, non compressés.');
+            el.className = 't-line t-ok';
+            playTone(370, 'sine', 0.25, 0, 0.04);
+          }, 2600);
+        } },
+        core: { d: ['dump the core (it\'s donuts)', 'vider la mémoire core (ce sont des donuts)'], fx() {
+          cheatFall(['🍩'], 10);
+          dsL('CORE DUMPED: 64 KB of magnetic donuts. (core memory was literally tiny rings. eat one. metaphorically.)', 'CORE DUMPÉ : 64 Ko de donuts magnétiques. (la mémoire à tores, c\'était littéralement des petits anneaux. manges-en un. métaphoriquement.)', 't-ok');
+        } },
+        eniac: { d: ['ask grandmother ENIAC for wisdom', 'demander sa sagesse à grand-mère ENIAC'], fx() {
+          dsL('👵 ENIAC (est. 1945, 30 tonnes, 18,000 tubes) adjusts her plugboard and says:', '👵 ENIAC (née en 1945, 30 tonnes, 18 000 tubes) ajuste son tableau de connexions et dit :', 't-dim');
+          dsL('"in MY day, programming was six brilliant women and a room of cables. it still counts as magic."', '« de MON temps, programmer c\'était six femmes brillantes et une salle pleine de câbles. ça compte toujours comme de la magie. »', 't-ok');
+          gainFollowers(1);
+        } },
+        y2k38: { d: ['schedule the NEXT apocalypse (jan 19, 2038)', 'planifier la PROCHAINE apocalypse (19 jan 2038)'], fx() {
+          dsL('REMINDER SET: jan 19, 2038, 03:14:07 UTC — signed 32-bit time_t overflows.', 'RAPPEL CRÉÉ : 19 jan 2038, 03:14:07 UTC — le time_t signé 32 bits déborde.', 't-err');
+          dsL('the mainframe giggles in 64-bit. it has been ready since before you were born.', 'le mainframe glousse en 64 bits. il est prêt depuis avant ta naissance.', 't-ok');
+        } },
+        daemon: { d: ['spawn a helpful daemon (it does chores)', 'invoquer un daemon serviable (il fait les corvées)'], fx() {
+          dreamCritter({ emoji: '😈', hop: 5, ms: 9000, label: ['daemon — friendly, does chores', 'daemon — amical, fait les corvées'], onClick: (c) => {
+            playSparkleSound(); gainFollowers(1);
+            const bb = c.querySelector('.dream-critter-bubble');
+            if (bb) bb.textContent = trT('*quietly refills your coffee*', '*ressert discrètement ton café*');
+          } });
+          dsL('daemon spawned (lowercase d, very important). it runs in the background and judges no one.', 'daemon invoqué (d minuscule, très important). il tourne en arrière-plan et ne juge personne.', 't-ok');
+        } },
+        teletype: { d: ['switch to teletype speed (110 baud, savor it)', 'passer en vitesse télétype (110 bauds, savoure)'], fx() {
+          const msg = trT('T T Y   M O D E :   e a c h   l e t t e r   a r r i v e s   b y   c o u r i e r .   l u x u r i o u s .', 'M O D E   T T Y :   c h a q u e   l e t t r e   a r r i v e   p a r   c o u r s i e r .   l u x u e u x .');
+          if (!termOut) return;
+          const el = document.createElement('span');
+          el.className = 't-line t-ok';
+          termOut.appendChild(el);
+          let i = 0;
+          const iv = dI(() => {
+            if (!el.isConnected || i >= msg.length) { clearInterval(iv); return; }
+            el.textContent += msg[i++];
+            if (i % 3 === 0) playTone(1600, 'square', 0.012, 0, 0.01);
+            termOut.scrollTop = termOut.scrollHeight;
+          }, 45);
+        } },
+        abacus: { d: ['arm the fallback compute engine', 'armer le moteur de calcul de secours'], fx() {
+          dsL('🧮 FALLBACK ENGINE ARMED: abacus v1.0 — uptime: 4,000 years. CVEs: zero. dependencies: fingers.', '🧮 MOTEUR DE SECOURS ARMÉ : boulier v1.0 — uptime : 4 000 ans. CVE : zéro. dépendances : les doigts.', 't-ok');
+          dsL('(the mainframe pretends not to be impressed. it is impressed.)', '(le mainframe fait semblant de ne pas être impressionné. il l\'est.)', 't-dim');
+        } },
+        vacuum: { d: ['replace a vacuum tube (1 of 18,000)', 'remplacer un tube à vide (1 sur 18 000)'], fx() {
+          dsBar('replacing tube #4 of 18,000', 2400, () => {
+            playTone(520, 'sine', 0.2, 0, 0.04);
+            dsL('tube replaced. estimated remaining: yes. the warm glow returns. moths (see `bug`) take notice.', 'tube remplacé. restant estimé : oui. la lueur chaude revient. les mites (voir `bug`) sont intéressées.', 't-ok');
+          });
+        } },
+        overtime: { d: ['file for overtime (the mainframe hums louder)', 'déclarer des heures sup (le mainframe ronronne plus fort)'], fx() {
+          playTone(55, 'sawtooth', 1.4, 0, 0.05);
+          playDreamPrinter();
+          gainFollowers(1);
+          dsL('OVERTIME SLIP PRINTED: "worked 1 (one) dream past curfew. compensation: 1 (one) extra pat."', 'FICHE D\'HEURES SUP IMPRIMÉE : « a travaillé 1 (un) rêve après le couvre-feu. compensation : 1 (une) caresse en plus. »', 't-ok');
+        } },
+        eightball: { d: ['consult the magic 8-ball subroutine', 'consulter la sous-routine boule magique'], fx() {
+          const a = [['OUTLOOK GOOD (CONFIDENCE: 8 BITS)', 'PERSPECTIVES BONNES (CONFIANCE : 8 BITS)'], ['REPLY HAZY — RESUBMIT WITH MORE SNACKS', 'RÉPONSE FLOUE — RESOUMETTRE AVEC PLUS DE SNACKS'], ['IT IS DECIDEDLY SO (THE TAPE AGREES)', 'C\'EST CERTAIN (LA BANDE EST D\'ACCORD)'], ['ASK AGAIN AFTER A NAP', 'REDEMANDE APRÈS UNE SIESTE']][Math.floor(Math.random() * 4)];
+          playTone(300, 'sine', 0.15, 0, 0.04);
+          dsL('🎱 SUBROUTINE 8BALL RETURNS: ' + a[0], '🎱 LA SOUS-ROUTINE 8BALL RETOURNE : ' + a[1], 't-ok');
+        } },
+        logoff: { d: ['end the session (wake up)', 'terminer la session (réveil)'], fx() {
+          dsL('SESSION SUMMARY — CPU: 0.00034 HOURS · JOBS: several · HUGS: logged.', 'RÉSUMÉ DE SESSION — CPU : 0,00034 HEURE · JOBS : plusieurs · CÂLINS : consignés.', 't-dim');
+          dsWake('LOGOFF ACCEPTED. THANK YOU FOR COMPUTING WITH US SINCE 1974 ♡', 'DÉCONNEXION ACCEPTÉE. MERCI DE CALCULER AVEC NOUS DEPUIS 1974 ♡');
+        } }
+      }
+    }
+  };
 
   /* =====================================================
      v7.0 — SCP FOUNDATION, PROPERLY 🔬

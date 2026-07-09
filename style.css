@@ -10372,6 +10372,65 @@ html.scp-form-2521 #slime-pet img { filter: brightness(0.15) contrast(1.4) drop-
   .scp-envelope, .scp-letter, .scp-stamp, .scp-env-band, .scp-env-hint { animation: none; }
 }
 
+/* ---- v83: DREAM SHELL fx classes (the 147 secret words need props) ---- */
+body.ds-shake { animation: ds-shake 0.32s linear infinite; }
+@keyframes ds-shake {
+  25% { transform: translate(3px, -2px); }
+  50% { transform: translate(-3px, 2px); }
+  75% { transform: translate(2px, 3px); }
+}
+html.ds-gray { filter: grayscale(1) contrast(1.03); }
+html.ds-pink { filter: hue-rotate(140deg) saturate(1.25); }
+html.ds-hotdog { filter: saturate(2.6) contrast(1.2) hue-rotate(-30deg); }
+html.ds-hot { filter: saturate(1.5) sepia(0.25) hue-rotate(-12deg); }
+html.ds-blur { filter: blur(3px); }
+html.ds-contrast { filter: brightness(0.82) contrast(1.35); }
+html.ds-ripple { animation: ds-ripple 1.5s ease-in-out; }
+@keyframes ds-ripple {
+  25% { filter: blur(1.5px) saturate(1.3); transform: skewX(0.6deg); }
+  55% { filter: blur(0.5px); transform: skewX(-0.4deg); }
+}
+html.ds-pause *, html.ds-pause *::before, html.ds-pause *::after { animation-play-state: paused !important; }
+html.ds-blink .window-title { animation: ds-blinky 0.8s steps(1) infinite; }
+@keyframes ds-blinky { 50% { opacity: 0; } }
+.ds-flash-blue, .ds-flash-red, .ds-flash-white {
+  position: fixed;
+  inset: 0;
+  z-index: 2696;
+  pointer-events: none;
+  animation: ds-flashfade 0.75s ease-out forwards;
+}
+.ds-flash-blue { background: #0827f5; }
+.ds-flash-red { background: #c62828; }
+.ds-flash-white { background: #fff; }
+@keyframes ds-flashfade { from { opacity: 0.85; } to { opacity: 0; } }
+.ds-glitchtiles {
+  position: fixed;
+  inset: 0;
+  z-index: 2696;
+  pointer-events: none;
+  background: repeating-conic-gradient(#000 0 25%, #fff 0 50%) 0 0 / 26px 26px;
+  mix-blend-mode: difference;
+  animation: ds-flashfade 0.85s steps(5) forwards;
+}
+.ds-frame800 {
+  position: fixed;
+  inset: 0;
+  z-index: 2694;
+  pointer-events: none;
+  border: solid #000;
+  border-width: max(0px, calc((100vh - 600px) / 2)) max(0px, calc((100vw - 800px) / 2));
+  box-shadow: inset 0 0 0 3px var(--ink);
+}
+#slime-habitat.ds-contain {
+  outline: 3px dashed #ffd23f;
+  outline-offset: 5px;
+  animation: scp-band-blink 1.1s steps(2) infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  body.ds-shake, html.ds-ripple, html.ds-blink .window-title, .ds-glitchtiles { animation: none; }
+}
+
 /* yongle provenance stamps */
 .dream-search-flavor {
   margin-top: 12px;
