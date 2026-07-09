@@ -10432,6 +10432,234 @@ html.ds-blink .window-title { animation: ds-blinky 0.8s steps(1) infinite; }
   body.ds-shake, html.ds-ripple, html.ds-blink .window-title, .ds-glitchtiles { animation: none; }
 }
 
+/* ---- v85: DREAMLOG.EXE — the journal that only exists in dreams ---- */
+.icon-visual-emoji {
+  width: 46px;
+  height: 46px;
+  font-size: 36px;
+  line-height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#icon-dreamlog { display: none; }
+html.dreaming #icon-dreamlog {
+  display: flex;
+  animation: dl-icon-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+html.dreaming #icon-dreamlog .icon-visual-emoji {
+  filter: drop-shadow(0 0 9px rgba(255, 143, 199, 0.85));
+  animation: dream-critter-bob 1.6s ease-in-out infinite alternate;
+}
+@keyframes dl-icon-pop {
+  from { transform: scale(0) rotate(-20deg); opacity: 0; }
+}
+.window-dreamlog { width: min(470px, 94vw); }
+.dreamlog-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  min-height: 280px;
+  max-height: min(430px, 62vh);
+  overflow-y: auto;
+  font-size: 0.86rem;
+}
+.dl-awake-note { padding: 30px 16px; text-align: center; opacity: 0.75; }
+.dl-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-family: var(--font-pixel);
+  font-size: 1rem;
+}
+.dl-count {
+  border: 2px solid var(--ink);
+  background: var(--cream);
+  padding: 0 8px;
+  box-shadow: 2px 2px 0 var(--shadow);
+}
+.dl-hint { font-size: 0.78rem; opacity: 0.78; line-height: 1.4; }
+.dl-list { display: flex; flex-direction: column; gap: 6px; }
+.dl-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 9px;
+  border: 2px solid var(--ink);
+  background: var(--cream);
+  box-shadow: 2px 2px 0 var(--shadow);
+  animation: dl-row-in 0.3s ease-out;
+}
+@keyframes dl-row-in { from { transform: translateX(-14px); opacity: 0; } }
+.dl-e { flex: none; width: 24px; text-align: center; }
+.dl-t { flex: 1; line-height: 1.35; }
+.dl-ts { flex: none; font-family: var(--font-pixel); font-size: 0.72rem; opacity: 0.6; }
+.dl-locked { opacity: 0.45; border-style: dashed; box-shadow: none; font-style: italic; }
+.dl-avail { cursor: pointer; }
+.dl-btn {
+  flex: none;
+  font-family: var(--font-pixel);
+  font-size: 0.74rem;
+  background: var(--cream);
+  color: var(--text);
+  border: 2px solid var(--ink);
+  box-shadow: 2px 2px 0 var(--shadow);
+  padding: 2px 8px;
+  cursor: pointer;
+}
+.dl-btn:active { transform: translate(1px, 1px); box-shadow: none; }
+/* — win95: notepad.exe, white paper, the sacred F5 — */
+.dl-win95 { background: #fff; color: #111; font-family: 'Courier New', monospace; }
+.dl-win95 .dl-row { background: #fff; border-color: transparent; box-shadow: none; padding: 2px 4px; }
+.dl-win95 .dl-locked { border-style: none; }
+.dl-win95 .dl-head, .dl-win95 .dl-count { color: #111; background: #fff; }
+.dl-f5bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-top: 2px dashed #999;
+  padding-top: 8px;
+  font-size: 0.78rem;
+  color: #444;
+}
+.dl-f5 { font-size: 1rem; padding: 4px 14px; background: #e8e8e8; }
+.dl-f5:disabled { opacity: 0.45; cursor: default; }
+/* — scp: manila incident folder, redaction bars — */
+.dl-scp { background: #efe3c0; color: #2b2417; }
+.dl-scp .dl-row { background: #f7eed4; }
+.dl-bars { letter-spacing: 1px; color: #111; }
+.dl-reveal { border-color: #1d8a44; }
+.dl-reveal .dl-t { animation: dl-fadein 0.5s; }
+.dl-scp .dl-got { position: relative; }
+.dl-scp .dl-got::after {
+  content: 'DECLASSIFIED ♡';
+  position: absolute;
+  right: 6px;
+  top: -8px;
+  font-family: var(--font-pixel);
+  font-size: 0.6rem;
+  color: #1d8a44;
+  border: 2px double #1d8a44;
+  border-radius: 4px;
+  padding: 0 4px;
+  transform: rotate(6deg);
+  background: #f7eed4;
+}
+@keyframes dl-fadein { from { opacity: 0; } }
+/* — matrix: residual memory, scrambled green — */
+.dl-matrix { background: #02120a; color: #39d353; font-family: 'VT323', monospace; }
+.dl-matrix .dl-row { background: #04180d; border-color: #1d5c33; box-shadow: none; color: #39d353; }
+.dl-matrix .dl-head, .dl-matrix .dl-count { color: #39d353; background: #02120a; border-color: #1d5c33; }
+.dl-matrix .dl-hint { color: #2aa04a; }
+.dl-focusing { outline: 2px solid #39d353; position: relative; overflow: hidden; }
+.dl-focusing::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 2px;
+  background: #39d353;
+  animation: dl-focus 1s linear forwards;
+}
+@keyframes dl-focus { from { width: 0; } to { width: 100%; } }
+/* — gameboy: DREAM DEX, tall grass, the [A] button — */
+.dl-gameboy { background: #9bbc0f; color: #0f380f; font-family: var(--font-pixel); }
+.dl-gameboy .dl-row { background: #8bac0f; border-color: #306230; box-shadow: none; color: #0f380f; }
+.dl-gameboy .dl-head, .dl-gameboy .dl-count { color: #0f380f; background: #9bbc0f; border-color: #306230; }
+.dl-gb-stage {
+  position: relative;
+  height: 62px;
+  border: 3px solid #306230;
+  background: repeating-linear-gradient(90deg, #8bac0f 0 14px, #7d9b0e 14px 28px);
+  overflow: hidden;
+}
+.dl-gb-ring {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 44px;
+  height: 44px;
+  transform: translate(-50%, -50%);
+  border: 3px dashed #0f380f;
+  border-radius: 50%;
+}
+.dl-gb-sprite {
+  position: absolute;
+  top: 16px;
+  left: 4px;
+  font-size: 26px;
+  animation: dl-gb-run 1.55s linear infinite alternate;
+}
+@keyframes dl-gb-run {
+  from { left: 4px; }
+  to { left: calc(100% - 34px); }
+}
+.dl-gb-a {
+  position: absolute;
+  right: 8px;
+  bottom: 6px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 3px solid #0f380f;
+  background: #a2003d;
+  color: #fff;
+  font-family: var(--font-pixel);
+  font-size: 1.1rem;
+  box-shadow: 0 3px 0 #0f380f;
+  cursor: pointer;
+}
+.dl-gb-a:active { transform: translateY(2px); box-shadow: 0 1px 0 #0f380f; }
+.dl-gb-empty { display: block; padding: 20px 10px; text-align: center; font-size: 0.8rem; }
+.dl-gb-miss { animation: ds-shake 0.25s linear 2; }
+/* — geo: 1998 guestbook, dotted and proud — */
+.dl-geo { background: #fffbe6; color: #333; }
+.dl-geo .dl-row { border-style: dotted; border-color: #ff62c5; background: #fff; }
+.dl-geo .dl-geo-soon { animation: ds-blinky 1s steps(1) infinite; }
+.dl-geo .dl-got .dl-t { font-style: italic; }
+/* — bsod: recovered dump, blue and brave — */
+.dl-bsod { background: #0827f5; color: #fff; font-family: var(--font-pixel); }
+.dl-bsod .dl-row { background: #0a2fe0; border-color: #fff; box-shadow: none; color: #fff; }
+.dl-bsod .dl-head, .dl-bsod .dl-count { color: #fff; background: #0827f5; border-color: #fff; }
+.dl-bsod .dl-hint { color: #cfd8ff; }
+.dl-bsod .dl-btn { background: #fff; color: #0827f5; }
+.dl-repairbar {
+  flex: none;
+  width: 56px;
+  height: 8px;
+  border: 1px solid #fff;
+  overflow: hidden;
+}
+.dl-repairbar i { display: block; height: 100%; width: 0; background: #7ee0a3; }
+.dl-repairing .dl-repairbar i { animation: dl-focus 1.4s linear forwards; }
+/* — amber: the 1947 logbook, paper and tape — */
+.dl-amber { background: #f4e4bc; color: #4a3319; font-family: 'Courier New', monospace; }
+.dl-amber .dl-row { background: #faf0d8; border-color: #8a6a3a; }
+.dl-slip { transform: rotate(-1.2deg); border-style: dashed; cursor: pointer; }
+.dl-taping { animation: dl-tape-in 0.7s ease-out forwards; }
+@keyframes dl-tape-in {
+  30% { transform: rotate(2deg) translateY(-6px); }
+  100% { transform: rotate(0.6deg); }
+}
+.dl-amber .dl-got { position: relative; transform: rotate(0.6deg); }
+.dl-amber .dl-got::before, .dl-amber .dl-got::after {
+  content: '';
+  position: absolute;
+  top: -6px;
+  width: 30px;
+  height: 12px;
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(138, 106, 58, 0.4);
+  transform: rotate(-38deg);
+}
+.dl-amber .dl-got::before { left: 8px; }
+.dl-amber .dl-got::after { right: 8px; transform: rotate(38deg); }
+@media (prefers-reduced-motion: reduce) {
+  .dl-gb-sprite, .dl-geo .dl-geo-soon, html.dreaming #icon-dreamlog .icon-visual-emoji { animation: none; }
+}
+
 /* yongle provenance stamps */
 .dream-search-flavor {
   margin-top: 12px;

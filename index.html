@@ -423,6 +423,12 @@
             <div class="icon-label" data-i18n="file.edu">education_awards.txt</div>
           </button>
 
+          <!-- Dreamlog: the dream journal — the icon only exists while the site dreams -->
+          <button class="desktop-icon-btn" data-window="win-dreamlog" id="icon-dreamlog" aria-haspopup="dialog">
+            <span class="icon-visual icon-visual-emoji" aria-hidden="true">📔</span>
+            <div class="icon-label">dreamlog.exe</div>
+          </button>
+
           <!-- Pikdex: the pikmin collection deck -->
           <button class="desktop-icon-btn" data-window="win-pikdex" aria-haspopup="dialog">
             <svg class="icon-visual" viewBox="0 0 32 32" width="46" height="46"><use href="#y2k-pikdex-icon" /></svg>
@@ -1135,6 +1141,24 @@
         <div class="window-footer">
           <span data-i18n="watch.footer.l">pets & plucks sync through the cloud</span>
           <span data-i18n="watch.footer.r">no app store required ♡</span>
+        </div>
+      </section>
+
+      <!-- Dreamlog: seven journals for seven dreams (rendered by JS per world) -->
+      <section class="window window-closed window-dreamlog" id="win-dreamlog" aria-labelledby="title-dreamlog" role="dialog">
+        <div class="window-header drag-handle">
+          <div class="window-title-container">
+            <span class="window-icon">📔</span>
+            <span class="window-title" id="title-dreamlog">dreamlog.exe</span>
+          </div>
+          <div class="window-controls">
+            <button class="win-btn win-btn-minimize" aria-label="Minimize window">_</button>
+            <button class="win-btn win-btn-maximize" aria-label="Maximize window">⛶</button>
+            <button class="win-btn win-btn-close" aria-label="Close window">♥</button>
+          </div>
+        </div>
+        <div class="window-body">
+          <div class="dreamlog-shell" id="dreamlog-body"></div>
         </div>
       </section>
 

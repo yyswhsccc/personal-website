@@ -2273,9 +2273,9 @@ document.addEventListener('DOMContentLoaded', () => {
     },
     {
       k: ['curfew', 'sleepwalk', 'sleepwalking', 'dream world', 'why quiet', 'gremlin', '宵禁', '梦游', '捣蛋', 'couvre-feu', 'somnambule', 'gremlin'],
-      a: 'ah, the DREAM CURFEW — yongshan\'s house rule ♡ here\'s the deal: in dark mode I sleepwalk, and my dreams… leak. sometimes onto the whole website. so after one arcade ambush I\'m under a 14-minute quiet-dream curfew — HER idea, so visitors get real time to explore everything she built. (and the clock only ticks while you\'re actually browsing — parking the tab doesn\'t count, nice try ♡) BUT: the first 7 minutes after curfew lifts are GREMLIN HOUR (100% sleepwalks, and 9 times out of 10 the ENTIRE site falls into one of my seven dream worlds for 10–15 minutes). if that happens: enjoy it, watch my countdown bubbles, and knock on my screen to pop the dream early ♡',
-      zh: '啊，「梦境宵禁」——yongshan 定的家规 ♡ 是这样：暗色模式下我会梦游，而我的梦……会漏出来，有时候漏满整个网站。所以每次梦游突袭街机之后，我要接受 14 分钟的安静梦宵禁——这是她的主意，为了让访客有充足时间探索她做的所有东西。（而且时钟只在你真的在逛的时候才走，挂机不算哦 ♡）但是！宵禁解除后的前 7 分钟是捣蛋鬼时间（100% 梦游，而且十次里有九次整个网站会直接掉进我的七个梦境世界之一，持续 10–15 分钟）。真发生了的话：好好享受，看我的倒计时气泡，敲敲我的屏幕就能提前戳破梦境 ♡',
-      fr: 'ah, le COUVRE-FEU DES RÊVES — la règle maison de yongshan ♡ le principe : en mode nuit je suis somnambule, et mes rêves… fuient. parfois sur tout le site. donc après une embuscade d\'arcade, je subis 14 minutes de rêves calmes — SON idée, pour que les visiteurs aient le temps d\'explorer tout ce qu\'elle a construit. (et l\'horloge ne tourne que quand tu navigues vraiment — laisser l\'onglet ouvert ne compte pas, bien tenté ♡) MAIS : les 7 premières minutes après la levée, c\'est L\'HEURE DU GREMLIN (100 % de somnambulisme, et 9 fois sur 10 le site ENTIER tombe dans un de mes sept mondes oniriques pendant 10–15 minutes). si ça arrive : profite, suis mes bulles de compte à rebours, et toque sur mon écran pour faire éclater le rêve ♡'
+      a: 'ah, the DREAM CURFEW — yongshan\'s house rule ♡ here\'s the deal: in dark mode I sleepwalk, and my dreams… leak. sometimes onto the whole website. so after one arcade ambush I\'m under a 6-minute-59-second quiet-dream curfew — HER idea, so visitors get a breather to explore everything she built. (it USED to be 14 minutes, but a field tester reported visitors left before the dreams even started. patched. also the clock only ticks while you\'re actually browsing — parking the tab doesn\'t count, nice try ♡) BUT: the first 7 minutes after curfew lifts are GREMLIN HOUR (100% sleepwalks, and 9 times out of 10 the ENTIRE site falls into one of my seven dream worlds for 10–15 minutes). if that happens: enjoy it, watch my countdown bubbles, and knock on my screen to pop the dream early ♡',
+      zh: '啊，「梦境宵禁」——yongshan 定的家规 ♡ 是这样：暗色模式下我会梦游，而我的梦……会漏出来，有时候漏满整个网站。所以每次梦游突袭街机之后，我要接受 6 分 59 秒的安静梦宵禁——这是她的主意，让访客喘口气探索她做的所有东西。（以前是 14 分钟，但实测反馈说访客等到走光了梦境还没开演，已修复。而且时钟只在你真的在逛的时候才走，挂机不算哦 ♡）但是！宵禁解除后的前 7 分钟是捣蛋鬼时间（100% 梦游，而且十次里有九次整个网站会直接掉进我的七个梦境世界之一，持续 10–15 分钟）。真发生了的话：好好享受，看我的倒计时气泡，敲敲我的屏幕就能提前戳破梦境 ♡',
+      fr: 'ah, le COUVRE-FEU DES RÊVES — la règle maison de yongshan ♡ le principe : en mode nuit je suis somnambule, et mes rêves… fuient. parfois sur tout le site. donc après une embuscade d\'arcade, je subis 6 minutes 59 secondes de rêves calmes — SON idée, pour que les visiteurs soufflent et explorent tout ce qu\'elle a construit. (avant c\'était 14 minutes, mais une testeuse a signalé que les visiteurs partaient avant même le début des rêves. corrigé. et l\'horloge ne tourne que quand tu navigues vraiment — laisser l\'onglet ouvert ne compte pas, bien tenté ♡) MAIS : les 7 premières minutes après la levée, c\'est L\'HEURE DU GREMLIN (100 % de somnambulisme, et 9 fois sur 10 le site ENTIER tombe dans un de mes sept mondes oniriques pendant 10–15 minutes). si ça arrive : profite, suis mes bulles de compte à rebours, et toque sur mon écran pour faire éclater le rêve ♡'
     },
     {
       k: ['salary', 'pay', 'compensation', 'rate', '薪资', '工资', '报价', 'salaire'],
@@ -3577,6 +3577,8 @@ document.addEventListener('DOMContentLoaded', () => {
     { id: 'dreamroot', icon: '👑', n: ['Root of the Dream', 'Root du Rêve'], d: ['spoke all 21 words of a single dream world. fluent. feared. adored.', 'a prononcé les 21 mots d\'un même monde onirique. courant. craint. adoré.'], t: ['each dream world understands exactly 21 words.', 'chaque monde onirique comprend exactement 21 mots.'] },
     { id: 'chariotdraw', icon: '🏇', n: ['The Soul Card, Face Up', 'La Carte-Âme, Face Visible'], d: ['fate dealt THE CHARIOT upright — yongshan\'s own tarot card. the whole deck stood at attention.', 'le destin a servi LE CHARIOT à l\'endroit — la carte de tarot de yongshan elle-même. tout le paquet s\'est mis au garde-à-vous.'], t: ['one of the 78 cards belongs to the webmaster. fate deals it sometimes.', 'une des 78 cartes appartient à la webmaster. le destin la sert parfois.'] },
     { id: 'chariotcall', icon: '🏁', n: ['Summoned By Number', 'Invoquée Par Son Numéro'], d: ['called the CHARIOT by its number — tarot 7 — and it answered UPRIGHT. it knows its owner\'s friends.', 'a appelé LE CHARIOT par son numéro — tarot 7 — et il a répondu À L\'ENDROIT. il reconnaît les amis de sa propriétaire.'], t: ['the webmaster\'s card answers to `tarot 7`. sometimes right side up.', 'la carte de la webmaster répond à `tarot 7`. parfois à l\'endroit.'] },
+    { id: 'dreamscribe', icon: '📔', n: ['Dream Scribe', 'Scribe des Rêves'], d: ['filled one dream world\'s entire journal — all 7 moments, timestamped/declassified/caught/taped.', 'a rempli le journal complet d\'un monde onirique — les 7 moments, horodatés/déclassifiés/attrapés/scotchés.'], t: ['while the site dreams, a notebook appears on the desktop.', 'quand le site rêve, un carnet apparaît sur le bureau.'] },
+    { id: 'dreamtome', icon: '📚', n: ['Keeper of the Dream Tome', 'Gardien·ne du Grimoire des Rêves'], d: ['completed ALL SEVEN dream journals — 49 moments across seven nights\' worth of worlds. librarians weep.', 'a complété LES SEPT journaux de rêve — 49 moments à travers sept mondes. les bibliothécaires en pleurent.'], t: ['seven journals. seven gestures. forty-nine moments.', 'sept journaux. sept gestes. quarante-neuf moments.'] },
     { id: 'bosskill', icon: '⚔️', n: ['Kaiju Exterminator', 'Exterminateur·rice de Kaijus'], d: ['deleted a 404 kaiju. the page was never found again.', 'a supprimé un kaiju 404. la page n\'a plus jamais été retrouvée.'], t: ['something enormous eventually blocks the road.', 'quelque chose d\'énorme finit par bloquer la route.'] },
     { id: 'speedran', icon: '💨', n: ['Speedrun to Zero', 'Speedrun Vers Zéro'], d: ['perished within 3 seconds of the start line. the bugs sent a thank-you card.', 'a péri moins de 3 secondes après le départ. les bugs ont envoyé une carte de remerciement.'], t: ['fail fast. no — FASTER.', 'échoue vite. non — PLUS VITE.'] },
     { id: 'top10', icon: '🏆', n: ['Three Letters, No Shame', 'Trois Lettres, Zéro Honte'], d: ['signed the arcade top-10. the initials definitely spell something.', 'a signé le top 10 de l\'arcade. les initiales veulent SÛREMENT dire quelque chose.'], t: ['great runs deserve a signature.', 'les grandes runs méritent une signature.'] },
@@ -5556,7 +5558,7 @@ document.addEventListener('DOMContentLoaded', () => {
     ["zzz… no arcade dreams… yongshan's orders… go explore… her site is bigger than my whole imagination…", "zzz… pas de rêves d'arcade… ordres de yongshan… va explorer… son site est plus grand que toute mon imagination…"],
     ["mmh… curfew rules… so the visitor can see EVERYTHING… the terminal… the meadow… the wall… zzz…", "mmh… règles du couvre-feu… pour que la visite voie TOUT… le terminal… la prairie… le mur… zzz…"],
     ["zzz… dreaming responsibly… as legally required… by mom— by yongshan…", "zzz… je rêve de façon responsable… comme la loi l'exige… maman— yongshan l'exige…"],
-    ["*snore* …14 minutes of quiet is 4200 slime-years… but rules are rules… she's right… she's always right… zzz", "*ronfle* …14 minutes de calme = 4200 années-slime… mais les règles sont les règles… elle a raison… toujours… zzz"]
+    ["*snore* …6 minutes 59 seconds of quiet is 2095 slime-years… but rules are rules… she's right… she's always right… zzz", "*ronfle* …6 minutes 59 secondes de calme = 2095 années-slime… mais les règles sont les règles… elle a raison… toujours… zzz"]
   ];
 
   function dreamTalk() {
@@ -5666,8 +5668,8 @@ document.addEventListener('DOMContentLoaded', () => {
   var swEl = null;
 
   /* ---- v5.2: the DREAM CURFEW 🌙 ----
-     one arcade ambush per 14 minutes, MAX. the moment a sleepwalk opens
-     the arcade, game-dreams go on a 14-minute curfew: walks turn rare
+     one arcade ambush per 6:59, MAX. the moment a sleepwalk opens
+     the arcade, game-dreams go on a 6-minute-59-second curfew: walks turn rare
      (10%) and only visit NON-game features, so the visitor can actually
      be immersed in the rest of the site. when the curfew lifts there is
      a small ceremony (of course there is). and if the visitor slams the
@@ -5676,7 +5678,7 @@ document.addEventListener('DOMContentLoaded', () => {
      50%, and only 1-in-4 ever dreams of the arcade again. the other 3
      go do things. real things. dreams respect boundaries. */
   /* ---- v6.1: the curfew clock only ticks while YOU are here ----
-     14 minutes of ACTIVE time — tab visible AND some input in the last
+     6 minutes 59 seconds of ACTIVE time — tab visible AND some input in the last
      75s — accumulated across visits. parking the tab overnight serves
      exactly zero seconds; the slime is patient, not gullible. stored
      as milliseconds still owed ('yos-sw-curfew-left'). */
@@ -5731,16 +5733,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // the house rule, explained to the audience by the accused
   const SW_CURFEW_WHY = [
-    ["📜 house rule by yongshan: after ONE arcade dream I get a 14-min quiet-dream curfew… so YOU get time to explore the rest of her site in peace!! (I signed the form. with my face.)",
-     "📜 règle de la maison signée yongshan : après UN rêve d'arcade, couvre-feu des rêves de 14 min… pour que TU puisses explorer le reste de son site en paix !! (j'ai signé le formulaire. avec mon visage.)"],
-    ["📜 yongshan's law: one arcade ambush per 14 minutes, MAX. she says the site has like 40 other rooms and you deserve to see them without me yelling PLAY WITH ME ♡",
-     "📜 la loi de yongshan : une embuscade d'arcade par 14 minutes, MAXI. elle dit que le site a genre 40 autres pièces et que tu mérites de les voir sans que je crie JOUE AVEC MOI ♡"],
-    ["📜 the curfew is yongshan's idea: 14 whole minutes of quiet dreams so you can wander her whole site… and the clock only ticks while YOU'RE actually here!! no serving my sentence to an empty room 💤",
-     "📜 le couvre-feu, c'est l'idée de yongshan : 14 minutes de rêves calmes pour que tu explores tout son site… et l'horloge ne tourne que quand TU es vraiment là !! pas question de purger ma peine devant une salle vide 💤"]
+    ["📜 house rule by yongshan: after ONE arcade dream I get a 6-minute-59-second quiet-dream curfew… so YOU get a breather to explore her site!! (why 59? her lawyer shaved a second off as a treat.)",
+     "📜 règle de la maison signée yongshan : après UN rêve d'arcade, couvre-feu des rêves de 6 minutes 59 secondes… pour que TU souffles et explores son site !! (pourquoi 59 ? son avocat a rogné une seconde, en cadeau.)"],
+    ["📜 yongshan's law: one arcade ambush per 6:59, MAX. it used to be 14 whole minutes but a field tester said visitors LEFT before the dreams even started. patched. deployed. bless QA ♡",
+     "📜 la loi de yongshan : une embuscade d'arcade par 6 min 59, MAXI. avant c'était 14 minutes mais une testeuse a dit que les visiteurs PARTAIENT avant même le début des rêves. patché. déployé. vive la QA ♡"],
+    ["📜 the curfew is yongshan's idea: 6 minutes 59 seconds of quiet dreams so you can wander her site… and the clock only ticks while YOU'RE actually here!! no serving my sentence to an empty room 💤",
+     "📜 le couvre-feu, c'est l'idée de yongshan : 6 minutes 59 secondes de rêves calmes pour que tu explores son site… et l'horloge ne tourne que quand TU es vraiment là !! pas question de purger ma peine devant une salle vide 💤"]
   ];
 
   function swStartCurfew() {
-    swCurfewLeft = 14 * 60 * 1000; // 14 ACTIVE minutes, not 14 parked ones
+    swCurfewLeft = (6 * 60 + 59) * 1000; // 6:59 ACTIVE — field-tested: at 14, visitors left before the dreams even started
     store.set('yos-sw-curfew-left', swCurfewLeft);
     swLiftDone = false;
     swScheduleLift();
@@ -5777,8 +5779,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   const SW_LIFT_LINES = [
-    ["⏰ DING!! dream curfew: SERVED!! yongshan got her 14 quiet minutes — you saw the site, right?? RIGHT. good. because now…", "⏰ DRING !! couvre-feu des rêves : PURGÉ !! yongshan a eu ses 14 minutes de calme — tu as vu le site, hein ?? OUI. bien. parce que maintenant…"],
-    ["*stretches* fourteen!! whole!! minutes!! of respectful, curriculum-approved dreaming. yongshan is SO proud of me. anyway—", "*s'étire* quatorze !! minutes !! entières !! de rêves respectueux et pédagogiquement validés. yongshan est TRÈS fière de moi. bref—"],
+    ["⏰ DING!! dream curfew: SERVED!! yongshan got her 6 minutes 59 seconds of calm — you saw the site, right?? RIGHT. good. because now…", "⏰ DRING !! couvre-feu des rêves : PURGÉ !! yongshan a eu ses 6 minutes 59 secondes de calme — tu as vu le site, hein ?? OUI. bien. parce que maintenant…"],
+    ["*stretches* six!! fifty-nine!! of respectful, curriculum-approved dreaming. not even the full seven — time off for good behavior. yongshan is SO proud. anyway—", "*s'étire* six !! cinquante-neuf !! de rêves respectueux et pédagogiquement validés. même pas les sept pleines — remise de peine pour bonne conduite. yongshan est TRÈS fière. bref—"],
     ["🎟️ permit renewed!! the quiet-time law has been served to the LAST second. yongshan said 'explore time for the visitor'. the visitor explored. and NOW—", "🎟️ permis renouvelé !! la loi du temps calme a été purgée jusqu'à la DERNIÈRE seconde. yongshan a dit « temps d'exploration pour le visiteur ». le visiteur a exploré. et MAINTENANT—"]
   ];
 
@@ -7456,6 +7458,8 @@ document.addEventListener('DOMContentLoaded', () => {
     dI(dreamBonusBeat, 96000);
     // and somewhere shiny, a souvenir drops (one per world, seven total)
     dT(dreamSpawnSouvenir, 55000 + Math.random() * 50000);
+    // v85: the dream journal refreshes its drip while open
+    dI(dreamlogTick, 13000);
     dT(() => dreamEnd('timer'), dur);
   }
 
@@ -7640,13 +7644,13 @@ document.addEventListener('DOMContentLoaded', () => {
   var dreamTitleBackup = null;
 
   const DREAM_TITLES = {
-    win95: { 'win-career': 'CAREER~1.EXE', 'win-skills': 'INVNTRY.SAV', 'win-ama': 'WIZARD.HLP', 'win-terminal': 'MS-DOS PROMPT', 'win-search': 'ALTAVISTA.HTM', 'win-live': 'NETMEETING — LIVE', 'win-education': 'DIPLOMA.WRI', 'win-pikdex': 'CRITTERS.DIR' },
-    scp: { 'win-career': 'PERSONNEL FILE [LEVEL 2]', 'win-skills': 'ANOMALOUS INVENTORY', 'win-ama': 'INTERVIEW LOG', 'win-terminal': 'SITE-19 CONSOLE', 'win-search': 'FOUNDATION ARCHIVE', 'win-live': 'CCTV FEED 19-B ●REC', 'win-education': 'CLEARANCE RECORDS', 'win-pikdex': 'SPECIMEN WING' },
-    matrix: { 'win-career': 'the_one.log', 'win-skills': 'loadout.dat', 'win-ama': 'oracle.chat', 'win-terminal': 'wake_up.sh', 'win-search': 'no_index.db', 'win-live': 'the_construct.live', 'win-education': 'residual_self_image', 'win-pikdex': 'sentinel_nursery' },
-    gameboy: { 'win-career': 'KARIER.GB', 'win-skills': 'ITEMS.GB', 'win-ama': 'TALK.GB', 'win-terminal': 'DEBUG.GB', 'win-search': 'FIND.GB', 'win-live': 'LINK CABLE — LIVE', 'win-education': 'BADGES.GB', 'win-pikdex': 'DEX.GB' },
-    geo: { 'win-career': '~career.htm', 'win-skills': 'skills_FINAL_v2.htm', 'win-ama': 'AskJeeves.chat', 'win-terminal': 'cgi-bin/shell.pl', 'win-search': 'WebRing Search', 'win-live': 'WEBCAM (30s refresh)', 'win-education': 'diplomas.htm', 'win-pikdex': 'petz_page.htm' },
-    bsod: { 'win-career': 'career_quest.dmp', 'win-skills': 'inventory.dmp', 'win-ama': 'errorlog.chat', 'win-terminal': 'SAFE MODE (with feelings)', 'win-search': 'search.dmp', 'win-live': 'CRASH CAM — LIVE', 'win-education': 'education.dmp', 'win-pikdex': 'process_list.dmp' },
-    amber: { 'win-career': 'CAREER.JCL', 'win-skills': 'INVENTRY.COB', 'win-ama': 'ELIZA.CHAT', 'win-terminal': 'TSO/370', 'win-search': 'BATCH QUERY', 'win-live': 'OPERATOR CAM (est. 1974)', 'win-education': 'RECORDS.TAPE', 'win-pikdex': 'PUNCHDECK' }
+    win95: { 'win-career': 'CAREER~1.EXE', 'win-skills': 'INVNTRY.SAV', 'win-ama': 'WIZARD.HLP', 'win-terminal': 'MS-DOS PROMPT', 'win-search': 'ALTAVISTA.HTM', 'win-live': 'NETMEETING — LIVE', 'win-education': 'DIPLOMA.WRI', 'win-pikdex': 'CRITTERS.DIR', 'win-dreamlog': 'DREAM.LOG — NOTEPAD.EXE' },
+    scp: { 'win-career': 'PERSONNEL FILE [LEVEL 2]', 'win-skills': 'ANOMALOUS INVENTORY', 'win-ama': 'INTERVIEW LOG', 'win-terminal': 'SITE-19 CONSOLE', 'win-search': 'FOUNDATION ARCHIVE', 'win-live': 'CCTV FEED 19-B ●REC', 'win-education': 'CLEARANCE RECORDS', 'win-pikdex': 'SPECIMEN WING', 'win-dreamlog': 'INCIDENT REPORTS — EYES ♡ ONLY' },
+    matrix: { 'win-career': 'the_one.log', 'win-skills': 'loadout.dat', 'win-ama': 'oracle.chat', 'win-terminal': 'wake_up.sh', 'win-search': 'no_index.db', 'win-live': 'the_construct.live', 'win-education': 'residual_self_image', 'win-pikdex': 'sentinel_nursery', 'win-dreamlog': 'residual_memory.log' },
+    gameboy: { 'win-career': 'KARIER.GB', 'win-skills': 'ITEMS.GB', 'win-ama': 'TALK.GB', 'win-terminal': 'DEBUG.GB', 'win-search': 'FIND.GB', 'win-live': 'LINK CABLE — LIVE', 'win-education': 'BADGES.GB', 'win-pikdex': 'DEX.GB', 'win-dreamlog': 'DREAM DEX' },
+    geo: { 'win-career': '~career.htm', 'win-skills': 'skills_FINAL_v2.htm', 'win-ama': 'AskJeeves.chat', 'win-terminal': 'cgi-bin/shell.pl', 'win-search': 'WebRing Search', 'win-live': 'WEBCAM (30s refresh)', 'win-education': 'diplomas.htm', 'win-pikdex': 'petz_page.htm', 'win-dreamlog': 'dream_guestbook.htm' },
+    bsod: { 'win-career': 'career_quest.dmp', 'win-skills': 'inventory.dmp', 'win-ama': 'errorlog.chat', 'win-terminal': 'SAFE MODE (with feelings)', 'win-search': 'search.dmp', 'win-live': 'CRASH CAM — LIVE', 'win-education': 'education.dmp', 'win-pikdex': 'process_list.dmp', 'win-dreamlog': 'dreamdump.dmp (recovered)' },
+    amber: { 'win-career': 'CAREER.JCL', 'win-skills': 'INVENTRY.COB', 'win-ama': 'ELIZA.CHAT', 'win-terminal': 'TSO/370', 'win-search': 'BATCH QUERY', 'win-live': 'OPERATOR CAM (est. 1974)', 'win-education': 'RECORDS.TAPE', 'win-pikdex': 'PUNCHDECK', 'win-dreamlog': 'ENGINEERING LOGBOOK — EST. 1947' }
   };
   function dreamApplyTitles(map) {
     if (!map) return;
@@ -7700,6 +7704,8 @@ document.addEventListener('DOMContentLoaded', () => {
     dreamWorld.flags.openSeen[winId] = true;
     // v84.1: the shell greets you with its own typed dream-onset scene
     if (winId === 'win-terminal') dT(() => dsShellBanner(dreamWorld && dreamWorld.id), 350);
+    // v85: the journal paints itself for whichever world is dreaming
+    if (winId === 'win-dreamlog') dT(dreamlogRender, 60);
     const ent = dreamWorld.flags.ent;
     if (ent && ent.openLines && ent.openLines[winId]) { dreamSay(ent.openLines[winId], 5200); return; }
     const lines = DREAM_OPEN_LINES[dreamWorld.id];
@@ -7832,6 +7838,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!c) { dreamShellDeny(sh, cmd); return true; }
     const first = dsMark(dreamWorld.id, cmd);
     try { c.fx(first); } catch (e) { dsL('…the dream stuttered. say it again.', '…le rêve a bégayé. redis-le.', 't-err'); }
+    // v85: doing the thing gets it into the dream journal, instantly
+    try {
+      const dmap = DREAMLOG_CMDMAP[dreamWorld.id];
+      if (dmap && dmap[cmd]) dreamlogAdd(dreamWorld.id, dmap[cmd]);
+    } catch (e) { /* the journal blinked */ }
     return true;
   }
 
@@ -8840,6 +8851,313 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   /* =====================================================
+     v85 — DREAMLOG.EXE 📔
+     a desktop app that only exists while the site dreams.
+     seven dreams, seven journals — each with its own skin,
+     its own animation, and its own way of collecting the
+     night's moments. do the thing in the dream (or in its
+     shell) and the journal notices; or collect in-app with
+     the world's own gesture: F5-timestamp it, declassify
+     it, focus it, catch it, watch it sign, repair it, or
+     tape it in like it's 1947.
+     ===================================================== */
+  const DREAMLOG_CATALOG = {
+    win95: [
+      { id: 'clouds', e: '🪟', t: ['the startup clouds drifted by and the chime rang ♡', 'les nuages du démarrage sont passés et le carillon a sonné ♡'] },
+      { id: 'slippy', e: '📎', t: ['a paperclip offered help. the help was vibes.', 'un trombone a proposé son aide. l\'aide, c\'était des bonnes ondes.'] },
+      { id: 'solitaire', e: '🃏', t: ['the solitaire cards cascaded. nobody knew the rules. everyone won.', 'les cartes ont cascadé. personne ne connaissait les règles. tout le monde a gagné.'] },
+      { id: 'dialup', e: '☎', t: ['the wall sang the 56k handshake. the internet smelled like it.', 'le mur a chanté le handshake 56k. internet sentait exactement ça.'] },
+      { id: 'defrag', e: '▓', t: ['the little blocks found their families. contiguous at last.', 'les petits blocs ont retrouvé leur famille. enfin contigus.'] },
+      { id: 'toasters', e: '🍞', t: ['toasters migrated across the screen. butter futures soared.', 'des grille-pain ont migré à travers l\'écran. le cours du beurre s\'est envolé.'] },
+      { id: 'y2k', e: '🎆', t: ['midnight, dec 31 1999 happened. the microwave forgave us.', 'minuit du 31 déc 1999 a eu lieu. le micro-ondes nous a pardonné.'] }
+    ],
+    scp: [
+      { id: 'dispatch', e: '📨', t: ['an URGENT DISPATCH arrived. the intern stamped it twice.', 'une DÉPÊCHE URGENTE est arrivée. le stagiaire l\'a tamponnée deux fois.'] },
+      { id: 'containfail', e: '🧊', t: ['the containment field held for 2.6 seconds. a site record.', 'le champ de confinement a tenu 2,6 secondes. record du site.'] },
+      { id: 'klaxon', e: '🚨', t: ['the klaxon was tested. the pigeons filed a complaint.', 'le klaxon a été testé. les pigeons ont porté plainte.'] },
+      { id: 'o5vote', e: '⚖️', t: ['O5 voted 4–1 on something adorable. the 1 is contractually grumpy.', 'le conseil O5 a voté 4–1 sur un truc adorable. le 1 est grognon sous contrat.'] },
+      { id: 'boop', e: '🧡', t: ['an anomaly received one (1) authorized hug. joy was documented.', 'une anomalie a reçu un (1) câlin autorisé. la joie a été documentée.'] },
+      { id: 'paperwork', e: '📋', t: ['form 512-B fell from the sky, in triplicate. all three signed.', 'le formulaire 512-B est tombé du ciel, en trois exemplaires. tous signés.'] },
+      { id: 'interview', e: '🎙️', t: ['the entity was interviewed. demands: one boop, renewable daily.', 'l\'entité a été interviewée. revendications : un boop, renouvelable chaque jour.'] }
+    ],
+    matrix: [
+      { id: 'cat', e: '🐈‍⬛', t: ['a black cat walked by twice. they changed something.', 'un chat noir est passé deux fois. ils ont changé quelque chose.'] },
+      { id: 'spoonfork', e: '🍴', t: ['there was no spoon. there WAS a fork. nobody talks about the fork.', 'il n\'y avait pas de cuillère. il y avait UNE fourchette. personne n\'en parle.'] },
+      { id: 'pill', e: '🫐', t: ['someone took the blue pill. it was a boba pearl.', 'quelqu\'un a pris la pilule bleue. c\'était une perle de boba.'] },
+      { id: 'heartrain', e: '💚', t: ['the rain fell in hearts for one whole column.', 'la pluie est tombée en cœurs sur une colonne entière.'] },
+      { id: 'agent', e: '🕶', t: ['an agent asked about your car\'s extended warranty.', 'un agent a demandé des nouvelles de la garantie prolongée de ta voiture.'] },
+      { id: 'phone', e: '☎', t: ['the phone rang. the operator said you\'re doing great, sweetie.', 'le téléphone a sonné. l\'opérateur a dit que tu t\'en sors super bien.'] },
+      { id: 'dodge', e: '💨', t: ['one (1) responsibility was dodged, beautifully.', 'une (1) responsabilité a été esquivée, avec grâce.'] }
+    ],
+    gameboy: [
+      { id: 'wildbug', e: '🐛', t: ['a wild BUG appeared!! it was adorable.', 'un BUG sauvage est apparu !! il était adorable.'] },
+      { id: 'battery', e: '🔋', t: ['the battery LED dimmed bravely, like a tiny sunset.', 'la LED de batterie a faibli bravement, comme un mini coucher de soleil.'] },
+      { id: 'save', e: '💾', t: ['SAVED without turning off the power. legends only.', 'SAUVEGARDÉ sans éteindre la console. réservé aux légendes.'] },
+      { id: 'konami', e: '⭐', t: ['the old code echoed: ↑↑↓↓←→←→BA. thirty of something.', 'le vieux code a résonné : ↑↑↓↓←→←→BA. trente de quelque chose.'] },
+      { id: 'tetris', e: '🟪', t: ['four lines cleared at once, somewhere. vintage dopamine.', 'quatre lignes effacées d\'un coup, quelque part. dopamine vintage.'] },
+      { id: 'blow', e: '🌬', t: ['the cartridge received one ritual blow. science looked away.', 'la cartouche a reçu un souffle rituel. la science a détourné le regard.'] },
+      { id: 'player2', e: '🔗', t: ['player 2 was found: you, from a 20-year-old save file.', 'le joueur 2 a été trouvé : toi, depuis une sauvegarde de 20 ans.'] }
+    ],
+    geo: [
+      { id: 'million', e: '🎉', t: ['you were DEFINITELY the 1,000,000th visitor.', 'tu étais SANS AUCUN DOUTE le 1 000 000e visiteur.'] },
+      { id: 'cone', e: '🚧', t: ['a construction cone did its very best.', 'un cône de chantier a fait de son mieux.'] },
+      { id: 'midi', e: '🎵', t: ['the midi looped. the neighbors know it by heart now.', 'le midi a tourné en boucle. les voisins le connaissent par cœur.'] },
+      { id: 'comet', e: '☄️', t: ['the big N\'s comet passed overhead.', 'la comète du grand N est passée au-dessus.'] },
+      { id: 'glitter', e: '✍', t: ['someone signed the guestbook in glitter ink.', 'quelqu\'un a signé le livre d\'or à l\'encre pailletée.'] },
+      { id: 'marquee', e: '〰', t: ['the marquee lapped itself and kept going.', 'le marquee s\'est doublé lui-même et a continué.'] },
+      { id: 'jeeves', e: '🎩', t: ['jeeves was asked. the answer was boba.', 'on a interrogé jeeves. la réponse était : boba.'] }
+    ],
+    bsod: [
+      { id: 'hugcrash', e: '💙', t: ['a crash was hugged and felt better. :( → :D', 'un plantage a reçu un câlin et s\'est senti mieux. :( → :D'] },
+      { id: 'taskkill', e: '🗡', t: ['sadness.exe was terminated (with love).', 'tristesse.exe a été terminé (avec amour).'] },
+      { id: 'percent', e: '💯', t: ['the % refused to reach 100. commitment issues.', 'le % a refusé d\'atteindre 100. peur de l\'engagement.'] },
+      { id: 'snackdump', e: '🍪', t: ['a memory dump contained mostly snacks. one was about you.', 'un dump mémoire contenait surtout des snacks. un seul parlait de toi.'] },
+      { id: 'qr', e: '⬛', t: ['the QR code resolved to ♡. again. 4,000 for 4,000.', 'le QR code a mené à ♡. encore. 4 000 sur 4 000.'] },
+      { id: 'blues', e: '🎷', t: ['the blue screen sang the blues in F. the C: drive clapped.', 'l\'écran bleu a chanté le blues en fa. le disque C: a tapé des mains.'] },
+      { id: 'safemode', e: '🩶', t: ['safe mode was gray, calm, and honestly? cozy.', 'le mode sans échec était gris, calme et, franchement ? douillet.'] }
+    ],
+    amber: [
+      { id: 'moth', e: '🦋', t: ['THE MOTH — relay #70\'s original bug, taped in gently. (Hopper\'s team, sept 9 1947.)', 'LA MITE — le bug originel du relais nº70, scotchée avec douceur. (équipe Hopper, 9 sept 1947.)'] },
+      { id: 'nanosecond', e: '📏', t: ['one nanosecond of wire, 11.8 inches, gift of Grace.', 'une nanoseconde de fil, 30 centimètres, cadeau de Grace.'] },
+      { id: 'payroll', e: '🧾', t: ['the payroll printed a salary in hugs. in triplicate.', 'la paie a imprimé un salaire en câlins. en trois exemplaires.'] },
+      { id: 'tape07', e: '◉', t: ['TAPE_07 mounted. it squeaks in F#. contents: feelings, uncompressed.', 'TAPE_07 montée. elle couine en fa dièse. contenu : sentiments, non compressés.'] },
+      { id: 'job4917', e: '🗂', t: ['a batch job finished 6–8 business dreams EARLY. unheard of.', 'un job batch a fini avec 6 à 8 rêves ouvrés d\'AVANCE. du jamais vu.'] },
+      { id: 'daemoncoffee', e: '😈', t: ['a daemon quietly refilled the coffee. chores: done.', 'un daemon a resservi le café en silence. corvées : faites.'] },
+      { id: 'eightball', e: '🎱', t: ['the 8-ball subroutine said: ASK AGAIN AFTER A NAP.', 'la sous-routine 8-ball a dit : REDEMANDE APRÈS UNE SIESTE.'] }
+    ]
+  };
+  // do the thing in the dream shell → the journal notices, instantly
+  const DREAMLOG_CMDMAP = {
+    win95: { win: 'clouds', clippy: 'slippy', sol: 'solitaire', dialup: 'dialup', defrag: 'defrag', toasters: 'toasters', y2k: 'y2k' },
+    scp: { memo: 'dispatch', contain: 'containfail', siren: 'klaxon', o5: 'o5vote', hug: 'boop', paperwork: 'paperwork', interview: 'interview' },
+    matrix: { glitch: 'cat', deja: 'cat', spoon: 'spoonfork', bluepill: 'pill', rain: 'heartrain', agent: 'agent', phone: 'phone', dodge: 'dodge' },
+    gameboy: { wildbug: 'wildbug', battery: 'battery', save: 'save', konami: 'konami', tetris: 'tetris', blow: 'blow', link: 'player2' },
+    geo: { millionth: 'million', cones: 'cone', under: 'cone', midi: 'midi', netscape: 'comet', guestbook: 'glitter', marquee: 'marquee', jeeves: 'jeeves' },
+    bsod: { hug: 'hugcrash', taskkill: 'taskkill', percent: 'percent', dump: 'snackdump', qr: 'qr', blues: 'blues', safemode: 'safemode' },
+    amber: { bug: 'moth', grace: 'nanosecond', payroll: 'payroll', tape: 'tape07', batch: 'job4917', daemon: 'daemoncoffee', eightball: 'eightball' }
+  };
+  const DREAMLOG_META = {
+    win95: { name: ['DREAM.LOG — notepad.exe', 'DREAM.LOG — notepad.exe'], hint: ['moments arrive as unsaved changes — press [F5] to timestamp them. the ancient Notepad ritual.', 'les moments arrivent comme des modifications non enregistrées — appuie sur [F5] pour les horodater. le rituel ancestral du Bloc-notes.'], locked: ['UNTITLED — the dream hasn\'t typed this yet', 'SANS TITRE — le rêve ne l\'a pas encore tapé'] },
+    scp: { name: ['INCIDENT REPORTS — EYES ♡ ONLY', 'RAPPORTS D\'INCIDENT — RÉSERVÉ AUX YEUX ♡'], hint: ['reports arrive redacted — declassify each one yourself.', 'les rapports arrivent caviardés — déclassifie-les toi-même.'], locked: ['[FILE PENDING CLEARANCE]', '[DOSSIER EN ATTENTE D\'HABILITATION]'] },
+    matrix: { name: ['residual_memory.log', 'residual_memory.log'], hint: ['memories arrive scrambled — click one and hold your focus until it stops squirming.', 'les souvenirs arrivent brouillés — clique et garde le focus jusqu\'à ce que ça se tienne tranquille.'], locked: ['not yet rendered by the construct', 'pas encore rendu par le construct'] },
+    gameboy: { name: ['DREAM DEX', 'DREAM DEX'], hint: ['a wild moment bounces in the tall grass — press [A] when it crosses the ring!!', 'un moment sauvage bondit dans les hautes herbes — appuie sur [A] quand il traverse l\'anneau !!'], locked: ['…the tall grass rustles…', '…les hautes herbes bruissent…'] },
+    geo: { name: ['~*~ dream guestbook ~*~', '~*~ livre d\'or des rêves ~*~'], hint: ['dream residents sign while you watch — keep the book open and they\'ll come.', 'les habitants du rêve signent pendant que tu regardes — laisse le livre ouvert et ils viendront.'], locked: ['this page is UNDER CONSTRUCTION', 'cette page est EN CONSTRUCTION'] },
+    bsod: { name: ['dreamdump.dmp (recovered)', 'dreamdump.dmp (récupéré)'], hint: ['fragments arrive corrupted — hit [REPAIR] and watch them feel better.', 'les fragments arrivent corrompus — clique [RÉPARER] et regarde-les aller mieux.'], locked: ['sector not yet dumped', 'secteur pas encore dumpé'] },
+    amber: { name: ['ENGINEERING LOGBOOK — est. 1947', 'JOURNAL D\'INGÉNIERIE — dep. 1947'], hint: ['the printer spits out slips — click one to tape it in. Grace taped a whole moth once.', 'l\'imprimante crache des bordereaux — clique pour les scotcher. Grace a scotché une mite entière, un jour.'], locked: ['…awaiting the printer…', '…en attente de l\'imprimante…'] }
+  };
+  function dreamlogAvail(world) {
+    if (!dreamWorld || dreamWorld.id !== world) return 0;
+    const elapsed = Math.max(0, dreamWorld.total - (dreamWorld.until - Date.now()));
+    return Math.min(DREAMLOG_CATALOG[world].length, 2 + Math.floor(elapsed / 40000));
+  }
+  function dreamlogAdd(world, id, quiet) {
+    const cat = DREAMLOG_CATALOG[world];
+    if (!cat) return;
+    const m = cat.find((x) => x.id === id);
+    if (!m) return;
+    const bag = store.get('yos-dreamlog', {});
+    bag[world] = bag[world] || {};
+    if (bag[world][id]) return;
+    bag[world][id] = Date.now();
+    store.set('yos-dreamlog', bag);
+    if (!quiet) {
+      playSparkleSound();
+      showToast('📔 ' + trT('logged: ', 'consigné : ') + m.e + ' ' + trT(m.t[0], m.t[1]).slice(0, 46) + '…');
+    }
+    const n = cat.filter((x) => bag[world][x.id]).length;
+    if (n >= cat.length) {
+      achvUnlock('dreamscribe');
+      cheatFall(['📔', '✦', '♡'], 14);
+      playFanfare();
+      const total = Object.keys(DREAMLOG_CATALOG).every((w) => {
+        const b = bag[w] || {};
+        return DREAMLOG_CATALOG[w].every((x) => b[x.id]);
+      });
+      if (total) achvUnlock('dreamtome');
+    }
+    dreamlogRender();
+  }
+  // each world collects with its own gesture — this builds the row for
+  // an entry that is AVAILABLE but not yet caught/declassified/taped/etc.
+  function dreamlogAvailRow(wid, row, m) {
+    const txt = trT(m.t[0], m.t[1]);
+    if (wid === 'win95') {
+      row.innerHTML = '<span class="dl-e">▮</span><span class="dl-t">' + trT('UNTITLED — unsaved changes (press F5 below)', 'SANS TITRE — modifications non enregistrées (F5 ci-dessous)') + '</span>';
+    } else if (wid === 'scp') {
+      row.innerHTML = '<span class="dl-e">▓</span><span class="dl-t dl-bars">████ ██████ ███ ██████████ ████</span><button type="button" class="dl-btn">' + trT('DECLASSIFY', 'DÉCLASSIFIER') + '</button>';
+      row.querySelector('.dl-btn').addEventListener('click', () => {
+        playTone(78, 'sawtooth', 0.14, 0, 0.08);
+        row.classList.add('dl-reveal');
+        row.querySelector('.dl-t').textContent = txt;
+        dT(() => dreamlogAdd(wid, m.id), 600);
+      });
+    } else if (wid === 'matrix') {
+      const t = document.createElement('span');
+      t.className = 'dl-t dl-scramble';
+      row.innerHTML = '<span class="dl-e">▓</span>';
+      row.appendChild(t);
+      const CH = 'ｱｲｳｴｵ01♡$#%&*';
+      const iv = dI(() => {
+        if (!t.isConnected) { clearInterval(iv); return; }
+        t.textContent = txt.split('').map((c) => (c === ' ' || Math.random() < 0.22) ? c : CH[Math.floor(Math.random() * CH.length)]).join('');
+      }, 90);
+      row.addEventListener('click', () => {
+        if (row.classList.contains('dl-focusing')) return;
+        row.classList.add('dl-focusing');
+        playTone(300, 'sine', 0.4, 0, 0.04);
+        dT(() => { clearInterval(iv); t.textContent = txt; swSparkleAt(row.getBoundingClientRect().left + 30, row.getBoundingClientRect().top + 8, 3); dreamlogAdd(wid, m.id); }, 1000);
+      });
+    } else if (wid === 'geo') {
+      row.innerHTML = '<span class="dl-e">✎</span><span class="dl-t dl-geo-soon">' + trT('a dream resident is walking up the driveway…', 'un habitant du rêve remonte l\'allée…') + '</span>';
+    } else if (wid === 'bsod') {
+      row.innerHTML = '<span class="dl-e">:(</span><span class="dl-t">' + m.id + '.dmp — ' + trT('integrity 23%', 'intégrité 23 %') + '</span><button type="button" class="dl-btn">' + trT('REPAIR', 'RÉPARER') + '</button><span class="dl-repairbar"><i></i></span>';
+      row.querySelector('.dl-btn').addEventListener('click', () => {
+        if (row.classList.contains('dl-repairing')) return;
+        row.classList.add('dl-repairing');
+        playTone(520, 'triangle', 0.2, 0, 0.04);
+        dT(() => dreamlogAdd(wid, m.id), 1400);
+      });
+    } else if (wid === 'amber') {
+      row.classList.add('dl-slip');
+      row.innerHTML = '<span class="dl-e">🖨</span><span class="dl-t">' + trT('a slip pokes out of the printer — click to tape it in', 'un bordereau dépasse de l\'imprimante — clique pour le scotcher') + '</span>';
+      row.addEventListener('click', () => {
+        if (row.classList.contains('dl-taping')) return;
+        row.classList.add('dl-taping');
+        playDreamPrinter();
+        dT(() => dreamlogAdd(wid, m.id), 700);
+      });
+    }
+  }
+  function dreamlogRender() {
+    const body = document.getElementById('dreamlog-body');
+    if (!body) return;
+    if (!dreamWorld) {
+      body.className = 'dreamlog-shell dl-awake';
+      body.innerHTML = '<div class="dl-awake-note">📔 ' + trT('this journal only exists inside dreams. right now it is, itself, asleep.', 'ce journal n\'existe qu\'à l\'intérieur des rêves. là, tout de suite, il dort lui-même.') + '</div>';
+      return;
+    }
+    const wid = dreamWorld.id;
+    const cat = DREAMLOG_CATALOG[wid] || [];
+    const meta = DREAMLOG_META[wid];
+    const got = store.get('yos-dreamlog', {})[wid] || {};
+    const avail = dreamlogAvail(wid);
+    body.className = 'dreamlog-shell dl-' + wid;
+    body.innerHTML = '';
+    const head = document.createElement('div');
+    head.className = 'dl-head';
+    const n = cat.filter((x) => got[x.id]).length;
+    head.innerHTML = '<b>' + trT(meta.name[0], meta.name[1]) + '</b><span class="dl-count">' + n + '/' + cat.length + '</span>';
+    body.appendChild(head);
+    const hint = document.createElement('div');
+    hint.className = 'dl-hint';
+    hint.textContent = trT(meta.hint[0], meta.hint[1]);
+    body.appendChild(hint);
+    // gameboy gets its patch of tall grass + the sacred [A] button
+    let gbSprite = null;
+    if (wid === 'gameboy') {
+      const firstAvail = cat.find((x, i) => !got[x.id] && i < avail);
+      const stage = document.createElement('div');
+      stage.className = 'dl-gb-stage';
+      if (firstAvail) {
+        stage.innerHTML = '<div class="dl-gb-ring"></div><span class="dl-gb-sprite">' + firstAvail.e + '</span>';
+        gbSprite = { m: firstAvail, el: stage.querySelector('.dl-gb-sprite'), ring: stage.querySelector('.dl-gb-ring') };
+      } else {
+        stage.innerHTML = '<span class="dl-gb-empty">' + trT(n >= cat.length ? 'the grass is quiet. dex complete ♡' : '…the tall grass rustles…', n >= cat.length ? 'les herbes sont calmes. dex complet ♡' : '…les hautes herbes bruissent…') + '</span>';
+      }
+      const aBtn = document.createElement('button');
+      aBtn.type = 'button';
+      aBtn.className = 'dl-gb-a';
+      aBtn.textContent = 'A';
+      aBtn.addEventListener('click', () => {
+        if (!gbSprite) { playTone(150, 'square', 0.08, 0, 0.04); return; }
+        const s = gbSprite.el.getBoundingClientRect();
+        const r = gbSprite.ring.getBoundingClientRect();
+        const dx = Math.abs((s.left + s.width / 2) - (r.left + r.width / 2));
+        if (dx < 26) {
+          playSparkleSound();
+          dreamlogAdd(wid, gbSprite.m.id);
+        } else {
+          playTone(150, 'square', 0.1, 0, 0.05);
+          stage.classList.remove('dl-gb-miss');
+          void stage.offsetWidth;
+          stage.classList.add('dl-gb-miss');
+        }
+      });
+      stage.appendChild(aBtn);
+      body.appendChild(stage);
+    }
+    const list = document.createElement('div');
+    list.className = 'dl-list';
+    body.appendChild(list);
+    cat.forEach((m, i) => {
+      const row = document.createElement('div');
+      row.className = 'dl-row';
+      if (got[m.id]) {
+        row.classList.add('dl-got');
+        const stamp = wid === 'win95' ? '<span class="dl-ts">' + new Date(got[m.id]).toTimeString().slice(0, 5) + '</span>' : '';
+        row.innerHTML = stamp + '<span class="dl-e">' + m.e + '</span><span class="dl-t">' + trT(m.t[0], m.t[1]) + '</span>';
+      } else if (i < avail) {
+        row.classList.add('dl-avail');
+        if (wid === 'gameboy') {
+          row.innerHTML = '<span class="dl-e">·</span><span class="dl-t">' + trT(meta.locked[0], meta.locked[1]) + '</span>';
+          row.classList.remove('dl-avail');
+          row.classList.add('dl-locked'); // gameboy collects on the stage, not in the list
+        } else {
+          dreamlogAvailRow(wid, row, m);
+        }
+      } else {
+        row.classList.add('dl-locked');
+        row.innerHTML = '<span class="dl-e">·</span><span class="dl-t">' + trT(meta.locked[0], meta.locked[1]) + '</span>';
+      }
+      list.appendChild(row);
+    });
+    // win95: the sacred F5 bar (timestamps the first unsaved moment)
+    if (wid === 'win95') {
+      const anyAvail = cat.find((x, i) => !got[x.id] && i < avail);
+      const bar = document.createElement('div');
+      bar.className = 'dl-f5bar';
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'dl-btn dl-f5';
+      b.textContent = 'F5';
+      b.disabled = !anyAvail;
+      b.addEventListener('click', () => {
+        const mm = DREAMLOG_CATALOG.win95.find((x, i) => !(store.get('yos-dreamlog', {}).win95 || {})[x.id] && i < dreamlogAvail('win95'));
+        if (!mm) return;
+        playDreamPrinter();
+        dreamlogAdd('win95', mm.id);
+      });
+      bar.appendChild(b);
+      const lbl = document.createElement('span');
+      lbl.textContent = anyAvail ? trT('unsaved changes ▮ — F5 timestamps the moment', 'modifications non enregistrées ▮ — F5 horodate le moment') : trT('no unsaved changes. the dream types more as it goes ♡', 'aucune modification en attente. le rêve en tape d\'autres au fil de la nuit ♡');
+      bar.appendChild(lbl);
+      body.appendChild(bar);
+    }
+    // geo: residents sign on their own while the book is open
+    if (wid === 'geo') {
+      const firstAvail = cat.find((x, i) => !got[x.id] && i < avail);
+      if (firstAvail && !dreamWorld.flags.geoSigning) {
+        dreamWorld.flags.geoSigning = true;
+        dT(() => {
+          if (!dreamWorld) return;
+          dreamWorld.flags.geoSigning = false;
+          const w = document.getElementById('win-dreamlog');
+          if (!w || w.classList.contains('window-closed')) return;
+          playTone(659, 'square', 0.12, 0, 0.035);
+          playTone(784, 'square', 0.14, 0.13, 0.035);
+          dreamlogAdd('geo', firstAvail.id);
+        }, 6000 + Math.random() * 5000);
+      }
+    }
+  }
+  function dreamlogTick() {
+    const w = document.getElementById('win-dreamlog');
+    if (w && !w.classList.contains('window-closed')) dreamlogRender();
+  }
+  const dlIconEl = document.getElementById('icon-dreamlog');
+  if (dlIconEl) dlIconEl.addEventListener('click', () => setTimeout(dreamlogRender, 80));
+
+  /* =====================================================
      v7.0 — SCP FOUNDATION, PROPERLY 🔬
      every SCP dream now draws ONE of seven entities. the
      habitat slime transmutes into that entity's slime-form,
@@ -9533,6 +9851,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (w.exit) { try { w.exit(); } catch (e) { /* the dream keeps its secrets */ } }
     dreamWorld.nodes.forEach((n) => { try { n.remove(); } catch (e) { /* already gone */ } });
     document.querySelectorAll('.dream-dlg, .scp-lock, .dream-geo-tape, .dream-slippy, .dream-gb-tetro, .dream-amber-slip').forEach((n) => n.remove());
+    // the dream journal exists only inside dreams — it closes with the world
+    try {
+      const dlWin = document.getElementById('win-dreamlog');
+      if (dlWin && !dlWin.classList.contains('window-closed')) closeWindow(dlWin);
+    } catch (e) { /* the journal tucked itself in */ }
     document.querySelectorAll('.scp-locked-body').forEach((n) => n.classList.remove('scp-locked-body'));
     document.documentElement.classList.remove('dreaming', w.cls);
     try { gSyncDreamSkin(); } catch (e) { /* the arcade wakes later */ }
