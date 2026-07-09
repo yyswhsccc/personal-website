@@ -9537,9 +9537,11 @@ html[data-theme="dark"].dream-amber .window-title { color: #ffd23f; text-shadow:
 @keyframes tarot-veil-in { from { opacity: 0; } }
 .tarot-out { opacity: 0; }
 .tarot-stage {
-  width: min(230px, 56vw);
-  height: min(384px, 93.4vw);
-  perspective: 1000px;
+  /* INTEGER pixel scaling only: the canvas is 100×170, shown at exactly
+     ×3 (desktop) or ×2 (small screens) — anything fractional smears */
+  width: 300px;
+  height: 510px;
+  perspective: 1100px;
   transform: scale(0.55) translateY(50px);
   filter: drop-shadow(0 0 6px rgba(255, 143, 199, 0.3));
 }
@@ -9857,8 +9859,24 @@ html[data-theme="dark"].dream-amber .window-title { color: #ffd23f; text-shadow:
   opacity: 0.65;
   pointer-events: none;
 }
-@media (max-width: 520px) {
-  .tarot-stage { width: 186px; height: 310px; }
+.tarot-quip {
+  min-height: 1.2em;
+  font-family: var(--font-pixel);
+  font-size: 0.92rem;
+  color: #ffe98a;
+  text-shadow: 0 0 10px rgba(255, 210, 63, 0.7), 1px 1px 0 rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+  opacity: 0;
+}
+.tarot-quip.is-on { animation: tarot-quip 2.4s ease forwards; }
+@keyframes tarot-quip {
+  0% { opacity: 0; transform: translateY(6px) scale(0.9); }
+  12% { opacity: 1; transform: none; }
+  80% { opacity: 1; }
+  100% { opacity: 0; }
+}
+@media (max-width: 520px), (max-height: 720px) {
+  .tarot-stage { width: 200px; height: 340px; }
   .tarot-sub-name { font-size: 1rem; }
 }
 @media (prefers-reduced-motion: reduce) {

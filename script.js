@@ -5052,8 +5052,16 @@ document.addEventListener('DOMContentLoaded', () => {
       const upright = Math.random() < 0.55;
       termLine(trT('🔮 the wizard obliges… (' + TAROT.length + ' cards in the deck)', '🔮 le mage s\'exécute… (' + TAROT.length + ' cartes au paquet)'), 't-accent');
       tarotReveal(card, upright, () => {
+        // v6.4: shell draws are REAL now — they stack into a classic
+        // three-card spread (rolling: a 4th draw retires the oldest)
+        // and ALL of them take hold the moment your next run starts
+        const spread = store.get('yos-tarot-spread', []);
+        spread.push({ i: idx, u: upright });
+        while (spread.length > 3) spread.shift();
+        store.set('yos-tarot-spread', spread);
         termLine(`${trT(...card.n)}${upright ? '' : trT(' (reversed)', ' (renversée)')} — ${trT(...(upright ? card.up : card.dn).t)}`, 't-ok');
-        termLine(trT('(inside slime_run.exe this would have DONE something ♡)', '(dans slime_run.exe, ça aurait EU un effet ♡)'), 't-dim');
+        termLine(trT(`⚡ sealed into your spread (${spread.length}/3) — it WILL take hold when your next run of slime_run.exe begins`, `⚡ scellée dans ton tirage (${spread.length}/3) — elle s'appliquera au départ de ta prochaine run de slime_run.exe`), 't-accent');
+        if (spread.length === 3) termLine(trT('   (full spread!! past · present · future. a 4th draw retires the oldest card)', '   (tirage complet !! passé · présent · futur. un 4e tirage retire la plus ancienne)'), 't-dim');
       });
       return;
     }
@@ -9042,6 +9050,27 @@ document.addEventListener('DOMContentLoaded', () => {
         if (w) GAME.toast = { text: w.icon + ' ' + trT('dream stage: ' + w.name[0], 'niveau de rêve : ' + w.name[1]), ttl: 150 };
       } catch (e) { /* stageless, still fun */ }
     }
+    // v6.4: the shell's three-card spread lands NOW, as one composite
+    // fate — every stored card fires in draw order, then the slate wipes
+    try {
+      const spread = store.get('yos-tarot-spread', []);
+      if (spread.length) {
+        store.set('yos-tarot-spread', []);
+        const names = [];
+        spread.forEach((s) => {
+          const c = TAROT[(s.i || 0) % TAROT.length];
+          if (!c) return;
+          const o = s.u ? c.up : c.dn;
+          try { o.fx(); } catch (e) { /* one card fumbled; the spread stands */ }
+          names.push(c.n[0] + (s.u ? '' : ' ⤵'));
+          GAME.decisions.push('fate:' + c.n[0] + (s.u ? ':up' : ':dn'));
+        });
+        GAME.score = Math.max(0, GAME.score);
+        if (GAME.lives < 1) GAME.lives = 1; // fate may sting — it never kills at the gate
+        GAME.toast = { text: '🔮 ' + trT('the spread takes hold: ', 'le tirage s\'applique : ') + names.join(' + '), ttl: 240 };
+        playSparkleSound();
+      }
+    } catch (e) { /* fate needs a coffee */ }
     if (typeof liveAway === 'function') liveAway(false);
     const rcam = document.getElementById('game-reaction-cam');
     if (rcam) rcam.classList.remove('cam-ad-dock');
@@ -10852,6 +10881,116 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   /* ---------- frame chrome + dispatch ---------- */
+  /* ---------- v6.4: POKE THEATRE — all 78 react differently ----------
+     poking a flipped card stamps cv._pk = {left, n}; the painter then
+     runs a card-specific overlay for ~9 frames. majors have bespoke
+     flourishes; minors are parametrized by suit × rank (poking the
+     Eight of Cups fountains pearls from all EIGHT cup positions). */
+  const T_POKE_QUIP = {
+    '0': ["the 404 cloud caught him. again.", "le nuage 404 l'a rattrapé. encore."],
+    'I': ["the desk shuffles itself. showoff.", "la table se remélange toute seule. frimeur."],
+    'II': ["the scroll flashes: SECRET=♡", "le parchemin s'illumine : SECRET=♡"],
+    'III': ["bloom check: PASSED.", "contrôle floraison : VALIDÉ."],
+    'IV': ["the racks approve. blink blink.", "les serveurs approuvent. clignote clignote."],
+    'V': ["STAMP. LGTM.", "TAMPON. LGTM."],
+    'VI': ["PDA in the arcana!!", "de la tendresse dans les arcanes !!"],
+    'VII': ["wheee. 360-no-scroll.", "wiiii. 360 sans scroll."],
+    'VIII': ["the laptop purrs shut.", "le portable ronronne en se fermant."],
+    'IX': ["the lantern flares: hope located.", "la lanterne flambe : espoir localisé."],
+    'X': ["100%!! …99%. so close.", "100 % !! …99 %. si proche."],
+    'XI': ["objection overruled (cutely).", "objection rejetée (mignonnement)."],
+    'XII': ["he swings. the halo stays put.", "il se balance. l'auréole ne bouge pas."],
+    'XIII': ["rebooting… back!! missed you.", "redémarrage… de retour !! tu m'as manqué."],
+    'XIV': ["the pour reverses. physics files a complaint.", "le versement s'inverse. la physique porte plainte."],
+    'XV': ["RGB intensifies. the EULA rattles.", "le RGB s'intensifie. l'EULA cliquette."],
+    'XVI': ["MORE lightning?? the tower sighs.", "ENCORE des éclairs ?? la tour soupire."],
+    'XVII': ["wish v2.0: granted.", "vœu v2.0 : exaucé."],
+    'XVIII': ["the crab does a little dance.", "le crabe fait une petite danse."],
+    'XIX': ["the sunflowers turn to look at YOU.", "les tournesols se tournent vers TOI."],
+    'XX': ["✓✓✓ shipped to heaven.", "✓✓✓ livré au paradis."],
+    'XXI': ["victory lap ×2!!", "tour d'honneur ×2 !!"],
+    wands: ["sparks!! mind the carpet.", "des étincelles !! attention au tapis."],
+    cups: ["pearls, airborne.", "perles, en vol."],
+    swords: ["the beams part politely.", "les faisceaux s'écartent poliment."],
+    coins: ["cha-ching, in stereo.", "cha-ching, en stéréo."],
+    court: ["royalty acknowledges you. a nod.", "la royauté te salue. d'un signe."],
+    ace: ["the hand high-fives back.", "la main te tape dans la main."],
+    sw3: ["the heart is mending ♡", "le cœur se répare ♡"],
+    sw8: ["the cage opened for a second!! (politely)", "la cage s'est ouverte une seconde !! (poliment)"],
+    sw10: ["he sat up to wave. still dramatic.", "il s'est assis pour saluer. toujours dramatique."]
+  };
+  function tarotQuipFor(card) {
+    const art = card.art || {};
+    if (art.suit) {
+      if (art.suit === 'swords' && art.rank === 3) return T_POKE_QUIP.sw3;
+      if (art.suit === 'swords' && art.rank === 8) return T_POKE_QUIP.sw8;
+      if (art.suit === 'swords' && art.rank === 10) return T_POKE_QUIP.sw10;
+      if (art.rank === 1) return T_POKE_QUIP.ace;
+      if (art.rank >= 11) return T_POKE_QUIP.court;
+      return T_POKE_QUIP[art.suit];
+    }
+    return T_POKE_QUIP[card.rn] || T_POKE_QUIP.court;
+  }
+
+  const T_MAJOR_POKE = {
+    '0': (g, f, a) => { // the little leap of faith, re-enacted
+      const t = a / 9;
+      const jx = TP_ART.x + 44 + t * 22, jy = TP_ART.y + 66 + (t < 0.5 ? t * 40 : (1 - t) * 40 + 20) - 20;
+      tpMat(g, TPM_TINY, jx, jy, null);
+      if (a > 5) { g.font = '7px monospace'; g.fillStyle = TP.k; g.fillText('boing', jx - 4, jy - 4); }
+    },
+    'I': (g, f, a) => { [[26, 84], [42, 82], [56, 74], [68, 78]].forEach(([x, y], i) => { tpx(g, TP_ART.x + x, TP_ART.y + y - 10 - ((a + i) % 4), 2, 2, TP.g); }); },
+    'II': (g, f, a) => { const w = Math.min(60, a * 8); tpx(g, TP_ART.x + 44 - w / 2, TP_ART.y + 60, w, 10, TP.c); if (w > 40) { g.font = '6px monospace'; g.fillStyle = TP.k; g.fillText('SECRET=♡', TP_ART.x + 20, TP_ART.y + 68); } },
+    'III': (g, f, a) => { [[22, 88], [50, 92], [78, 88]].forEach(([x, y], i) => { const r = Math.min(4, Math.floor(a / 2) + (i % 2)); for (let d = 0; d < 4; d++) tpx(g, TP_ART.x + x + Math.cos(d * 1.57) * r, TP_ART.y + y - 14 + Math.sin(d * 1.57) * r, 2, 2, TP.p); tpx(g, TP_ART.x + x, TP_ART.y + y - 14, 2, 2, TP.g); }); },
+    'IV': (g, f, a) => { for (let i = 0; i < 8; i++) tpx(g, TP_ART.x + (i < 4 ? 8 : 76) + (i % 2) * 4, TP_ART.y + 70 + (i % 4) * 6, 2, 2, [TP.r, TP.M, TP.b, TP.g][(i + a) % 4]); },
+    'V': (g, f, a) => { const s = Math.min(1, a / 4); const w = 44 * s, h = 16 * s; tpx(g, TP_ART.x + 44 - w / 2, TP_ART.y + 50 - h / 2, w, h, TP.c); if (s > 0.8) { g.font = '9px monospace'; g.fillStyle = '#2d8a4e'; g.fillText('LGTM', TP_ART.x + 32, TP_ART.y + 54); } },
+    'VI': (g, f, a) => { for (let i = 0; i < 5; i++) { const hx = TP_ART.x + 44 + (i - 2) * (a + 2), hy = TP_ART.y + 40 - a * 2 - (i % 2) * 5; tpx(g, hx, hy + 1, 2, 2, TP.P); tpx(g, hx + 2, hy, 2, 2, TP.P); tpx(g, hx + 1, hy + 3, 2, 1, TP.P); } },
+    'VII': (g, f, a) => { for (let i = 0; i < 6; i++) { const ang = (i / 6) * Math.PI * 2 + a * 0.7; tpx(g, TP_ART.x + 46 + Math.cos(ang) * 22, TP_ART.y + 56 + Math.sin(ang) * 12, 3, 1, TP.d); } },
+    'VIII': (g, f, a) => { if (a < 5) { tpx(g, TP_ART.x + 44, TP_ART.y + TP_ART.h - 40, 30, 3, TP.k); g.font = '7px monospace'; g.fillStyle = TP.k; g.fillText('chomp', TP_ART.x + 48, TP_ART.y + TP_ART.h - 44); } else { tpx(g, TP_ART.x + 58, TP_ART.y + TP_ART.h - 48, 2, 2, TP.P); tpx(g, TP_ART.x + 61, TP_ART.y + TP_ART.h - 50, 2, 2, TP.P); } },
+    'IX': (g, f, a) => { const r = 6 + a * 2; for (let d = 0; d < 12; d++) { const ang = d * 0.524; tpx(g, TP_ART.x + 68 + Math.cos(ang) * r, TP_ART.y + 38 + Math.sin(ang) * r, 1, 1, 'rgba(255,210,63,0.7)'); } if (a > 5) { g.font = '6px monospace'; g.fillStyle = TP.g; g.fillText('hope: found', TP_ART.x + 24, TP_ART.y + 24); } },
+    'X': (g, f, a) => { g.font = '8px monospace'; g.fillStyle = a < 5 ? '#2d8a4e' : TP.r; g.fillText(a < 5 ? '100%!!' : '99%…', TP_ART.x + 32, TP_ART.y + 46); if (a >= 5) tpx(g, TP_ART.x + 56, TP_ART.y + 40, 2, 3, TP.b); },
+    'XI': (g, f, a) => { const tl = (a % 2 ? 5 : -5); tpx(g, TP_ART.x + 26, TP_ART.y + 62 + tl, 16, 2, TP.G); tpx(g, TP_ART.x + 48, TP_ART.y + 62 - tl, 16, 2, TP.G); g.font = '7px monospace'; g.fillStyle = TP.k; g.fillText('!', TP_ART.x + 44, TP_ART.y + 40); },
+    'XII': (g, f, a) => { const sw = Math.sin(a * 0.8) * 14; tpMat(g, TPM_TINY, TP_ART.x + 42 + sw, TP_ART.y + 52, null); tpx(g, TP_ART.x + 44, TP_ART.y + 30, Math.abs(sw) || 1, 1, TP.d); },
+    'XIII': (g, f, a) => { if (a < 4) { tpx(g, TP_ART.x, TP_ART.y, TP_ART.w, TP_ART.h, '#05020e'); g.font = '7px monospace'; g.fillStyle = TP.M; g.fillText('> rebooting…', TP_ART.x + 16, TP_ART.y + 60); g.fillText('> feelings: OK', TP_ART.x + 16, TP_ART.y + 72); } else { g.font = '7px monospace'; g.fillStyle = TP.w; g.fillText('back!!', TP_ART.x + 38, TP_ART.y + 30); } },
+    'XIV': (g, f, a) => { for (let i = 0; i < 4; i++) tpx(g, TP_ART.x + 34 + i * 4, TP_ART.y + 70 - i * 2 - a, 2, 2, TP.b); g.font = '7px monospace'; g.fillStyle = TP.k; g.fillText('↑?', TP_ART.x + 58, TP_ART.y + 52); },
+    'XV': (g, f, a) => { const col = [TP.r, TP.M, TP.b][a % 3]; g.strokeStyle = col; g.lineWidth = 2; g.strokeRect(TP_ART.x + 2, TP_ART.y + 2, TP_ART.w - 4, TP_ART.h - 4); tpx(g, TP_ART.x + 24 + (a % 2) * 2, TP_ART.y + 78, 2, 2, TP.d); tpx(g, TP_ART.x + 64 - (a % 2) * 2, TP_ART.y + 78, 2, 2, TP.d); },
+    'XVI': (g, f, a) => { tpLightning(g, TP_ART.x + 24, TP_ART.y + 4, 30, 0); tpLightning(g, TP_ART.x + 66, TP_ART.y + 6, 26, 0); if (a > 4) { g.font = '7px monospace'; g.fillStyle = TP.g; g.fillText('AGAIN??', TP_ART.x + 30, TP_ART.y + 100); } },
+    'XVII': (g, f, a) => { const sx = TP_ART.x + 8 + a * 8; for (let i = 0; i < 6; i++) tpx(g, sx - i * 3, TP_ART.y + 14 + i, 2, 1, i ? 'rgba(255,233,138,' + (0.9 - i * 0.14) + ')' : TP.w); },
+    'XVIII': (g, f, a) => { const hop = (a % 2) * 3; tpMat(g, TPM_CRAB, TP_ART.x + 30 + Math.sin(a) * 10, TP_ART.y + TP_ART.h - 34 - hop, null); g.font = '7px monospace'; g.fillStyle = TP.g; g.fillText('♪', TP_ART.x + 58, TP_ART.y + TP_ART.h - 38 - hop); },
+    'XIX': (g, f, a) => { for (let i = 0; i < 8; i++) { const ang = (i * Math.PI) / 4; tpx(g, TP_ART.x + 44 + Math.cos(ang) * (13 + a), TP_ART.y + 20 + Math.sin(ang) * (13 + a), 2, 2, TP.G); } },
+    'XX': (g, f, a) => { [[16, 60], [42, 56], [68, 60]].forEach(([x, y], i) => { if (a > i * 3) { g.font = '8px monospace'; g.fillStyle = '#2d8a4e'; g.fillText('✓', TP_ART.x + x, TP_ART.y + y); } }); },
+    'XXI': (g, f, a) => { for (let i = 0; i < 10; i++) { const ang = (i / 10) * Math.PI * 2 + a * 0.4; tpx(g, TP_ART.x + 44 + Math.cos(ang) * 34, TP_ART.y + 54 + Math.sin(ang) * 40, 2, 2, [TP.p, TP.g, TP.b, TP.m][i % 4]); } }
+  };
+
+  function tpMinorPoke(g, suit, rank, f, a) {
+    const spots = rank <= 10 ? T_PIP_LAYOUT[rank].map(tpPipXY) : [[TP_ART.x + 30, TP_ART.y + 50]];
+    if (suit === 'swords' && rank === 8) { // the cage parts, the prisoner peeks
+      tpMat(g, TPM_TINY, TP_ART.x + 40, TP_ART.y + 40 - Math.min(6, a), null);
+      if (a < 5) tpx(g, TP_ART.x + 12, TP_ART.y + 22, TP_ART.w - 24, 2, 'rgba(22,9,62,0.8)');
+      return;
+    }
+    if (suit === 'swords' && rank === 3) { for (let i = 0; i < 4; i++) tpx(g, TP_ART.x + 40 + Math.cos(i * 1.57 + a) * 12, TP_ART.y + 44 + Math.sin(i * 1.57 + a) * 12, 2, 2, TP.g); return; }
+    if (suit === 'swords' && rank === 10) { tpMat(g, TPM_TINY, TP_ART.x + 40, TP_ART.y + TP_ART.h - 44 - (a % 2) * 2, null); g.font = '6px monospace'; g.fillStyle = TP.w; g.fillText('still ok', TP_ART.x + 34, TP_ART.y + TP_ART.h - 50); return; }
+    if (rank === 1) { // the hand high-fives back
+      tpMat(g, TPM_HAND, TP_ART.x + 2 + Math.min(6, a), TP_ART.y + 22, null, false, 2);
+      for (let i = 0; i < 5; i++) tpx(g, TP_ART.x + 48 + Math.cos(i * 1.26) * (4 + a), TP_ART.y + 40 + Math.sin(i * 1.26) * (4 + a), 2, 2, TP.g);
+      return;
+    }
+    if (rank >= 11) { tpCrown(g, TP_ART.x + 28, TP_ART.y + 24 - Math.min(4, a), 2); g.font = '7px monospace'; g.fillStyle = TP.k; g.fillText('♪', TP_ART.x + 54, TP_ART.y + 30); return; }
+    spots.forEach(([x, y], i) => {
+      if (suit === 'wands') { for (let d = 0; d < 3; d++) tpx(g, x + 3 + Math.cos(d * 2.1 + i) * a, y + Math.sin(d * 2.1 + i) * a, 1, 1, d % 2 ? TP.g : TP.p); }
+      else if (suit === 'cups') { tpx(g, x + 3, y - 4 - a - (i % 3), 2, 2, '#3a2412'); tpx(g, x + 7, y - 2 - a, 2, 2, '#3a2412'); }
+      else if (suit === 'swords') { tpx(g, x + 3, y - 2, 1, 26, 'rgba(255,255,255,0.75)'); g.font = '6px monospace'; g.fillStyle = '#d6ffe6'; g.fillText(String((i + a) % 2), x + Math.cos(i + a) * 6, y + 10 + Math.sin(i + a) * 6); }
+      else { tpx(g, x + (a + i) % 9, y + 2, 2, 1, '#ffffff'); g.font = '6px monospace'; g.fillStyle = TP.G; g.fillText('+', x + 4, y - 4 - (a % 5)); }
+    });
+  }
+
+  function tarotDrawPoke(g, card, f, a) {
+    const art = card.art || {};
+    if (art.suit) tpMinorPoke(g, art.suit, art.rank, f, a);
+    else if (T_MAJOR_POKE[card.rn]) T_MAJOR_POKE[card.rn](g, f, a);
+  }
+
   function tarotPaintCard(card, upright, cv, f) {
     const g = cv.getContext('2d');
     g.imageSmoothingEnabled = false;
@@ -10876,6 +11015,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (art.suit) tpPaintMinor(g, art.suit, art.rank, f);
     else if (T_MAJOR_PX[card.rn]) T_MAJOR_PX[card.rn](g, f);
     else { tpSky(g, 'day', f); tpSlimeAt(g, TP_ART.x + 37, TP_ART.y + 54, null); tpGround(g, 'grass', f); }
+    // the poke pass: a card-specific flourish rides on top for ~9 frames
+    if (cv._pk && cv._pk.left > 0) {
+      cv._pk.left--;
+      try { tarotDrawPoke(g, card, f, 9 - cv._pk.left); } catch (e) { /* the flourish fizzled */ }
+    }
     g.restore();
     // a fine dotted passe-partout hugging the picture (gallery manners)
     for (let dx = 2; dx < TP_ART.w; dx += 4) {
@@ -11082,17 +11226,19 @@ document.addEventListener('DOMContentLoaded', () => {
     let pxIv = null;
     const paint = () => { try { tarotPaintCard(card, upright, cv, pxFrame++); } catch (e) { /* a smudged frame is still a frame */ } };
     paint();
-    if (!REDUCED_MOTION) pxIv = setInterval(paint, 160);
-    // v6.2: the card is INTERACTIVE — poke it (after the flip) for a
-    // themed flourish. it stops the exit for that click, so you can play
+    if (!REDUCED_MOTION) pxIv = setInterval(paint, 140);
+    // v6.4: EVERY card reacts differently to a poke — bespoke overlays
+    // for the 22 majors, suit×rank flourishes for the 56 minors, plus a
+    // per-card quip. poking never skips the reveal; the veil does that.
     let pokes = 0;
     cv.addEventListener('pointerdown', (e) => {
-      if (!flip.classList.contains('is-flipped') || pokes >= 8) return;
+      if (!flip.classList.contains('is-flipped') || pokes >= 10) return;
       e.stopPropagation();
       pokes++;
+      cv._pk = { left: 9, n: pokes }; // the painter picks this up next frame
       const suit = (card.art && card.art.suit) || 'major';
       const burst = { wands: ['⚡', '✦', '🔥'], cups: ['🧋', '♡', '💧'], swords: ['0', '1', '✦'], coins: ['⛁', '★', '✨'], major: ['✦', '♡', '⭐'] }[suit];
-      for (let i = 0; i < 5; i++) {
+      for (let i = 0; i < 4; i++) {
         const s = document.createElement('span');
         s.className = 'tarot-poke';
         s.textContent = burst[i % burst.length];
@@ -11104,8 +11250,10 @@ document.addEventListener('DOMContentLoaded', () => {
         s.addEventListener('animationend', () => s.remove());
       }
       stage.classList.remove('tarot-wiggle'); void stage.offsetWidth; stage.classList.add('tarot-wiggle');
-      const suitMotif = suit === 'major' ? [880, 1174] : T_SUITS[suit].motif;
-      playTone(suitMotif[pokes % suitMotif.length], 'triangle', 0.09, 0, 0.05);
+      quip.textContent = trT(...tarotQuipFor(card));
+      quip.classList.remove('is-on'); void quip.offsetWidth; quip.classList.add('is-on');
+      const suitMotif = suit === 'major' ? [880, 1174.66, 1568] : T_SUITS[suit].motif;
+      playTone(suitMotif[pokes % suitMotif.length] * (1 + (pokes % 3) * 0.02), 'triangle', 0.09, 0, 0.05);
       if (pokes === 6) { // reward the persistent
         try { gainFollowers(1); } catch (er) { /* offline hearts */ }
         subFx.textContent = trT('✦ (the card giggled. +1 fan for curiosity ♡)', '✦ (la carte a gloussé. +1 fan pour la curiosité ♡)');
@@ -11122,10 +11270,13 @@ document.addEventListener('DOMContentLoaded', () => {
     subFx.className = 'tarot-sub-fx';
     sub.appendChild(subName);
     sub.appendChild(subFx);
+    const quip = document.createElement('div');
+    quip.className = 'tarot-quip';
     const hint = document.createElement('div');
     hint.className = 'tarot-skiphint';
-    hint.textContent = trT('(click / ␣ to continue)', '(clic / ␣ pour continuer)');
+    hint.textContent = trT('(poke the card ♡ · click outside / ␣ to continue)', '(touche la carte ♡ · clic à côté / ␣ pour continuer)');
     veil.appendChild(stage);
+    veil.appendChild(quip);
     veil.appendChild(sub);
     veil.appendChild(hint);
     document.body.appendChild(veil);
