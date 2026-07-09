@@ -10432,6 +10432,33 @@ html.ds-blink .window-title { animation: ds-blinky 0.8s steps(1) infinite; }
   body.ds-shake, html.ds-ripple, html.ds-blink .window-title, .ds-glitchtiles { animation: none; }
 }
 
+/* ---- v85.1: the mercy ticker — ESC scripture below the console buttons ---- */
+.console-mercy {
+  width: 100%;
+  overflow: hidden;
+  display: flex;
+  white-space: nowrap;
+  margin-top: 6px;
+  font-family: var(--font-pixel);
+  font-size: 0.74rem;
+  color: var(--pink-hot, #f0509f);
+  opacity: 0.9;
+  pointer-events: none;
+}
+.console-mercy span {
+  flex: none;
+  padding-right: 28px;
+  animation: console-mercy-scroll 17s linear infinite;
+}
+@keyframes console-mercy-scroll {
+  to { transform: translateX(-100%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .console-mercy { white-space: normal; }
+  .console-mercy span { animation: none; }
+  .console-mercy span + span { display: none; }
+}
+
 /* ---- v85: DREAMLOG.EXE — the journal that only exists in dreams ---- */
 .icon-visual-emoji {
   width: 46px;

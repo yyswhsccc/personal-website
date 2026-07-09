@@ -4646,6 +4646,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     termLine(trT(`git: '${sub}' — not here. \`git help\` shows the whole toolbox`, `git : '${sub}' — pas ici. \`git help\` montre toute la boîte`), 't-err');
   }
+  // v85.1: the chariot interlock — a full spread about to shove yongshan's
+  // soul card off the table demands explicit eye contact first
+  var termTarotPending = null;
   function runTermCommand(raw, piped, stdin) {
     const input = raw.trim();
     if (!input) return;
@@ -4681,6 +4684,22 @@ document.addEventListener('DOMContentLoaded', () => {
     // ---- v83: dream shell — while the site dreams, the waking shell is
     // sealed. only the current world's 21-word dialect gets through. ----
     if (dreamWorld && DREAM_SHELL[dreamWorld.id]) { dreamShellRun(cmd); return; }
+
+    // ---- v85.1: a pending "really push THE CHARIOT out?" answer rides first ----
+    if (termTarotPending && Date.now() - termTarotPending.at < 60000) {
+      if (cmd === 'y' || cmd === 'yes') {
+        const again = termTarotPending.input;
+        termTarotPending.at = Date.now(); // stays fresh so the interlock lets it pass
+        runTermCommand(again, true);
+        return;
+      }
+      if (cmd !== 'tarot') {
+        termTarotPending = null;
+        termLine(trT('(the wizard exhales and reshuffles — THE CHARIOT stays.)', '(le mage souffle et rebat les cartes — LE CHARIOT reste.)'), 't-dim');
+      }
+    } else if (termTarotPending) {
+      termTarotPending = null; // the 60s window closed on its own
+    }
 
     // ---- the terminal door: a tiny CTF playground until the name is spoken ----
     if (document.body.classList.contains('terminal-only')) {
@@ -5068,6 +5087,22 @@ document.addEventListener('DOMContentLoaded', () => {
       // the shell. no mechanical effect outside the arcade — fate keeps
       // the receipts for slime_run.exe. `tarot <0-77>` deals a specific
       // card, for scholars of the deck.
+      // v85.1: interlock — if this draw would shove THE CHARIOT off the
+      // table (full spread, chariot oldest), the wizard demands a confirm
+      const spreadNow = store.get('yos-tarot-spread', []);
+      const oldest = spreadNow.length >= 3 ? spreadNow[0] : null;
+      if (oldest && (oldest.i % TAROT.length) === 7) {
+        if (!(termTarotPending && Date.now() - termTarotPending.at < 60000)) {
+          termTarotPending = { at: Date.now(), input };
+          termLine(trT('⚠ WAIT. your spread is FULL and the oldest card is THE CHARIOT — yongshan\'s soul card. one more draw pushes it off the table.', '⚠ ATTENDS. ton tirage est PLEIN et la plus ancienne carte est LE CHARIOT — la carte-âme de yongshan. un tirage de plus la pousse hors de la table.'), 't-err');
+          if (oldest.u && store.get('yos-chariot', null)) {
+            termLine(trT('   …and it sits UPRIGHT with 17 unstoppable seconds armed. they leave WITH it. the wizard\'s hands are shaking.', '   …et elle est À L\'ENDROIT avec 17 secondes inarrêtables armées. elles partent AVEC elle. les mains du mage tremblent.'), 't-err');
+          }
+          termLine(trT('really draw? type `y` (or `tarot` again) within 60s to confirm — any other command spares the chariot ♡', 'vraiment tirer ? tape `y` (ou `tarot` encore) sous 60 s pour confirmer — toute autre commande épargne le chariot ♡'), 't-accent');
+          return;
+        }
+        termTarotPending = null; // eye contact made — fate proceeds
+      }
       const idx = args[0] !== undefined && !isNaN(parseInt(args[0], 10)) ? Math.abs(parseInt(args[0], 10)) % TAROT.length : Math.floor(Math.random() * TAROT.length);
       const card = TAROT[idx];
       const upright = Math.random() < 0.55;
@@ -5085,8 +5120,21 @@ document.addEventListener('DOMContentLoaded', () => {
         // and ALL of them take hold the moment your next run starts
         const spread = store.get('yos-tarot-spread', []);
         spread.push({ i: idx, u: upright });
-        while (spread.length > 3) spread.shift();
+        let pushedChariot = null;
+        while (spread.length > 3) {
+          const old = spread.shift();
+          if ((old.i % TAROT.length) === 7) pushedChariot = old;
+        }
         store.set('yos-tarot-spread', spread);
+        if (pushedChariot) {
+          if (pushedChariot.u && store.get('yos-chariot', null)) {
+            store.set('yos-chariot', null);
+            playGlitchSound();
+            termLine(trT('💔 THE CHARIOT leaves the spread — and takes its 17 unstoppable seconds with it. the wizard files a formal complaint with fate.', '💔 LE CHARIOT quitte le tirage — et emporte ses 17 secondes inarrêtables. le mage dépose une réclamation officielle auprès du destin.'), 't-err');
+          } else {
+            termLine(trT('…THE CHARIOT slides off the table and rolls into the sunset. backwards. dramatically.', '…LE CHARIOT glisse de la table et roule vers le couchant. en marche arrière. dramatiquement.'), 't-dim');
+          }
+        }
         termLine(`${trT(...card.n)}${upright ? '' : trT(' (reversed)', ' (renversée)')} — ${trT(...(upright ? card.up : card.dn).t)}`, 't-ok');
         termLine(trT(`⚡ sealed into your spread (${spread.length}/3) — it WILL take hold when your next run of slime_run.exe begins`, `⚡ scellée dans ton tirage (${spread.length}/3) — elle s'appliquera au départ de ta prochaine run de slime_run.exe`), 't-accent');
         if (spread.length === 3) termLine(trT('   (full spread!! past · present · future. a 4th draw retires the oldest card)', '   (tirage complet !! passé · présent · futur. un 4e tirage retire la plus ancienne)'), 't-dim');
@@ -14133,7 +14181,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (scene < 2) {
       g2.fillStyle = inkC;
       g2.font = "22px 'Jersey 25', 'VT323', monospace";
-      g2.fillText(skit.brand, G_W / 2, 42);
+      // the pause banner rents the top 40px — the headline politely ducks
+      g2.fillText(skit.brand, G_W / 2, loopMode ? 62 : 42);
       g2.font = "13px 'Jersey 25', 'VT323', monospace";
       g2.fillStyle = subC;
       g2.fillText(trT(skit.lines[scene][0], skit.lines[scene][1]), G_W / 2, G_H - 34);
@@ -14144,10 +14193,10 @@ document.addEventListener('DOMContentLoaded', () => {
       g2.fillStyle = inkC;
       g2.font = "18px 'Jersey 25', 'VT323', monospace";
       const finale = (gDreamSkin && AD_FINALE_DREAM[gDreamSkin]) || ['♡ this ad slot is for rent ♡', '♡ cet espace pub est à louer ♡'];
-      g2.fillText(trT(finale[0], finale[1]), G_W / 2, 44);
+      g2.fillText(trT(finale[0], finale[1]), G_W / 2, loopMode ? 58 : 44);
       g2.font = "12px 'Jersey 25', 'VT323', monospace";
       g2.fillStyle = subC;
-      g2.fillText('yuyongshan573@gmail.com', G_W / 2, 62);
+      g2.fillText('yuyongshan573@gmail.com', G_W / 2, loopMode ? 76 : 62);
       g2.fillText(trT('(serious brands only. payment in boba accepted)', '(marques sérieuses uniquement. paiement en boba accepté)'), G_W / 2, G_H - 34);
       gAdActor(g2, G_W / 2, 90, GAME.adT * 0.12);
       // pixel confetti
@@ -19886,7 +19935,17 @@ document.addEventListener('DOMContentLoaded', () => {
     hall.addEventListener('click', () => openWindow('win-leaderboard'));
     const eject = mkBtn('⏏', trT('quit game', 'quitter le jeu'), 'console-btn-eject');
     eject.addEventListener('click', () => closeWindow(win));
-    side.append(screen, hall, eject);
+    // v85.1: the mercy ticker — a tiny scrolling scripture of rest
+    const mercy = document.createElement('div');
+    mercy.className = 'console-mercy';
+    mercy.setAttribute('aria-hidden', 'true');
+    const mercyText = trT('♡ struggling?? press ESC anytime — the merciful slime god will grant you rest ♡ no shame. only naps. the run waits for you ♡ ', '♡ ça devient trop ?? appuie sur ÉCHAP quand tu veux — le dieu-slime miséricordieux t\'accordera du repos ♡ zéro honte. que des siestes. la run t\'attend ♡ ');
+    for (let mi = 0; mi < 2; mi++) { // doubled so the loop never gaps
+      const ms = document.createElement('span');
+      ms.textContent = mercyText;
+      mercy.appendChild(ms);
+    }
+    side.append(screen, hall, eject, mercy);
     body.appendChild(side);
     // corner screws — load-bearing cuteness
     [['10px', '10px'], ['10px', ''], ['', '10px'], ['', '']].forEach(([tp, lf], i) => {
