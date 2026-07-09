@@ -3566,6 +3566,7 @@ document.addEventListener('DOMContentLoaded', () => {
     { id: 'dreamrabbit', icon: '🐰', n: ['Followed It Anyway', 'L\'a Suivi Quand Même'], d: ['caught the pink rabbit inside the slimetrix. it multiplied. that\'s on you.', 'a attrapé le lapin rose dans la slimetrice. il s\'est multiplié. c\'est ta faute.'], t: ['inside the green dream, something pink hops.', 'dans le rêve vert, quelque chose de rose bondit.'] },
     { id: 'dreamwake', icon: '⏰', n: ['Dream Bouncer', 'Videur de Rêves'], d: ['knocked an entire dream world off the website. it popped like a soap bubble.', 'a fait tomber un monde onirique entier du site. il a éclaté comme une bulle de savon.'], t: ['dreams are poppable. knock.', 'les rêves sont perçables. toque.'] },
     { id: 'gremlin', icon: '😈', n: ['Gremlin Hour Witness', 'Témoin de l\'Heure du Gremlin'], d: ['watched the 7 unsupervised minutes after curfew. saw everything. told no one.', 'a assisté aux 7 minutes sans surveillance après le couvre-feu. a tout vu. n\'a rien dit.'], t: ['when the curfew lifts, a mask goes on.', 'quand le couvre-feu tombe, un masque se met.'] },
+    { id: 'dreamhoard', icon: '🎁', n: ['Keeper of Seven Keepsakes', 'Gardien·ne des Sept Souvenirs'], d: ['pocketed a souvenir from every dream world. the shelf is FULL.', 'a empoché un souvenir de chaque monde onirique. l\'étagère est PLEINE.'], t: ['every dream drops one shiny thing.', 'chaque rêve laisse tomber une chose qui brille.'] },
     { id: 'bosskill', icon: '⚔️', n: ['Kaiju Exterminator', 'Exterminateur·rice de Kaijus'], d: ['deleted a 404 kaiju. the page was never found again.', 'a supprimé un kaiju 404. la page n\'a plus jamais été retrouvée.'], t: ['something enormous eventually blocks the road.', 'quelque chose d\'énorme finit par bloquer la route.'] },
     { id: 'speedran', icon: '💨', n: ['Speedrun to Zero', 'Speedrun Vers Zéro'], d: ['perished within 3 seconds of the start line. the bugs sent a thank-you card.', 'a péri moins de 3 secondes après le départ. les bugs ont envoyé une carte de remerciement.'], t: ['fail fast. no — FASTER.', 'échoue vite. non — PLUS VITE.'] },
     { id: 'top10', icon: '🏆', n: ['Three Letters, No Shame', 'Trois Lettres, Zéro Honte'], d: ['signed the arcade top-10. the initials definitely spell something.', 'a signé le top 10 de l\'arcade. les initiales veulent SÛREMENT dire quelque chose.'], t: ['great runs deserve a signature.', 'les grandes runs méritent une signature.'] },
@@ -5072,7 +5073,13 @@ document.addEventListener('DOMContentLoaded', () => {
       if (dreamActive()) { termLine(trT('already dreaming — knock on the habitat to pop it ♡', 'déjà en plein rêve — toquez sur l\'habitat pour l\'éclater ♡'), 't-dim'); return; }
       if (!args[0]) {
         termLine(trT('the slime\'s seven dream worlds:', 'les sept mondes oniriques du slime :'), 't-accent');
-        DREAM_WORLDS.forEach((w) => termLine(`  ${w.icon} ${w.id.padEnd(8)} — ${trT(...w.name)}`, 't-dim'));
+        const bag = store.get('yos-dream-souvenirs', {});
+        DREAM_WORLDS.forEach((w) => {
+          const sv = bag[w.id] ? DREAM_SOUVENIRS[w.id][0] + ' ✓' : '· ·';
+          termLine(`  ${w.icon} ${w.id.padEnd(8)} [${sv}] — ${trT(...w.name)}`, 't-dim');
+        });
+        const n = Object.keys(bag).length;
+        termLine(trT(`souvenirs: ${n}/7 — every dream drops one shiny keepsake ♡`, `souvenirs : ${n}/7 — chaque rêve laisse tomber une babiole brillante ♡`), n >= 7 ? 't-ok' : 't-dim');
         termLine(trT('usage: `dream <name>` — or just let it sleepwalk after curfew', 'usage : `dream <nom>` — ou laissez-le somnambuler après le couvre-feu'), 't-dim');
         return;
       }
@@ -6877,7 +6884,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const ch = 'ｱｲｳｴｵ01♡ zzz'[Math.floor(Math.random() * 12)] || '0';
         x.fillStyle = ch === '♡' ? 'rgba(255,143,199,0.5)' : 'rgba(57,211,83,0.4)';
         x.fillText(ch, i * cell, d * cell);
-        drops[i] = d * cell > cv.height && Math.random() > 0.98 ? 0 : d + 0.6;
+        drops[i] = d * cell > cv.height && Math.random() > 0.98 ? 0 : d + (dreamWorld && dreamWorld.flags.slowmo ? 0.12 : 0.6);
       });
     }, 70);
   }
@@ -6980,10 +6987,22 @@ document.addEventListener('DOMContentLoaded', () => {
       tick();
       dI(tick, 20000);
       dI(() => { if (Math.random() < 0.75) dwGbTetromino(); }, 34000);
+      const KONAMI = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'KeyB', 'KeyA'];
       const keyBeep = (e) => {
         if (!dreamWorld) return;
         const tag = (e.target && e.target.tagName) || '';
         if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target && e.target.isContentEditable)) return;
+        // the sacred code is armed for the whole dream (of course it is)
+        const kb = dreamWorld.flags.kbuf = (dreamWorld.flags.kbuf || []);
+        kb.push(e.code);
+        if (kb.length > 10) kb.shift();
+        if (kb.length === 10 && KONAMI.every((k, i) => kb[i] === k)) {
+          dreamWorld.flags.kbuf = [];
+          playFanfare();
+          cheatFall(['🍄', '⭐', '♡'], 20);
+          gainFollowers(3);
+          showToast(trT('KONAMI!! +30 lives (redeemable nowhere. treasured everywhere)', 'KONAMI !! +30 vies (échangeables nulle part. précieuses partout)'));
+        }
         if (!/^Arrow/.test(e.key)) return;
         const now = Date.now();
         if (now - (dreamWorld.flags.gbBeepAt || 0) < 160) return;
@@ -7147,6 +7166,26 @@ document.addEventListener('DOMContentLoaded', () => {
       head.innerHTML = '<div class="dream-bsod-face">:(</div><div class="dream-bsod-text"></div>';
       document.body.appendChild(head);
       dN(head);
+      // v6.5: the sad face is consolable — click it up to :D
+      const face = head.querySelector('.dream-bsod-face');
+      if (face) {
+        const moods = [':(', ':|', ':)', ':D'];
+        let mi = 0;
+        face.style.pointerEvents = 'auto';
+        face.style.cursor = 'var(--cursor-heart)';
+        face.addEventListener('click', () => {
+          if (!dreamWorld) return;
+          mi = Math.min(moods.length - 1, mi + 1);
+          face.textContent = moods[mi];
+          playTone(392 + mi * 140, 'triangle', 0.12, 0, 0.05);
+          if (mi === moods.length - 1 && !dreamWorld.flags.consoled) {
+            dreamWorld.flags.consoled = true;
+            gainFollowers(2);
+            cheatFall(['💙', '♡'], 10);
+            showToast(trT('mood restored. crash forgiven ♡', 'humeur restaurée. crash pardonné ♡'));
+          }
+        });
+      }
       const txt = head.querySelector('.dream-bsod-text');
       const draw = () => {
         if (!dreamWorld) return;
@@ -7351,13 +7390,19 @@ document.addEventListener('DOMContentLoaded', () => {
     // 10–15 min dream never runs out of surprises
     dT(dreamSignatureBeat, resumed ? 12000 : 26000);
     dI(dreamSignatureBeat, 48000);
+    // tier-2: one PLAYABLE bit per world, offered a couple times a dream
+    dT(dreamBonusBeat, resumed ? 40000 : 72000);
+    dI(dreamBonusBeat, 96000);
+    // and somewhere shiny, a souvenir drops (one per world, seven total)
+    dT(dreamSpawnSouvenir, 55000 + Math.random() * 50000);
     dT(() => dreamEnd('timer'), dur);
   }
 
   /* ---- v6.2: per-world signature beats (the dream keeps performing) ---- */
   function dreamSignatureBeat() {
     if (!dreamWorld || REDUCED_MOTION) return;
-    if (Math.random() < 0.28) return; // it's a dream, not a metronome
+    if (Math.random() < 0.12) { dwCrossover(); return; } // wrong-dream cameo!!
+    if (Math.random() < 0.24) return; // it's a dream, not a metronome
     const id = dreamWorld.id;
     if (id === 'win95') dwBeatSolitaire();
     else if (id === 'scp') dwBeatAnomaly();
@@ -7366,6 +7411,159 @@ document.addEventListener('DOMContentLoaded', () => {
     else if (id === 'geo') dwBeatMillionth();
     else if (id === 'bsod') dwBeatErrorReport();
     else if (id === 'amber') dwBeatFortune();
+  }
+
+  // sometimes a resident of ANOTHER dream wanders in. don't tell the director.
+  const DW_CAMEOS = {
+    win95: { emoji: '📎', l: ['a paperclip?? (wrong dream — escorting it home)', 'un trombone ?? (mauvais rêve — on le raccompagne)'] },
+    scp: { emoji: '🧊', l: ['a loose containment cube (it hums)', 'un cube de confinement égaré (il fredonne)'] },
+    matrix: { emoji: '🐇', l: ['the pink rabbit took a wrong turn', 'le lapin rose s\'est trompé de sortie'] },
+    gameboy: { emoji: '🕹', l: ['a cartridge rolled in from next door', 'une cartouche a roulé depuis la porte d\'à côté'] },
+    geo: { emoji: '🚧', l: ['a 1998 cone, still under construction', 'un cône de 1998, toujours en construction'] },
+    bsod: { emoji: '💙', l: ['a stray :( looking for its window', 'un :( égaré qui cherche sa fenêtre'] },
+    amber: { emoji: '🎫', l: ['a punch card, badly folded (a crime)', 'une carte perforée, mal pliée (un crime)'] }
+  };
+  function dwCrossover() {
+    if (!dreamWorld) return;
+    const others = Object.keys(DW_CAMEOS).filter((k) => k !== dreamWorld.id);
+    const pick = DW_CAMEOS[others[Math.floor(Math.random() * others.length)]];
+    dreamCritter({ emoji: pick.emoji, ms: 11000, hop: 4, label: pick.l });
+    dreamSay(["zzz… that's not from THIS dream… don't tell the director…", "zzz… ça ne vient pas de CE rêve… ne le dites pas au réalisateur…"], 4200);
+  }
+
+  /* ---- v6.5: dream souvenirs 🎁 — one per world, collect all seven ---- */
+  const DREAM_SOUVENIRS = {
+    win95: ['💾', ['a rescued floppy (1.44MB of feelings)', 'une disquette sauvée (1,44 Mo de sentiments)']],
+    scp: ['🧊', ['a containment cube (empty. or IS it)', 'un cube de confinement (vide. ou PAS)']],
+    matrix: ['💊', ['the third pill (grape flavor)', 'la troisième pilule (goût raisin)']],
+    gameboy: ['🕹', ['a dusty cartridge (blow before use)', 'une cartouche poussiéreuse (souffler avant usage)']],
+    geo: ['🖋', ['the guestbook pen (glitter ink)', 'le stylo du livre d\'or (encre pailletée)']],
+    bsod: ['💙', ['one collected error (it purrs)', 'une erreur recueillie (elle ronronne)']],
+    amber: ['🎫', ['punch card № 341 (do not fold)', 'carte perforée nº 341 (ne pas plier)']]
+  };
+  function dreamSpawnSouvenir() {
+    if (!dreamWorld || dreamWorld.flags.souvenirUp) return;
+    const got = store.get('yos-dream-souvenirs', {});
+    if (got[dreamWorld.id]) return; // already pocketed this world's keepsake
+    dreamWorld.flags.souvenirUp = true;
+    const [emoji, desc] = DREAM_SOUVENIRS[dreamWorld.id];
+    const el = document.createElement('button');
+    el.type = 'button';
+    el.className = 'dream-souvenir';
+    el.innerHTML = '<span class="dream-souvenir-item">' + emoji + '</span><small>' + trT('souvenir!!', 'souvenir !!') + '</small>';
+    el.style.left = (18 + Math.random() * 55) + '%';
+    el.style.top = (24 + Math.random() * 34) + '%';
+    el.addEventListener('click', () => {
+      const bag = store.get('yos-dream-souvenirs', {});
+      bag[dreamWorld ? dreamWorld.id : 'x'] = true;
+      store.set('yos-dream-souvenirs', bag);
+      const n = Object.keys(bag).length;
+      el.classList.add('dream-souvenir-got');
+      playSparkleSound();
+      gainFollowers(1);
+      showToast('🎁 ' + trT(...desc) + ' — ' + n + '/7');
+      if (n >= 7) { achvUnlock('dreamhoard'); cheatFall(['🎁', '✦', '♡'], 22); playFanfare(); }
+      setTimeout(() => el.remove(), 900);
+    }, { once: true });
+    document.body.appendChild(el);
+    dN(el);
+    dreamSay(["zzz… psst… the dream dropped a SOUVENIR… somewhere shiny…", "zzz… psst… le rêve a laissé tomber un SOUVENIR… un truc qui brille…"], 4600);
+    setTimeout(() => { if (el.isConnected && !el.classList.contains('dream-souvenir-got')) { el.classList.add('dream-souvenir-fade'); setTimeout(() => el.remove(), 1200); } }, 90000);
+  }
+
+  /* ---- v6.5: tier-2 interactive beats (one playable bit per world) ---- */
+  function dreamBonusBeat() {
+    if (!dreamWorld || REDUCED_MOTION || document.querySelector('.dream-dlg')) return;
+    const id = dreamWorld.id;
+    if (id === 'win95') { // minesweeper.exe: one click, trust your heart
+      const cells = ['🌸', '🌸', '🌸', '🌸', '🌸', '💣', '🌸', '🌸', '🌸'].sort(() => Math.random() - 0.5);
+      const d = dreamDlg({
+        title: 'minesweeper.exe', force: true,
+        lines: [trT('one click. trust your heart.', 'un clic. écoute ton cœur.')],
+        buttons: []
+      });
+      if (!d) return;
+      const grid = document.createElement('div');
+      grid.className = 'dream-mine-grid';
+      cells.forEach((c) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.textContent = '▒';
+        b.addEventListener('click', () => {
+          if (grid.dataset.done) return;
+          grid.dataset.done = '1';
+          b.textContent = c;
+          if (c === '💣') { playGlitchSound(); cheatFall(['💥', '🌸'], 12); showToast(trT('BOOM. it was confetti. you win anyway (house rules)', 'BOUM. c\'était des confettis. tu gagnes quand même (règle maison)')); }
+          else { playSparkleSound(); gainFollowers(1); showToast(trT('a flower!! minesweeper certified: pure of heart ♡', 'une fleur !! certifié démineur : cœur pur ♡')); }
+          setTimeout(() => { try { d.remove(); } catch (e) { /* swept */ } }, 1500);
+        }, { once: true });
+        grid.appendChild(b);
+      });
+      d.querySelector('.dream-dlg-body').appendChild(grid);
+    } else if (id === 'scp') { // Class-D orientation, question 1 of 1
+      dreamDlg({
+        title: trT('CLASS-D ORIENTATION QUIZ', 'QUIZ D\'ORIENTATION CLASSE-D'), force: true,
+        lines: [trT('SCP-999 approaches. you should:', 'SCP-999 approche. vous devez :')],
+        buttons: [
+          [trT('hug', 'câlin'), () => { playSparkleSound(); showToast(trT('correct ✓ (all answers were correct)', 'correct ✓ (toutes les réponses étaient correctes)')); gainFollowers(1); }],
+          [trT('hug FASTER', 'câlin PLUS VITE'), () => { playFanfare(); showToast(trT('EXTREMELY correct ✓✓ promoted to Class-Hug', 'EXTRÊMEMENT correct ✓✓ promu·e Classe-Câlin')); gainFollowers(2); }],
+          [trT('document the hug', 'documenter le câlin'), () => { playDreamPop(); showToast(trT('correct ✓ the O5 council loves paperwork', 'correct ✓ le conseil O5 adore la paperasse')); gainFollowers(1); }]
+        ]
+      });
+    } else if (id === 'matrix') { // one charge of bullet time
+      if (document.querySelector('.dream-bullet-badge')) return;
+      const b = dreamBadge('', 'dream-bullet-badge');
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = trT('🕶 bullet time (1 charge)', '🕶 bullet time (1 charge)');
+      btn.addEventListener('click', () => {
+        if (!dreamWorld) return;
+        dreamWorld.flags.slowmo = true;
+        document.body.classList.add('dream-slowmo');
+        playTone(160, 'sine', 1.2, 0, 0.06);
+        playTone(80, 'sine', 1.6, 0.3, 0.05);
+        dreamSay(["…whoa.", "…whoa."], 2600);
+        setTimeout(() => { if (dreamWorld) dreamWorld.flags.slowmo = false; document.body.classList.remove('dream-slowmo'); playTone(320, 'sine', 0.4, 0, 0.04); }, 4200);
+        b.remove();
+      }, { once: true });
+      b.appendChild(btn);
+      setTimeout(() => { if (b.isConnected) b.remove(); }, 30000);
+    } else if (id === 'gameboy') { // SAVE GAME? (there is no battery)
+      dreamDlg({
+        title: 'SAVE GAME?', force: true,
+        lines: [trT('saving requires a battery. the battery is a dream.', 'sauvegarder demande une pile. la pile est un rêve.')],
+        buttons: [
+          [trT('SAVE', 'SAUVER'), () => { playDreamGB(); showToast(trT('saved!! (in our hearts. the only stable storage)', 'sauvegardé !! (dans nos cœurs. le seul stockage stable)')); }],
+          [trT('SAVE ANYWAY', 'SAUVER QUAND MÊME'), () => { playFanfare(); gainFollowers(1); showToast(trT('DOUBLE-saved. you absolute legend.', 'DOUBLEMENT sauvegardé. légende absolue.')); }]
+        ]
+      });
+    } else if (id === 'geo') { // the TOP 100 SLIME SITES poll
+      if (document.querySelector('.dream-vote-badge')) return;
+      const b = dreamBadge('', 'dream-vote-badge');
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = trT('⭐ VOTE: TOP 100 SLIME SITES ⭐', '⭐ VOTE : TOP 100 SITES DE SLIME ⭐');
+      btn.addEventListener('click', () => {
+        playFanfare();
+        cheatFall(['⭐', '✦'], 12);
+        gainFollowers(1);
+        showToast(trT('vote registered!! current rank: #1 of 1 (landslide)', 'vote enregistré !! classement : nº1 sur 1 (raz-de-marée)'));
+        b.remove();
+      }, { once: true });
+      b.appendChild(btn);
+      setTimeout(() => { if (b.isConnected) b.remove(); }, 30000);
+    } else if (id === 'bsod') { // the :( face is consolable (see build hook)
+      dreamSay(["zzz… psst… you can CLICK the sad face… cheer it up…", "zzz… psst… tu peux CLIQUER le visage triste… console-le…"], 4600);
+    } else if (id === 'amber') { // ASK THE MAINFRAME (it knows)
+      dreamDlg({
+        title: 'ASK THE MAINFRAME', force: true,
+        lines: [trT('"will the deploy succeed?" (Y/N accepted, wisdom guaranteed)', '« le déploiement va-t-il réussir ? » (O/N acceptés, sagesse garantie)')],
+        buttons: [
+          ['Y', () => { playDreamPrinter(); showToast(trT('MAINFRAME: "AFFIRMATIVE. DEPLOY ON A TUESDAY."', 'MAINFRAME : « AFFIRMATIF. DÉPLOYEZ UN MARDI. »')); }],
+          ['N', () => { playDreamPrinter(); showToast(trT('MAINFRAME: "CORRECT. IT NEVER DOES. SHIP ANYWAY."', 'MAINFRAME : « CORRECT. ÇA NE MARCHE JAMAIS. LIVREZ QUAND MÊME. »')); }]
+        ]
+      });
+    }
   }
 
   // win95: the solitaire victory cascade (nobody ever asked for it, it came anyway)
@@ -7563,7 +7761,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function dreamEnd(reason) {
     if (!dreamWorld || dreamEnding) return;
+    // v6.5: natural endings get a 1.4s COLLAPSE first — reality wobbles,
+    // one last cameo dashes through, and THEN the dream lets go
+    if (reason === 'timer' && !REDUCED_MOTION && !dreamWorld.flags.collapsing) {
+      dreamWorld.flags.collapsing = true;
+      document.documentElement.classList.add('dream-collapse');
+      playGlitchSound();
+      try { dwCrossover(); } catch (e) { /* the cameo missed its cue */ }
+      setTimeout(() => { document.documentElement.classList.remove('dream-collapse'); dreamEnd('timer'); }, 1400);
+      return;
+    }
     dreamEnding = true;
+    document.documentElement.classList.remove('dream-collapse');
     const w = dreamWorld.w;
     dreamWorld.timers.forEach((t) => { clearTimeout(t); clearInterval(t); });
     if (w.exit) { try { w.exit(); } catch (e) { /* the dream keeps its secrets */ } }
@@ -10207,6 +10416,54 @@ document.addEventListener('DOMContentLoaded', () => {
     s: '#ffe4f2', d: '#c9c9d9', D: '#8a8fa0'
   };
   function tpx(g, x, y, w, h, c) { g.fillStyle = c; g.fillRect(Math.round(x), Math.round(y), Math.max(1, Math.round(w)), Math.max(1, Math.round(h))); }
+
+  /* ---- a REAL 3×5 bitmap font: pure rects, zero anti-aliasing ----
+     canvas fillText smears gray fuzz at pixel scale; this never does. */
+  const TP_FONT = {
+    'A': ['010', '101', '111', '101', '101'], 'B': ['110', '101', '110', '101', '110'],
+    'C': ['011', '100', '100', '100', '011'], 'D': ['110', '101', '101', '101', '110'],
+    'E': ['111', '100', '110', '100', '111'], 'F': ['111', '100', '110', '100', '100'],
+    'G': ['011', '100', '101', '101', '011'], 'H': ['101', '101', '111', '101', '101'],
+    'I': ['111', '010', '010', '010', '111'], 'J': ['001', '001', '001', '101', '010'],
+    'K': ['101', '110', '100', '110', '101'], 'L': ['100', '100', '100', '100', '111'],
+    'M': ['101', '111', '111', '101', '101'], 'N': ['101', '111', '111', '111', '101'],
+    'O': ['010', '101', '101', '101', '010'], 'P': ['110', '101', '110', '100', '100'],
+    'Q': ['010', '101', '101', '110', '011'], 'R': ['110', '101', '110', '110', '101'],
+    'S': ['011', '100', '010', '001', '110'], 'T': ['111', '010', '010', '010', '010'],
+    'U': ['101', '101', '101', '101', '011'], 'V': ['101', '101', '101', '010', '010'],
+    'W': ['101', '101', '111', '111', '101'], 'X': ['101', '010', '010', '010', '101'],
+    'Y': ['101', '101', '010', '010', '010'], 'Z': ['111', '001', '010', '100', '111'],
+    '0': ['010', '101', '101', '101', '010'], '1': ['010', '110', '010', '010', '111'],
+    '2': ['110', '001', '010', '100', '111'], '3': ['110', '001', '010', '001', '110'],
+    '4': ['101', '101', '111', '001', '001'], '5': ['111', '100', '110', '001', '110'],
+    '6': ['011', '100', '110', '101', '010'], '7': ['111', '001', '010', '010', '010'],
+    '8': ['010', '101', '010', '101', '010'], '9': ['010', '101', '011', '001', '110'],
+    '!': ['010', '010', '010', '000', '010'], '?': ['110', '001', '010', '000', '010'],
+    '%': ['101', '001', '010', '100', '101'], '$': ['011', '110', '010', '011', '110'],
+    '.': ['000', '000', '000', '000', '010'], ':': ['000', '010', '000', '010', '000'],
+    ',': ['000', '000', '000', '010', '100'], '-': ['000', '000', '111', '000', '000'],
+    '_': ['000', '000', '000', '000', '111'], '+': ['000', '010', '111', '010', '000'],
+    '=': ['000', '111', '000', '111', '000'], '>': ['100', '010', '001', '010', '100'],
+    '/': ['001', '001', '010', '100', '100'], '~': ['000', '010', '101', '000', '000'],
+    "'": ['010', '010', '000', '000', '000'], '(': ['001', '010', '010', '010', '001'],
+    ')': ['100', '010', '010', '010', '100'], '…': ['000', '000', '000', '000', '101'],
+    '♡': ['101', '111', '111', '010', '000'], '✓': ['000', '001', '001', '110', '010'],
+    '♪': ['011', '010', '010', '110', '110'], '↑': ['010', '111', '010', '010', '010'],
+    '§': ['011', '010', '101', '010', '110'], '⌘': ['101', '111', '010', '111', '101'],
+    '∞': ['000', '101', '111', '101', '000'], '#': ['101', '111', '101', '111', '101'],
+    ' ': ['000', '000', '000', '000', '000']
+  };
+  function tpText(g, str, x, y, c, s) {
+    s = s || 1;
+    let cx = Math.round(x);
+    String(str).toUpperCase().split('').forEach((ch) => {
+      const glyph = TP_FONT[ch] || TP_FONT[' '];
+      for (let r = 0; r < 5; r++) for (let b = 0; b < 3; b++) {
+        if (glyph[r][b] === '1') { g.fillStyle = c; g.fillRect(cx + b * s, Math.round(y) + r * s, s, s); }
+      }
+      cx += 4 * s;
+    });
+  }
   // paint a string-matrix sprite; pal remaps chars → TP keys, '.'=skip
   function tpMat(g, mat, x, y, pal, flip, s) {
     s = s || 1;
@@ -10508,12 +10765,10 @@ document.addEventListener('DOMContentLoaded', () => {
       tpx(g, cx - 1 + (i % 2), my, 1, 1, TP.w);
     }
     // free-floating digits, each scrolling at its own pace — no cage
-    g.font = '7px monospace';
     for (let i = 0; i < 3; i++) {
       const dy = y + ((f * (1 + i * 0.6) + digitSeed * 5 + i * (h / 3)) % Math.max(8, h - 2));
       const bright = i === (f >> 3) % 3;
-      g.fillStyle = bright ? '#d6ffe6' : 'rgba(61,255,124,0.85)';
-      g.fillText(String((digitSeed + i + (f >> 2)) % 2), cx - 2, dy);
+      tpText(g, String((digitSeed + i + (f >> 2)) % 2), cx - 1, dy - 4, bright ? '#d6ffe6' : 'rgba(61,255,124,0.85)');
     }
   }
   function tpLightning(g, x, y, len, f) {
@@ -10611,7 +10866,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (rank === 5) { // outside the paywall, in the snow
         tpx(g, TP_ART.x + 30, TP_ART.y + 22, 28, 44, TP.N);
         for (let yy = 0; yy < 5; yy++) for (let xx = 0; xx < 3; xx++) tpx(g, TP_ART.x + 33 + xx * 8, TP_ART.y + 25 + yy * 8, 6, 6, (xx + yy) % 2 ? TP.g : TP.o);
-        g.font = '7px monospace'; g.fillStyle = TP.k; g.fillText('$', TP_ART.x + 41, TP_ART.y + 48);
+        tpText(g, '$', TP_ART.x + 40, TP_ART.y + 42, TP.k);
         tpSlimeAt(g, TP_ART.x + 6, gy - 9, null);
         tpMat(g, TPM_TINY, TP_ART.x + 68, gy - 5, null, true);
         for (let i = 0; i < 6; i++) tpx(g, TP_ART.x + (i * 17 + f * 2) % TP_ART.w, TP_ART.y + (i * 23 + f) % (TP_ART.h - 30), 1, 1, TP.w);
@@ -10656,7 +10911,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const gy = tpGround(g, 'grass', f);
       tpx(g, TP_ART.x + 52, gy - 14, 36, 36, '#5db374'); // the cliff
       tpx(g, TP_ART.x + 52, gy - 14, 2, 36, '#3d8a55');
-      tpCloud(g, TP_ART.x + 56, gy + 4, 16); g.font = '6px monospace'; g.fillStyle = TP.v; g.fillText('404', TP_ART.x + 59, gy + 10);
+      tpCloud(g, TP_ART.x + 56, gy + 4, 16); tpText(g, '404', TP_ART.x + 58, gy + 5, TP.v);
       tpSlimeAt(g, TP_ART.x + 40, gy - 24 - (f % 2), null); // mid-skip at the edge
       tpx(g, TP_ART.x + 54, gy - 30, 1, 8, TP.t); tpx(g, TP_ART.x + 53, gy - 32, 4, 3, TP.p); // the bindle
       tpMat(g, TPM_TINY, TP_ART.x + 26, gy - 5, { p: 'w', P: 'p' }); // the little white dog-slime, barking
@@ -10675,11 +10930,11 @@ document.addEventListener('DOMContentLoaded', () => {
       tpSky(g, 'night', f);
       tpGround(g, 'checker', f);
       tpx(g, TP_ART.x + 8, TP_ART.y + 16, 12, 76, TP.k); tpx(g, TP_ART.x + 68, TP_ART.y + 16, 12, 76, TP.w);
-      g.font = '8px monospace'; g.fillStyle = TP.w; g.fillText('0', TP_ART.x + 11, TP_ART.y + 30);
-      g.fillStyle = TP.k; g.fillText('1', TP_ART.x + 71, TP_ART.y + 30);
+      tpText(g, '0', TP_ART.x + 11, TP_ART.y + 24, TP.w);
+      tpText(g, '1', TP_ART.x + 72, TP_ART.y + 24, TP.k);
       tpSlimeAt(g, TP_ART.x + 37, TP_ART.y + 52 + (f % 2), { p: 'l', P: 'v' });
       tpMoon(g, TP_ART.x + 44, TP_ART.y + 36, f);
-      tpx(g, TP_ART.x + 36, TP_ART.y + 66, 16, 8, TP.c); g.font = '6px monospace'; g.fillStyle = TP.k; g.fillText('.env', TP_ART.x + 37, TP_ART.y + 72);
+      tpx(g, TP_ART.x + 36, TP_ART.y + 66, 16, 8, TP.c); tpText(g, '.env', TP_ART.x + 37, TP_ART.y + 67, TP.k);
     },
     'III': (g, f) => { // the Empress in her sprout garden
       tpSky(g, 'day', f); tpSun(g, TP_ART.x + 16, TP_ART.y + 12, f);
@@ -10706,7 +10961,7 @@ document.addEventListener('DOMContentLoaded', () => {
       tpx(g, TP_ART.x + 38, TP_ART.y + 32, 12, 3, TP.k); tpx(g, TP_ART.x + 48, TP_ART.y + 34, 3, 2, TP.g); // the grad cap
       tpMat(g, TPM_TINY, TP_ART.x + 18, TP_ART.y + 88, null); tpMat(g, TPM_TINY, TP_ART.x + 60, TP_ART.y + 88, null, true);
       tpx(g, TP_ART.x + 38, TP_ART.y + 84, 5, 4, TP.d); tpx(g, TP_ART.x + 46, TP_ART.y + 84, 5, 4, TP.d); // crossed ⌘ keycaps
-      g.font = '6px monospace'; g.fillStyle = TP.k; g.fillText('⌘', TP_ART.x + 39, TP_ART.y + 88); g.fillText('⌘', TP_ART.x + 47, TP_ART.y + 88);
+      tpText(g, '⌘', TP_ART.x + 39, TP_ART.y + 83, TP.k); tpText(g, '⌘', TP_ART.x + 47, TP_ART.y + 83, TP.k);
     },
     'VI': (g, f) => { // the Lovers pair-program under the angel cloud
       tpSky(g, 'day', f); tpSun(g, TP_ART.x + 44, TP_ART.y + 10, f);
@@ -10742,8 +10997,8 @@ document.addEventListener('DOMContentLoaded', () => {
       tpSlimeAt(g, TP_ART.x + 34, TP_ART.y + 44, { p: 'v', P: 'N' });
       tpx(g, TP_ART.x + 52, TP_ART.y + 40, 8, 10, TP.G); tpx(g, TP_ART.x + 54, TP_ART.y + 43, 4, 4, f % 2 ? TP.g : TP.w); // the lantern breathes
       tpx(g, TP_ART.x + 28, TP_ART.y + 42, 2, 18, TP.t);
-      g.font = '7px monospace'; g.fillStyle = TP.M; g.fillText('$ grep hope', TP_ART.x + 16, TP_ART.y + 100 + (f % 2 ? 0 : 0));
-      if (f % 2) g.fillText('_', TP_ART.x + 66, TP_ART.y + 100);
+      tpText(g, '$ grep hope', TP_ART.x + 12, TP_ART.y + 94, TP.M);
+      if (f % 2) tpText(g, '_', TP_ART.x + 58, TP_ART.y + 94, TP.M);
     },
     'X': (g, f) => { // the Wheel is a loading spinner (it never resolves)
       tpSky(g, 'gold', f);
@@ -10753,7 +11008,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const bright = i < 4;
         tpx(g, cx + Math.cos(a) * 20 - 2, cy + Math.sin(a) * 20 - 2, 4, 4, bright ? TP.P : TP.l);
       }
-      tpx(g, cx - 5, cy - 5, 10, 10, TP.c); g.font = '6px monospace'; g.fillStyle = TP.k; g.fillText('99%', cx - 6, cy + 3);
+      tpx(g, cx - 8, cy - 5, 16, 10, TP.c); tpText(g, '99%', cx - 6, cy - 2, TP.k);
       tpCloud(g, TP_ART.x + 6, TP_ART.y + 20, 16); tpCloud(g, TP_ART.x + 62, TP_ART.y + 26, 18);
       tpMat(g, TPM_TINY, TP_ART.x + 8, TP_ART.y + 14, null); tpMat(g, TPM_TINY, TP_ART.x + 66, TP_ART.y + 20, null, true); // corner scholars
       tpGround(g, 'grass', f);
@@ -10789,7 +11044,7 @@ document.addEventListener('DOMContentLoaded', () => {
       tpx(g, TP_ART.x + 30, TP_ART.y + 36, 2, 14, TP.d); tpx(g, TP_ART.x + 26, TP_ART.y + 36, 6, 2, TP.w); // cursor-scythe
       tpx(g, TP_ART.x + 52, TP_ART.y + 56, 6, 8, TP.w); tpx(g, TP_ART.x + 54, TP_ART.y + 58, 2, 2, TP.P); // the white rose banner
       tpCrown(g, TP_ART.x + 14, TP_ART.y + 88); // a fallen crown
-      g.font = '6px monospace'; g.fillStyle = TP.w; g.fillText('rebooting' + ('...'.slice(0, (f % 3) + 1)), TP_ART.x + 26, TP_ART.y + 100);
+      tpText(g, 'rebooting' + ('...'.slice(0, (f % 3) + 1)), TP_ART.x + 20, TP_ART.y + 95, TP.w);
     },
     'XIV': (g, f) => { // Temperance pours boba between cups (zero spills)
       tpSky(g, 'day', f);
@@ -10810,7 +11065,7 @@ document.addEventListener('DOMContentLoaded', () => {
       for (let i = 0; i < 3; i++) { tpx(g, TP_ART.x + 26 - i * 3, TP_ART.y + 22 + i * 2, 2, 1, TP.d); tpx(g, TP_ART.x + 58 + i * 3, TP_ART.y + 22 + i * 2, 2, 1, TP.d); } // inverted wifi
       tpMat(g, TPM_TINY, TP_ART.x + 16, TP_ART.y + 84, null); tpMat(g, TPM_TINY, TP_ART.x + 62, TP_ART.y + 84, null, true);
       for (let i = 0; i < 4; i++) { tpx(g, TP_ART.x + 24 + i * 2, TP_ART.y + 80 - i, 1, 1, TP.d); tpx(g, TP_ART.x + 66 - i * 2, TP_ART.y + 80 - i, 1, 1, TP.d); } // the chains
-      g.font = '6px monospace'; g.fillStyle = TP.d; g.fillText('EULA §666', TP_ART.x + 28, TP_ART.y + 104);
+      tpText(g, 'EULA §666', TP_ART.x + 26, TP_ART.y + 99, TP.d);
     },
     'XVI': (g, f) => { // the Tower: prod goes down beautifully
       tpSky(g, 'storm', f);
@@ -10865,13 +11120,13 @@ document.addEventListener('DOMContentLoaded', () => {
       tpMat(g, TPM_MONITOR, TP_ART.x + 12, TP_ART.y + 70 + rise, null);
       tpMat(g, TPM_MONITOR, TP_ART.x + 38, TP_ART.y + 66 + rise, null);
       tpMat(g, TPM_MONITOR, TP_ART.x + 64, TP_ART.y + 70 + rise, null);
-      g.font = '6px monospace'; g.fillStyle = TP.k; g.fillText('✓', TP_ART.x + 58, TP_ART.y + 12);
+      tpText(g, '✓', TP_ART.x + 58, TP_ART.y + 7, TP.k);
     },
     'XXI': (g, f) => { // the World: CI is green, everyone dances
       tpSky(g, 'day', f);
       const cx = TP_ART.x + 44, cy = TP_ART.y + 54;
       for (let i = 0; i < 20; i++) { const a = (i / 20) * Math.PI * 2; tpx(g, cx + Math.cos(a) * 30, cy + Math.sin(a) * 36, 3, 3, i % 2 ? '#5db374' : '#7ec98f'); } // the wreath
-      tpx(g, cx - 5, cy - 42, 10, 8, TP.m); g.font = '6px monospace'; g.fillStyle = TP.e; g.fillText('CI✓', cx - 5, cy - 36); // the badge crowns it
+      tpx(g, cx - 8, cy - 42, 16, 9, TP.m); tpText(g, 'CI✓', cx - 6, cy - 40, TP.e); // the badge crowns it
       tpSlimeAt(g, cx - 7, cy - 6 - (f % 2) * 2, null); // mid-twirl
       tpx(g, cx - 12, cy - 10 + (f % 2) * 2, 2, 8, TP.t); tpx(g, cx + 10, cy - 10 - (f % 2) * 2, 2, 8, TP.t); // two batons
       tpMat(g, TPM_CUP, TP_ART.x + 2, TP_ART.y + 2, null); tpMat(g, TPM_COIN, TP_ART.x + 76, TP_ART.y + 2, null); // the four corners
@@ -10937,28 +11192,28 @@ document.addEventListener('DOMContentLoaded', () => {
       const t = a / 9;
       const jx = TP_ART.x + 44 + t * 22, jy = TP_ART.y + 66 + (t < 0.5 ? t * 40 : (1 - t) * 40 + 20) - 20;
       tpMat(g, TPM_TINY, jx, jy, null);
-      if (a > 5) { g.font = '7px monospace'; g.fillStyle = TP.k; g.fillText('boing', jx - 4, jy - 4); }
+      if (a > 5) tpText(g, 'boing', jx - 8, jy - 10, TP.k);
     },
     'I': (g, f, a) => { [[26, 84], [42, 82], [56, 74], [68, 78]].forEach(([x, y], i) => { tpx(g, TP_ART.x + x, TP_ART.y + y - 10 - ((a + i) % 4), 2, 2, TP.g); }); },
-    'II': (g, f, a) => { const w = Math.min(60, a * 8); tpx(g, TP_ART.x + 44 - w / 2, TP_ART.y + 60, w, 10, TP.c); if (w > 40) { g.font = '6px monospace'; g.fillStyle = TP.k; g.fillText('SECRET=♡', TP_ART.x + 20, TP_ART.y + 68); } },
+    'II': (g, f, a) => { const w = Math.min(60, a * 8); tpx(g, TP_ART.x + 44 - w / 2, TP_ART.y + 60, w, 10, TP.c); if (w > 40) tpText(g, 'SECRET=♡', TP_ART.x + 28, TP_ART.y + 62, TP.k); },
     'III': (g, f, a) => { [[22, 88], [50, 92], [78, 88]].forEach(([x, y], i) => { const r = Math.min(4, Math.floor(a / 2) + (i % 2)); for (let d = 0; d < 4; d++) tpx(g, TP_ART.x + x + Math.cos(d * 1.57) * r, TP_ART.y + y - 14 + Math.sin(d * 1.57) * r, 2, 2, TP.p); tpx(g, TP_ART.x + x, TP_ART.y + y - 14, 2, 2, TP.g); }); },
     'IV': (g, f, a) => { for (let i = 0; i < 8; i++) tpx(g, TP_ART.x + (i < 4 ? 8 : 76) + (i % 2) * 4, TP_ART.y + 70 + (i % 4) * 6, 2, 2, [TP.r, TP.M, TP.b, TP.g][(i + a) % 4]); },
-    'V': (g, f, a) => { const s = Math.min(1, a / 4); const w = 44 * s, h = 16 * s; tpx(g, TP_ART.x + 44 - w / 2, TP_ART.y + 50 - h / 2, w, h, TP.c); if (s > 0.8) { g.font = '9px monospace'; g.fillStyle = '#2d8a4e'; g.fillText('LGTM', TP_ART.x + 32, TP_ART.y + 54); } },
+    'V': (g, f, a) => { const s = Math.min(1, a / 4); const w = 44 * s, h = 16 * s; tpx(g, TP_ART.x + 44 - w / 2, TP_ART.y + 50 - h / 2, w, h, TP.c); if (s > 0.8) tpText(g, 'LGTM', TP_ART.x + 29, TP_ART.y + 45, '#2d8a4e', 2); },
     'VI': (g, f, a) => { for (let i = 0; i < 5; i++) { const hx = TP_ART.x + 44 + (i - 2) * (a + 2), hy = TP_ART.y + 40 - a * 2 - (i % 2) * 5; tpx(g, hx, hy + 1, 2, 2, TP.P); tpx(g, hx + 2, hy, 2, 2, TP.P); tpx(g, hx + 1, hy + 3, 2, 1, TP.P); } },
     'VII': (g, f, a) => { for (let i = 0; i < 6; i++) { const ang = (i / 6) * Math.PI * 2 + a * 0.7; tpx(g, TP_ART.x + 46 + Math.cos(ang) * 22, TP_ART.y + 56 + Math.sin(ang) * 12, 3, 1, TP.d); } },
-    'VIII': (g, f, a) => { if (a < 5) { tpx(g, TP_ART.x + 44, TP_ART.y + TP_ART.h - 40, 30, 3, TP.k); g.font = '7px monospace'; g.fillStyle = TP.k; g.fillText('chomp', TP_ART.x + 48, TP_ART.y + TP_ART.h - 44); } else { tpx(g, TP_ART.x + 58, TP_ART.y + TP_ART.h - 48, 2, 2, TP.P); tpx(g, TP_ART.x + 61, TP_ART.y + TP_ART.h - 50, 2, 2, TP.P); } },
-    'IX': (g, f, a) => { const r = 6 + a * 2; for (let d = 0; d < 12; d++) { const ang = d * 0.524; tpx(g, TP_ART.x + 68 + Math.cos(ang) * r, TP_ART.y + 38 + Math.sin(ang) * r, 1, 1, 'rgba(255,210,63,0.7)'); } if (a > 5) { g.font = '6px monospace'; g.fillStyle = TP.g; g.fillText('hope: found', TP_ART.x + 24, TP_ART.y + 24); } },
-    'X': (g, f, a) => { g.font = '8px monospace'; g.fillStyle = a < 5 ? '#2d8a4e' : TP.r; g.fillText(a < 5 ? '100%!!' : '99%…', TP_ART.x + 32, TP_ART.y + 46); if (a >= 5) tpx(g, TP_ART.x + 56, TP_ART.y + 40, 2, 3, TP.b); },
-    'XI': (g, f, a) => { const tl = (a % 2 ? 5 : -5); tpx(g, TP_ART.x + 26, TP_ART.y + 62 + tl, 16, 2, TP.G); tpx(g, TP_ART.x + 48, TP_ART.y + 62 - tl, 16, 2, TP.G); g.font = '7px monospace'; g.fillStyle = TP.k; g.fillText('!', TP_ART.x + 44, TP_ART.y + 40); },
+    'VIII': (g, f, a) => { if (a < 5) { tpx(g, TP_ART.x + 44, TP_ART.y + TP_ART.h - 40, 30, 3, TP.k); tpText(g, 'chomp', TP_ART.x + 46, TP_ART.y + TP_ART.h - 50, TP.k); } else { tpx(g, TP_ART.x + 58, TP_ART.y + TP_ART.h - 48, 2, 2, TP.P); tpx(g, TP_ART.x + 61, TP_ART.y + TP_ART.h - 50, 2, 2, TP.P); } },
+    'IX': (g, f, a) => { const r = 6 + a * 2; for (let d = 0; d < 12; d++) { const ang = d * 0.524; tpx(g, TP_ART.x + 68 + Math.cos(ang) * r, TP_ART.y + 38 + Math.sin(ang) * r, 1, 1, 'rgba(255,210,63,0.7)'); } if (a > 5) tpText(g, 'hope: found', TP_ART.x + 20, TP_ART.y + 19, TP.g); },
+    'X': (g, f, a) => { tpText(g, a < 5 ? '100%!!' : '99%…', TP_ART.x + 30, TP_ART.y + 39, a < 5 ? '#2d8a4e' : TP.r); if (a >= 5) tpx(g, TP_ART.x + 56, TP_ART.y + 40, 2, 3, TP.b); },
+    'XI': (g, f, a) => { const tl = (a % 2 ? 5 : -5); tpx(g, TP_ART.x + 26, TP_ART.y + 62 + tl, 16, 2, TP.G); tpx(g, TP_ART.x + 48, TP_ART.y + 62 - tl, 16, 2, TP.G); tpText(g, '!', TP_ART.x + 43, TP_ART.y + 33, TP.k, 2); },
     'XII': (g, f, a) => { const sw = Math.sin(a * 0.8) * 14; tpMat(g, TPM_TINY, TP_ART.x + 42 + sw, TP_ART.y + 52, null); tpx(g, TP_ART.x + 44, TP_ART.y + 30, Math.abs(sw) || 1, 1, TP.d); },
-    'XIII': (g, f, a) => { if (a < 4) { tpx(g, TP_ART.x, TP_ART.y, TP_ART.w, TP_ART.h, '#05020e'); g.font = '7px monospace'; g.fillStyle = TP.M; g.fillText('> rebooting…', TP_ART.x + 16, TP_ART.y + 60); g.fillText('> feelings: OK', TP_ART.x + 16, TP_ART.y + 72); } else { g.font = '7px monospace'; g.fillStyle = TP.w; g.fillText('back!!', TP_ART.x + 38, TP_ART.y + 30); } },
-    'XIV': (g, f, a) => { for (let i = 0; i < 4; i++) tpx(g, TP_ART.x + 34 + i * 4, TP_ART.y + 70 - i * 2 - a, 2, 2, TP.b); g.font = '7px monospace'; g.fillStyle = TP.k; g.fillText('↑?', TP_ART.x + 58, TP_ART.y + 52); },
+    'XIII': (g, f, a) => { if (a < 4) { tpx(g, TP_ART.x, TP_ART.y, TP_ART.w, TP_ART.h, '#05020e'); tpText(g, '> rebooting…', TP_ART.x + 12, TP_ART.y + 54, TP.M); tpText(g, '> feelings: OK', TP_ART.x + 12, TP_ART.y + 66, TP.M); } else { tpText(g, 'back!!', TP_ART.x + 34, TP_ART.y + 24, TP.w); } },
+    'XIV': (g, f, a) => { for (let i = 0; i < 4; i++) tpx(g, TP_ART.x + 34 + i * 4, TP_ART.y + 70 - i * 2 - a, 2, 2, TP.b); tpText(g, '↑?', TP_ART.x + 56, TP_ART.y + 46, TP.k); },
     'XV': (g, f, a) => { const col = [TP.r, TP.M, TP.b][a % 3]; g.strokeStyle = col; g.lineWidth = 2; g.strokeRect(TP_ART.x + 2, TP_ART.y + 2, TP_ART.w - 4, TP_ART.h - 4); tpx(g, TP_ART.x + 24 + (a % 2) * 2, TP_ART.y + 78, 2, 2, TP.d); tpx(g, TP_ART.x + 64 - (a % 2) * 2, TP_ART.y + 78, 2, 2, TP.d); },
-    'XVI': (g, f, a) => { tpLightning(g, TP_ART.x + 24, TP_ART.y + 4, 30, 0); tpLightning(g, TP_ART.x + 66, TP_ART.y + 6, 26, 0); if (a > 4) { g.font = '7px monospace'; g.fillStyle = TP.g; g.fillText('AGAIN??', TP_ART.x + 30, TP_ART.y + 100); } },
+    'XVI': (g, f, a) => { tpLightning(g, TP_ART.x + 24, TP_ART.y + 4, 30, 0); tpLightning(g, TP_ART.x + 66, TP_ART.y + 6, 26, 0); if (a > 4) tpText(g, 'AGAIN??', TP_ART.x + 30, TP_ART.y + 94, TP.g); },
     'XVII': (g, f, a) => { const sx = TP_ART.x + 8 + a * 8; for (let i = 0; i < 6; i++) tpx(g, sx - i * 3, TP_ART.y + 14 + i, 2, 1, i ? 'rgba(255,233,138,' + (0.9 - i * 0.14) + ')' : TP.w); },
-    'XVIII': (g, f, a) => { const hop = (a % 2) * 3; tpMat(g, TPM_CRAB, TP_ART.x + 30 + Math.sin(a) * 10, TP_ART.y + TP_ART.h - 34 - hop, null); g.font = '7px monospace'; g.fillStyle = TP.g; g.fillText('♪', TP_ART.x + 58, TP_ART.y + TP_ART.h - 38 - hop); },
+    'XVIII': (g, f, a) => { const hop = (a % 2) * 3; tpMat(g, TPM_CRAB, TP_ART.x + 30 + Math.sin(a) * 10, TP_ART.y + TP_ART.h - 34 - hop, null); tpText(g, '♪', TP_ART.x + 58, TP_ART.y + TP_ART.h - 44 - hop, TP.g); },
     'XIX': (g, f, a) => { for (let i = 0; i < 8; i++) { const ang = (i * Math.PI) / 4; tpx(g, TP_ART.x + 44 + Math.cos(ang) * (13 + a), TP_ART.y + 20 + Math.sin(ang) * (13 + a), 2, 2, TP.G); } },
-    'XX': (g, f, a) => { [[16, 60], [42, 56], [68, 60]].forEach(([x, y], i) => { if (a > i * 3) { g.font = '8px monospace'; g.fillStyle = '#2d8a4e'; g.fillText('✓', TP_ART.x + x, TP_ART.y + y); } }); },
+    'XX': (g, f, a) => { [[16, 60], [42, 56], [68, 60]].forEach(([x, y], i) => { if (a > i * 3) tpText(g, '✓', TP_ART.x + x, TP_ART.y + y - 8, '#2d8a4e', 2); }); },
     'XXI': (g, f, a) => { for (let i = 0; i < 10; i++) { const ang = (i / 10) * Math.PI * 2 + a * 0.4; tpx(g, TP_ART.x + 44 + Math.cos(ang) * 34, TP_ART.y + 54 + Math.sin(ang) * 40, 2, 2, [TP.p, TP.g, TP.b, TP.m][i % 4]); } }
   };
 
@@ -10970,18 +11225,18 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     if (suit === 'swords' && rank === 3) { for (let i = 0; i < 4; i++) tpx(g, TP_ART.x + 40 + Math.cos(i * 1.57 + a) * 12, TP_ART.y + 44 + Math.sin(i * 1.57 + a) * 12, 2, 2, TP.g); return; }
-    if (suit === 'swords' && rank === 10) { tpMat(g, TPM_TINY, TP_ART.x + 40, TP_ART.y + TP_ART.h - 44 - (a % 2) * 2, null); g.font = '6px monospace'; g.fillStyle = TP.w; g.fillText('still ok', TP_ART.x + 34, TP_ART.y + TP_ART.h - 50); return; }
+    if (suit === 'swords' && rank === 10) { tpMat(g, TPM_TINY, TP_ART.x + 40, TP_ART.y + TP_ART.h - 44 - (a % 2) * 2, null); tpText(g, 'still ok', TP_ART.x + 26, TP_ART.y + TP_ART.h - 56, TP.w); return; }
     if (rank === 1) { // the hand high-fives back
       tpMat(g, TPM_HAND, TP_ART.x + 2 + Math.min(6, a), TP_ART.y + 22, null, false, 2);
       for (let i = 0; i < 5; i++) tpx(g, TP_ART.x + 48 + Math.cos(i * 1.26) * (4 + a), TP_ART.y + 40 + Math.sin(i * 1.26) * (4 + a), 2, 2, TP.g);
       return;
     }
-    if (rank >= 11) { tpCrown(g, TP_ART.x + 28, TP_ART.y + 24 - Math.min(4, a), 2); g.font = '7px monospace'; g.fillStyle = TP.k; g.fillText('♪', TP_ART.x + 54, TP_ART.y + 30); return; }
+    if (rank >= 11) { tpCrown(g, TP_ART.x + 28, TP_ART.y + 24 - Math.min(4, a), 2); tpText(g, '♪', TP_ART.x + 54, TP_ART.y + 24, TP.k); return; }
     spots.forEach(([x, y], i) => {
       if (suit === 'wands') { for (let d = 0; d < 3; d++) tpx(g, x + 3 + Math.cos(d * 2.1 + i) * a, y + Math.sin(d * 2.1 + i) * a, 1, 1, d % 2 ? TP.g : TP.p); }
       else if (suit === 'cups') { tpx(g, x + 3, y - 4 - a - (i % 3), 2, 2, '#3a2412'); tpx(g, x + 7, y - 2 - a, 2, 2, '#3a2412'); }
-      else if (suit === 'swords') { tpx(g, x + 3, y - 2, 1, 26, 'rgba(255,255,255,0.75)'); g.font = '6px monospace'; g.fillStyle = '#d6ffe6'; g.fillText(String((i + a) % 2), x + Math.cos(i + a) * 6, y + 10 + Math.sin(i + a) * 6); }
-      else { tpx(g, x + (a + i) % 9, y + 2, 2, 1, '#ffffff'); g.font = '6px monospace'; g.fillStyle = TP.G; g.fillText('+', x + 4, y - 4 - (a % 5)); }
+      else if (suit === 'swords') { tpx(g, x + 3, y - 2, 1, 26, 'rgba(255,255,255,0.75)'); tpText(g, String((i + a) % 2), x + Math.cos(i + a) * 6, y + 5 + Math.sin(i + a) * 6, '#d6ffe6'); }
+      else { tpx(g, x + (a + i) % 9, y + 2, 2, 1, '#ffffff'); tpText(g, '+', x + 4, y - 9 - (a % 5), TP.G); }
     });
   }
 
@@ -11031,10 +11286,8 @@ document.addEventListener('DOMContentLoaded', () => {
       tpx(g, TP_ART.x + TP_ART.w - 2, TP_ART.y + dy, 1, 1, 'rgba(201,167,245,0.55)');
     }
     // the signature, where Pixie put hers
-    g.font = '7px monospace';
-    g.fillStyle = 'rgba(45,35,80,0.7)';
-    g.fillText('~slime', 70, 144);
-    tpx(g, 92, 139, 2, 2, TP.P);
+    tpText(g, '~slime', 68, 139, 'rgba(45,35,80,0.75)');
+    tpx(g, 93, 141, 2, 2, TP.P);
   }
 
   /* ---------- the tarot reveal theatre 🔮 ----------
