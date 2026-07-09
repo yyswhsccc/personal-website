@@ -4920,9 +4920,26 @@ document.addEventListener('DOMContentLoaded', () => {
       termLine('wall: status · admin <secret> · rm <id> · freeze · thaw', 't-dim');
       return;
     }
-    if (cmd === 'watch' && !rest) {
-      termLine(trT('⌚ opening the smartwatch pairing panel…', '⌚ ouverture du panneau d\'appairage montre…'), 't-ok');
-      if (typeof watchPanelOpen === 'function') watchPanelOpen();
+    if (cmd === 'watch') {
+      // v86: `watch 1234` pairs straight from the shell — the watch's own
+      // hint says "type watch", so the code better be welcome here too
+      const pinArg = (rest || '').replace(/\D/g, '');
+      if (pinArg.length === 4) {
+        termLine(trT(`⌚ pairing with code ${pinArg}…`, `⌚ appairage avec le code ${pinArg}…`), 't-accent');
+        watchPair(pinArg).then((res) => {
+          if (res === 'ok') { termLine(trT('⌚ PAIRED!! the device showing that code just became your wrist slime — pet it, pluck it ♡', '⌚ APPAIRÉE !! l\'appareil qui affichait ce code vient de devenir ton slime de poignet — caresse-le, cueille ♡'), 't-ok'); playFanfare(); }
+          else if (res === 'taken') termLine(trT('that code is already burned (rare!!) — tap NEW CODE on the watch and try the fresh one', 'ce code est déjà grillé (rare !!) — touche NEW CODE sur la montre et réessaie avec le nouveau'), 't-err');
+          else if (res === 'nocloud') termLine(trT('cloud unreachable — try again in a moment', 'cloud injoignable — réessaie dans un instant'), 't-err');
+          else termLine(trT('that needs to be the 4 digits shown on the watch', 'il faut les 4 chiffres affichés sur la montre'), 't-err');
+        });
+        return;
+      }
+      if (!rest) {
+        termLine(trT('⌚ opening the smartwatch pairing panel… (tip: `watch 1234` pairs in one line)', '⌚ ouverture du panneau d\'appairage montre… (astuce : `watch 1234` appaire en une ligne)'), 't-ok');
+        if (typeof watchPanelOpen === 'function') watchPanelOpen();
+        return;
+      }
+      termLine(trT('watch: usage `watch` (panel) or `watch <4-digit code>`', 'watch : usage `watch` (panneau) ou `watch <code à 4 chiffres>`'), 't-err');
       return;
     }
     if (cmd === 'echo') { termLine(rest || ''); return; }
@@ -22885,9 +22902,11 @@ document.addEventListener('DOMContentLoaded', () => {
     return cloudEnsure().then((cs) => {
       if (!cs) return 'nocloud';
       const v = watchUidToNum(cs.uid);
-      return fetch(`${ACHV_API}/create/${ACHV_NS}/wpair-${pin}`, { method: 'POST' })
-        .then((r) => (r.ok ? r.json() : Promise.reject()))
-        .then((d) => fetch(`${ACHV_API}/set/${ACHV_NS}/wpair-${pin}?value=${v}`, { method: 'POST', headers: { Authorization: `Bearer ${d.admin_key}` } }))
+      // v86: go through cloudKeyFor — it CACHES the counter's admin key,
+      // so re-pairing with a pin this browser already burned still works
+      // (the old direct-create path failed with 'taken' on every retry)
+      return cloudKeyFor(`wpair-${pin}`)
+        .then((key) => fetch(`${ACHV_API}/set/${ACHV_NS}/wpair-${pin}?value=${v}`, { method: 'POST', headers: { Authorization: `Bearer ${key}` } }))
         .then((r) => {
           if (!r.ok) throw new Error('set failed');
           store.set('yos-watch-paired', Date.now());
@@ -22895,7 +22914,7 @@ document.addEventListener('DOMContentLoaded', () => {
           watchPullArm();
           return 'ok';
         })
-        .catch(() => 'taken'); // a stale pin squats that counter — new pin, please
+        .catch(() => 'taken'); // someone else's stale pin squats that counter — new code, please
     });
   }
   function watchPanelOpen() { openWindow('win-watch'); } // the panel grew up into a desktop app
@@ -22926,6 +22945,16 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => { syncBtn.disabled = false; syncBtn.textContent = trT('🔄 sync now', '🔄 synchroniser'); renderWatchWin(); }, 4000);
       });
       card.appendChild(syncBtn);
+      // v86: a way OUT on this side too (the watch unpairs by holding its clock)
+      const forget = mk('button', 'wp-btn wp-forget', trT('✂ forget this watch', '✂ oublier cette montre'));
+      forget.type = 'button';
+      forget.addEventListener('click', () => {
+        store.set('yos-watch-paired', 0);
+        if (watchPullTimer) { clearInterval(watchPullTimer); watchPullTimer = null; }
+        showToast(trT('⌚ unpaired on this side. (the watch itself unpairs by holding its clock for 2s ♡)', '⌚ dissociée de ce côté. (la montre se dissocie en maintenant son horloge 2 s ♡)'));
+        renderWatchWin();
+      });
+      card.appendChild(forget);
     }
     shell.appendChild(card);
 
@@ -22955,7 +22984,7 @@ document.addEventListener('DOMContentLoaded', () => {
     urlRow.append(url, copyBtn);
     shell.appendChild(urlRow);
     shell.appendChild(copyStatus);
-    shell.appendChild(mk('p', '', trT('2 · the watch shows a 4-digit code. type it here (all the typing happens on the BIG screen ♡):', '2 · la montre affiche un code à 4 chiffres. tape-le ici (tout le clavier reste sur le GRAND écran ♡) :')));
+    shell.appendChild(mk('p', '', trT('2 · the watch shows a 4-digit code. type it here — or straight into the terminal: `watch 1234` (all the typing happens on the BIG screen ♡):', '2 · la montre affiche un code à 4 chiffres. tape-le ici — ou directement dans le terminal : `watch 1234` (tout le clavier reste sur le GRAND écran ♡) :')));
     const row = mk('div', 'wp-row');
     const inp = document.createElement('input');
     inp.type = 'text';
@@ -22990,7 +23019,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function watchPullArm() {
     if (watchPullTimer) return;
     if (!store.get('yos-watch-paired', 0)) return;
-    watchPullTimer = setInterval(watchPullSync, 150000);
+    watchPullTimer = setInterval(watchPullSync, 60000); // v86: 150s felt like dial-up — the wrist deserves a minute
     setTimeout(watchPullSync, 5000);
     document.addEventListener('visibilitychange', () => { if (!document.hidden) watchPullSync(); });
   }
@@ -23002,25 +23031,37 @@ document.addEventListener('DOMContentLoaded', () => {
     Promise.all([cloudGet(`sv2-${u}-wgp`), cloudGet(`sv2-${u}-wgs`), cloudGet(`sv2-${u}-wpt`)])
       .then(([wgp, wgs, wpt]) => {
         const seenP = Math.max(store.get('yos-wgp-seen', 0), wgs || 0);
-        const newPlucks = Math.min(Math.max(0, (wgp || 0) - seenP), 12);
+        const deltaP = Math.max(0, (wgp || 0) - seenP);
+        const newPlucks = Math.min(deltaP, 12);
         const seenT = store.get('yos-wpt-seen', 0);
-        const newPets = Math.min(Math.max(0, (wpt || 0) - seenT), 60);
+        const deltaT = Math.max(0, (wpt || 0) - seenT);
+        const newPets = Math.min(deltaT, 60);
         if (newPlucks > 0) {
+          let added = 0;
           for (let i = 0; i < newPlucks; i++) {
             const roll = pikRollSprout();
             if (!roll) break;
             const sp = roll.type === 'hidden' ? roll.sp : null;
             const hue = roll.type === 'normal' ? roll.hue : 5 + Math.floor(Math.random() * 355);
             pikdexAdd({ h: hue, ch: roll.type === 'chameleon' ? 1 : 0, s: 0, k: PIK_SKILLS[Math.floor(Math.random() * PIK_SKILLS.length)].id, sp: sp ? sp.id : null });
+            added++;
           }
           achvUnlock('wristfarmer');
-          store.set('yos-wgp-seen', wgp || 0);
-          cloudSet(`sv2-${u}-wgs`, wgp || 0).catch(() => {});
+          // v86: advance only past what was GRANTED — a big offline harvest
+          // drips in over the next pulls instead of evaporating. carryover
+          // is capped (60 plucks) so nobody farms a fortune into a backlog.
+          const consumedP = seenP + added + Math.max(0, deltaP - added - 60);
+          store.set('yos-wgp-seen', consumedP);
+          cloudSet(`sv2-${u}-wgs`, consumedP).catch(() => {});
           if (typeof deskPikResync === 'function') deskPikResync();
         }
         if (newPets > 0) {
-          store.set('yos-wpt-seen', wpt || 0);
+          const consumedT = seenT + newPets + Math.max(0, deltaT - newPets - 300);
+          store.set('yos-wpt-seen', consumedT);
           gainFollowers(newPets);
+        }
+        if (newPlucks > 0 || newPets > 0) {
+          try { cloudQueueSync(); } catch (e) { /* wst refresh rides the next sync */ }
         }
         if (newPlucks > 0 || newPets > 0) {
           showToast(trT(

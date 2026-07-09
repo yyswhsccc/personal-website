@@ -124,7 +124,12 @@
       .then(function (d) { return Math.max(0, Number(d.value) || 0); })
       .catch(function () { return 0; });
   }
-  function hit(key) { return fetch(API + '/hit/' + NS + '/' + key).catch(function () {}); }
+  function hit(key) {
+    // honest hits: resolve true only when the cloud really counted it
+    return fetch(API + '/hit/' + NS + '/' + key)
+      .then(function (r) { return r.ok; })
+      .catch(function () { return false; });
+  }
 
   /* ---- the pixel slime, drawn by hand, worn on a wrist ---- */
   var ROWS = [
@@ -190,39 +195,95 @@
   }
 
   /* ---------- pairing screen: the watch only DISPLAYS. never types. ---------- */
-  var pollTimer = null, clockTimer = null, drawTimer = null, wstTimer = null, flushTimer = null;
+  var pollTimer = null, clockTimer = null, drawTimer = null, wstTimer = null, flushTimer = null, gardenTimer = null;
+  var onVisible = null; // the active screen's "we're back!!" hook
+  function clearTimers() {
+    [pollTimer, clockTimer, drawTimer, wstTimer, flushTimer, gardenTimer].forEach(function (t) { if (t) clearInterval(t); });
+    pollTimer = clockTimer = drawTimer = wstTimer = flushTimer = gardenTimer = null;
+  }
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden && onVisible) onVisible(); // wrist screens sleep hard — catch up the moment they wake
+  });
+  /* pins burn forever on the counter service (one per pairing, ever).
+     never DISPLAY a burned pin: its stale value would instantly mispair
+     this watch to whoever used that code before. mint until clean. */
+  function mintPin(cb, attempt) {
+    attempt = attempt || 0;
+    var candidate = 1000 + Math.floor(Math.random() * 9000);
+    if (attempt >= 6 || !navigator.onLine) { cb(candidate); return; }
+    get('wpair-' + candidate).then(function (v) {
+      if (v > 0) mintPin(cb, attempt + 1); // burned by pairing history — skip it
+      else cb(candidate);
+    });
+  }
   function showPairing() {
-    if (pollTimer) clearInterval(pollTimer);
-    var pin = LS.get('yosw-pin', 0);
-    if (!pin) { pin = 1000 + Math.floor(Math.random() * 9000); LS.set('yosw-pin', pin); }
+    clearTimers();
+    onVisible = null;
     app.innerHTML = '';
     app.appendChild(el('div', 'clock', 'yongshanOS ⌚'));
     app.appendChild(el('div', 'hint', 'wrist edition (a phone works too — pocket edition ♡)')).style.marginBottom = '4px';
-    var pinEl = el('div', 'pin', String(pin));
+    var pinEl = el('div', 'pin', '····');
     app.appendChild(pinEl);
     var hint = el('div', 'hint', '');
-    hint.innerHTML = 'on the <b>desktop site</b>, open the terminal and type <b>watch</b> — then enter this code there. no typing on tiny screens, promise ♡';
+    hint.innerHTML = 'on the <b>desktop site</b>, open the terminal and type <b>watch</b> (or <b>watch CODE</b> in one go) — all the typing happens over there ♡';
     app.appendChild(hint);
-    var status = el('div', 'status', 'listening for the desktop…');
+    var status = el('div', 'status', 'minting a fresh code…');
     app.appendChild(status);
     var re = el('button', 'btn', 'new code');
-    re.addEventListener('click', function () { LS.set('yosw-pin', 0); showPairing(); });
+    re.addEventListener('click', function () { LS.set('yosw-pin', 0); LS.set('yosw-pin-ts', 0); showPairing(); });
     app.appendChild(re);
-    var tries = 0;
-    pollTimer = setInterval(function () {
-      if (!navigator.onLine) { status.textContent = 'offline — waiting for signal'; status.className = 'status offline'; return; }
-      status.className = 'status';
-      tries++;
-      if (tries > 70) { clearInterval(pollTimer); status.textContent = 'paused — tap NEW CODE to retry'; return; }
-      get('wpair-' + pin).then(function (v) {
-        if (v > 0) {
-          clearInterval(pollTimer);
-          LS.set('yosw-uid', numToUid(v));
-          LS.set('yosw-pin', 0);
-          pairSplash(function () { showHome(true); });
-        }
+
+    function startPolling(pin) {
+      pinEl.textContent = String(pin);
+      status.textContent = 'listening for the desktop…';
+      var tries = 0;
+      var verified = false; // first clean read proves the code is ours alone
+      var mintedFresh = Date.now() - LS.get('yosw-pin-ts', 0) < 10 * 60 * 1000;
+      function adopt(v) {
+        clearTimers();
+        LS.set('yosw-uid', numToUid(v));
+        LS.set('yosw-pin', 0);
+        LS.set('yosw-pin-ts', 0);
+        pairSplash(function () { showHome(true); });
+      }
+      function checkPair() {
+        if (!navigator.onLine) { status.textContent = 'offline — waiting for signal'; status.className = 'status offline'; return; }
+        status.className = 'status';
+        tries++;
+        if (tries > 900) { if (pollTimer) { clearInterval(pollTimer); pollTimer = null; } status.textContent = 'nap time — tap the code to keep listening'; return; }
+        if (tries > 70 && tries % 4 !== 0) return; // eco mode after ~3 min: one look every ~10s
+        if (tries === 71) status.textContent = 'still listening (eco mode)…';
+        get('wpair-' + pin).then(function (v) {
+          if (v > 0 && !verified && !mintedFresh) {
+            // value already there on a code we didn't just mint = somebody
+            // ELSE's pairing from history. never adopt a stranger's save.
+            status.textContent = 'that code went stale — minting a fresh one ♡';
+            LS.set('yosw-pin', 0); LS.set('yosw-pin-ts', 0);
+            if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+            setTimeout(showPairing, 1200);
+            return;
+          }
+          verified = true;
+          if (v > 0) adopt(v);
+        });
+      }
+      pollTimer = setInterval(checkPair, 2600);
+      checkPair(); // no 2.6s of dead air on arrival
+      pinEl.addEventListener('click', function () { // tapping the code wakes a napping listener
+        if (!pollTimer) { tries = 0; status.textContent = 'listening again…'; pollTimer = setInterval(checkPair, 2600); checkPair(); }
       });
-    }, 2600);
+      onVisible = checkPair;
+    }
+
+    var stored = LS.get('yosw-pin', 0);
+    if (stored) startPolling(stored);
+    else {
+      mintPin(function (pin) {
+        LS.set('yosw-pin', pin);
+        LS.set('yosw-pin-ts', Date.now());
+        startPolling(pin);
+      });
+    }
   }
 
   function pairSplash(then) {
@@ -244,7 +305,7 @@
   function showHome(freshPair) {
     var uid = LS.get('yosw-uid', null);
     if (!uid) { showPairing(); return; }
-    [pollTimer, clockTimer, drawTimer, wstTimer, flushTimer].forEach(function (t) { if (t) clearInterval(t); });
+    clearTimers();
     app.innerHTML = '';
     var clock = el('div', 'clock', '--:--');
     var sub = el('small', '', 'yongshanOS ⌚ · slime #' + uid.slice(0, 3) + '···');
@@ -285,7 +346,9 @@
     tickClock();
     drawTimer = setInterval(drawSlime, 90);
 
-    /* petting: instant joy locally, polite drip to the cloud */
+    /* petting: instant joy locally, polite drip to the cloud.
+       plucks queue too now — offline harvests wait in the basket
+       instead of evaporating (v86: nothing earned is ever lost) */
     var petsPending = LS.get('yosw-pets-q', 0);
     var petLines = ['pik!! ♡', 'more!!', 'hehe', '!!!', '♥♥♥', 'best human'];
     tap.addEventListener('click', function (ev) {
@@ -297,13 +360,35 @@
       fans.textContent = '♥ ' + (lastFans != null ? (lastFans + petsPending) : ('+' + petsPending + ' queued'));
       if (Math.random() < 0.3) { stats.textContent = petLines[Math.floor(Math.random() * petLines.length)]; setTimeout(refreshStats, 1400); }
     });
-    flushTimer = setInterval(function () {
-      if (!navigator.onLine || petsPending <= 0) return;
+    var flushBusy = false;
+    function flushNow() {
+      if (flushBusy || !navigator.onLine) return;
+      var plq = LS.get('yosw-plq', 0);
+      if (plq > 0) { // harvests ride first class
+        flushBusy = true;
+        hit('sv2-' + uid + '-wgp').then(function (ok) {
+          flushBusy = false;
+          if (ok) {
+            LS.set('yosw-plq', Math.max(0, LS.get('yosw-plq', 0) - 1));
+            stats.textContent = '🌸 synced ✓ it joins the meadow ♡';
+            setTimeout(refreshStats, 3200);
+            if (LS.get('yosw-plq', 0) > 0) setTimeout(flushNow, 800); // drain the basket
+          } else {
+            stats.textContent = '🌸 cloud hiccup — the basket keeps it safe, retrying';
+            setTimeout(refreshStats, 3200);
+          }
+        });
+        return;
+      }
+      if (petsPending <= 0) return;
       var send = Math.min(petsPending, 3); // three love-packets per flush, max
-      petsPending -= send;
-      LS.set('yosw-pets-q', petsPending);
-      for (var i = 0; i < send; i++) hit('sv2-' + uid + '-wpt');
-    }, 4000);
+      for (var i = 0; i < send; i++) {
+        hit('sv2-' + uid + '-wpt').then(function (ok) {
+          if (ok) { petsPending = Math.max(0, petsPending - 1); LS.set('yosw-pets-q', petsPending); }
+        });
+      }
+    }
+    flushTimer = setInterval(flushNow, 4000);
 
     /* the garden: a real-time sprout. the FIRST one is ready in ~90s
        (hello, instant joy), then each next takes 20-35 minutes. plucking
@@ -344,12 +429,15 @@
       squish = 6;
       var r = pluck.getBoundingClientRect();
       for (var i = 0; i < 5; i++) setTimeout(function () { heartAt(r.left + Math.random() * r.width, r.top); }, i * 90);
-      stats.textContent = '🌸 plucked!! sending home…';
-      hit('sv2-' + uid + '-wgp').then(function () { stats.textContent = '🌸 synced ✓ it joins the meadow ♡'; });
-      setTimeout(refreshStats, 3200);
+      // v86: into the basket first, THEN the cloud — offline plucks
+      // survive tunnels, elevators and airplane mode ♡
+      LS.set('yosw-plq', LS.get('yosw-plq', 0) + 1);
+      stats.textContent = navigator.onLine ? '🌸 plucked!! sending home…' : '🌸 plucked!! safe in the basket — sends when signal returns ♡';
+      flushNow();
+      setTimeout(refreshStats, 3600);
       gardenTick();
     });
-    setInterval(gardenTick, 5000);
+    gardenTimer = setInterval(gardenTick, 5000);
     gardenTick();
 
     /* status from home base: fans, lifetime plucks, wheel completion */
@@ -370,6 +458,7 @@
     }
     wstTimer = setInterval(pollWst, 40000);
     pollWst();
+    onVisible = function () { pollWst(); flushNow(); }; // wrist woke up — catch up instantly
 
     /* unpair: hold the clock */
     var holdT = null;
