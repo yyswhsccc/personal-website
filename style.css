@@ -10393,7 +10393,7 @@ html.ds-ripple { animation: ds-ripple 1.5s ease-in-out; }
 html.ds-pause *, html.ds-pause *::before, html.ds-pause *::after { animation-play-state: paused !important; }
 html.ds-blink .window-title { animation: ds-blinky 0.8s steps(1) infinite; }
 @keyframes ds-blinky { 50% { opacity: 0; } }
-.ds-flash-blue, .ds-flash-red, .ds-flash-white {
+.ds-flash-blue, .ds-flash-red, .ds-flash-white, .ds-flash-gold {
   position: fixed;
   inset: 0;
   z-index: 2696;
@@ -10403,6 +10403,7 @@ html.ds-blink .window-title { animation: ds-blinky 0.8s steps(1) infinite; }
 .ds-flash-blue { background: #0827f5; }
 .ds-flash-red { background: #c62828; }
 .ds-flash-white { background: #fff; }
+.ds-flash-gold { background: radial-gradient(circle at 50% 60%, #ffd23f 0%, #ff9f1c 55%, transparent 100%); }
 @keyframes ds-flashfade { from { opacity: 0.85; } to { opacity: 0; } }
 .ds-glitchtiles {
   position: fixed;

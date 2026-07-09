@@ -3575,6 +3575,8 @@ document.addEventListener('DOMContentLoaded', () => {
     { id: 'dreamhoard', icon: '🎁', n: ['Keeper of Seven Keepsakes', 'Gardien·ne des Sept Souvenirs'], d: ['pocketed a souvenir from every dream world. the shelf is FULL.', 'a empoché un souvenir de chaque monde onirique. l\'étagère est PLEINE.'], t: ['every dream drops one shiny thing.', 'chaque rêve laisse tomber une chose qui brille.'] },
     { id: 'dreamshell', icon: '🐚', n: ['Dream Dialect Speaker', 'Locuteur·rice de Dialecte Onirique'], d: ['spoke a secret word to a dreaming terminal. it understood.', 'a dit un mot secret à un terminal endormi. il a compris.'], t: ['when the site dreams, the shell dreams too. try talking to it.', 'quand le site rêve, le shell rêve aussi. essaie de lui parler.'] },
     { id: 'dreamroot', icon: '👑', n: ['Root of the Dream', 'Root du Rêve'], d: ['spoke all 21 words of a single dream world. fluent. feared. adored.', 'a prononcé les 21 mots d\'un même monde onirique. courant. craint. adoré.'], t: ['each dream world understands exactly 21 words.', 'chaque monde onirique comprend exactement 21 mots.'] },
+    { id: 'chariotdraw', icon: '🏇', n: ['The Soul Card, Face Up', 'La Carte-Âme, Face Visible'], d: ['fate dealt THE CHARIOT upright — yongshan\'s own tarot card. the whole deck stood at attention.', 'le destin a servi LE CHARIOT à l\'endroit — la carte de tarot de yongshan elle-même. tout le paquet s\'est mis au garde-à-vous.'], t: ['one of the 78 cards belongs to the webmaster. fate deals it sometimes.', 'une des 78 cartes appartient à la webmaster. le destin la sert parfois.'] },
+    { id: 'chariotcall', icon: '🏁', n: ['Summoned By Number', 'Invoquée Par Son Numéro'], d: ['called the CHARIOT by its number — tarot 7 — and it answered UPRIGHT. it knows its owner\'s friends.', 'a appelé LE CHARIOT par son numéro — tarot 7 — et il a répondu À L\'ENDROIT. il reconnaît les amis de sa propriétaire.'], t: ['the webmaster\'s card answers to `tarot 7`. sometimes right side up.', 'la carte de la webmaster répond à `tarot 7`. parfois à l\'endroit.'] },
     { id: 'bosskill', icon: '⚔️', n: ['Kaiju Exterminator', 'Exterminateur·rice de Kaijus'], d: ['deleted a 404 kaiju. the page was never found again.', 'a supprimé un kaiju 404. la page n\'a plus jamais été retrouvée.'], t: ['something enormous eventually blocks the road.', 'quelque chose d\'énorme finit par bloquer la route.'] },
     { id: 'speedran', icon: '💨', n: ['Speedrun to Zero', 'Speedrun Vers Zéro'], d: ['perished within 3 seconds of the start line. the bugs sent a thank-you card.', 'a péri moins de 3 secondes après le départ. les bugs ont envoyé une carte de remerciement.'], t: ['fail fast. no — FASTER.', 'échoue vite. non — PLUS VITE.'] },
     { id: 'top10', icon: '🏆', n: ['Three Letters, No Shame', 'Trois Lettres, Zéro Honte'], d: ['signed the arcade top-10. the initials definitely spell something.', 'a signé le top 10 de l\'arcade. les initiales veulent SÛREMENT dire quelque chose.'], t: ['great runs deserve a signature.', 'les grandes runs méritent une signature.'] },
@@ -5067,6 +5069,13 @@ document.addEventListener('DOMContentLoaded', () => {
       const idx = args[0] !== undefined && !isNaN(parseInt(args[0], 10)) ? Math.abs(parseInt(args[0], 10)) % TAROT.length : Math.floor(Math.random() * TAROT.length);
       const card = TAROT[idx];
       const upright = Math.random() < 0.55;
+      const called = args[0] !== undefined; // summoned by number vs dealt by fate
+      // v84: VII — THE CHARIOT — is yongshan's own soul card. the wizard
+      // treats its number with visible respect (and a little fear).
+      if (idx === 7) {
+        termLine(trT('VII — THE CHARIOT: the webmaster\'s own soul card. the wizard straightens his hat before touching it.', 'VII — LE CHARIOT : la carte-âme de la webmaster en personne. le mage ajuste son chapeau avant d\'y toucher.'), 't-accent');
+        showBubble(trT('oh!! oh oh oh. the CHARIOT. that\'s yongshan\'s card — her tarot soul-card!! hold your breath for the flip…', 'oh !! oh oh oh. le CHARIOT. c\'est la carte de yongshan — sa carte-âme du tarot !! retiens ton souffle pour la révélation…'), 4600);
+      }
       termLine(trT('🔮 the wizard obliges… (' + TAROT.length + ' cards in the deck)', '🔮 le mage s\'exécute… (' + TAROT.length + ' cartes au paquet)'), 't-accent');
       tarotReveal(card, upright, () => {
         // v6.4: shell draws are REAL now — they stack into a classic
@@ -5079,6 +5088,15 @@ document.addEventListener('DOMContentLoaded', () => {
         termLine(`${trT(...card.n)}${upright ? '' : trT(' (reversed)', ' (renversée)')} — ${trT(...(upright ? card.up : card.dn).t)}`, 't-ok');
         termLine(trT(`⚡ sealed into your spread (${spread.length}/3) — it WILL take hold when your next run of slime_run.exe begins`, `⚡ scellée dans ton tirage (${spread.length}/3) — elle s'appliquera au départ de ta prochaine run de slime_run.exe`), 't-accent');
         if (spread.length === 3) termLine(trT('   (full spread!! past · present · future. a 4th draw retires the oldest card)', '   (tirage complet !! passé · présent · futur. un 4e tirage retire la plus ancienne)'), 't-dim');
+        if (idx === 7) {
+          if (upright) {
+            chariotCelebrate(called);
+            termLine(trT('🏇 THE CHARIOT RIDES FOR YOU — your next run opens with 17 unstoppable seconds: bugs shatter on contact, every coin/heart/box on screen flies to you, and each encounter is auto-answered with the statistically best pick (recomputed live).', '🏇 LE CHARIOT ROULE POUR TOI — ta prochaine run s\'ouvre sur 17 secondes inarrêtables : les bugs éclatent au contact, chaque pièce/cœur/boîte vole vers toi, et chaque rencontre reçoit automatiquement le choix statistiquement optimal (recalculé en direct).'), 't-ok');
+          } else {
+            termLine(trT('…reversed. the office chair rolls backwards, dramatically. (upright = 17 seconds of glory. the wizard suggests: keep drawing.)', '…renversée. la chaise de bureau recule, dramatiquement. (à l\'endroit = 17 secondes de gloire. le mage suggère : continue de tirer.)'), 't-dim');
+            showBubble(trT('yongshan\'s card, upside down!! …it\'s doing a cool trick. probably. draw again ♡', 'la carte de yongshan, à l\'envers !! …elle fait une figure stylée. sûrement. retire ♡'), 5200);
+          }
+        }
       });
       return;
     }
@@ -5423,7 +5441,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (themeBtn) {
       themeBtn.textContent = themePref === 'auto' ? '🌗' : (th === 'dark' ? '🌞' : '🌙');
       themeBtn.title = themePref === 'auto'
-        ? trT('theme: AUTO (clock) — click to force light', 'thème : AUTO (horloge) — clic pour forcer clair')
+        ? trT('theme: AUTO — this site runs on the slime\'s (impeccably healthy) sleep schedule: sunshine till 9pm, then lights out, up at 8. click to force light', 'thème : AUTO — ce site vit au rythme du sommeil (impeccablement sain) du slime : soleil jusqu\'à 21h, extinction des feux, debout à 8h. clic pour forcer clair')
         : th === 'dark'
           ? trT('theme: DARK — click for AUTO', 'thème : SOMBRE — clic pour AUTO')
           : trT('theme: LIGHT — click for dark', 'thème : CLAIR — clic pour sombre');
@@ -5705,6 +5723,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // resumes the second the mask comes off.
   function swGameChance() {
     if (swCurfewOn() || swTricksterOn()) return 0;
+    // v84: a visitor who has ALREADY played gets zero arcade ambushes —
+    // their nights belong to the seven dream worlds now (see night express)
+    if (store.get('yos-played', null)) return 0;
     return swAverse ? 0.25 : 0.92;
   }
 
@@ -9528,6 +9549,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   var nightFirstTimer = null;
 
+  var nightExpressTimer = null;
+  var nightExpressArmed = false; // fires once per nightfall, not once per sync
   function syncGhostMode() {
     if (!slimeBody) return;
     if (resolvedTheme() === 'dark') {
@@ -9540,12 +9563,30 @@ document.addEventListener('DOMContentLoaded', () => {
       swScheduleLift();
       // v6.0: a dream world interrupted by a reload picks itself back up
       dreamResume();
+      // v84: THE NIGHT EXPRESS — a visitor who has already played skips
+      // every queue: nightfall goes STRAIGHT into the seven dream worlds.
+      // no curfew gate, no arcade funnel (swGameChance is 0 for them too).
+      if (!nightExpressArmed && store.get('yos-played', null)
+        && window.innerWidth >= 560 && !document.body.classList.contains('terminal-only')) {
+        nightExpressArmed = true;
+        if (nightExpressTimer) clearTimeout(nightExpressTimer);
+        nightExpressTimer = setTimeout(() => {
+          nightExpressTimer = null;
+          if (resolvedTheme() !== 'dark' || dreamActive() || document.body.classList.contains('terminal-only')) return;
+          store.set('yos-dream-cd', 0); // veterans don't wait for cooldowns
+          const w = DREAM_WORLDS[Math.floor(Math.random() * DREAM_WORLDS.length)];
+          if (slimeBody) slimeBody.classList.add('is-ghost-hidden');
+          try { startDreamWalk(w); } catch (e) { /* the express slipped on a rail */ }
+        }, 8000); // bedtime ceremony first (2.1s), then straight to dreamland
+      }
     } else {
       // sunrise: dream worlds evaporate before the lights come on
       if (dreamActive()) dreamEnd('quiet');
       if (nightLoopTimer) clearTimeout(nightLoopTimer);
       if (nightRetireTimer) clearTimeout(nightRetireTimer);
       if (nightFirstTimer) clearTimeout(nightFirstTimer);
+      if (nightExpressTimer) { clearTimeout(nightExpressTimer); nightExpressTimer = null; }
+      nightExpressArmed = false; // next nightfall gets a fresh express
       cancelSleepwalk();
       slimeBody.classList.remove('is-ghost-hidden');
     }
@@ -9733,8 +9774,8 @@ document.addEventListener('DOMContentLoaded', () => {
       setThemePref(next);
       const nowDark = resolvedTheme() === 'dark';
       if (next === 'auto') {
-        showToast(trT('🌗 theme: AUTO — follows the clock (light 8am, dark 9pm)', '🌗 thème : AUTO — suit l\'horloge (clair 8h, sombre 21h)'));
-        if (!pet.sleeping && !pet.busy) showBubble(trT('auto mode!! I sleep at 9, wake at 8 ♡', 'mode auto !! je dors à 21h, réveil à 8h ♡'), 2400);
+        showToast(trT('🌗 theme: AUTO — the site now follows the slime\'s (very healthy) sleep schedule: bright all day, lights out at 9pm sharp, up at 8 ♡', '🌗 thème : AUTO — le site suit désormais le rythme de sommeil (très sain) du slime : lumineux le jour, extinction à 21h pile, debout à 8h ♡'));
+        if (!pet.sleeping && !pet.busy) showBubble(trT('auto mode!! the whole SITE sleeps when I sleep now. 9pm lights out, 8am stretch. dermatologist-recommended ♡', 'mode auto !! le SITE entier dort quand je dors maintenant. 21h extinction, 8h étirements. recommandé par les dermatologues ♡'), 3200);
       } else {
         showToast(t(next === 'dark' ? 'toast.dark' : 'toast.light'));
         if (!pet.sleeping && !pet.busy) {
@@ -10932,6 +10973,23 @@ document.addEventListener('DOMContentLoaded', () => {
         playSparkleSound();
       }
     } catch (e) { /* fate needs a coffee */ }
+    // v84: anyone who starts a run is a Player forever — nightfall remembers
+    store.set('yos-played', 1);
+    // v84: THE CHARIOT — if fate armed it, the first 17 seconds are HERS
+    GAME.chariotUntil = 0;
+    GAME.chariotBowed = false;
+    try {
+      if (store.get('yos-chariot', null)) {
+        store.set('yos-chariot', null);
+        GAME.chariotUntil = GAME.frame + 17 * 60;
+        GAME.invUntil = GAME.chariotUntil; // nothing on this road argues with a chariot
+        GAME.nextEventSec = 5 + Math.random() * 4; // fate steers an encounter INTO the ride
+        GAME.flash = 12;
+        gToast(['🏇 THE CHARIOT TAKES THE FIELD — 17s: untouchable, all-collecting, and it answers every encounter with the optimal play', '🏇 LE CHARIOT ENTRE EN PISTE — 17 s : intouchable, ramasse-tout, et il répond à chaque rencontre par le choix optimal'], 300);
+        playFanfare();
+        playSparkleSound();
+      }
+    } catch (e) { /* the chariot never no-shows; it just parks */ }
     if (typeof liveAway === 'function') liveAway(false);
     const rcam = document.getElementById('game-reaction-cam');
     if (rcam) rcam.classList.remove('cam-ad-dock');
@@ -11128,7 +11186,8 @@ document.addEventListener('DOMContentLoaded', () => {
   function gDrawSlime(g2) {
     // i-frames render as a steady translucent ghost — NEVER a strobe
     // (flashing is a photosensitivity hazard; alpha is just as readable)
-    const ghosted = GAME.frame < GAME.invUntil;
+    const riding = gChariotOn(); // a champion rides at FULL opacity
+    const ghosted = GAME.frame < GAME.invUntil && !riding;
     if (ghosted) g2.globalAlpha = 0.32;
     // during the nightmare the slime roams freely on WASD
     const baseX = GAME.nm ? GAME.nmPx : G_SLIME_X;
@@ -11136,6 +11195,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const squash = (GAME.y <= 0 ? 1 + Math.sin(GAME.frame * 0.35) * 0.04 : 0.94) * modVal('size');
     const h = G_SLIME_S * squash;
     const yTop = G_GROUND - h - GAME.y + bob;
+    if (riding) { // the office-chair chariot rolls in underneath, trailing dust
+      g2.save();
+      g2.font = '17px sans-serif';
+      g2.globalAlpha = 0.92;
+      g2.fillText('🪑', baseX + 7, G_GROUND - GAME.y + 4);
+      g2.globalAlpha = 0.6;
+      g2.fillText('💨', baseX - 17, G_GROUND - GAME.y - 4);
+      g2.fillText('💨', baseX - 30, G_GROUND - GAME.y - 16);
+      g2.restore();
+    }
     if (gSprite.complete && gSprite.naturalWidth) {
       g2.drawImage(gSprite, baseX, yTop, G_SLIME_S, h);
     } else {
@@ -11144,6 +11213,19 @@ document.addEventListener('DOMContentLoaded', () => {
       g2.fillStyle = gTheme.ink;
       g2.fillRect(baseX + 10, yTop + 14, 3, 3);
       g2.fillRect(baseX + 20, yTop + 14, 3, 3);
+    }
+    if (riding) { // golden aura + the honest countdown
+      const left = Math.ceil((GAME.chariotUntil - GAME.frame) / 60);
+      g2.save();
+      g2.strokeStyle = 'rgba(255, 210, 63, ' + (0.45 + Math.sin(GAME.frame * 0.25) * 0.25).toFixed(2) + ')';
+      g2.lineWidth = 2;
+      g2.beginPath();
+      g2.arc(baseX + G_SLIME_S / 2, yTop + h / 2, G_SLIME_S * 0.85, 0, Math.PI * 2);
+      g2.stroke();
+      g2.font = "10px 'Jersey 25', 'VT323', monospace";
+      g2.fillStyle = '#ffd23f';
+      g2.fillText('⚡' + left + 's', baseX + 6, Math.max(10, yTop - 10));
+      g2.restore();
     }
     if (ghosted) g2.globalAlpha = 1;
   }
@@ -11280,6 +11362,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (GAME.event && !GAME.event._born) {
       GAME.event._born = 1;
       GAME.eventLockUntil = Date.now() + 1600;
+      // v84: mid-ride, the CHARIOT reads the odds and answers for you
+      if (gChariotOn() && !GAME.event._chariot) { GAME.event._chariot = 1; try { gChariotDecide(GAME.event); } catch (e) { /* the reins slipped */ } }
+    }
+    // …and after its 17 unstoppable seconds, it bows out (once, politely)
+    if (GAME.chariotUntil && GAME.frame >= GAME.chariotUntil && !GAME.chariotBowed) {
+      GAME.chariotBowed = true;
+      gToast(['🏇 the CHARIOT bows out — the road is yours again, champion', '🏇 le CHARIOT tire sa révérence — la route est à toi, champion·ne'], 200);
+      playFanfare();
     }
 
     // Edmonton weather leaks into the runner — visuals only, the
@@ -11459,6 +11549,20 @@ document.addEventListener('DOMContentLoaded', () => {
       const sz = modVal('size');
       const sx = G_SLIME_X + 5, sw = (G_SLIME_S - 10) * sz;
       const sy = G_GROUND - G_SLIME_S * sz - GAME.y + 6, sh = G_SLIME_S * sz - 8;
+      // v84: the CHARIOT does not brake — obstacles become confetti (+15 each)
+      if (gChariotOn()) {
+        for (let ci = GAME.obs.length - 1; ci >= 0; ci--) {
+          const o = GAME.obs[ci];
+          const oy = o.fly ? G_GROUND - 58 : G_GROUND - o.h - (o.jy || 0);
+          const oh = o.fly ? 16 : o.h;
+          if (sx < o.x + o.w - 3 && sx + sw > o.x + 3 && sy < oy + oh - 3 && sy + sh > oy + 2) {
+            GAME.obs.splice(ci, 1);
+            GAME.score += 15;
+            for (let k = 0; k < 8; k++) GAME.sparks.push({ x: o.x + o.w / 2, y: oy + oh / 2, vx: (Math.random() + 0.2) * 5, vy: (Math.random() - 0.8) * 6, life: 26 });
+            playTone(880 + Math.random() * 320, 'square', 0.07, 0, 0.05);
+          }
+        }
+      }
       if (GAME.frame >= GAME.invUntil) {
         for (const o of GAME.obs) {
           const oy = o.fly ? G_GROUND - 58 : G_GROUND - o.h - (o.jy || 0);
@@ -14898,6 +15002,138 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ---------- hit handling ----------
+  /* =====================================================
+     v84 — THE CHARIOT 🏇 (VII, upright — yongshan's soul card)
+     when fate deals the webmaster's own card face-up, the
+     next run opens with 17 unstoppable seconds: obstacles
+     shatter, loot flies home, and every encounter is
+     auto-answered with the statistically optimal pick,
+     recomputed from the live game state each time.
+     ===================================================== */
+  function gChariotOn() { return !!(GAME.chariotUntil && GAME.frame < GAME.chariotUntil); }
+
+  function chariotCelebrate(viaCall) {
+    achvUnlock(viaCall ? 'chariotcall' : 'chariotdraw');
+    store.set('yos-chariot', 1);
+    try {
+      cheatFall(['🏇', '⚡', '👑', '✦', '🏁'], 24);
+      playFanfare();
+      playSparkleSound();
+      if (!REDUCED_MOTION) {
+        const f = document.createElement('div');
+        f.className = 'ds-flash-gold';
+        document.body.appendChild(f);
+        setTimeout(() => { try { f.remove(); } catch (e) { /* faded */ } }, 1000);
+      }
+      burstAtSlime(['⚡', '✦', '♡'], 8);
+    } catch (e) { /* the parade is spiritual */ }
+    showBubble(trT('‼️ THE CHARIOT — VII — UPRIGHT!! that\'s YONGSHAN\'S card — her tarot soul-card ♡ fate just co-signed you!! next run: 17 seconds of UNSTOPPABLE.', '‼️ LE CHARIOT — VII — À L\'ENDROIT !! c\'est la carte de YONGSHAN — sa carte-âme du tarot ♡ le destin vient de te parrainer !! prochaine run : 17 secondes d\'INARRÊTABLE.'), 8000);
+  }
+
+  // the chariot's toast voice: confident, mathy, a little smug
+  function gChariotSay(en, fr) { gToast(['🏇 ' + en, '🏇 ' + fr], 180); }
+
+  // pick the best of a reward/coach shelf, judged against the live run
+  function gChariotBest(opts) {
+    let bi = 0, bs = -1, why = ['it sparkles', 'ça brille'];
+    opts.forEach((o, i) => {
+      let s = 30, w = ['flat value', 'valeur de base'];
+      if (o.icon === '💖') { s = GAME.lives <= 1 ? 100 : GAME.lives === 2 ? 62 : 24; w = GAME.lives <= 1 ? ['1 ♥ left — a heart is worth EVERYTHING right now', 'plus qu\'1 ♥ — un cœur vaut TOUT là maintenant'] : ['a spare heart never spoils', 'un cœur de rechange ne périme jamais']; }
+      else if (o.icon === '🛡️') { s = GAME.lives <= 1 ? 70 : 44; w = ['shields scale with danger', 'le bouclier vaut plus quand ça chauffe']; }
+      else if (o.icon === '🌈') { s = GAME.weapon ? 52 : 66; w = GAME.weapon ? ['double points, always liquid', 'points doublés, toujours liquide'] : ['fever PLUS a wand — you\'re unarmed', 'fièvre PLUS une baguette — tu es désarmé·e']; }
+      else if (o.icon === '💰') { s = GAME.coins < 10 ? 55 : 38; w = GAME.coins < 10 ? ['your wallet echoes — fix that', 'ton portefeuille résonne — corrigeons ça'] : ['coins compound', 'les pièces s\'accumulent']; }
+      else if (o.icon === '🍀') { s = 40; w = ['40s of luck outlasts everything here', '40 s de chance survivent à tout le reste']; }
+      if (s > bs) { bs = s; bi = i; why = w; }
+    });
+    return { i: bi, why };
+  }
+
+  // appraise the boba cat's shelf: value minus price, traps excluded
+  function gChariotShop(ev) {
+    let bi = -1, bs = 0, why = null;
+    for (let i = 0; i < 3; i++) {
+      if (ev.sold[i]) continue;
+      const it = ev.items[i];
+      if (it.trap) continue; // the chariot reads labels AND fine print
+      const isLtd = ev.limited != null && i === ev.limited;
+      const cost = isLtd ? GAME.coins : ((ev.prices && ev.prices[i] != null) ? ev.prices[i] : it.price);
+      if (isLtd && GAME.coins < 5) continue;
+      if (cost > GAME.coins) continue;
+      let v = 20;
+      if (isLtd) v = 80;
+      else if (it.icon === '💖') v = GAME.lives <= 1 ? 95 : GAME.lives === 2 ? 55 : 18;
+      else if (it.icon === '🛡️') v = 34;
+      else if (it.icon === '🌈') v = 36;
+      else if (it.icon === '🐱' || it.icon === '🥖') v = GAME.weapon ? 12 : 50;
+      else if (it.icon === '🎧') v = 42;
+      else if (it.icon === '⭐') v = 26;
+      else if (it.icon === '⚡') v = 24;
+      else if (it.icon === '🧪') v = 22;
+      const net = v - cost * 1.6;
+      if (net > bs) {
+        bs = net; bi = i;
+        why = isLtd
+          ? ['legendary gear beats a full wallet — statistically', 'du matos légendaire bat un portefeuille plein — statistiquement']
+          : [it.icon + ' has tonight\'s best value-per-coin', it.icon + ' offre le meilleur rendement par pièce ce soir'];
+      }
+    }
+    return { i: bi, why };
+  }
+
+  // the chariot answers every encounter with the optimal play, out loud
+  function gChariotDecide(ev) {
+    const after = (extra, fn) => setTimeout(() => { if (GAME.event === ev && gChariotOn()) fn(); }, Math.max(0, (GAME.eventLockUntil || 0) - Date.now()) + (extra || 500));
+    if (ev.type === 'god') {
+      after(600, () => {
+        ev.sel = 0;
+        gChariotSay('BELIEVE. (45% blessing beats 30% — the chariot did the math mid-gallop)', 'CROIRE. (45 % de bénédiction bat 30 % — le chariot a fait le calcul au galop)');
+        gEventKey('Enter');
+      });
+    } else if (ev.type === 'offer') {
+      const take = !ev.cursed || GAME.lives >= 2;
+      after(600, () => {
+        ev.sel = take ? 0 : 1;
+        gChariotSay(take ? 'arm the cavalry. a weapon outscores a consolation coin toss' : 'cursed steel at 1 ♥? expected value says WALK', take ? 'armons la cavalerie. une arme rapporte plus qu\'un pile-ou-face de consolation' : 'de l\'acier maudit à 1 ♥ ? l\'espérance dit : PASSE');
+        gEventKey('Enter');
+      });
+    } else if (ev.type === 'interview') {
+      after(600, () => {
+        ev.sel = 0;
+        gChariotSay('the fairy\'s gift is NOTARIZED. certainty beats +3 coins, always', 'le cadeau de la fée est NOTARIÉ. la certitude bat +3 pièces, toujours');
+        gEventKey('Enter');
+      });
+    } else if (ev.type === 'reward' || ev.type === 'coach') {
+      after(700, () => {
+        const best = gChariotBest(ev.opts);
+        ev.sel = best.i;
+        gChariotSay('taking ' + ev.opts[best.i].icon + ' — ' + best.why[0], 'je prends ' + ev.opts[best.i].icon + ' — ' + best.why[1]);
+        gEventKey('Enter');
+      });
+    } else if (ev.type === 'tarot') {
+      after(700, () => {
+        ev.sel = gStateHash('chpick' + GAME.frame) % 3;
+        ev.confirmsLeft = 1; // no haggling with a chariot
+        gChariotSay('three face-down cards = identical distributions. picking with STYLE instead', 'trois cartes face cachée = distributions identiques. je choisis avec STYLE, alors');
+        gEventKey('Enter'); // pick → confirm
+        setTimeout(() => { if (GAME.event === ev) gEventKey('Enter'); }, 700);
+      });
+    } else if (ev.type === 'shop') {
+      after(700, () => {
+        const best = gChariotShop(ev);
+        if (best.i < 0) {
+          gChariotSay('nothing on this shelf beats its own price tag. the cat gets a nod, not a coin', 'rien sur cette étagère ne vaut son étiquette. le chat a droit à un signe de tête, pas à une pièce');
+          ev.sel = 3;
+          gEventKey('Enter');
+          return;
+        }
+        ev.sel = best.i;
+        gChariotSay(best.why[0], best.why[1]);
+        gEventKey('Enter');
+        setTimeout(() => { if (GAME.event === ev) { ev.sel = 3; gEventKey('Enter'); } }, 1100);
+      });
+    }
+  }
+
   function gHit(o) {
     // a bud buddy throws itself in front: exception caught, life saved
     const guard = (GAME.piks || []).find((p) => (p.stage === 1 || (p.skill && p.skill.id === 'trycatch')) && GAME.frame >= (p.shieldReadyAt || 0));
@@ -14948,6 +15184,15 @@ document.addEventListener('DOMContentLoaded', () => {
       if (Math.random() < 0.0005) GAME.loot.push({ kind: 'box', x: G_W + 16, y: G_GROUND + G_SLIME_S - 22, t: 0 });
 
       GAME.loot.forEach((it) => { it.x -= gSpeed(); it.t++; });
+      // v84: the CHARIOT vacuums the road — every coin, heart and box
+      // on screen banks toward the champion at parade speed
+      if (gChariotOn()) {
+        const cty = G_GROUND - G_SLIME_S - GAME.y + 8;
+        GAME.loot.forEach((it) => {
+          it.x += (G_SLIME_X + 8 - it.x) * 0.22;
+          it.y += (cty - it.y) * 0.22;
+        });
+      }
       const sz = modVal('size');
       const sTop = G_GROUND - G_SLIME_S * sz - GAME.y;
       GAME.loot = GAME.loot.filter((it) => {
@@ -15230,6 +15475,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const card = gPick(TAROT, 'card' + ev.sel);
     const upright = gStateHash('side' + ev.sel) % 100 < 55;
     GAME.decisions.push('tarot:' + card.n[0] + (upright ? ':up' : ':dn'));
+    // v84: fate deals the webmaster's own card FACE UP — the table erupts,
+    // and the NEXT run opens with the chariot's 17 seconds
+    if (TAROT.indexOf(card) === 7 && upright) { try { chariotCelebrate(false); } catch (e) { /* confetti jam */ } }
     const o = upright ? card.up : card.dn;
     // v6.1: the runner holds its breath while the card plays its whole
     // scene — the effect lands when the curtain falls, never buried
