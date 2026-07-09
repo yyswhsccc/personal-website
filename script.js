@@ -2270,9 +2270,9 @@ document.addEventListener('DOMContentLoaded', () => {
     },
     {
       k: ['curfew', 'sleepwalk', 'sleepwalking', 'dream world', 'why quiet', 'gremlin', '宵禁', '梦游', '捣蛋', 'couvre-feu', 'somnambule', 'gremlin'],
-      a: 'ah, the DREAM CURFEW — yongshan\'s house rule ♡ here\'s the deal: in dark mode I sleepwalk, and my dreams… leak. sometimes onto the whole website. so after one arcade ambush I\'m under a 30-minute quiet-dream curfew — HER idea, so visitors get real time to explore everything she built. (and the clock only ticks while you\'re actually browsing — parking the tab doesn\'t count, nice try ♡) BUT: the first 7 minutes after curfew lifts are GREMLIN HOUR (100% sleepwalks, dreams everywhere, occasionally the entire site falls into one of my seven dream worlds for 10–15 minutes). if that happens: enjoy it, watch my countdown bubbles, and knock on my screen to pop the dream early ♡',
-      zh: '啊，「梦境宵禁」——yongshan 定的家规 ♡ 是这样：暗色模式下我会梦游，而我的梦……会漏出来，有时候漏满整个网站。所以每次梦游突袭街机之后，我要接受 30 分钟的安静梦宵禁——这是她的主意，为了让访客有充足时间探索她做的所有东西。（而且时钟只在你真的在逛的时候才走，挂机不算哦 ♡）但是！宵禁解除后的前 7 分钟是捣蛋鬼时间（100% 梦游，到处都是梦，偶尔整个网站会掉进我的七个梦境世界之一，持续 10–15 分钟）。真发生了的话：好好享受，看我的倒计时气泡，敲敲我的屏幕就能提前戳破梦境 ♡',
-      fr: 'ah, le COUVRE-FEU DES RÊVES — la règle maison de yongshan ♡ le principe : en mode nuit je suis somnambule, et mes rêves… fuient. parfois sur tout le site. donc après une embuscade d\'arcade, je subis 30 minutes de rêves calmes — SON idée, pour que les visiteurs aient le temps d\'explorer tout ce qu\'elle a construit. (et l\'horloge ne tourne que quand tu navigues vraiment — laisser l\'onglet ouvert ne compte pas, bien tenté ♡) MAIS : les 7 premières minutes après la levée, c\'est L\'HEURE DU GREMLIN (100 % de somnambulisme, des rêves partout, et parfois le site entier tombe dans un de mes sept mondes oniriques pendant 10–15 minutes). si ça arrive : profite, suis mes bulles de compte à rebours, et toque sur mon écran pour faire éclater le rêve ♡'
+      a: 'ah, the DREAM CURFEW — yongshan\'s house rule ♡ here\'s the deal: in dark mode I sleepwalk, and my dreams… leak. sometimes onto the whole website. so after one arcade ambush I\'m under a 14-minute quiet-dream curfew — HER idea, so visitors get real time to explore everything she built. (and the clock only ticks while you\'re actually browsing — parking the tab doesn\'t count, nice try ♡) BUT: the first 7 minutes after curfew lifts are GREMLIN HOUR (100% sleepwalks, and 9 times out of 10 the ENTIRE site falls into one of my seven dream worlds for 10–15 minutes). if that happens: enjoy it, watch my countdown bubbles, and knock on my screen to pop the dream early ♡',
+      zh: '啊，「梦境宵禁」——yongshan 定的家规 ♡ 是这样：暗色模式下我会梦游，而我的梦……会漏出来，有时候漏满整个网站。所以每次梦游突袭街机之后，我要接受 14 分钟的安静梦宵禁——这是她的主意，为了让访客有充足时间探索她做的所有东西。（而且时钟只在你真的在逛的时候才走，挂机不算哦 ♡）但是！宵禁解除后的前 7 分钟是捣蛋鬼时间（100% 梦游，而且十次里有九次整个网站会直接掉进我的七个梦境世界之一，持续 10–15 分钟）。真发生了的话：好好享受，看我的倒计时气泡，敲敲我的屏幕就能提前戳破梦境 ♡',
+      fr: 'ah, le COUVRE-FEU DES RÊVES — la règle maison de yongshan ♡ le principe : en mode nuit je suis somnambule, et mes rêves… fuient. parfois sur tout le site. donc après une embuscade d\'arcade, je subis 14 minutes de rêves calmes — SON idée, pour que les visiteurs aient le temps d\'explorer tout ce qu\'elle a construit. (et l\'horloge ne tourne que quand tu navigues vraiment — laisser l\'onglet ouvert ne compte pas, bien tenté ♡) MAIS : les 7 premières minutes après la levée, c\'est L\'HEURE DU GREMLIN (100 % de somnambulisme, et 9 fois sur 10 le site ENTIER tombe dans un de mes sept mondes oniriques pendant 10–15 minutes). si ça arrive : profite, suis mes bulles de compte à rebours, et toque sur mon écran pour faire éclater le rêve ♡'
     },
     {
       k: ['salary', 'pay', 'compensation', 'rate', '薪资', '工资', '报价', 'salaire'],
@@ -5454,7 +5454,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // gremlin hour (v6.0): 100%, and the gremlin doesn't dawdle.
     if (Math.random() < swWalkChance()) {
       if (sleepwalkTimer) clearTimeout(sleepwalkTimer);
-      const dawdle = swTricksterOn() ? 1800 + Math.random() * 2600 : 5000 + Math.random() * 6000;
+      const dawdle = swTricksterOn() ? 800 + Math.random() * 1200 : 5000 + Math.random() * 6000;
       sleepwalkTimer = setTimeout(() => startSleepwalk(), dawdle);
     }
   }
@@ -5519,7 +5519,7 @@ document.addEventListener('DOMContentLoaded', () => {
     ["zzz… no arcade dreams… yongshan's orders… go explore… her site is bigger than my whole imagination…", "zzz… pas de rêves d'arcade… ordres de yongshan… va explorer… son site est plus grand que toute mon imagination…"],
     ["mmh… curfew rules… so the visitor can see EVERYTHING… the terminal… the meadow… the wall… zzz…", "mmh… règles du couvre-feu… pour que la visite voie TOUT… le terminal… la prairie… le mur… zzz…"],
     ["zzz… dreaming responsibly… as legally required… by mom— by yongshan…", "zzz… je rêve de façon responsable… comme la loi l'exige… maman— yongshan l'exige…"],
-    ["*snore* …30 minutes of quiet is 4200 slime-years… but rules are rules… she's right… she's always right… zzz", "*ronfle* …30 minutes de calme = 4200 années-slime… mais les règles sont les règles… elle a raison… toujours… zzz"]
+    ["*snore* …14 minutes of quiet is 4200 slime-years… but rules are rules… she's right… she's always right… zzz", "*ronfle* …14 minutes de calme = 4200 années-slime… mais les règles sont les règles… elle a raison… toujours… zzz"]
   ];
 
   function dreamTalk() {
@@ -5629,8 +5629,8 @@ document.addEventListener('DOMContentLoaded', () => {
   var swEl = null;
 
   /* ---- v5.2: the DREAM CURFEW 🌙 ----
-     one arcade ambush per half hour, MAX. the moment a sleepwalk opens
-     the arcade, game-dreams go on a 30-minute curfew: walks turn rare
+     one arcade ambush per 14 minutes, MAX. the moment a sleepwalk opens
+     the arcade, game-dreams go on a 14-minute curfew: walks turn rare
      (10%) and only visit NON-game features, so the visitor can actually
      be immersed in the rest of the site. when the curfew lifts there is
      a small ceremony (of course there is). and if the visitor slams the
@@ -5639,7 +5639,7 @@ document.addEventListener('DOMContentLoaded', () => {
      50%, and only 1-in-4 ever dreams of the arcade again. the other 3
      go do things. real things. dreams respect boundaries. */
   /* ---- v6.1: the curfew clock only ticks while YOU are here ----
-     30 minutes of ACTIVE time — tab visible AND some input in the last
+     14 minutes of ACTIVE time — tab visible AND some input in the last
      75s — accumulated across visits. parking the tab overnight serves
      exactly zero seconds; the slime is patient, not gullible. stored
      as milliseconds still owed ('yos-sw-curfew-left'). */
@@ -5691,16 +5691,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // the house rule, explained to the audience by the accused
   const SW_CURFEW_WHY = [
-    ["📜 house rule by yongshan: after ONE arcade dream I get a 30-min quiet-dream curfew… so YOU get time to explore the rest of her site in peace!! (I signed the form. with my face.)",
-     "📜 règle de la maison signée yongshan : après UN rêve d'arcade, couvre-feu des rêves de 30 min… pour que TU puisses explorer le reste de son site en paix !! (j'ai signé le formulaire. avec mon visage.)"],
-    ["📜 yongshan's law: one arcade ambush per half hour, MAX. she says the site has like 40 other rooms and you deserve to see them without me yelling PLAY WITH ME ♡",
-     "📜 la loi de yongshan : une embuscade d'arcade par demi-heure, MAXI. elle dit que le site a genre 40 autres pièces et que tu mérites de les voir sans que je crie JOUE AVEC MOI ♡"],
-    ["📜 the curfew is yongshan's idea: 30 whole minutes of quiet dreams so you can wander her whole site… and the clock only ticks while YOU'RE actually here!! no serving my sentence to an empty room 💤",
-     "📜 le couvre-feu, c'est l'idée de yongshan : 30 minutes de rêves calmes pour que tu explores tout son site… et l'horloge ne tourne que quand TU es vraiment là !! pas question de purger ma peine devant une salle vide 💤"]
+    ["📜 house rule by yongshan: after ONE arcade dream I get a 14-min quiet-dream curfew… so YOU get time to explore the rest of her site in peace!! (I signed the form. with my face.)",
+     "📜 règle de la maison signée yongshan : après UN rêve d'arcade, couvre-feu des rêves de 14 min… pour que TU puisses explorer le reste de son site en paix !! (j'ai signé le formulaire. avec mon visage.)"],
+    ["📜 yongshan's law: one arcade ambush per 14 minutes, MAX. she says the site has like 40 other rooms and you deserve to see them without me yelling PLAY WITH ME ♡",
+     "📜 la loi de yongshan : une embuscade d'arcade par 14 minutes, MAXI. elle dit que le site a genre 40 autres pièces et que tu mérites de les voir sans que je crie JOUE AVEC MOI ♡"],
+    ["📜 the curfew is yongshan's idea: 14 whole minutes of quiet dreams so you can wander her whole site… and the clock only ticks while YOU'RE actually here!! no serving my sentence to an empty room 💤",
+     "📜 le couvre-feu, c'est l'idée de yongshan : 14 minutes de rêves calmes pour que tu explores tout son site… et l'horloge ne tourne que quand TU es vraiment là !! pas question de purger ma peine devant une salle vide 💤"]
   ];
 
   function swStartCurfew() {
-    swCurfewLeft = 30 * 60 * 1000; // 30 ACTIVE minutes, not 30 parked ones
+    swCurfewLeft = 14 * 60 * 1000; // 14 ACTIVE minutes, not 14 parked ones
     store.set('yos-sw-curfew-left', swCurfewLeft);
     swLiftDone = false;
     swScheduleLift();
@@ -5737,8 +5737,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   const SW_LIFT_LINES = [
-    ["⏰ DING!! dream curfew: SERVED!! yongshan got her 30 quiet minutes — you saw the site, right?? RIGHT. good. because now…", "⏰ DRING !! couvre-feu des rêves : PURGÉ !! yongshan a eu ses 30 minutes de calme — tu as vu le site, hein ?? OUI. bien. parce que maintenant…"],
-    ["*stretches* thirty!! whole!! minutes!! of respectful, curriculum-approved dreaming. yongshan is SO proud of me. anyway—", "*s'étire* trente !! minutes !! entières !! de rêves respectueux et pédagogiquement validés. yongshan est TRÈS fière de moi. bref—"],
+    ["⏰ DING!! dream curfew: SERVED!! yongshan got her 14 quiet minutes — you saw the site, right?? RIGHT. good. because now…", "⏰ DRING !! couvre-feu des rêves : PURGÉ !! yongshan a eu ses 14 minutes de calme — tu as vu le site, hein ?? OUI. bien. parce que maintenant…"],
+    ["*stretches* fourteen!! whole!! minutes!! of respectful, curriculum-approved dreaming. yongshan is SO proud of me. anyway—", "*s'étire* quatorze !! minutes !! entières !! de rêves respectueux et pédagogiquement validés. yongshan est TRÈS fière de moi. bref—"],
     ["🎟️ permit renewed!! the quiet-time law has been served to the LAST second. yongshan said 'explore time for the visitor'. the visitor explored. and NOW—", "🎟️ permis renouvelé !! la loi du temps calme a été purgée jusqu'à la DERNIÈRE seconde. yongshan a dit « temps d'exploration pour le visiteur ». le visiteur a exploré. et MAINTENANT—"]
   ];
 
@@ -5786,13 +5786,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const r2 = slimeBody.getBoundingClientRect();
         swProp(r2.left + r2.width / 2 - 70, Math.max(8, r2.top - 46), trT('GREMLIN HOUR — 7:00 😈', 'HEURE DU GREMLIN — 7:00 😈'), true);
       } catch (e) { /* the manifesto stands */ }
-      // gremlin hour wastes no time: first walk within seconds
+      // gremlin hour wastes NO time: the first walk starts immediately
       if (!sleepwalkActive && ghostHidden()) {
         if (sleepwalkTimer) clearTimeout(sleepwalkTimer);
-        sleepwalkTimer = setTimeout(() => startSleepwalk(), 2600);
+        sleepwalkTimer = setTimeout(() => startSleepwalk(), 900);
       } else {
-        // it's out of bed for the ceremony — tuck it back in fast
-        setTimeout(() => { if (resolvedTheme() === 'dark' && !pet.busy && !isGrabbing) nightRetireNow(); }, 6000);
+        // it's out of bed for the ceremony — straight back under the covers
+        setTimeout(() => { if (resolvedTheme() === 'dark' && !pet.busy && !isGrabbing) nightRetireNow(); }, 1200);
       }
     }, 5600);
   }
@@ -6225,9 +6225,10 @@ document.addEventListener('DOMContentLoaded', () => {
       line = SW_GAME_LINE;
       isGame = true;
       directDive = true;
-    } else if (dreamWorldEligible() && Math.random() < (swTricksterOn() ? 0.6 : 0.45)) {
-      // v6.0: the dream goes DEEP — the whole site becomes the dream.
-      // rolls before the arcade so takeovers actually happen post-curfew
+    } else if (dreamWorldEligible() && Math.random() < 0.9) {
+      // v6.6: post-curfew walks are 90% DEEP DREAMS — the whole site
+      // becomes the dream. the remaining 10% keeps the on-site mischief
+      // (terminal typing, AMA questions, sticky notes…) in rotation
       startDreamWalk();
       return;
     } else if (Math.random() < swGameChance()) {
@@ -6366,7 +6367,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // until the 7 minutes run dry (deep dreams pause the parade)
       if (swTricksterOn() && resolvedTheme() === 'dark' && ghostHidden() && !dreamActive()) {
         if (sleepwalkTimer) clearTimeout(sleepwalkTimer);
-        sleepwalkTimer = setTimeout(() => startSleepwalk(), 3800 + Math.random() * 4200);
+        sleepwalkTimer = setTimeout(() => startSleepwalk(), 2200 + Math.random() * 2400);
       }
     }, 1200);
   }
@@ -9274,9 +9275,12 @@ document.addEventListener('DOMContentLoaded', () => {
           names.push(c.n[0] + (s.u ? '' : ' ⤵'));
           GAME.decisions.push('fate:' + c.n[0] + (s.u ? ':up' : ':dn'));
         });
-        GAME.score = Math.max(0, GAME.score);
         if (GAME.lives < 1) GAME.lives = 1; // fate may sting — it never kills at the gate
-        GAME.toast = { text: '🔮 ' + trT('the spread takes hold: ', 'le tirage s\'applique : ') + names.join(' + '), ttl: 240 };
+        // negative balances are LEGAL now: the wizard simply opens a tab
+        let debtNote = '';
+        if (GAME.coins < 0) debtNote = ' · ' + trT(`⛁ ${GAME.coins} — the wizard opened a tab in your name`, `⛁ ${GAME.coins} — le mage a ouvert une ardoise à ton nom`);
+        else if (GAME.score < 0) debtNote = ' · ' + trT('score in the red: character development', 'score dans le rouge : développement personnel');
+        GAME.toast = { text: '🔮 ' + trT('the spread takes hold: ', 'le tirage s\'applique : ') + names.join(' + ') + debtNote, ttl: 260 };
         playSparkleSound();
       }
     } catch (e) { /* fate needs a coffee */ }
@@ -10126,14 +10130,16 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ---------- effect primitives ----------
-  function fxCoins(n) { GAME.coins = Math.max(0, GAME.coins + n); }
+  // v6.6: balances may go NEGATIVE — stacked tarot fates can open a tab
+  // in your name, and the wizard keeps receipts. debt repays coin by coin.
+  function fxCoins(n) { GAME.coins = GAME.coins + n; }
   function fxLife(n) {
     const before = GAME.lives;
     GAME.lives = Math.max(0, Math.min(3, GAME.lives + n));
     if (GAME.lives > before) gMarkJoy();
     if (GAME.lives === 0) gGameOver();
   }
-  function fxScore(n) { GAME.score = Math.max(0, GAME.score + n); }
+  function fxScore(n) { GAME.score = GAME.score + n; } // negative score = "character development"
   function fxInvincible(secs) { GAME.invUntil = GAME.frame + secs * 60; if (secs >= 6) gMarkJoy(); }
   function fxFever(secs) { GAME.fever = secs * 60; gMarkJoy(); }
   function fxClearBugs() {
