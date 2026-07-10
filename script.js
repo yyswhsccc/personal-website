@@ -5298,6 +5298,8 @@ document.addEventListener('DOMContentLoaded', () => {
       if (document.body.classList.contains('terminal-only') && window.__door && !window.__door.rescued) {
         const panicky = /help!|idk|do?n'?t know|anyone|please|plz|hello|stuck|lost|confus|how do|what do|no idea|救命|不会|帮帮/i.test(lower);
         doorFlail += panicky ? 2 : 1;
+        // every cry goes on the record — the villain quotes the transcript back
+        if (doorFlailLog.length < 8) doorFlailLog.push(input.replace(/[\x00-\x1f\x7f]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 40));
         if (doorFlail >= 4) { window.__door.rescued = true; setTimeout(doorRescue, 700); }
       }
     }
@@ -22565,6 +22567,7 @@ document.addEventListener('DOMContentLoaded', () => {
      reveals his villain arc, cages the tty… and monologues one sentence too
      long. enter: the slime of legend. one ultimate. curtains. site. ---- */
   var doorFlail = 0;
+  var doorFlailLog = []; // verbatim cries (≤8, each ≤40 chars) — rescue-scene ammunition
   function rescueSlime(hero) {
     const cv = document.createElement('canvas');
     cv.width = 112; cv.height = 112;
@@ -22670,7 +22673,12 @@ document.addEventListener('DOMContentLoaded', () => {
       playTone(70, 'sawtooth', 0.5, 0, 0.1);
       playTone(110, 'square', 0.3, 0.1, 0.06);
       document.body.classList.add('rescue-quake');
-      setTimeout(() => { document.body.classList.remove('rescue-quake'); stage.classList.remove('is-rage'); stage.__raging = 0; }, 1600);
+      setTimeout(() => {
+        document.body.classList.remove('rescue-quake'); stage.classList.remove('is-rage'); stage.__raging = 0;
+        // resume the monologue where it left off — a mashing visitor (the
+        // rescue's core audience!) must not rage right past the good lines
+        if (stage.__pendingLine) { const vb2 = stage.querySelector('.rescue-bub-villain'); if (vb2) vb2.textContent = stage.__pendingLine; }
+      }, 1600);
     };
     setTimeout(() => rescueLock(stage, rage), cageMs - 200);
     // THE VILLAIN — big, centered, dread incarnate
@@ -22684,13 +22692,62 @@ document.addEventListener('DOMContentLoaded', () => {
       requestAnimationFrame(() => requestAnimationFrame(() => vil.classList.add('is-in')));
       playTone(140, 'sawtooth', 0.4, 0, 0.07);
     }, cageMs);
+    /* ---- the dossier: everything they typed is now evidence. the villain
+       reads the actual transcript back; a proper "died of exposition" villain
+       does not do GENERIC taunts — it does RESEARCH. ---- */
+    const log = (doorFlailLog.length ? doorFlailLog.slice() : ['help']);
+    const shortQ = (s) => '`' + (s.length > 24 ? s.slice(0, 23) + '…' : s) + '`';
+    const tally = {};
+    log.forEach((s) => { const k = s.toLowerCase(); tally[k] = (tally[k] || 0) + 1; });
+    let topKey = log[0].toLowerCase(), topN = 1;
+    Object.keys(tally).forEach((k) => { if (tally[k] > topN) { topN = tally[k]; topKey = k; } });
+    const allTyped = log.join(' ');
+    const bangs = (allTyped.match(/!/g) || []).length;
+    const qmarks = (allTyped.match(/\?/g) || []).length;
+    const NUMW = ['zero', 'ONE', 'TWO', 'THREE', 'FOUR', 'FIVE', 'SIX', 'SEVEN', 'EIGHT', 'NINE', 'TEN'];
+    const NUMF = ['zéro', 'UNE', 'DEUX', 'TROIS', 'QUATRE', 'CINQ', 'SIX', 'SEPT', 'HUIT', 'NEUF', 'DIX'];
+    const nw = (n) => (n > 10 ? String(n) : NUMW[n]);
+    const nf = (n) => (n > 10 ? String(n) : NUMF[n]);
+    const capsHit = log.find((s) => { const L = s.replace(/[^a-zA-Z]/g, ''); return L.length >= 4 && L === L.toUpperCase(); });
+    const mashHit = log.find((s) => {
+      const w = s.replace(/[^a-zA-Z]/g, '').toLowerCase();
+      if (w.length < 5) return false;
+      if (!/[aeiou]/.test(w)) return true; // fkjshdfkjh
+      // the classics are literal keyboard rows — `asdfghjkl` has an 'a' but fools nobody
+      return 'qwertyuiop'.includes(w) || 'asdfghjkl'.includes(w) || 'zxcvbnm'.includes(w);
+    });
+    const politeHit = log.find((s) => /\b(please|pls|plz)\b|s'il (te|vous) pla|svp/i.test(s));
+    const sudoHit = log.find((s) => /^sudo\b/i.test(s));
+    const cjkHit = log.find((s) => /[一-鿿]/.test(s));
+    const bangHit = log.find((s) => /!/.test(s)) || log[0];
+    const uniq = []; log.forEach((s) => { if (!uniq.some((u) => u.toLowerCase() === s.toLowerCase())) uniq.push(s); });
+    const spec = uniq.slice(0, 3).map(shortQ).join(' + ');
+    // the cry the hero answers to: their actual panic word, punctuation shed
+    const cry = ((allTyped.match(/help|anyone|somebody|idk|hello|please|plz|stuck|lost|救命|帮帮|不会/i) || [topKey])[0]).replace(/[!?.,;:]+$/, '') || 'help';
+
+    // beat 1 — the gloat, aimed at their single juiciest habit
+    let v1;
+    if (mashHit) v1 = trT(`AHAHAHA!! CAGED!! at some point you gave up on WORDS and typed ${shortQ(mashHit)} — palm, meet keyboard. primal. I respect it. CAGED ANYWAY ♡`, `AHAHAHA !! EN CAGE !! à un moment tu as renoncé aux MOTS pour taper ${shortQ(mashHit)} — la paume sur le clavier. primal. je respecte. EN CAGE QUAND MÊME ♡`);
+    else if (capsHit) v1 = trT(`AHAHAHA!! you are CAGED!! you typed ${shortQ(capsHit)} in FULL CAPS — as if volume compiles. it does not. VIOLENCE does ♡`, `AHAHAHA !! EN CAGE !! tu as tapé ${shortQ(capsHit)} en MAJUSCULES — comme si le volume compilait. non. la VIOLENCE, oui ♡`);
+    else if (bangs >= 2) v1 = trT(`AHAHAHA!! you are CAGED, little visitor!! I watched you type ${shortQ(bangHit)} — ${nw(bangs)} exclamation marks. I counted EVERY one. and I chose VIOLENCE ♡`, `AHAHAHA !! EN CAGE, petit·e visiteur·euse !! je t'ai vu taper ${shortQ(bangHit)} — ${nf(bangs)} points d'exclamation. TOUS comptés. et j'ai choisi la VIOLENCE ♡`);
+    else if (cjkHit) v1 = trT(`AHAHAHA!! CAGED!! you cried ${shortQ(cjkHit)} — adorable. this cage ships fully localized: despair in EVERY language ♡`, `AHAHAHA !! EN CAGE !! tu as crié ${shortQ(cjkHit)} — adorable. cette cage est entièrement localisée : le désespoir dans TOUTES les langues ♡`);
+    else if (politeHit) v1 = trT(`AHAHAHA!! you are CAGED!! ${shortQ(politeHit)} — you said PLEASE. to a TERMINAL. manners are not a dependency of this prison ♡`, `AHAHAHA !! EN CAGE !! ${shortQ(politeHit)} — tu as dit S'IL TE PLAÎT. à un TERMINAL. la politesse n'est pas une dépendance de cette prison ♡`);
+    else if (sudoHit) v1 = trT(`AHAHAHA!! CAGED!! ${shortQ(sudoHit)}?? trying to OUTRANK me at my own door?? I run as root here, darling ♡`, `AHAHAHA !! EN CAGE !! ${shortQ(sudoHit)} ?? tu essaies de me DÉPASSER en grade à ma propre porte ?? ici c'est MOI le root, chéri·e ♡`);
+    else v1 = trT(`AHAHAHA!! you are CAGED, little visitor!! I watched you type ${shortQ(log[0])} and I chose VIOLENCE ♡`, `AHAHAHA !! EN CAGE, petit·e visiteur·euse !! je t'ai vu taper ${shortQ(log[0])} et j'ai choisi la VIOLENCE ♡`);
+
+    // beat 2 — the prison's spec sheet, compiled from their actual transcript
+    let v2tail = topN >= 2
+      ? trT(`and ${shortQ(topKey)} — ${nw(topN)} TIMES?? as if the next one would find somebody the first ${topN - 1 > 1 ? nw(topN - 1).toLowerCase() : 'one'} missed.`, `et ${shortQ(topKey)} — ${nf(topN)} FOIS ?? comme si la suivante allait trouver quelqu'un que ${topN - 1 > 1 ? 'les autres ont' : 'la première a'} raté.`)
+      : (qmarks >= 3
+        ? trT(`you typed ${nw(qmarks)} question marks. the cage answers none of them.`, `tu as tapé ${nf(qmarks)} points d'interrogation. la cage ne répond à aucun.`)
+        : trT(`your ${shortQ(uniq[uniq.length - 1])}? nobody is coming.`, `ton ${shortQ(uniq[uniq.length - 1])} ? personne ne viendra.`));
     const VILLAIN = [
-      trT('AHAHAHA!! you are CAGED, little visitor!! I watched you type `help` with SEVEN exclamation marks and I chose VIOLENCE ♡', 'AHAHAHA !! EN CAGE, petit·e visiteur·euse !! je t\'ai vu taper `help` avec SEPT points d\'exclamation et j\'ai choisi la VIOLENCE ♡'),
-      trT('this prison is compiled from your OWN unknown commands. artisanal. zero dependencies. escape complexity: O(never). your `anyone`? nobody is coming.', 'cette prison est compilée depuis TES commandes introuvables. artisanale. zéro dépendance. complexité d\'évasion : O(jamais). ton `anyone` ? personne ne viendra.'),
+      v1,
+      trT(`this prison is compiled from your OWN words — ${spec}. artisanal. zero dependencies. escape complexity: O(never). ${v2tail}`, `cette prison est compilée depuis TES propres mots — ${spec}. artisanale. zéro dépendance. complexité d'évasion : O(jamais). ${v2tail}`),
       trT('and NOW — before I `rm -rf` you — allow me to recite my FULL tragic backstory. it begins in 1997, with a missing semicolon on line—', 'et MAINTENANT — avant de te `rm -rf` — laisse-moi réciter ma PLEINE histoire tragique. tout commence en 1997, avec un point-virgule manquant à la ligne—')
     ];
     const timers = [];
-    VILLAIN.forEach((line, i) => timers.push(setTimeout(() => { if (!stage.__raging) vbub.textContent = line; playTone(190 + i * 30, 'square', 0.09, 0, 0.04); }, cageMs + 500 + i * 3400)));
+    VILLAIN.forEach((line, i) => timers.push(setTimeout(() => { stage.__pendingLine = line; if (!stage.__raging) vbub.textContent = line; playTone(190 + i * 30, 'square', 0.09, 0, 0.04); }, cageMs + 500 + i * 3400)));
     // HARD CAP: no matter how much the visitor rages the villain, the hero MUST
     // arrive exactly 11s after the cage lands — a rescue is never held hostage
     // by someone mashing keys. this is a plain fixed timer, immune to the rage loop.
@@ -22715,7 +22772,14 @@ document.addEventListener('DOMContentLoaded', () => {
       document.body.classList.add('rescue-quake');
       setTimeout(() => document.body.classList.remove('rescue-quake'), 600);
       playFanfare();
-      setTimeout(() => { hbub.textContent = trT('did someone spam `help`? great news. I AM help ♡', 'quelqu\'un a spammé `help` ? bonne nouvelle. JE SUIS help ♡'); }, 900);
+      setTimeout(() => {
+        // the hero answers to whatever THEY actually shouted — spam `anyone`
+        // and the sky replies "I AM anyone"; smash the keyboard and the sky
+        // is fluent in that too
+        hbub.textContent = mashHit
+          ? trT(`someone typed ${shortQ(mashHit)}? lucky day — I am FLUENT in keyboard-smash. it translates to: SAVE ME. on it ♡`, `quelqu'un a tapé ${shortQ(mashHit)} ? jour de chance — je parle COURAMMENT le clavier-écrasé. traduction : SAUVEZ-MOI. j'arrive ♡`)
+          : trT(`did someone spam ${shortQ(cry)}? great news. I AM ${cry} ♡`, `quelqu'un a spammé ${shortQ(cry)} ? bonne nouvelle. JE SUIS ${cry} ♡`);
+      }, 900);
       // ✦✦✦ THE ULTIMATE — SLIME-GOD OVERDRIVE: charge, then a screen-filling nova ✦✦✦
       setTimeout(() => {
         hero.classList.add('is-charging');
