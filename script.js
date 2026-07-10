@@ -7511,6 +7511,17 @@ document.addEventListener('DOMContentLoaded', () => {
       };
       document.addEventListener('click', iconGuard, true);
       dreamWorld.flags.removers.push(() => document.removeEventListener('click', iconGuard, true));
+      // rehearsal door: ?bsodshow fast-tracks the error cascade to 3s
+      // after entry (normally it waits for a signature beat), so the
+      // whole show can be watched on demand
+      try {
+        if (/[?&]bsodshow/.test(location.search)) dT(() => {
+          if (dreamWorld && !dreamWorld.flags.bsodCascade) {
+            dreamWorld.flags.bsodCascade = 1;
+            dwBsodCascade();
+          }
+        }, 3000);
+      } catch (e) { /* no shortcut tonight */ }
       const head = document.createElement('div');
       head.className = 'dream-bsod-head';
       head.innerHTML = '<div class="dream-bsod-face">:(</div><div class="dream-bsod-text"></div>';
@@ -11005,8 +11016,8 @@ document.addEventListener('DOMContentLoaded', () => {
     dT(() => {
       if (!dreamWorld) return;
       f.bsodSwarmMode = 'packed';
-      showToast(trT('⚠ no desktop detected. only errors. you have TEN seconds — click wisely ♡', '⚠ aucun bureau détecté. que des erreurs. tu as DIX secondes — clique bien ♡'), { scroll: true });
-      dT(dwBsodHeroParade, 10000); // the ten seconds of freedom
+      showToast(trT('⚠ no desktop detected. only errors. you have TWENTY seconds — click wisely ♡', '⚠ aucun bureau détecté. que des erreurs. tu as VINGT secondes — clique bien ♡'), { scroll: true });
+      dT(dwBsodHeroParade, 20000); // the twenty seconds of freedom
     }, k * 26 + 400);
   }
   // the hero: the ACTUAL 14×14 pixel slime, in heroic blue
@@ -11074,7 +11085,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     const W0 = Math.max(560, par.getBoundingClientRect().width);
     const x0 = -W0 - 60, x1 = window.innerWidth + 120, DUR = 16000, t0 = Date.now();
-    let lastBeep = 0;
+    let lastBeep = 0, lastChirp = 0;
     const iv = dI(() => {
       const p = Math.min(1, (Date.now() - t0) / DUR);
       const px = x0 + (x1 - x0) * p;
@@ -11099,26 +11110,108 @@ document.addEventListener('DOMContentLoaded', () => {
           dT(() => { try { d.remove(); } catch (e) { /* hauled */ } }, 1700);
         }
       }
+      // the crew talks while it works: every second or so, one to three
+      // of them call out
+      if (Date.now() - lastChirp > 1300 && p > 0.04 && p < 0.97) {
+        lastChirp = Date.now();
+        const imgs = [...par.querySelectorAll('.bsod-pik-img')];
+        const n = 1 + Math.floor(Math.random() * 3);
+        for (let k = 0; k < n && imgs.length; k++) {
+          const img = imgs.splice(Math.floor(Math.random() * imgs.length), 1)[0];
+          const chirp = document.createElement('span');
+          chirp.className = 'bsod-chirp';
+          chirp.textContent = ['pik!', 'mi!', 'pik, mi!', 'pik pik!', 'mi!!'][Math.floor(Math.random() * 5)];
+          chirp.style.left = (img.offsetLeft + img.offsetWidth / 2) + 'px';
+          par.appendChild(chirp);
+          playTone(1200 + Math.random() * 500, 'triangle', 0.05, k * 0.09, 0.035);
+          setTimeout(() => { try { chirp.remove(); } catch (e) { /* chirped */ } }, 950);
+        }
+      }
+      // halfway through, the tail pikmin turns to marvel at a window
+      // being hauled away… and quietly falls behind
+      if (!f.bsodStraggler && p >= 0.55) {
+        f.bsodStraggler = 1;
+        const tail = par.querySelector('.bsod-pik-img');
+        if (tail) {
+          const r = tail.getBoundingClientRect();
+          const nest = document.createElement('div');
+          nest.className = 'bsod-straggler';
+          nest.style.left = Math.max(20, r.left) + 'px';
+          nest.style.top = r.top + 'px';
+          const bb = document.createElement('span');
+          bb.className = 'bsod-chirp bsod-chirp-stay';
+          bb.textContent = 'pik…?';
+          nest.appendChild(bb);
+          nest.appendChild(tail);
+          document.body.appendChild(nest);
+          dN(nest);
+          f.bsodStragglerX = Math.max(20, r.left);
+          playTone(1180, 'triangle', 0.08, 0, 0.04);
+          playTone(920, 'triangle', 0.1, 0.14, 0.04);
+        }
+      }
       if (Date.now() - lastBeep > 300) { lastBeep = Date.now(); playTone(430 + p * 320, 'triangle', 0.05, 0, 0.025); }
       if (p >= 1) {
         clearInterval(iv);
-        // stragglers (anything still on stage) get hauled too, then the bow
+        // any window still on stage gets hauled too
         document.querySelectorAll('.dream-dlg:not(.bsod-dragged)').forEach((d, i) => {
           dT(() => {
             d.classList.add('bsod-dragged');
             dT(() => { try { d.remove(); } catch (e) { /* hauled late */ } }, 1700);
           }, i * 120);
         });
-        dT(() => {
-          try { par.remove(); } catch (e) { /* marched offstage */ }
-          f.bsodSwarmMode = 'done';
-          cheatFall(['💙', '🌱', '✦'], 20);
-          gainFollowers(2);
-          showToast(trT('the crew hauled away every window. all ' + (f.bsodSwarmTotal + 22) + ' of them. not one hug was skipped ♡ +2 fans', 'l\'escouade a emporté toutes les fenêtres. les ' + (f.bsodSwarmTotal + 22) + '. pas un seul câlin n\'a été oublié ♡ +2 fans'), { scroll: true });
-          dT(dwBsodFinale, 1400);
-        }, 1900);
+        // …then the hero counts heads, and the count comes up short
+        dT(() => dwBsodHeadcount(par, bubble, W0, f), 1900);
       }
     }, 60);
+  }
+  // the rescue: the hero notices the missing pik, marches the whole
+  // crew BACK to collect it, then everyone exits together
+  function dwBsodHeadcount(par, bubble, W0, f) {
+    if (!dreamWorld) return;
+    const nest = document.querySelector('.bsod-straggler');
+    if (!nest) { dwBsodParadeBow(par, f); return; }
+    bubble.textContent = trT('HEADCOUNT!! …we are one (1) pik short.', 'À L\'APPEL !! …il nous manque un (1) pik.');
+    playTone(392, 'square', 0.12, 0, 0.05);
+    playTone(330, 'square', 0.14, 0.16, 0.05);
+    const startX = parseFloat(par.style.left) || (window.innerWidth + 120);
+    const targetX = Math.max(-100, (f.bsodStragglerX || 100) - W0 + 70);
+    const t0 = Date.now(), BACK = 2600;
+    const iv = dI(() => {
+      const p = Math.min(1, (Date.now() - t0) / BACK);
+      par.style.left = (startX + (targetX - startX) * p) + 'px';
+      if (p < 1) return;
+      clearInterval(iv);
+      // the reunion ♡
+      const img = nest.querySelector('.bsod-pik-img');
+      const bb = nest.querySelector('.bsod-chirp');
+      if (bb) bb.textContent = 'pik, mi!!';
+      playTone(1046, 'triangle', 0.08, 0, 0.05);
+      playTone(1318, 'triangle', 0.12, 0.12, 0.05);
+      cheatFall(['💙', '♡'], 8);
+      bubble.textContent = trT('there you are ♡ NOBODY gets left behind. not even errors.', 'te voilà ♡ PERSONNE n\'est laissé derrière. pas même les erreurs.');
+      dT(() => {
+        if (!dreamWorld) return;
+        if (img) par.insertBefore(img, par.firstChild);
+        try { nest.remove(); } catch (e) { /* rejoined */ }
+        // and off they march, all together this time
+        const t1 = Date.now(), OUT = 2400;
+        const sx = parseFloat(par.style.left) || targetX, ex = window.innerWidth + 160;
+        const iv2 = dI(() => {
+          const q = Math.min(1, (Date.now() - t1) / OUT);
+          par.style.left = (sx + (ex - sx) * q) + 'px';
+          if (q >= 1) { clearInterval(iv2); dwBsodParadeBow(par, f); }
+        }, 40);
+      }, 1400);
+    }, 40);
+  }
+  function dwBsodParadeBow(par, f) {
+    try { par.remove(); } catch (e) { /* marched offstage */ }
+    f.bsodSwarmMode = 'done';
+    cheatFall(['💙', '🌱', '✦'], 20);
+    gainFollowers(2);
+    showToast(trT('the crew hauled away every window. all ' + (f.bsodSwarmTotal + 22) + ' of them. not one hug was skipped ♡ +2 fans', 'l\'escouade a emporté toutes les fenêtres. les ' + (f.bsodSwarmTotal + 22) + '. pas un seul câlin n\'a été oublié ♡ +2 fans'), { scroll: true });
+    dT(dwBsodFinale, 1400);
   }
 
   // amber: the batch printer spits a fortune-cookie payslip you can read

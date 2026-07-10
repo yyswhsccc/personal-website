@@ -9521,6 +9521,38 @@ html.dream-bsod .desktop-icon-btn[data-window="win-dreamlog"] {
     drop-shadow(0 0 13px rgba(255, 212, 0, 0.95));
   animation: bsod-hero-bob 0.42s steps(2) infinite;
 }
+/* the crew's work chatter: pik! mi! pik, mi! */
+.bsod-chirp {
+  position: absolute;
+  top: -30px;
+  transform: translateX(-50%);
+  font-family: var(--font-pixel);
+  font-size: 0.68rem;
+  color: #0a234d;
+  background: #fff;
+  border: 2px solid #0a234d;
+  padding: 1px 6px;
+  white-space: nowrap;
+  animation: bsod-chirp-pop 0.9s ease forwards;
+  pointer-events: none;
+}
+@keyframes bsod-chirp-pop {
+  0% { transform: translateX(-50%) translateY(6px) scale(0.6); opacity: 0; }
+  18% { transform: translateX(-50%) translateY(0) scale(1); opacity: 1; }
+  80% { opacity: 1; }
+  100% { transform: translateX(-50%) translateY(-6px); opacity: 0; }
+}
+/* the straggler: it saw a window being hauled away and simply had to watch */
+.bsod-straggler {
+  position: fixed;
+  z-index: 2697;
+  pointer-events: none;
+}
+.bsod-straggler .bsod-chirp-stay {
+  left: 50%;
+  animation: none;
+  opacity: 1;
+}
 .dream-dlg-zap { animation: bsod-zap 0.24s ease-in forwards; pointer-events: none; }
 @keyframes bsod-zap { to { transform: scale(0.05) rotate(20deg); opacity: 0; } }
 .bsod-zap-heart {
