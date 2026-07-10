@@ -12988,6 +12988,96 @@ document.addEventListener('DOMContentLoaded', () => {
       blue: grab('--blue-dark', '#6cc4f5'),
       mint: '#43b581'
     };
+    gDreamColorCache = {}; // world changed — yesterday's costumes don't fit
+  }
+
+  /* ---- DREAM COLOR ENGINE — the runner's whole cast joins the palette.
+     CSS grades (--dream-grade) unify every DOM sprite; anything painted
+     BY HAND on the canvas flows through gDreamColor instead: luminance in,
+     world ramp out. same philosophy as the CSS chain (collapse hue first,
+     then tint), so both pipelines land on the same family. ---- */
+  const G_DREAM_RAMPS = {
+    // dark anchor → deep → accent → highlight (luminance ascending)
+    bsod:   [[8, 29, 122], [47, 86, 214], [138, 180, 255], [234, 243, 255]],
+    matrix: [[2, 24, 12], [15, 122, 58], [61, 255, 124], [204, 255, 228]],
+    amber:  [[22, 14, 2], [122, 82, 0], [255, 176, 0], [255, 233, 184]]
+  };
+  const G_DREAM_DESAT = { win95: 0.3, scp: 0.35 }; // match saturate(0.7)/grayscale(0.35)
+  var gDreamColorCache = {};
+  function gParseColor(col) {
+    if (typeof col !== 'string') return null;
+    let m = /^#([0-9a-f]{6})$/i.exec(col.trim());
+    if (m) { const n = parseInt(m[1], 16); return [n >> 16, (n >> 8) & 255, n & 255, 1]; }
+    m = /^#([0-9a-f]{3})$/i.exec(col.trim());
+    if (m) return [17 * parseInt(m[1][0], 16), 17 * parseInt(m[1][1], 16), 17 * parseInt(m[1][2], 16), 1];
+    m = /^rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*(?:,\s*([\d.]+)\s*)?\)$/i.exec(col.trim());
+    if (m) return [+m[1], +m[2], +m[3], m[4] == null ? 1 : +m[4]];
+    m = /^hsla?\(\s*([\d.]+)\s*,\s*([\d.]+)%\s*,\s*([\d.]+)%\s*(?:,\s*([\d.]+)\s*)?\)$/i.exec(col.trim());
+    if (m) { // tiny hsl→rgb, enough for hueColor() strings
+      const h = ((+m[1] % 360) + 360) % 360 / 360, s = +m[2] / 100, l = +m[3] / 100;
+      const q = l < 0.5 ? l * (1 + s) : l + s - l * s, p = 2 * l - q;
+      const f = (t) => { t = ((t % 1) + 1) % 1; return t < 1 / 6 ? p + (q - p) * 6 * t : t < 0.5 ? q : t < 2 / 3 ? p + (q - p) * (2 / 3 - t) * 6 : p; };
+      return [Math.round(f(h + 1 / 3) * 255), Math.round(f(h) * 255), Math.round(f(h - 1 / 3) * 255), m[4] == null ? 1 : +m[4]];
+    }
+    return null; // gradients & exotic strings pass through untinted
+  }
+  function gDreamMapRgb(r, g, b) {
+    const ramp = G_DREAM_RAMPS[gDreamSkin];
+    if (ramp) { // mono world: luminance picks the seat on the ramp
+      const t = Math.min(1, Math.max(0, (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255));
+      const seg = Math.min(ramp.length - 2, Math.floor(t * (ramp.length - 1)));
+      const f = t * (ramp.length - 1) - seg;
+      const a = ramp[seg], z = ramp[seg + 1];
+      return [Math.round(a[0] + (z[0] - a[0]) * f), Math.round(a[1] + (z[1] - a[1]) * f), Math.round(a[2] + (z[2] - a[2]) * f)];
+    }
+    const k = G_DREAM_DESAT[gDreamSkin];
+    if (k) { // muted world: pull toward its own luminance
+      const gr = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+      return [Math.round(r + (gr - r) * k), Math.round(g + (gr - g) * k), Math.round(b + (gr - b) * k)];
+    }
+    return [r, g, b];
+  }
+  function gDreamColor(col) {
+    // geo is natively neon; gameboy's canvas is DMG'd wholesale by CSS
+    if (!gDreamSkin || gDreamSkin === 'geo' || gDreamSkin === 'gameboy' || !col) return col;
+    const hit = gDreamColorCache[col];
+    if (hit) return hit;
+    const p = gParseColor(col);
+    if (!p) return col;
+    const m = gDreamMapRgb(p[0], p[1], p[2]);
+    const out = p[3] >= 1 ? 'rgb(' + m[0] + ',' + m[1] + ',' + m[2] + ')' : 'rgba(' + m[0] + ',' + m[1] + ',' + m[2] + ',' + p[3] + ')';
+    gDreamColorCache[col] = out;
+    return out;
+  }
+  function gContrastInk(col) { // black or white, whichever survives the chip
+    const p = gParseColor(col);
+    if (!p) return '#ffffff';
+    return (0.2126 * p[0] + 0.7152 * p[1] + 0.0722 * p[2]) > 150 ? '#14020e' : '#ffffff';
+  }
+  var gTintedSprites = {};
+  function gWorldSprite(img) {
+    // per-pixel port of a PNG onto the dream ramp (the protagonist itself)
+    if (!gDreamSkin || gDreamSkin === 'geo' || gDreamSkin === 'gameboy') return img;
+    if (!img || !(img.complete === undefined || img.complete) || !(img.naturalWidth || img.width)) return img;
+    const key = img.src ? gDreamSkin + '|' + (img.src + '').slice(-48) : null;
+    if (key && gTintedSprites[key]) return gTintedSprites[key];
+    try {
+      const c = document.createElement('canvas');
+      c.width = img.naturalWidth || img.width;
+      c.height = img.naturalHeight || img.height;
+      const x = c.getContext('2d');
+      x.drawImage(img, 0, 0);
+      const d = x.getImageData(0, 0, c.width, c.height);
+      const px = d.data;
+      for (let i = 0; i < px.length; i += 4) {
+        if (!px[i + 3]) continue;
+        const m = gDreamMapRgb(px[i], px[i + 1], px[i + 2]);
+        px[i] = m[0]; px[i + 1] = m[1]; px[i + 2] = m[2];
+      }
+      x.putImageData(d, 0, 0);
+      if (key) gTintedSprites[key] = c; // live canvases re-tint per frame
+      return c;
+    } catch (e) { return img; } // tainted canvas (file://) — raw beats absent
   }
 
   /* ---- v6.1: the runner falls into the dream too 🌌 ----
@@ -13324,11 +13414,11 @@ document.addEventListener('DOMContentLoaded', () => {
   function gPal(ch) {
     switch (ch) {
       case 'P': return gTheme.pink;
-      case 'p': return '#ffb3dd';
+      case 'p': return gDreamColor('#ffb3dd'); // frozen pastels dream too
       case 'U': return gTheme.purple;
-      case 'u': return '#c9a7f5';
-      case 'Y': return '#ffe98a';
-      case 'W': return '#ffffff';
+      case 'u': return gDreamColor('#c9a7f5');
+      case 'Y': return gDreamColor('#ffe98a');
+      case 'W': return gDreamColor('#ffffff');
       case 'K': return gTheme.ink;
       default: return null;
     }
@@ -13346,7 +13436,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function gDrawRainbow(g2, x, y) {
-    const cols = [gTheme.pink, '#ffe98a', '#8fd4fa'];
+    // in a mono dream the "rainbow" arrives in the world's three shades ♡
+    const cols = [gTheme.pink, gDreamColor('#ffe98a'), gDreamColor('#8fd4fa')];
     cols.forEach((col, ci) => {
       const r = 16 - ci * 4;
       g2.fillStyle = col;
@@ -13400,9 +13491,11 @@ document.addEventListener('DOMContentLoaded', () => {
       g2.restore();
     }
     if (gSprite.complete && gSprite.naturalWidth) {
-      g2.drawImage(gSprite, baseX, yTop, G_SLIME_S, h);
+      // the protagonist dreams in the world's colors — a true palette port,
+      // not a filter approximation (per-pixel, cached per world)
+      g2.drawImage(gWorldSprite(gSprite), baseX, yTop, G_SLIME_S, h);
     } else {
-      g2.fillStyle = '#7ee0a3';
+      g2.fillStyle = gDreamColor('#7ee0a3');
       g2.fillRect(baseX + 4, yTop + 8, G_SLIME_S - 8, h - 8);
       g2.fillStyle = gTheme.ink;
       g2.fillRect(baseX + 10, yTop + 14, 3, 3);
@@ -13596,14 +13689,14 @@ document.addEventListener('DOMContentLoaded', () => {
     g2.font = "13px 'Jersey 25', 'VT323', monospace";
     GAME.clouds.forEach((cl) => {
       cl.x -= 0.6;
-      g2.fillStyle = wxSnowy ? '#9fc4ea' : (cl.c === '♡' ? gTheme.pink : gTheme.blue); // snow days tint the sky icy blue
+      g2.fillStyle = (wxSnowy && !gDreamSkin) ? '#9fc4ea' : (cl.c === '♡' ? gTheme.pink : gTheme.blue); // snow days tint the sky icy blue (dreams have their own sky)
       g2.globalAlpha = 0.55;
       g2.fillText(cl.c, cl.x, cl.y);
       g2.globalAlpha = 1;
     });
     GAME.clouds = GAME.clouds.filter((cl) => cl.x > -20);
 
-    if (wxRainy) {
+    if (wxRainy && !gDreamSkin) {
       // pixel rain streaks + puddles glinting along the track
       g2.fillStyle = 'rgba(108, 196, 245, 0.5)';
       for (let i = 0; i < 14; i++) {
@@ -13617,7 +13710,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const px = ((i * 173 + 40 - scroll) % (G_W + 60) + (G_W + 60)) % (G_W + 60) - 30;
         g2.fillRect(px, G_GROUND + G_SLIME_S - 2, 26, 2);
       }
-    } else if (wxSnowy) {
+    } else if (wxSnowy && !gDreamSkin) {
       // slow pixel snowfall
       g2.fillStyle = 'rgba(207, 233, 255, 0.85)';
       for (let i = 0; i < 12; i++) {
@@ -13670,9 +13763,9 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
     if (GAME.fever > 0) {
-      // rainbow contrail behind the slime
+      // rainbow contrail behind the slime (dream-dyed like the arc prop)
       const trailY = G_GROUND - G_SLIME_S - GAME.y;
-      [gTheme.pink, '#ffe98a', '#8fd4fa'].forEach((col, ci) => {
+      [gTheme.pink, gDreamColor('#ffe98a'), gDreamColor('#8fd4fa')].forEach((col, ci) => {
         g2.globalAlpha = 0.5;
         g2.fillStyle = col;
         g2.fillRect(G_SLIME_X - 26, trailY + 8 + ci * 8, 24 - ((GAME.frame * 2 + ci * 6) % 10), 5);
@@ -13715,7 +13808,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // cards can never bury a "not enough coins" message again)
 
     // dashed pixel ground (the world stands STILL during the nightmare)
-    g2.fillStyle = wxSnowy ? '#9fc4ea' : gTheme.purple; // fresh powder on snow days
+    g2.fillStyle = (wxSnowy && !gDreamSkin) ? '#9fc4ea' : gTheme.purple; // fresh powder on snow days (never inside a dream)
     const dashShift = (GAME.state === 'run' && !GAME.nm) ? (GAME.frame * GAME.speed) % 18 : 0;
     for (let x = -18; x < G_W + 18; x += 18) {
       g2.fillRect(x - dashShift, G_GROUND + G_SLIME_S - 4, 10, 3);
@@ -13911,7 +14004,7 @@ document.addEventListener('DOMContentLoaded', () => {
     GAME.sparks.forEach((sp) => { sp.x += sp.vx; sp.y += sp.vy; sp.vy += 0.15; sp.life--; });
     GAME.sparks = GAME.sparks.filter((sp) => sp.life > 0);
     GAME.sparks.forEach((sp) => {
-      g2.fillStyle = sp.life % 6 < 3 ? gTheme.pink : '#ffe98a';
+      g2.fillStyle = sp.life % 6 < 3 ? gTheme.pink : gDreamColor('#ffe98a');
       g2.fillRect(Math.round(sp.x), Math.round(sp.y), 3, 3);
     });
 
@@ -13935,10 +14028,10 @@ document.addEventListener('DOMContentLoaded', () => {
       if (bs.flash % 2 === 0) {
         if (bs.kind === 'cookie') {
           // the most feared monster on the modern web
-          g2.fillStyle = '#f2e2c4';
+          g2.fillStyle = gDreamColor('#f2e2c4');
           g2.fillRect(bs.x, bs.y, 66, 30);
-          g2.fillStyle = '#3a2412'; // cookie-brown ink, readable in every theme
-          g2.strokeStyle = '#3a2412';
+          g2.fillStyle = gDreamColor('#3a2412'); // cookie-brown ink, readable in every theme
+          g2.strokeStyle = gDreamColor('#3a2412');
           g2.lineWidth = 2;
           g2.strokeRect(bs.x + 1, bs.y + 1, 64, 28);
           g2.font = "9px 'Jersey 25', 'VT323', monospace";
@@ -13957,7 +14050,7 @@ document.addEventListener('DOMContentLoaded', () => {
           g2.fillText('<<<<<<< HEAD', bs.x - 6, bs.y - 4);
         } else {
           gDrawMat(g2, G_MATS.boss, bs.x, bs.y, 3);
-          g2.fillStyle = '#2a0a20'; // deep plum: readable on the pink belly in any theme
+          g2.fillStyle = gDreamColor('#2a0a20'); // deep plum: readable on the pink belly in any theme
           g2.font = "10px 'Jersey 25', 'VT323', monospace";
           g2.fillText('404', bs.x + 13, bs.y + 24);
         }
@@ -14042,15 +14135,16 @@ document.addEventListener('DOMContentLoaded', () => {
       g2.fillStyle = '#fff0fa';   // cream pops on dusk
       g2.fillText(goTxt, G_W / 2, 62);
       if (!GAME.adUsed) {
-        // hot-pink chip: readable on every theme, impossible to miss
+        // accent chip: hot pink at home, the world's accent inside a dream
         const offer = trT('📺 [A] watch a lil ad → revive ♡', '📺 [A] mini pub → résurrection ♡');
         g2.font = "13px 'Jersey 25', 'VT323', monospace";
         const tw = g2.measureText(offer).width;
+        const chipC = gDreamSkin ? gTheme.pink : '#f0509f';
         g2.fillStyle = '#14020e';
         g2.fillRect(G_W / 2 - tw / 2 - 10, 72, tw + 20, 22);
-        g2.fillStyle = '#f0509f';
+        g2.fillStyle = chipC;
         g2.fillRect(G_W / 2 - tw / 2 - 8, 74, tw + 16, 18);
-        g2.fillStyle = '#ffffff';
+        g2.fillStyle = gContrastInk(chipC);
         g2.fillText(offer, G_W / 2, 87);
       }
     } else if (GAME.state === 'ad') {
@@ -15629,7 +15723,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const pix = WEAPON_PIX[id];
     if (!pix) return;
     pix.forEach(([c, px2, py2, w2, h2]) => {
-      g2.fillStyle = c;
+      g2.fillStyle = gDreamColor(c); // badges dress for the world they visit
       g2.fillRect(x + px2 * s, y + py2 * s, w2 * s, h2 * s);
     });
   }
@@ -15641,7 +15735,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const wy = G_GROUND - G_SLIME_S - 26 - GAME.y * 0.6 + bob;
     gDrawWeaponIcon(g2, GAME.weapon.id, G_SLIME_X - 24, wy, 1.6);
     if (GAME.frame % 34 < 4) { // occasional sparkle of loyalty
-      g2.fillStyle = '#fff7d1';
+      g2.fillStyle = gDreamColor('#fff7d1');
       g2.fillRect(G_SLIME_X - 28, wy - 3, 2, 2);
     }
   }
@@ -15835,28 +15929,28 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function gAdActor(g2, cx, cy, bounce) {
-    // chibi slime spokesperson
+    // chibi slime spokesperson (method actor: becomes the world's colors)
     const y = cy + Math.sin(bounce) * 5;
-    g2.fillStyle = '#c9a7f5';
+    g2.fillStyle = gDreamColor('#c9a7f5');
     g2.fillRect(cx - 21, y - 14, 42, 30);
-    g2.fillStyle = '#ff9fd0';
+    g2.fillStyle = gDreamColor('#ff9fd0');
     g2.fillRect(cx - 19, y - 12, 38, 26);
-    g2.fillStyle = '#ffc9e4';
+    g2.fillStyle = gDreamColor('#ffc9e4');
     g2.fillRect(cx - 15, y - 9, 9, 6);
-    g2.fillStyle = '#14020e';
+    g2.fillStyle = gDreamColor('#14020e');
     g2.fillRect(cx - 9, y - 2, 4, 4); g2.fillRect(cx + 6, y - 2, 4, 4);
-    g2.fillStyle = '#ff6fae';
+    g2.fillStyle = gDreamColor('#ff6fae');
     g2.fillRect(cx - 3, y + 5, 7, 3);
-    g2.fillStyle = '#ffb3dd';
+    g2.fillStyle = gDreamColor('#ffb3dd');
     g2.fillRect(cx - 15, y + 3, 4, 3); g2.fillRect(cx + 12, y + 3, 4, 3);
   }
 
   function gAdPik(g2, cx, cy, color, dance) {
     const y = cy - Math.abs(Math.sin(dance)) * 6;
-    g2.fillStyle = '#57c689'; g2.fillRect(cx + 3, y - 5, 2, 4);
-    g2.fillStyle = '#ffffff'; g2.fillRect(cx + 1, y - 8, 2, 2); g2.fillRect(cx + 5, y - 8, 2, 2); g2.fillRect(cx + 3, y - 9, 2, 2);
-    g2.fillStyle = color; g2.fillRect(cx, y, 9, 8);
-    g2.fillStyle = '#14020e'; g2.fillRect(cx + 2, y + 2, 2, 2); g2.fillRect(cx + 6, y + 2, 2, 2);
+    g2.fillStyle = gDreamColor('#57c689'); g2.fillRect(cx + 3, y - 5, 2, 4);
+    g2.fillStyle = gDreamColor('#ffffff'); g2.fillRect(cx + 1, y - 8, 2, 2); g2.fillRect(cx + 5, y - 8, 2, 2); g2.fillRect(cx + 3, y - 9, 2, 2);
+    g2.fillStyle = gDreamColor(color); g2.fillRect(cx, y, 9, 8);
+    g2.fillStyle = gDreamColor('#14020e'); g2.fillRect(cx + 2, y + 2, 2, 2); g2.fillRect(cx + 6, y + 2, 2, 2);
   }
 
   function gAdProp(g2, kind, cx, cy, accent) {
@@ -15866,20 +15960,20 @@ document.addEventListener('DOMContentLoaded', () => {
       g2.textAlign = 'center';
       g2.fillText('m', cx, cy + 14);
     } else if (kind === 'cup') {
-      g2.fillStyle = '#ffffff'; g2.fillRect(cx - 11, cy - 14, 22, 28);
+      g2.fillStyle = gDreamColor('#ffffff'); g2.fillRect(cx - 11, cy - 14, 22, 28);
       g2.fillStyle = accent; g2.fillRect(cx - 11, cy - 4, 22, 8);
-      g2.fillStyle = '#c9a7f5'; g2.fillRect(cx - 2, cy - 22, 4, 9); // straw
-      g2.fillStyle = '#3a2412';
+      g2.fillStyle = gDreamColor('#c9a7f5'); g2.fillRect(cx - 2, cy - 22, 4, 9); // straw
+      g2.fillStyle = gDreamColor('#3a2412');
       g2.fillRect(cx - 6, cy + 8, 3, 3); g2.fillRect(cx + 1, cy + 9, 3, 3); // pearls
     } else if (kind === 'phone') {
-      g2.fillStyle = '#14020e'; g2.fillRect(cx - 10, cy - 18, 20, 36);
-      g2.fillStyle = '#eef2ff'; g2.fillRect(cx - 8, cy - 16, 16, 32);
-      g2.fillStyle = '#ff9fd0'; g2.fillRect(cx - 5, cy - 6, 10, 8); // slime on screen
-      g2.fillStyle = '#14020e'; g2.fillRect(cx - 3, cy - 4, 2, 2); g2.fillRect(cx + 1, cy - 4, 2, 2);
+      g2.fillStyle = gDreamColor('#14020e'); g2.fillRect(cx - 10, cy - 18, 20, 36);
+      g2.fillStyle = gDreamColor('#eef2ff'); g2.fillRect(cx - 8, cy - 16, 16, 32);
+      g2.fillStyle = gDreamColor('#ff9fd0'); g2.fillRect(cx - 5, cy - 6, 10, 8); // slime on screen
+      g2.fillStyle = gDreamColor('#14020e'); g2.fillRect(cx - 3, cy - 4, 2, 2); g2.fillRect(cx + 1, cy - 4, 2, 2);
     } else if (kind === 'tv') {
-      g2.fillStyle = '#14020e'; g2.fillRect(cx - 16, cy - 12, 32, 24);
+      g2.fillStyle = gDreamColor('#14020e'); g2.fillRect(cx - 16, cy - 12, 32, 24);
       g2.fillStyle = accent; g2.fillRect(cx - 14, cy - 10, 28, 20);
-      g2.fillStyle = '#ffffff';
+      g2.fillStyle = gDreamColor('#ffffff');
       g2.beginPath(); g2.moveTo(cx - 4, cy - 6); g2.lineTo(cx + 6, cy); g2.lineTo(cx - 4, cy + 6); g2.fill();
     }
   }
@@ -15894,17 +15988,17 @@ document.addEventListener('DOMContentLoaded', () => {
     // the ad covers the whole screen
     g2.fillStyle = skit.tint;
     g2.fillRect(0, 0, G_W, G_H);
-    // marquee AD strip
+    // marquee AD strip (ink picked by contrast — bsod's accent IS white)
     g2.fillStyle = skit.accent;
     g2.fillRect(0, 0, G_W, 12);
-    g2.fillStyle = '#ffffff';
+    g2.fillStyle = gContrastInk(skit.accent);
     g2.font = "10px 'Jersey 25', 'VT323', monospace";
     g2.textAlign = 'left';
     const shift = (GAME.adT * 0.8) % 46;
     for (let x = -shift; x < G_W; x += 46) g2.fillText('AD ♡', x, 10);
     if (!loopMode) {
       g2.textAlign = 'right';
-      g2.fillStyle = '#14020e';
+      g2.fillStyle = inkC; // dream skits bring their own readable ink
       g2.font = "12px 'Jersey 25', 'VT323', monospace";
       g2.fillText(`⏳ ${tLeft}s`, G_W - 6, 26);
     }
@@ -15915,11 +16009,13 @@ document.addEventListener('DOMContentLoaded', () => {
       const msg = trT('⏸ GAME PAUSED — book that interview!! your run is 100% safe ♡', '⏸ JEU EN PAUSE — réserve cet entretien !! ta run est 100 % en sécurité ♡');
       g2.font = "13px 'Jersey 25', 'VT323', monospace";
       const tw2 = g2.measureText(msg).width;
-      g2.fillStyle = '#14020e';
+      // in a dream the chip wears the world's accent (hot pink stays home)
+      const chipC = gDreamSkin ? gTheme.pink : '#f0509f';
+      g2.fillStyle = gDreamColor('#14020e');
       g2.fillRect(G_W / 2 - tw2 / 2 - 10, 15, tw2 + 20, 24);
-      g2.fillStyle = '#f0509f';
+      g2.fillStyle = chipC;
       g2.fillRect(G_W / 2 - tw2 / 2 - 8, 17, tw2 + 16, 20);
-      g2.fillStyle = '#ffffff';
+      g2.fillStyle = gContrastInk(chipC);
       g2.fillText(msg, G_W / 2, 31);
     }
     if (scene < 2) {
@@ -15943,11 +16039,11 @@ document.addEventListener('DOMContentLoaded', () => {
       g2.fillText('yuyongshan573@gmail.com', G_W / 2, loopMode ? 76 : 62);
       g2.fillText(trT('(serious brands only. payment in boba accepted)', '(marques sérieuses uniquement. paiement en boba accepté)'), G_W / 2, G_H - 34);
       gAdActor(g2, G_W / 2, 90, GAME.adT * 0.12);
-      // pixel confetti
+      // pixel confetti (dream-dyed: four shades of the world, still a party)
       for (let i = 0; i < 22; i++) {
         const cxx = (i * 47 + GAME.adT) % G_W;
         const cyy = (i * 31 + GAME.adT * 1.6) % (G_H - 20);
-        g2.fillStyle = ['#ff8fc7', '#ffd400', '#a8e0ff', '#c9a7f5'][i % 4];
+        g2.fillStyle = gDreamColor(['#ff8fc7', '#ffd400', '#a8e0ff', '#c9a7f5'][i % 4]);
         g2.fillRect(cxx, cyy, 3, 3);
       }
     }
@@ -15956,8 +16052,10 @@ document.addEventListener('DOMContentLoaded', () => {
     cast.slice(0, 6).forEach((col, i) => gAdPik(g2, G_W / 2 - 60 + i * 22, G_H - 16, col, GAME.adT * 0.16 + i));
     if (!loopMode) {
       g2.font = "9px 'Jersey 25', 'VT323', monospace";
-      g2.fillStyle = 'rgba(20, 2, 14, 0.55)';
+      g2.globalAlpha = 0.55;
+      g2.fillStyle = inkC; // readable on every dream tint
       g2.fillText(trT('ESC = give up the revive', 'ÉCHAP = renoncer à la résurrection'), G_W / 2, G_H - 4);
+      g2.globalAlpha = 1;
     }
     g2.textAlign = 'left';
   }
@@ -16095,9 +16193,11 @@ document.addEventListener('DOMContentLoaded', () => {
       // exact plant at the wrong growth stage. squint. squint HARDER. —
       const cast = (typeof pikEnsureCast === 'function') ? pikEnsureCast() : [];
       const base = cast.length ? cast[Math.abs(gStateHash('capbase')) % cast.length] : null;
-      const hue = base ? pikEntryColor(base) : Math.abs(gStateHash('caphue')) % 360;
+      // a NUMERIC hue (pikEntryColor returns a color OBJECT — feeding it to
+      // hue math made NaN and every sprite rendered pitch black: unsolvable)
+      const hue = base ? pikHueOf(base) : Math.abs(gStateHash('caphue')) % 360;
       const stage = 2;
-      const mk = (h, s) => pikSprite(((h % 360) + 360) % 360, s, null);
+      const mk = (h, s) => pikSprite(hueColor(((h % 360) + 360) % 360), s, null);
       const panel = nmPanel(trT('🤖 slimeCAPTCHA — select EVERY exact clone. no lookalikes.', '🤖 slimeCAPTCHA — cochez CHAQUE clone exact. pas de sosies.'));
       const ref = document.createElement('div');
       ref.className = 'nm-cap-ref';
@@ -16171,7 +16271,7 @@ document.addEventListener('DOMContentLoaded', () => {
         do { c = Math.floor(Math.random() * 16); } while (takenCells.has(c));
         takenCells.add(c);
         const p = cast.length ? cast[i % cast.length] : null;
-        piks.push({ cell: c, caught: false, src: p ? pikSprite(pikEntryColor(p), p.s || 0, p.sp || null) : pikSprite(Math.floor(Math.random() * 360), 1, null) });
+        piks.push({ cell: c, caught: false, src: p ? pikSprite(pikEntryColor(p), p.s || 0, p.sp || null) : pikSprite(hueColor(Math.floor(Math.random() * 360)), 1, null) });
       }
       const draw = () => {
         cells.forEach((cell, ci) => {
@@ -16349,7 +16449,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
           const g = document.createElement('img');
           g.className = 'nm-ghost';
-          g.src = pikSprite(Math.floor(Math.random() * 360), 0, null);
+          g.src = pikSprite(hueColor(Math.floor(Math.random() * 360)), 0, null);
           g.style.left = (4 + Math.random() * 88) + 'vw';
           g.style.top = (6 + Math.random() * 80) + 'vh';
           g.alt = '';
@@ -16798,18 +16898,18 @@ document.addEventListener('DOMContentLoaded', () => {
     // the drifting checkpoint disk (pixel floppy with a heart label)
     if (nm.disk) {
       const dx = nm.disk.x, dy = nm.disk.y + Math.sin(nm.t * 0.1) * 3;
-      g2.fillStyle = '#8fd4fa'; g2.fillRect(dx, dy, 16, 16);
-      g2.fillStyle = '#5a3d6e'; g2.fillRect(dx + 3, dy, 10, 6);
-      g2.fillStyle = '#fffdfb'; g2.fillRect(dx + 3, dy + 9, 10, 6);
-      g2.fillStyle = '#ff5fb0'; g2.fillRect(dx + 7, dy + 11, 3, 3);
+      g2.fillStyle = gDreamColor('#8fd4fa'); g2.fillRect(dx, dy, 16, 16);
+      g2.fillStyle = gDreamColor('#5a3d6e'); g2.fillRect(dx + 3, dy, 10, 6);
+      g2.fillStyle = gDreamColor('#fffdfb'); g2.fillRect(dx + 3, dy + 9, 10, 6);
+      g2.fillStyle = gDreamColor('#ff5fb0'); g2.fillRect(dx + 7, dy + 11, 3, 3);
       g2.font = "9px 'Jersey 25', 'VT323', monospace";
-      g2.fillStyle = '#ffd400';
+      g2.fillStyle = gDreamColor('#ffd400');
       g2.fillText(trT('SAVE!', 'SAVE !'), dx - 2, dy - 4);
     }
     // active summon banner: the player always knows WHAT to resolve
     if (nm.attack) {
       g2.textAlign = 'center';
-      g2.fillStyle = '#ff5fb0';
+      g2.fillStyle = gDreamColor('#ff5fb0');
       g2.font = "12px 'Jersey 25', 'VT323', monospace";
       const label = { captcha: trT('🤖 SOLVE THE CAPTCHA!!', '🤖 RÉSOLVEZ LE CAPTCHA !!'), resume: trT('📄 STAMP THE RESUME (career window)!!', '📄 TAMPONNEZ LE CV (fenêtre career) !!'), term: trT('🖥️ TYPE `wake up` IN THE TERMINAL!!', '🖥️ TAPEZ `wake up` DANS LE TERMINAL !!'), bsod: trT('💗 PRESS ANY KEY!!', '💗 APPUYEZ SUR UNE TOUCHE !!'), pik: trT('🥡 SMASH THE CAGE!!', '🥡 BRISEZ LA CAGE !!') }[nm.attack.kind] || '';
       g2.fillText(label, G_W / 2, G_H - 10);
@@ -16818,14 +16918,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // entrance veil: the arena dims while the giant drifts in (soft, steady)
     if (nm.intro > 0) {
       g2.globalAlpha = Math.min(0.42, nm.intro / 150 * 0.42);
-      g2.fillStyle = '#1d1135';
+      g2.fillStyle = gDreamColor('#1d1135');
       g2.fillRect(0, 0, G_W, G_H);
       g2.globalAlpha = 1;
       g2.textAlign = 'center';
-      g2.fillStyle = '#ffd400';
+      g2.fillStyle = gDreamColor('#ffd400');
       g2.font = "20px 'Jersey 25', 'VT323', monospace";
       g2.fillText(trT('⚠ NIGHTMARE BOSS ⚠', '⚠ BOSS CAUCHEMAR ⚠'), G_W / 2, 40);
-      g2.fillStyle = '#ffb7e2';
+      g2.fillStyle = gDreamColor('#ffb7e2');
       g2.font = "12px 'Jersey 25', 'VT323', monospace";
       g2.fillText(trT('the sleepwalker grew. a lot.', 'le somnambule a grandi. beaucoup.'), G_W / 2, 58);
       g2.textAlign = 'left';
@@ -16835,14 +16935,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const spr = nmSprite();
     if (spr) {
       if (nm.hitFlash > 0) g2.globalAlpha = 0.75;
-      g2.drawImage(spr, nm.x + jx, nmY, NM_W, NM_H);
+      // even the kaiju dreams in the world's palette
+      g2.drawImage(gWorldSprite(spr), nm.x + jx, nmY, NM_W, NM_H);
       g2.globalAlpha = 1;
     } else { // sprite still loading: a big soft silhouette holds the spot
-      g2.fillStyle = '#3d2350';
+      g2.fillStyle = gDreamColor('#3d2350');
       g2.fillRect(nm.x + jx + 8, nmY + 14, NM_W - 16, NM_H - 20);
     }
     // drifting zzz — it IS asleep, after all
-    g2.fillStyle = '#c3aee0';
+    g2.fillStyle = gDreamColor('#c3aee0');
     g2.font = "12px 'Jersey 25', 'VT323', monospace";
     const zf = (nm.t % 120) / 120;
     g2.globalAlpha = 1 - zf;
@@ -16856,11 +16957,11 @@ document.addEventListener('DOMContentLoaded', () => {
       const tw = g2.measureText(nm.say.text).width;
       const by = Math.min(G_H - 26, nmY + NM_H + 6);
       const bx = Math.max(6, Math.min(G_W - tw - 22, nm.x + NM_W / 2 - tw / 2 - 8));
-      g2.fillStyle = '#14020e';
+      g2.fillStyle = gDreamColor('#14020e');
       g2.fillRect(bx - 2, by - 2, tw + 20, 20);
-      g2.fillStyle = '#fff4fb';
+      g2.fillStyle = gDreamColor('#fff4fb');
       g2.fillRect(bx, by, tw + 16, 16);
-      g2.fillStyle = '#5a3d6e';
+      g2.fillStyle = gDreamColor('#5a3d6e');
       g2.fillText(nm.say.text, bx + 8, by + 12);
     }
     // the weak point is now UNMISSABLE: a big pixel heart, white
@@ -16869,11 +16970,11 @@ document.addEventListener('DOMContentLoaded', () => {
       const wx = nm.x + nm.weak.ox, wy = nmY + nm.weak.oy;
       const pulse = 0.75 + Math.sin(GAME.frame * 0.09) * 0.2;
       g2.globalAlpha = pulse;
-      g2.fillStyle = '#ffd400';
+      g2.fillStyle = gDreamColor('#ffd400');
       g2.fillRect(wx - 11, wy - 11, 24, 24); // gold halo
-      g2.fillStyle = '#ffffff';
+      g2.fillStyle = gDreamColor('#ffffff');
       g2.fillRect(wx - 9, wy - 9, 20, 20); // white outline
-      g2.fillStyle = '#ff2d78'; // the heart (chunky pixel version)
+      g2.fillStyle = gDreamColor('#ff2d78'); // the heart (chunky pixel version)
       g2.fillRect(wx - 7, wy - 6, 6, 6);
       g2.fillRect(wx + 2, wy - 6, 6, 6);
       g2.fillRect(wx - 7, wy - 2, 15, 6);
@@ -16882,35 +16983,35 @@ document.addEventListener('DOMContentLoaded', () => {
       g2.globalAlpha = 1;
       g2.textAlign = 'center';
       g2.font = "10px 'Jersey 25', 'VT323', monospace";
-      g2.fillStyle = '#14020e';
+      g2.fillStyle = gDreamColor('#14020e');
       g2.fillRect(wx - 26, wy - 26, 54, 12);
-      g2.fillStyle = '#ffd400';
+      g2.fillStyle = gDreamColor('#ffd400');
       g2.fillText(trT('RAM ME!!', 'FONCE !!'), wx + 1, wy - 17);
       g2.textAlign = 'left';
     }
     // your auto-fire heart-bolts, mid-flight
     (nm.bolts || []).forEach((bl) => {
-      g2.fillStyle = '#ff5f9e';
+      g2.fillStyle = gDreamColor('#ff5f9e');
       g2.fillRect(bl.x, bl.y, 7, 5);
-      g2.fillStyle = '#ffd8ee';
+      g2.fillStyle = gDreamColor('#ffd8ee');
       g2.fillRect(bl.x + 1, bl.y + 1, 3, 2);
     });
     // falling exceptions
-    g2.fillStyle = '#ffe98a';
+    g2.fillStyle = gDreamColor('#ffe98a');
     g2.font = "12px 'Jersey 25', 'VT323', monospace";
     nm.shots.forEach((s) => g2.fillText('!', s.x, s.y));
     // boss hp bar: TOP CENTER, its own lane — the left HUD keeps
     // hearts/coins/weapon without anyone sitting on anyone
     const hpw = 170;
     const hx = G_W / 2 - hpw / 2;
-    g2.fillStyle = '#14020e';
+    g2.fillStyle = gDreamColor('#14020e');
     g2.fillRect(hx - 2, 12, hpw + 4, 12);
-    g2.fillStyle = '#3d2350';
+    g2.fillStyle = gDreamColor('#3d2350');
     g2.fillRect(hx, 14, hpw, 8);
-    g2.fillStyle = '#ff5f9e';
+    g2.fillStyle = gDreamColor('#ff5f9e');
     g2.fillRect(hx, 14, hpw * Math.max(0, nm.hp / 12), 8);
     g2.textAlign = 'center';
-    g2.fillStyle = '#ffb7e2';
+    g2.fillStyle = gDreamColor('#ffb7e2');
     g2.font = "10px 'Jersey 25', 'VT323', monospace";
     g2.fillText(trT('sleepwalker.exe', 'somnambule.exe'), G_W / 2, 10);
     g2.textAlign = 'left';
@@ -16924,9 +17025,9 @@ document.addEventListener('DOMContentLoaded', () => {
       const ftw = g2.measureText(f.text).width;
       const fbx = Math.max(4, Math.min(G_W - ftw - 16, fx2 - ftw / 2 - 6));
       g2.globalAlpha = 1 - p * 0.7;
-      g2.fillStyle = '#f0509f';
+      g2.fillStyle = gDreamColor('#f0509f');
       g2.fillRect(fbx - 2, fy - 12, ftw + 14, 17);
-      g2.fillStyle = '#ffffff';
+      g2.fillStyle = gDreamColor('#ffffff');
       g2.fillText(f.text, fbx + 5, fy);
       g2.globalAlpha = 1;
     }
@@ -17084,10 +17185,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (fx.skill === 'ctrl_z') {
       // the bug rewinds right out of the timeline
       g2.globalAlpha = 1 - t;
-      g2.fillStyle = '#e05f8f';
+      g2.fillStyle = gDreamColor('#e05f8f');
       g2.fillRect(fx.x + t * 90, fx.y, fx.w, fx.h);
       g2.globalAlpha = 1;
-      g2.fillStyle = '#c3aee0';
+      g2.fillStyle = gDreamColor('#c3aee0');
       g2.font = "11px 'Jersey 25', 'VT323', monospace";
       g2.fillText('⌫ undo', cx, fx.y - 6);
     } else if (fx.skill === 'rm_rf') {
@@ -17096,29 +17197,29 @@ document.addEventListener('DOMContentLoaded', () => {
         g2.fillRect(cx - 8 + (k % 4) * 5, cy + t * (18 + k * 4), 3, 3);
       }
     } else if (fx.skill === 'blame') {
-      g2.fillStyle = '#ffd400';
+      g2.fillStyle = gDreamColor('#ffd400');
       g2.font = "11px 'Jersey 25', 'VT323', monospace";
       g2.fillText('BLAME!', cx, fx.y - 6 - t * 8);
       g2.globalAlpha = 1 - t; // slinks away in shame
-      g2.fillStyle = '#e05f8f';
+      g2.fillStyle = gDreamColor('#e05f8f');
       g2.fillRect(fx.x, fx.y + t * 10, fx.w, Math.max(2, fx.h * (1 - t)));
       g2.globalAlpha = 1;
     } else if (fx.skill === 'four04') {
       g2.globalAlpha = 1 - t;
-      g2.fillStyle = '#c3aee0';
+      g2.fillStyle = gDreamColor('#c3aee0');
       g2.font = "13px 'Jersey 25', 'VT323', monospace";
       g2.fillText('404', cx, cy - t * 14);
       g2.globalAlpha = 1;
     } else if (fx.skill === 'zip') {
       const squash = Math.max(2, fx.h * (1 - t * 1.4)); // flatten…
-      g2.fillStyle = '#e05f8f';
+      g2.fillStyle = gDreamColor('#e05f8f');
       g2.fillRect(fx.x, fx.y + fx.h - squash, fx.w, squash);
-      if (t > 0.7) { g2.fillStyle = '#fff7d1'; g2.fillRect(cx - 1, fx.y + fx.h - 4, 3, 3); } // …pop
+      if (t > 0.7) { g2.fillStyle = gDreamColor('#fff7d1'); g2.fillRect(cx - 1, fx.y + fx.h - 4, 3, 3); } // …pop
     } else if (fx.skill === 'duck') {
       g2.font = "12px 'Jersey 25', 'VT323', monospace";
       g2.fillText('🦆', cx - 12, cy - t * 16);
       g2.globalAlpha = 1 - t; // it leaves. voluntarily. changed.
-      g2.fillStyle = '#e05f8f';
+      g2.fillStyle = gDreamColor('#e05f8f');
       g2.fillRect(fx.x + t * 50, fx.y, fx.w, fx.h);
       g2.globalAlpha = 1;
     } else if (fx.skill === 'lint') {
@@ -17127,60 +17228,60 @@ document.addEventListener('DOMContentLoaded', () => {
       g2.fillText('🌸', cx, cy + 4 - t * 10);
       g2.globalAlpha = 1;
       for (let k = 0; k < 5; k++) {
-        g2.fillStyle = '#ffd8ee';
+        g2.fillStyle = gDreamColor('#ffd8ee');
         const a = t * 6 + k * 1.26;
         g2.fillRect(cx + Math.cos(a) * 12, cy + Math.sin(a) * 9, 2, 2);
       }
     } else if (fx.skill === 'sudo') { // it bows, then simply complies
-      g2.fillStyle = '#ffd400';
+      g2.fillStyle = gDreamColor('#ffd400');
       g2.font = "10px 'Jersey 25', 'VT323', monospace";
       g2.fillText('👑', cx, fx.y - 6);
-      g2.fillStyle = '#e05f8f';
+      g2.fillStyle = gDreamColor('#e05f8f');
       g2.fillRect(fx.x, fx.y + t * fx.h, fx.w, Math.max(2, fx.h * (1 - t)));
     } else if (fx.skill === 'forkb') { // one bug, two exits
-      g2.fillStyle = '#e05f8f';
+      g2.fillStyle = gDreamColor('#e05f8f');
       g2.globalAlpha = 1 - t;
       g2.fillRect(fx.x - t * 40, fx.y, fx.w, fx.h);
       g2.fillRect(fx.x + t * 40, fx.y, fx.w, fx.h);
       g2.globalAlpha = 1;
-      g2.fillStyle = '#c3aee0';
+      g2.fillStyle = gDreamColor('#c3aee0');
       g2.font = "11px 'Jersey 25', 'VT323', monospace";
       g2.fillText('🍴 fork()', cx, fx.y - 6);
     } else if (fx.skill === 'bsod') { // a tiny blue screen of reconsideration
-      g2.fillStyle = '#3b6fd4';
+      g2.fillStyle = gDreamColor('#3b6fd4');
       g2.fillRect(fx.x - 3, fx.y - 3, fx.w + 6, fx.h + 6);
-      g2.fillStyle = '#ffffff';
+      g2.fillStyle = gDreamColor('#ffffff');
       g2.font = "9px 'Jersey 25', 'VT323', monospace";
       g2.fillText(':(', cx, cy + 3);
       g2.globalAlpha = t;
-      g2.fillStyle = '#0d1117';
+      g2.fillStyle = gDreamColor('#0d1117');
       g2.fillRect(fx.x - 3, fx.y - 3, fx.w + 6, (fx.h + 6) * t);
       g2.globalAlpha = 1;
     } else if (fx.skill === 'cache') { // motion lines: the world snaps back
-      g2.strokeStyle = '#8fd4fa';
+      g2.strokeStyle = gDreamColor('#8fd4fa');
       for (let k = 0; k < 3; k++) {
         g2.beginPath();
         g2.moveTo(cx + 8 + k * 7, cy - 6 + k * 6);
         g2.lineTo(cx + 26 + k * 7 + t * 18, cy - 6 + k * 6);
         g2.stroke();
       }
-      g2.fillStyle = '#c3aee0';
+      g2.fillStyle = gDreamColor('#c3aee0');
       g2.font = "10px 'Jersey 25', 'VT323', monospace";
       g2.fillText('🧊 CACHE HIT', cx, fx.y - 6);
     } else if (fx.skill === 'defrag') { // tidied into a shiny coin
       g2.globalAlpha = 1 - t;
-      g2.fillStyle = '#e05f8f';
+      g2.fillStyle = gDreamColor('#e05f8f');
       g2.fillRect(fx.x, fx.y, fx.w, fx.h);
       g2.globalAlpha = 1;
-      g2.fillStyle = '#ffd400';
+      g2.fillStyle = gDreamColor('#ffd400');
       g2.fillRect(cx - 3 + Math.sin(t * 9) * 2, cy - 3 - t * 8, 6, 6);
     } else { // every other talent gets a labeled send-off
       const meta = PIK_SKILL_META[fx.skill] || { icon: '✨', name: 'PIK' };
       g2.globalAlpha = 1 - t;
-      g2.fillStyle = '#e05f8f';
+      g2.fillStyle = gDreamColor('#e05f8f');
       g2.fillRect(fx.x, fx.y + t * 8, fx.w, Math.max(2, fx.h * (1 - t)));
       g2.globalAlpha = 1;
-      g2.fillStyle = '#c3aee0';
+      g2.fillStyle = gDreamColor('#c3aee0');
       g2.font = "11px 'Jersey 25', 'VT323', monospace";
       g2.fillText(meta.icon + ' ' + meta.name, cx, fx.y - 6 - t * 10);
     }
@@ -17206,20 +17307,20 @@ document.addEventListener('DOMContentLoaded', () => {
       const hop = Math.abs(Math.sin(GAME.frame * 0.18 + p.phase)) * (GAME.y > 0 ? 7 : 3);
       const by = G_GROUND - (bh + 3) - hop;
       const mx = bx + Math.round(bw / 2) - 1; // stem anchor
-      g2.fillStyle = '#57c689'; // stem
+      g2.fillStyle = gDreamColor('#57c689'); // stem
       g2.fillRect(mx, by - 5, 2, 5);
-      if (p.stage === 0) { g2.fillStyle = '#7ddba4'; g2.fillRect(mx - 2, by - 7, 3, 2); }
-      else if (p.stage === 1) { g2.fillStyle = p.dark; g2.fillRect(mx - 2, by - 8, 4, 3); }
+      if (p.stage === 0) { g2.fillStyle = gDreamColor('#7ddba4'); g2.fillRect(mx - 2, by - 7, 3, 2); }
+      else if (p.stage === 1) { g2.fillStyle = gDreamColor(p.dark); g2.fillRect(mx - 2, by - 8, 4, 3); }
       else {
-        g2.fillStyle = '#ffffff';
+        g2.fillStyle = gDreamColor('#ffffff');
         g2.fillRect(mx - 3, by - 8, 2, 2); g2.fillRect(mx + 2, by - 8, 2, 2); g2.fillRect(mx - 1, by - 10, 3, 2);
-        g2.fillStyle = '#ffd400'; g2.fillRect(mx - 1, by - 8, 3, 2);
+        g2.fillStyle = gDreamColor('#ffd400'); g2.fillRect(mx - 1, by - 8, 3, 2);
       }
-      g2.fillStyle = p.color; // glowing jelly body
+      g2.fillStyle = gDreamColor(p.color); // glowing jelly body (dream-dyed)
       g2.fillRect(bx, by, bw, bh); g2.fillRect(bx + 1, by + bh, bw - 2, 2);
-      if (p.form === 3) { g2.fillStyle = '#ffd400'; g2.fillRect(bx - 1, by - 1, bw + 2, 1); } // apex gold rim
+      if (p.form === 3) { g2.fillStyle = gDreamColor('#ffd400'); g2.fillRect(bx - 1, by - 1, bw + 2, 1); } // apex gold rim
       g2.fillStyle = 'rgba(255,255,255,0.7)'; g2.fillRect(bx + 1, by + 1, 2, 2);
-      g2.fillStyle = '#14020e'; // eyes
+      g2.fillStyle = gDreamColor('#14020e'); // eyes
       g2.fillRect(bx + 2, by + Math.round(bh * 0.38), 2, 2);
       g2.fillRect(bx + bw - 4, by + Math.round(bh * 0.38), 2, 2);
       if (p.hat) { // hidden species wear their hats into battle, obviously
@@ -18891,6 +18992,15 @@ document.addEventListener('DOMContentLoaded', () => {
     cv.width = W * 2; cv.height = H * 2;
     const x = cv.getContext('2d');
     x.scale(2, 2);
+    // a photo taken inside a dream develops in the dream's chemistry —
+    // same --dream-grade the stage wears on screen (browsers without
+    // canvas filters just get the honest daylight print)
+    try {
+      if (typeof dreamWorld !== 'undefined' && dreamWorld && typeof x.filter === 'string') {
+        const grade = (getComputedStyle(document.documentElement).getPropertyValue('--dream-grade') || '').trim();
+        if (grade && grade !== 'none') x.filter = grade;
+      }
+    } catch (e) { /* the darkroom stays daylight */ }
     // the banded pastel sky, faithfully
     const bands = [['#ffd9ec', 0], ['#ffd9ec', 0.13], ['#fde0f1', 0.13], ['#fde0f1', 0.25], ['#f3e0f8', 0.25], ['#f3e0f8', 0.37], ['#e6e4fb', 0.37], ['#e6e4fb', 0.5], ['#d9eafc', 0.5], ['#d9eafc', 0.63], ['#cfeffc', 0.63], ['#cfeffc', 0.78], ['#c8f3f7', 0.78], ['#c8f3f7', 1]];
     const g = x.createLinearGradient(0, 0, 0, H);
