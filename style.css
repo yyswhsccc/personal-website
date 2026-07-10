@@ -9377,32 +9377,29 @@ html[data-theme="dark"].dream-bsod ::selection { background: #fff; color: #0a23a
 @keyframes bsod-face-pop {
   40% { transform: scale(1.16) rotate(-4deg); }
 }
-/* v98.3: the crashed desktop's DOOR POLICY. dead icons stay VISIBLE —
-   memorials, gray and occasionally glitching — and clicking one files
-   its own complaint (JS). the window rule is the load-bearing one: the
-   app's session-restore reopens windows AFTER the dream's JS sweep, so
-   CSS (which doesn't care about timing) is what keeps the crash a
-   crash. allowed on screen: the survivors (terminal, journal) and the
-   two exempted witnesses (crash cam, slime_run). */
+/* v99.3: the crashed desktop's DOOR POLICY. the desktop itself is BARE
+   — only the two survivor icons remain; every other program was
+   evacuated to the START menu, where clicking one still files its own
+   complaint (the openWindow gate catches every entry point). the
+   window rule is the load-bearing one: the app's session-restore
+   reopens windows AFTER the dream's JS sweep, so CSS (which doesn't
+   care about timing) is what keeps the crash a crash. allowed on
+   screen: the survivors (terminal, journal) and the two exempted
+   witnesses (crash cam, slime_run). */
 html.dream-bsod .window:not(#win-terminal):not(#win-dreamlog):not(#win-game):not(#win-live) { display: none !important; }
-html.dream-bsod .desktop-icon-btn {
-  filter: grayscale(1) brightness(0.72);
-  opacity: 0.6;
-  cursor: not-allowed;
-  animation: bsod-dead-icon 7s steps(1) infinite;
-}
-@keyframes bsod-dead-icon {
-  0%, 88% { transform: none; }
-  89%, 90% { transform: translateX(-2px) skewX(-4deg); }
-  91%, 93% { transform: translateX(1px); }
-  94%, 100% { transform: none; }
-}
-/* a crash is fullscreen or it is nothing: the bio sidebar and fan wall
-   stand down too. (all of it restores when the dream ends.) */
+html.dream-bsod .desktop-icon-btn { display: none; }
+/* a crash is fullscreen or it is nothing: sidebar, fan wall, the desk
+   pikmin crew and every desk trinket stand down too. (all of it
+   restores when the dream ends.) */
 html.dream-bsod .desktop-sidebar,
-html.dream-bsod #fan-wall { display: none !important; }
+html.dream-bsod #fan-wall,
+html.dream-bsod #desk-pik-layer,
+html.dream-bsod .desk-clock,
+html.dream-bsod .desk-note,
+html.dream-bsod .desk-sticker { display: none !important; }
 html.dream-bsod .desktop-icon-btn[data-window="win-terminal"],
 html.dream-bsod .desktop-icon-btn[data-window="win-dreamlog"] {
+  display: flex;
   filter: none;
   opacity: 1;
   cursor: inherit;
@@ -9632,11 +9629,14 @@ html.dream-scp .live-stage .slime-pet { visibility: hidden !important; }
 }
 /* the haul: a porter pikmin lands on the title bar and the whole
    window is carried off, lifted first, then away down the stage */
-.bsod-dragged { pointer-events: none; animation: bsod-drag-away 1.7s ease-in forwards !important; }
+/* v99.3: the haul is SLOW now — lift, wobble, and a long visible
+   carry off the stage (you should be able to follow every window) */
+.bsod-dragged { pointer-events: none; animation: bsod-drag-away 3.4s ease-in forwards !important; }
 @keyframes bsod-drag-away {
   0% { transform: translate(0, 0) rotate(0deg); }
-  18% { transform: translate(6px, -16px) rotate(-3deg); }
-  100% { transform: translate(46vw, 112vh) rotate(16deg); opacity: 0.85; }
+  12% { transform: translate(4px, -24px) rotate(-3deg); }
+  22% { transform: translate(10px, -20px) rotate(2deg); }
+  100% { transform: translate(52vw, 118vh) rotate(14deg); opacity: 0.9; }
 }
 .bsod-dragger {
   position: absolute;

@@ -7534,7 +7534,9 @@ document.addEventListener('DOMContentLoaded', () => {
       // its own complaint. survivors pass; the anchor icon (moodle) is
       // caught here too, before it can navigate away.
       const iconGuard = (e) => {
-        const btn = e.target && e.target.closest && e.target.closest('.desktop-icon-btn');
+        // v99.3: the guard also covers the START menu's external link —
+        // buttons there go through openWindow (the gate catches those)
+        const btn = e.target && e.target.closest && e.target.closest('.desktop-icon-btn, a.start-menu-item[href]');
         if (!btn || !dreamWorld) return;
         const winId = btn.dataset.window;
         if (winId === 'win-terminal' || winId === 'win-dreamlog') return;
@@ -7570,7 +7572,7 @@ document.addEventListener('DOMContentLoaded', () => {
           title: trT('☠ DESKTOP.EXE — fatal nap', '☠ DESKTOP.EXE — sieste fatale'), force: true, cls: 'dream-dlg-err',
           x: window.innerWidth / 2 - 150, y: Math.max(64, window.innerHeight * 0.14),
           lines: [
-            trT('the desktop has stopped working. the icons remain as memorials — clicking one files its own complaint.', 'le bureau a cessé de fonctionner. les icônes restent en mémorial — cliquer dépose sa propre réclamation.'),
+            trT('the desktop has stopped working. all programs were evacuated to the START menu — asking for one there still files its own complaint.', 'le bureau a cessé de fonctionner. tous les programmes ont été évacués vers le menu DÉMARRER — les y demander dépose toujours sa propre réclamation.'),
             trT('survivors: terminal.exe + the dream journal. exempt by ancient law: the CRASH CAM and slime_run.exe (they never stopped running) ♡', 'survivants : terminal.exe + le journal de rêve. exemptés par la loi ancienne : la CRASH CAM et slime_run.exe (ils n\'ont jamais cessé de tourner) ♡')
           ],
           buttons: [
@@ -11383,10 +11385,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // the hero narrates the operation, one order at a time
     DW_BSOD_HERO_LINES.forEach((ln, i) => {
       if (!i) return;
-      dT(() => { if (document.body.contains(bubble)) { bubble.textContent = trT(...ln); playTone(660 + i * 40, 'triangle', 0.06, 0, 0.03); } }, 2600 * i);
+      dT(() => { if (document.body.contains(bubble)) { bubble.textContent = trT(...ln); playTone(660 + i * 40, 'triangle', 0.06, 0, 0.03); } }, 4300 * i);
     });
     const W0 = Math.max(560, par.getBoundingClientRect().width);
-    const x0 = -W0 - 60, x1 = window.innerWidth + 120, DUR = 16000, t0 = Date.now();
+    // v99.3: the march is SLOW now (a haul, not a sprint), and it ENDS
+    // ON SCREEN — the parade parks at the right edge so the HEADCOUNT
+    // scene plays in full view instead of in the wings
+    const x0 = -W0 - 60, x1 = Math.max(x0 + 400, window.innerWidth - W0 + 20), DUR = 28000, t0 = Date.now();
     let lastBeep = 0, lastChirp = 0;
     const iv = dI(() => {
       const p = Math.min(1, (Date.now() - t0) / DUR);
@@ -11397,7 +11402,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // porter each, a few at a time (a crew works in shifts)
       let lifted = 0;
       const open = document.querySelectorAll('.dream-dlg:not(.bsod-dragged)');
-      for (let i = 0; i < open.length && lifted < 3; i++) {
+      for (let i = 0; i < open.length && lifted < 2; i++) {
         const d = open[i];
         const r = d.getBoundingClientRect();
         if (r.left + r.width / 2 < front) {
@@ -11409,7 +11414,7 @@ document.addEventListener('DOMContentLoaded', () => {
           try { porter.src = pikSprite(hueColor(206 + Math.floor(Math.random() * 20)), Math.floor(Math.random() * 3), null); } catch (e) { /* the porter called in sick */ }
           d.appendChild(porter);
           playTone(520 + Math.random() * 260, 'triangle', 0.05, 0, 0.03);
-          dT(() => { try { d.remove(); } catch (e) { /* hauled */ } }, 1700);
+          dT(() => { try { d.remove(); } catch (e) { /* hauled */ } }, 3400);
         }
       }
       // the crew talks while it works: every second or so, one to three
@@ -11459,11 +11464,11 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('.dream-dlg:not(.bsod-dragged)').forEach((d, i) => {
           dT(() => {
             d.classList.add('bsod-dragged');
-            dT(() => { try { d.remove(); } catch (e) { /* hauled late */ } }, 1700);
-          }, i * 120);
+            dT(() => { try { d.remove(); } catch (e) { /* hauled late */ } }, 3400);
+          }, i * 240);
         });
         // …then the hero counts heads, and the count comes up short
-        dT(() => dwBsodHeadcount(par, bubble, W0, f), 1900);
+        dT(() => dwBsodHeadcount(par, bubble, W0, f), 3800);
       }
     }, 60);
   }
@@ -11476,9 +11481,9 @@ document.addEventListener('DOMContentLoaded', () => {
     bubble.textContent = trT('HEADCOUNT!! …we are one (1) pik short.', 'À L\'APPEL !! …il nous manque un (1) pik.');
     playTone(392, 'square', 0.12, 0, 0.05);
     playTone(330, 'square', 0.14, 0.16, 0.05);
-    const startX = parseFloat(par.style.left) || (window.innerWidth + 120);
+    const startX = parseFloat(par.style.left) || (window.innerWidth - W0 + 20);
     const targetX = Math.max(-100, (f.bsodStragglerX || 100) - W0 + 70);
-    const t0 = Date.now(), BACK = 2600;
+    const t0 = Date.now(), BACK = 3600;
     const iv = dI(() => {
       const p = Math.min(1, (Date.now() - t0) / BACK);
       par.style.left = (startX + (targetX - startX) * p) + 'px';
@@ -11497,7 +11502,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (img) par.insertBefore(img, par.firstChild);
         try { nest.remove(); } catch (e) { /* rejoined */ }
         // and off they march, all together this time
-        const t1 = Date.now(), OUT = 2400;
+        const t1 = Date.now(), OUT = 3200;
         const sx = parseFloat(par.style.left) || targetX, ex = window.innerWidth + 160;
         const iv2 = dI(() => {
           const q = Math.min(1, (Date.now() - t1) / OUT);
