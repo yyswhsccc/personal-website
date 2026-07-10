@@ -4819,8 +4819,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ---- v83: dream shell — while the site dreams, the waking shell is
-    // sealed. only the current world's 21-word dialect gets through. ----
-    if (dreamWorld && DREAM_SHELL[dreamWorld.id]) { dreamShellRun(cmd); return; }
+    // sealed. only the current world's dialect gets through. (v99.2:
+    // `dream` itself stays awake — it is the CHANNEL SWITCH, so you can
+    // hop worlds without waking up first.) ----
+    if (dreamWorld && DREAM_SHELL[dreamWorld.id] && cmd !== 'dream') { dreamShellRun(cmd); return; }
 
     // ---- v85.1: a pending "really push THE CHARIOT out?" answer rides first ----
     if (termTarotPending && Date.now() - termTarotPending.at < 60000) {
@@ -5285,7 +5287,23 @@ document.addEventListener('DOMContentLoaded', () => {
       // the hidden dream valve: seven worlds, one shell. not in `help` —
       // finding it IS the achievement (spiritually)
       if (resolvedTheme() !== 'dark') { termLine(trT('dream: requires the dark (try `theme dark` — dreams are shy)', 'dream : exige la nuit (essayez `theme dark` — les rêves sont timides)'), 't-err'); return; }
-      if (dreamActive()) { termLine(trT('already dreaming — knock on the habitat to pop it ♡', 'déjà en plein rêve — toquez sur l\'habitat pour l\'éclater ♡'), 't-dim'); return; }
+      // v99.2: the whole argument counts ("scp foundation", "windows 95")
+      const dreamQuery = args.join(' ');
+      if (dreamActive()) {
+        // channel switching: `dream <other world>` hops without waking
+        if (!dreamQuery) { termLine(trT('already dreaming — `dream <name>` switches the channel, knocking on the habitat wakes up ♡', 'déjà en plein rêve — `dream <nom>` change de chaîne, toquer sur l\'habitat réveille ♡'), 't-dim'); return; }
+        const w2 = dreamPick(dreamQuery);
+        if (!w2) { termLine(trT(`dream: never dreamed of "${dreamQuery}" (try: win95 · scp · matrix · gameboy · geo · bsod · amber)`, `dream : jamais rêvé de « ${dreamQuery} » (essayez : win95 · scp · matrix · gameboy · geo · bsod · amber)`), 't-err'); return; }
+        if (dreamWorld && dreamWorld.id === w2.id) { termLine(trT('you are already IN that dream. look around ♡', 'tu es déjà DANS ce rêve. regarde autour de toi ♡'), 't-dim'); return; }
+        termLine(trT(`📺 changing channel → ${w2.icon} ${w2.id} (do not adjust your set)`, `📺 changement de chaîne → ${w2.icon} ${w2.id} (ne réglez pas votre poste)`), 't-accent');
+        dreamEnd('swap');
+        store.set('yos-dream-cd', 0);
+        setTimeout(() => {
+          if (slimeBody) slimeBody.classList.add('is-ghost-hidden');
+          startDreamWalk(w2);
+        }, 800);
+        return;
+      }
       if (!args[0]) {
         termLine(trT('the slime\'s seven dream worlds:', 'les sept mondes oniriques du slime :'), 't-accent');
         const bag = store.get('yos-dream-souvenirs', {});
@@ -5299,8 +5317,8 @@ document.addEventListener('DOMContentLoaded', () => {
         termLine(trT('⚠ inside a dream, this shell forgets its own commands — each world speaks 21 secret words instead', '⚠ dans un rêve, ce shell oublie ses propres commandes — chaque monde parle 21 mots secrets à la place'), 't-accent');
         return;
       }
-      const w = dreamPick(args[0]);
-      if (!w) { termLine(trT(`dream: never dreamed of "${args[0]}" (yet)`, `dream : jamais rêvé de « ${args[0]} » (pour l'instant)`), 't-err'); return; }
+      const w = dreamPick(dreamQuery);
+      if (!w) { termLine(trT(`dream: never dreamed of "${dreamQuery}" (try: win95 · scp · matrix · gameboy · geo · bsod · amber)`, `dream : jamais rêvé de « ${dreamQuery} » (essayez : win95 · scp · matrix · gameboy · geo · bsod · amber)`), 't-err'); return; }
       if (document.body.classList.contains('terminal-only')) { termLine(trT('the door hates redecorating. come back once you\'re inside.', 'la porte déteste qu\'on redécore. revenez une fois entré·e.'), 't-err'); return; }
       store.set('yos-dream-cd', 0);
       if (slimeBody) slimeBody.classList.add('is-ghost-hidden');
@@ -7898,8 +7916,34 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const DREAM_WORLDS = [DREAM_95, DREAM_SCP, DREAM_MATRIX, DREAM_GB, DREAM_GEO, DREAM_BSOD, DREAM_AMBER];
 
+  /* v99.2: dreamPick understands humans now. `dream <SCP Foundation>`,
+     `dream blue`, `dream 蓝屏`, `dream windows 95` — brackets stripped,
+     case ignored, aliases welcome. exact ids still match first (the
+     resume path depends on it). */
+  const DREAM_ALIASES = {
+    win95: ['win95', '95', 'windows', 'windows95', 'beige', 'retro', 'clippy'],
+    scp: ['scp', 'foundation', 'scpfoundation', 'site19', '173', '999', 'contain', '基金会'],
+    matrix: ['matrix', 'slimetrix', 'neo', 'rain', 'redpill', 'rabbit', '矩阵', '黑客'],
+    gameboy: ['gameboy', 'gb', 'dmg', 'dreamboy', 'cartridge', '游戏机'],
+    geo: ['geo', 'geocities', '1998', 'webring', 'guestbook', '主页'],
+    bsod: ['bsod', 'blue', 'bluescreen', 'bluedream', 'crash', '蓝屏'],
+    amber: ['amber', 'mainframe', '1970', 'cobol', '370', 'punchcard', 'printer', '大型机']
+  };
   function dreamPick(forceId) {
-    if (forceId) return DREAM_WORLDS.find((w) => w.id === forceId) || null;
+    if (forceId) {
+      const exact = DREAM_WORLDS.find((w) => w.id === forceId);
+      if (exact) return exact;
+      const flat = String(forceId).toLowerCase()
+        .replace(/[<>«»"'`。，.,!?！？]/g, '')
+        .replace(/[\s_-]+/g, '');
+      if (flat.length < 2) return null;
+      for (const id of Object.keys(DREAM_ALIASES)) {
+        if (flat === id || DREAM_ALIASES[id].some((a) => flat === a || flat.indexOf(a) !== -1)) {
+          return DREAM_WORLDS.find((w) => w.id === id) || null;
+        }
+      }
+      return null;
+    }
     const last = store.get('yos-dream-last', null);
     const fresh = DREAM_WORLDS.filter((w) => w.id !== last);
     return fresh[Math.floor(Math.random() * fresh.length)];
