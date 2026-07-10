@@ -7566,39 +7566,104 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  /* v98: the BSOD face mood engine. it drifts through feelings on its
-     own (a crash has feelings about being a crash) and clicking always
-     comforts it one tier. consoling it to :D once pays fans; after that
-     it keeps living — sometimes it remembers the crash and needs
-     consoling again. that's the whole relationship. */
+  /* v98.2: the BSOD face is a kaomoji JUKEBOX — 132 moods in three
+     tiers. the original consolation arc is untouched (:( climbs to :D,
+     once per dream, +2 fans) — but a consoled face never repeats
+     itself: every click deals the next card from a shuffled 132-face
+     deck (a full lap before any reshuffle), while the ambient drift
+     keeps wandering between tiers on its own. every face you've ever
+     met is remembered across dreams ('yos-bsod-faces'), with milestone
+     toasts at 25, 75 and the full 132. */
   const DW_BSOD_MOODS = [
-    [':(', ':|', ':/', 'T_T', 'x_x'], // tier 0 — crashed
-    [':)', ':3', ';)', ':P', '^_^'],  // tier 1 — recovering
-    [':D', '=D', ':D ♡']              // tier 2 — fully hugged
+    // tier 0 — crashed (44)
+    [':(', ':\'(', ':((', ':[', ':{', ':c', ':C', '=(', '8(', ';(', '>:(', ':-(', 'D:', 'Dx',
+     'T_T', 'T-T', ';_;', 'Q_Q', 'u_u', 'v_v', '-_-', '._.', ',_,', 'x_x', 'X_X', '+_+', '@_@',
+     '>_<', '>.<', ':/', ':\\', ':|', ':-|', '=|', ':S', ':$', 'x(', 'X(', '(;_;)', '(T_T)',
+     '~_~', 'z_z', '-.-', '0x:('],
+    // tier 1 — recovering (44)
+    [':)', ':-)', '=)', ':]', ':}', 'c:', '(:', '8)', 'B)', 'B-)', ';)', ';-)', '~_^', '^_~',
+     ':3', '=3', ';3', 'x3', ':P', ':p', '=P', 'xP', ':b', ':-P', ';P', '^_^', '^-^', '(^_^)',
+     'o_o', 'O_o', 'o_O', 'O_O', '0_0', ':o', ':O', '=O', 'owo', 'OwO', 'uwu', 'UwU',
+     '-w-', '=w=', '(\'-\')', '(o_o)'],
+    // tier 2 — fully hugged (44)
+    [':D', ':-D', '=D', '8D', 'xD', 'XD', ';D', '>:D', ':DD', '=DD', '\\o/', '^o^', '^0^',
+     '(^o^)', 'n_n', 'n.n', '^u^', '^w^', '>w<', '\\(^o^)', '(^o^)/', '♡_♡', '♡o♡', '♡w♡',
+     '^♡^', '(♡_♡)', ':D ♡', '♡ :D', '<3', ':*', ';*', ':-*', '*_*', '*o*', '*w*', '$_$',
+     'd(^_^)', '(^_^)b', '\\(:D)/', ':3♡', '=^_^=', '!!:D', ':D!!', '\\^o^/']
   ];
+  const DW_BSOD_ALL = DW_BSOD_MOODS[0].concat(DW_BSOD_MOODS[1], DW_BSOD_MOODS[2]);
+  function dwBsodFaceTier(f) {
+    return DW_BSOD_MOODS[2].indexOf(f) >= 0 ? 2 : DW_BSOD_MOODS[1].indexOf(f) >= 0 ? 1 : 0;
+  }
   function dwBsodFace(face) {
     if (!face) return;
     let tier = 0;
-    const setFace = (t) => {
-      tier = t;
-      const pool = DW_BSOD_MOODS[t];
-      let next = pool[Math.floor(Math.random() * pool.length)];
-      if (next === face.textContent) next = pool[(pool.indexOf(next) + 1) % pool.length];
-      face.textContent = next;
+    let comfort = 0; // the consolation ladder: three clicks to :D, drift can't shortcut it
+    let deck = [];
+    // the lifetime mood ledger — persists across dreams and visits
+    const remember = (f) => {
+      try {
+        const seen = store.get('yos-bsod-faces', {});
+        if (seen[f]) return;
+        seen[f] = 1;
+        store.set('yos-bsod-faces', seen);
+        const n = Object.keys(seen).length;
+        if (n === 25) showToast(trT('25 moods logged. the blue screen contains multitudes.', '25 humeurs consignées. l\'écran bleu est plein de multitudes.'));
+        else if (n === 75) showToast(trT('75/132 moods. you are basically its therapist now.', '75/132 humeurs. à ce stade tu es sa ou son thérapeute.'));
+        else if (n >= DW_BSOD_ALL.length) { playFanfare(); cheatFall(['💙', '♡', '✦'], 18); gainFollowers(2); showToast(trT('all 132 moods of one blue screen, witnessed. it has no secrets left ♡ +2 fans', 'les 132 humeurs d\'un seul écran bleu, toutes vues. il n\'a plus aucun secret ♡ +2 fans'), { scroll: true }); }
+      } catch (e) { /* moods uncounted, still felt */ }
+    };
+    const setFace = (f) => {
+      face.textContent = f;
+      remember(f);
       face.classList.remove('dream-bsod-face-pop');
       void face.offsetWidth; // restart the pop animation
       face.classList.add('dream-bsod-face-pop');
     };
+    const dealFrom = (pool) => {
+      let f = pool[Math.floor(Math.random() * pool.length)];
+      if (f === face.textContent) f = pool[(pool.indexOf(f) + 1) % pool.length];
+      return f;
+    };
+    // the deck: all 132 shuffled, dealt one per click, reshuffled only
+    // when empty — so no face repeats within a lap
+    const nextCard = () => {
+      if (!deck.length) {
+        deck = DW_BSOD_ALL.slice();
+        for (let i = deck.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          const t = deck[i]; deck[i] = deck[j]; deck[j] = t;
+        }
+      }
+      let f = deck.pop();
+      if (f === face.textContent) f = deck.length ? deck.pop() : dealFrom(DW_BSOD_ALL);
+      return f;
+    };
     face.addEventListener('click', () => {
       if (!dreamWorld) return;
-      setFace(Math.min(2, tier + 1));
-      playTone(392 + tier * 140, 'triangle', 0.12, 0, 0.05);
-      if (tier === 2 && !dreamWorld.flags.consoled) {
-        dreamWorld.flags.consoled = true;
-        gainFollowers(2);
-        cheatFall(['💙', '♡'], 10);
-        showToast(trT('mood restored. crash forgiven ♡', 'humeur restaurée. crash pardonné ♡'));
-      } else if (tier === 2 && dreamWorld.flags.bsodRelapsed === 1) {
+      if (!dreamWorld.flags.consoled) {
+        // the original arc, untouched: three clicks of comfort to :D —
+        // counted on its own ladder so an ambient mood swing can't
+        // shortcut the ritual
+        comfort++;
+        tier = comfort >= 3 ? 2 : 1;
+        setFace(dealFrom(DW_BSOD_MOODS[tier]));
+        playTone(392 + tier * 140, 'triangle', 0.12, 0, 0.05);
+        if (tier === 2) {
+          dreamWorld.flags.consoled = true;
+          gainFollowers(2);
+          cheatFall(['💙', '♡'], 10);
+          showToast(trT('mood restored. crash forgiven ♡ (it has 132 moods now — keep clicking)', 'humeur restaurée. crash pardonné ♡ (il a 132 humeurs — continue de cliquer)'), { scroll: true });
+        }
+        return;
+      }
+      // consoled: the jukebox. every click is a face it hasn't worn
+      // this lap, with a pitch to match the mood
+      const f = nextCard();
+      tier = dwBsodFaceTier(f);
+      setFace(f);
+      playTone(300 + tier * 130 + Math.random() * 90, 'triangle', 0.1, 0, 0.045);
+      if (tier === 2 && dreamWorld.flags.bsodRelapsed === 1) {
         dreamWorld.flags.bsodRelapsed = 2;
         cheatFall(['♡'], 6);
         showToast(trT('re-consoled. it will remember this instead ♡', 'reconsolé. c\'est de ça qu\'il se souviendra ♡'));
@@ -7610,9 +7675,11 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!dreamWorld) return;
       const r = Math.random();
       const consoled = dreamWorld.flags.consoled;
-      const t = consoled ? (r < 0.15 ? 0 : r < 0.55 ? 1 : 2) : (r < 0.6 ? 0 : r < 0.9 ? 1 : 2);
+      // before being hugged it can't cheer itself up — joy is earned
+      const t = consoled ? (r < 0.15 ? 0 : r < 0.55 ? 1 : 2) : (r < 0.7 ? 0 : 1);
       const relapse = consoled && t === 0 && tier > 0;
-      setFace(t);
+      tier = t;
+      setFace(dealFrom(DW_BSOD_MOODS[t]));
       if (relapse && !dreamWorld.flags.bsodRelapsed) {
         dreamWorld.flags.bsodRelapsed = 1;
         showToast(trT('oh no — it remembered the crash. console it again? ♡', 'oh non — il s\'est souvenu du crash. on le reconsole ? ♡'));
