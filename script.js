@@ -5653,6 +5653,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (th === 'light') document.documentElement.removeAttribute('data-theme');
     else document.documentElement.setAttribute('data-theme', th);
 
+    // Safari's toolbar is painted from meta theme-color, which is keyed
+    // to the OS scheme by default — repaint both metas to the SITE's
+    // theme on every switch so Safari's chrome follows the page
+    // (Chrome desktop ignores these; iOS Safari tints too)
+    const tc = th === 'dark' ? '#2a1440' : '#ff8fc7';
+    document.querySelectorAll('meta[name="theme-color"]').forEach((m) => m.setAttribute('content', tc));
+
     const themeBtn = document.getElementById('btn-theme-toggle');
     // 🌗 = auto (following the clock), 🌞 = forced light, 🌙 = forced dark
     if (themeBtn) {
@@ -10635,34 +10642,84 @@ document.addEventListener('DOMContentLoaded', () => {
     [['helpful tip', 'astuce utile'], ['have you tried turning your feelings off and on again?', 'as-tu essayé d\'éteindre puis rallumer tes sentiments ?']],
     [['(this one is just vibing)', '(celle-ci vibe, c\'est tout)'], ['♡', '♡']]
   ];
+  /* v98.4: the HYDRA. closing the reporter spawns TWO errors. closing
+     both spawns FOUR. closing all four spawns SIXTEEN — and closing
+     just two of those sixteen wakes the whole swarm. every window must
+     be dismissed by hand (that's the joke); an unattended generation
+     politely closes itself after 40s so the show never stalls. */
   function dwBsodAvalanche(src) {
     if (!dreamWorld || dreamWorld.flags.bsodAvalanche) return;
     dreamWorld.flags.bsodAvalanche = 1;
     playGlitchSound();
     if (src) { src.classList.add('dream-dlg-dying'); dT(() => { try { src.remove(); } catch (e) { /* pre-crashed */ } }, 700); }
-    dreamSay(["zzz… the error had errors… they're multiplying…", 'zzz… l\'erreur a des erreurs… elles se multiplient…'], 4200);
-    const cx = Math.max(10, window.innerWidth / 2 - 150 - 60), cy = Math.max(56, window.innerHeight * 0.12);
+    dreamSay(["zzz… you closed the error… it didn't take it well…", 'zzz… tu as fermé l\'erreur… elle l\'a mal pris…'], 4200);
+    dT(() => dwBsodHydra(1), 900);
+  }
+  const DW_BSOD_HYDRA_TOASTS = {
+    1: ['⚠ closing an error creates two errors. this is documented behavior.', '⚠ fermer une erreur en crée deux. c\'est un comportement documenté.'],
+    2: ['⚠ update: closing two errors creates four. the documentation is thriving.', '⚠ mise à jour : fermer deux erreurs en crée quatre. la documentation se porte à merveille.'],
+    3: ['⚠ sixteen. go on — close two more. what could possibly happen ♡', '⚠ seize. vas-y — fermes-en deux de plus. qu\'est-ce qui pourrait bien arriver ♡']
+  };
+  function dwBsodHydra(gen) {
+    if (!dreamWorld) return;
+    const count = gen === 1 ? 2 : gen === 2 ? 4 : 16;
+    const need = gen === 3 ? 2 : count; // sixteen only takes TWO closes to blow
+    let closed = 0;
+    let advanced = false;
     const spawned = [];
-    DW_BSOD_ECHOES.forEach((e, i) => {
+    const advance = () => {
+      if (advanced || !dreamWorld) return;
+      advanced = true;
+      if (gen < 3) { dT(() => dwBsodHydra(gen + 1), 650); return; }
+      dreamSay(["zzz… oh no… you woke ALL of them…", 'zzz… oh non… tu les as TOUTES réveillées…'], 4000);
+      dT(dwBsodSwarm, 800);
+    };
+    const onClose = (dlg) => {
+      playTone(300 + closed * 60, 'square', 0.06, 0, 0.045);
+      try { dlg.remove(); } catch (e) { /* already gone */ }
+      closed++;
+      if (closed >= need) advance();
+    };
+    showToast(trT(...DW_BSOD_HYDRA_TOASTS[gen]), { scroll: true });
+    for (let i = 0; i < count; i++) {
       dT(() => {
-        if (!dreamWorld) return;
-        playTone(330 - i * 22, 'square', 0.07, 0, 0.04);
+        if (!dreamWorld || advanced) return;
+        playTone(330 + gen * 40 + i * 14, 'square', 0.05, 0, 0.035);
+        let x, y;
+        if (gen === 1) {
+          x = window.innerWidth / 2 - 150 + (i === 0 ? -120 : 120);
+          y = Math.max(60, window.innerHeight * 0.2) + i * 34;
+        } else if (gen === 2) {
+          x = [0.06, 0.55, 0.08, 0.56][i] * Math.max(80, window.innerWidth - 330) + Math.random() * 24;
+          y = 44 + [0.1, 0.14, 0.5, 0.54][i] * Math.max(80, window.innerHeight - 280) + Math.random() * 20;
+        } else {
+          x = 8 + (i % 4) * Math.max(60, (window.innerWidth - 260) / 3) + Math.random() * 22 - 11;
+          y = 44 + Math.floor(i / 4) * Math.max(60, (window.innerHeight - 300) / 3) + Math.random() * 18 - 9;
+        }
+        const spec = gen < 3 ? DW_BSOD_ECHOES[gen === 1 ? i : 2 + i] : null;
         const dlg = dreamDlg({
-          title: trT(...e[0]), lines: [trT(...e[1])], force: true, cls: 'dream-dlg-err dream-dlg-echo',
-          x: Math.min(window.innerWidth - 310, cx + i * 30), y: Math.min(window.innerHeight - 180, cy + i * 44),
-          buttons: []
+          title: spec ? trT(...spec[0]) : trT('error #', 'erreur nº ') + (i + 7),
+          lines: [spec ? trT(...spec[1]) : trT(...DW_BSOD_SWARM_LINES[i % DW_BSOD_SWARM_LINES.length])],
+          force: true,
+          cls: 'dream-dlg-err ' + (gen === 3 ? 'dream-dlg-mini' : 'dream-dlg-echo'),
+          x: Math.max(8, Math.min(window.innerWidth - (gen === 3 ? 240 : 310), x)),
+          y: Math.max(40, Math.min(window.innerHeight - 170, y)),
+          buttons: [],
+          onX: onClose
         });
-        if (dlg) spawned.push(dlg);
-      }, 350 * i);
-    });
-    // the six die… and their funerals invite EVERYONE (act three: the
-    // swarm floods the screen, then the CHKDSK pass collects them all,
-    // and only then the one big feeling)
+        if (dlg) { if (gen === 3) dlg.style.transform = 'rotate(' + (Math.random() * 6 - 3).toFixed(1) + 'deg)'; spawned.push(dlg); }
+      }, (gen === 3 ? 110 : 320) * i);
+    }
+    // the idle valve: an unattended generation excuses itself after 40s
+    // (each self-close counts, so the show still reaches the swarm)
     dT(() => {
-      if (!dreamWorld) return;
-      spawned.forEach((dlg, i) => dT(() => { dlg.classList.add('dream-dlg-dying'); dT(() => { try { dlg.remove(); } catch (e) { /* already mourned */ } }, 650); }, i * 90));
-      dT(dwBsodSwarm, spawned.length * 90 + 900);
-    }, 350 * DW_BSOD_ECHOES.length + 2800);
+      if (advanced || !dreamWorld) return;
+      spawned.forEach((dlg, i) => dT(() => {
+        if (advanced || !document.body.contains(dlg)) return;
+        dlg.classList.add('dream-dlg-dying');
+        dT(() => onClose(dlg), 620);
+      }, i * 170));
+    }, 40000);
   }
 
   // stage 3: the merge — one error to hug them all
@@ -10879,7 +10936,8 @@ document.addEventListener('DOMContentLoaded', () => {
         playTone(220 + i * 16, 'square', 0.045, 0, 0.028);
         const ln = DW_BSOD_SWARM_LINES[i % DW_BSOD_SWARM_LINES.length];
         const d = dreamDlg({
-          title: trT('error #', 'erreur nº ') + (i + 7), force: true, cls: 'dream-dlg-err dream-dlg-mini',
+          // the hydra's sixteen were #7–#22; the swarm keeps counting
+          title: trT('error #', 'erreur nº ') + (i + 23), force: true, cls: 'dream-dlg-err dream-dlg-mini',
           x: 8 + Math.random() * Math.max(60, window.innerWidth - 248),
           y: 44 + Math.random() * Math.max(80, window.innerHeight - 240),
           lines: [trT(...ln)], buttons: []

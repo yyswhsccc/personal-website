@@ -3,6 +3,9 @@
    Palette homage: NEEDY STREAMER OVERLOAD (pink/lilac/baby-blue)
    ===================================================== */
 :root {
+  /* tell the browser which scheme we're rendering — without this,
+     Safari keeps light scrollbars/form controls in dark mode */
+  color-scheme: light;
   /* NSO-leaning palette */
   --pink: #ffb3dd;
   --pink-hot: #ff8fc7;
@@ -3517,6 +3520,7 @@ html[data-theme="dark"] .game-reaction-cam {
    deep NSO night: neon pinks, starfield, glowing windows
    ===================================================== */
 html[data-theme="dark"] {
+  color-scheme: dark;
   --pink: #7a3d68;
   --pink-hot: #ff6ec0;
   --pink-deep: #ff3fa4;

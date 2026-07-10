@@ -60,6 +60,13 @@
           dark = pref === 'dark';
         }
         if (dark) document.documentElement.setAttribute('data-theme', 'dark');
+        // Safari (15+) paints its own toolbar with meta theme-color and,
+        // keyed by media, follows the OS scheme — not the site's theme.
+        // repaint both metas to the SITE's resolved theme so Safari's
+        // chrome always matches the page (Chrome desktop ignores these).
+        var tc = dark ? '#2a1440' : '#ff8fc7';
+        var metas = document.querySelectorAll('meta[name="theme-color"]');
+        for (var i = 0; i < metas.length; i++) metas[i].setAttribute('content', tc);
       } catch (e) { /* first visit */ }
     })();
   </script>
@@ -103,7 +110,7 @@
     })();
   </script>
 
-  <link rel="stylesheet" href="style.css?v=100">
+  <link rel="stylesheet" href="style.css?v=101">
 <script>/* wrist-sized screens get the wrist edition */(function(){try{if(screen.width<=340&&screen.height<=430)location.replace('watch.html');}catch(e){}})();</script>
 </head>
 <body>
@@ -1490,6 +1497,6 @@
   <div id="email-toast" class="toast-hidden" role="status" aria-live="polite">Email copied to clipboard! ♡</div>
 
   <script src="i18n.js?v=87"></script>
-  <script src="script.js?v=101"></script>
+  <script src="script.js?v=102"></script>
 </body>
 </html>
