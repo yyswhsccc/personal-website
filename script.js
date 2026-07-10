@@ -7458,31 +7458,43 @@ document.addEventListener('DOMContentLoaded', () => {
     ],
     wake: ["*reboot noise* …I'm BACK. uptime: reset. cuteness: preserved. who filed the crash report?? it just says '♡'", "*bruit de redémarrage* …je suis LÀ. uptime : remis à zéro. mignonnerie : intacte. qui a rempli le rapport de crash ?? il dit juste « ♡ »"],
     build() {
+      /* v98: a crash is a SPECIAL dream — the desktop does not survive it.
+         every open window closes, 9 of 11 icons are collected for their
+         own safety (CSS hides them), and the night runs on the two
+         survivors: the terminal and the dream journal. */
+      const bsodSweep = () => document.querySelectorAll('.window:not(.window-closed)').forEach((w) => {
+        if (w.id === 'win-terminal' || w.id === 'win-dreamlog') return;
+        try { closeWindow(w); } catch (e) { /* it was already gone */ }
+      });
+      bsodSweep();
+      // on a mid-dream reload, boot-restored windows reopen AFTER build —
+      // sweep twice more so the crash stays a crash
+      dT(bsodSweep, 2800);
+      dT(bsodSweep, 7000);
       const head = document.createElement('div');
       head.className = 'dream-bsod-head';
       head.innerHTML = '<div class="dream-bsod-face">:(</div><div class="dream-bsod-text"></div>';
       document.body.appendChild(head);
       dN(head);
-      // v6.5: the sad face is consolable — click it up to :D
-      const face = head.querySelector('.dream-bsod-face');
-      if (face) {
-        const moods = [':(', ':|', ':)', ':D'];
-        let mi = 0;
-        face.style.pointerEvents = 'auto';
-        face.style.cursor = 'var(--cursor-heart)';
-        face.addEventListener('click', () => {
-          if (!dreamWorld) return;
-          mi = Math.min(moods.length - 1, mi + 1);
-          face.textContent = moods[mi];
-          playTone(392 + mi * 140, 'triangle', 0.12, 0, 0.05);
-          if (mi === moods.length - 1 && !dreamWorld.flags.consoled) {
-            dreamWorld.flags.consoled = true;
-            gainFollowers(2);
-            cheatFall(['💙', '♡'], 10);
-            showToast(trT('mood restored. crash forgiven ♡', 'humeur restaurée. crash pardonné ♡'));
-          }
+      // v98: the face runs a little mood engine now — it drifts through
+      // feelings on its own and clicking always comforts it one tier
+      dwBsodFace(head.querySelector('.dream-bsod-face'));
+      // ~4.5s in: the formal announcement — desktop.exe did not make it
+      dT(() => {
+        if (!dreamWorld) return;
+        dreamDlg({
+          title: trT('☠ DESKTOP.EXE — fatal nap', '☠ DESKTOP.EXE — sieste fatale'), force: true, cls: 'dream-dlg-err',
+          x: window.innerWidth / 2 - 150, y: Math.max(64, window.innerHeight * 0.14),
+          lines: [
+            trT('the desktop has stopped working. 9 icons were collected for their own safety.', 'le bureau a cessé de fonctionner. 9 icônes ont été mises à l\'abri.'),
+            trT('survivors: terminal.exe (it always survives) and the dream journal ♡', 'survivants : terminal.exe (il survit toujours) et le journal de rêve ♡')
+          ],
+          buttons: [
+            [trT('open the terminal →', 'ouvrir le terminal →'), () => { try { openWindow('win-terminal'); } catch (e) { /* even safe mode naps */ } }],
+            [trT('mourn the icons', 'pleurer les icônes'), () => { playDreamSad(); cheatFall(['🥀', '💙'], 10); showToast(trT('the icons are fine. they are napping in a .dmp file, dreaming of double-clicks ♡', 'les icônes vont bien. elles font la sieste dans un .dmp, rêvant de double-clics ♡'), { scroll: true }); }]
+          ]
         });
-      }
+      }, 4500);
       const txt = head.querySelector('.dream-bsod-text');
       const draw = () => {
         if (!dreamWorld) return;
@@ -7531,12 +7543,71 @@ document.addEventListener('DOMContentLoaded', () => {
       };
       document.addEventListener('keydown', anyKey);
       if (dreamWorld) dreamWorld.flags.bsodAnyKey = anyKey;
-      try { termLine('kernel: panic averted — rebooted with hugs (uptime preserved, feelings intact)', 't-dim'); } catch (e) { /* core dumped (gently) */ }
+      try {
+        termLine('kernel: panic averted — rebooted with hugs (uptime preserved, feelings intact)', 't-dim');
+        termLine(trT('desktop.exe not found — running SAFE MODE (with feelings). the shell is all yours tonight ♡', 'desktop.exe introuvable — MODE SANS ÉCHEC (avec sentiments). le shell est tout à toi ce soir ♡'), 't-ok');
+      } catch (e) { /* core dumped (gently) */ }
     },
     exit() {
       if (dreamWorld && dreamWorld.flags.bsodAnyKey) document.removeEventListener('keydown', dreamWorld.flags.bsodAnyKey);
     }
   };
+
+  /* v98: the BSOD face mood engine. it drifts through feelings on its
+     own (a crash has feelings about being a crash) and clicking always
+     comforts it one tier. consoling it to :D once pays fans; after that
+     it keeps living — sometimes it remembers the crash and needs
+     consoling again. that's the whole relationship. */
+  const DW_BSOD_MOODS = [
+    [':(', ':|', ':/', 'T_T', 'x_x'], // tier 0 — crashed
+    [':)', ':3', ';)', ':P', '^_^'],  // tier 1 — recovering
+    [':D', '=D', ':D ♡']              // tier 2 — fully hugged
+  ];
+  function dwBsodFace(face) {
+    if (!face) return;
+    let tier = 0;
+    const setFace = (t) => {
+      tier = t;
+      const pool = DW_BSOD_MOODS[t];
+      let next = pool[Math.floor(Math.random() * pool.length)];
+      if (next === face.textContent) next = pool[(pool.indexOf(next) + 1) % pool.length];
+      face.textContent = next;
+      face.classList.remove('dream-bsod-face-pop');
+      void face.offsetWidth; // restart the pop animation
+      face.classList.add('dream-bsod-face-pop');
+    };
+    face.addEventListener('click', () => {
+      if (!dreamWorld) return;
+      setFace(Math.min(2, tier + 1));
+      playTone(392 + tier * 140, 'triangle', 0.12, 0, 0.05);
+      if (tier === 2 && !dreamWorld.flags.consoled) {
+        dreamWorld.flags.consoled = true;
+        gainFollowers(2);
+        cheatFall(['💙', '♡'], 10);
+        showToast(trT('mood restored. crash forgiven ♡', 'humeur restaurée. crash pardonné ♡'));
+      } else if (tier === 2 && dreamWorld.flags.bsodRelapsed === 1) {
+        dreamWorld.flags.bsodRelapsed = 2;
+        cheatFall(['♡'], 6);
+        showToast(trT('re-consoled. it will remember this instead ♡', 'reconsolé. c\'est de ça qu\'il se souviendra ♡'));
+      }
+    });
+    // ambient drift: every 7–13s the face has a feeling of its own —
+    // being consoled tilts the odds toward joy but never locks them
+    const drift = () => {
+      if (!dreamWorld) return;
+      const r = Math.random();
+      const consoled = dreamWorld.flags.consoled;
+      const t = consoled ? (r < 0.15 ? 0 : r < 0.55 ? 1 : 2) : (r < 0.6 ? 0 : r < 0.9 ? 1 : 2);
+      const relapse = consoled && t === 0 && tier > 0;
+      setFace(t);
+      if (relapse && !dreamWorld.flags.bsodRelapsed) {
+        dreamWorld.flags.bsodRelapsed = 1;
+        showToast(trT('oh no — it remembered the crash. console it again? ♡', 'oh non — il s\'est souvenu du crash. on le reconsole ? ♡'));
+      }
+      dT(drift, 7000 + Math.random() * 6000);
+    };
+    dT(drift, 7000 + Math.random() * 6000);
+  }
 
   // ---- dream 7/7: SLIME/370 — the mainframe dream (est. 1970) ----
   const DW_AMBER_SLIPS = [
@@ -7984,73 +8055,288 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  /* ================= 📅 THE WEEKDAY BEAT — 7 day-linked interactions =================
-     whatever real-world day you drew this dream on, a themed bit greets you.
-     one per dream, keyed to new Date().getDay() (0=Sun … 6=Sat). ---- */
+  /* ================= 📅 THE WEEKDAY THEATER — 7 dreams × 7 days =================
+     whatever real-world day you drew this dream on, a bit themed to BOTH
+     that day AND this dream greets you: 49 scripts, one per combination,
+     each rooted in its own world's props. one per dream, keyed to
+     new Date().getDay() (0=Sun … 6=Sat). rehearsal: ?theater=<0-6>. ---- */
+  const DW_DAILY_SND = { fanfare: playFanfare, sparkle: playSparkleSound, glitch: playGlitchSound, hum: playDreamHum, printer: playDreamPrinter, pop: playDreamPop, gb: playDreamGB, modem: playDreamModem, chime95: playDreamChime95, alarm: playDreamAlarm, sad: playDreamSad, eat: playEatSound, startup: playStartupChime, ribbit: () => playTone(180, 'square', 0.14, 0, 0.06) };
+  const DW_DAILY = {
+    win95: [
+      // sun
+      { t: ["☀ SUNDAY.SCR", "☀ DIMANCHE.SCR"], l: ["NO MOUSE INPUT DETECTED FOR 6 DAYS. per SUNDAY.SCR policy, the only scheduled task today is the screensaver. engage?", "AUCUN MOUVEMENT DE SOURIS DEPUIS 6 JOURS. politique DIMANCHE.SCR : la seule tâche planifiée aujourd'hui, c'est l'écran de veille. lancer ?"], b: [
+        [["flying toasters 🍞", "grille-pain volants 🍞"], { snd: 'hum', fall: ["🍞","🥪","✨"], n: 16, fans: 1, toast: ["the toasters migrate across your sunday. butter futures soar. rest has never been this aerodynamic ♡", "les grille-pain migrent à travers ton dimanche. le cours du beurre s'envole. le repos n'a jamais été aussi aérodynamique ♡"] }],
+        [["defrag my feelings ▓", "défragmenter mes sentiments ▓"], { snd: 'sparkle', fall: ["▓","▒","░","♡"], n: 14, fans: 1, toast: ["defrag complete. every little block found its family (your turn). rest is just becoming contiguous ♡", "défragmentation terminée. chaque petit bloc a retrouvé sa famille (à ton tour). se reposer, c'est devenir contigu ♡"] }]
+      ] },
+      // mon
+      { t: ["⚠ MONDAY~1.EXE", "⚠ LUNDI~1.EXE"], l: ["MONDAY~1.EXE has performed an illegal operation: existing (0x0000MOND). if the problem persists, it's monday — it persists.", "LUNDI~1.EXE a effectué une opération illégale : exister (0x0000LUND). si le problème persiste, c'est lundi — ça persiste."], err: 1, b: [
+        [["CTRL+ALT+DEL ♡", "CTRL+ALT+SUPPR ♡"], { snd: 'fanfare', fall: ["☕","🪟","✦"], n: 16, fans: 2, toast: ["CLOSE PROGRAM: MONDAY~1.EXE (not responding) → END TASK. its 640K of conventional memory has been reallocated to the start menu's only entry: naps ♡ +2 fans", "FERMER LE PROGRAMME : LUNDI~1.EXE (ne répond plus) → FIN DE TÂCHE. ses 640 Ko de mémoire conventionnelle sont réaffectés à la seule entrée du menu démarrer : les siestes ♡ +2 fans"] }],
+        [["Abort, Retry, Fail?", "Abandonner, Réessayer, Échouer ?"], { snd: 'sad', fans: 1, toast: ["you chose Fail. the dream always chooses Fail. General Failure salutes you personally (he understands. all his days are mondays.)", "tu as choisi Échouer. le rêve choisit toujours Échouer. General Failure te salue personnellement (lui, il vit un lundi perpétuel.)"] }]
+      ] },
+      // tue
+      { t: ["🌮 NEW HARDWARE FOUND", "🌮 NOUVEAU MATÉRIEL DÉTECTÉ"], l: ["found: 1 (one) taco tuesday, plug and play. install salsa drivers now? [yes] [also yes]", "détecté : 1 (un) mardi tacos, plug and play. installer les pilotes salsa maintenant ? [oui] [aussi oui]"], b: [
+        [["yes 🌮", "oui 🌮"], { snd: 'chime95', fall: ["🌮","💿","✦"], n: 18, fans: 2, toast: ["drivers installed on the first try — a certified 1995 miracle. the CD tray slides open: it was a taco holder all along ♡ +2 fans", "pilotes installés du premier coup — miracle certifié 1995. le tiroir du lecteur CD s'ouvre : c'était un porte-tacos depuis le début ♡ +2 fans"] }],
+        [["also yes 🌮🌮", "aussi oui 🌮🌮"], { snd: 'fanfare', fall: ["🌮","🚀","✦"], n: 22, fans: 2, toast: ["TACO.SYS loaded into high memory. HIMEM.SYS reports ∞K of salsa OK. reboot not required — tuesday hot-reloads ♡ +2 fans", "TACO.SYS chargé en mémoire haute. HIMEM.SYS annonce ∞ Ko de salsa OK. redémarrage inutile — le mardi se recharge à chaud ♡ +2 fans"] }]
+      ] },
+      // wed
+      { critter: { e: "🐸", label: ["WEDNSDAY.WAV — now playing, my dudes", "MERCREDI.WAV — lecture en cours, mes potes"], bubble: ["*RIBBIT.WAV — mono, PC speaker, maximum 1995* ♡", "*RIBBIT.WAV — mono, haut-parleur PC, 1995 à fond* ♡"], fall: ["🐸","💚"], fans: 1, ms: 9000, hop: 9 }, say: ["zzz… it is wednesday… my dudes… (double-click the frog… he is plug and play…)", "zzz… c'est mercredi… mes potes… (double-clique la grenouille… elle est plug and play…)"] },
+      // thu
+      { t: ["📼 ALTAVISTA.HTM — #TBT", "📼 ALTAVISTA.HTM — #TBT"], l: ["#tbt — ALTAVISTA.HTM pulled a baby photo of this dream from the 1996 cache (still warm): no clouds, no chime, just C:\\> blinking in the dark. load it?", "#tbt — ALTAVISTA.HTM a retrouvé une photo bébé de ce rêve dans le cache de 1996 (encore tiède) : pas de nuages, pas de carillon, juste C:\\> qui clignote dans le noir. la charger ?"], b: [
+        [["load photo (56k) 📸", "charger la photo (56k) 📸"], { snd: 'modem', fall: ["💾","📼","✦"], n: 16, fans: 1, toast: ["downloading… 2 minutes remaining… 3 hours remaining… done. baby DOS, blinking its one cursor up at you. it grew into an entire beige sky ♡", "téléchargement… 2 minutes restantes… 3 heures restantes… terminé. bébé DOS, qui te fixe en clignotant de son unique curseur. il a grandi en tout un ciel beige ♡"] }]
+      ] },
+      // fri
+      { t: ["🚨 THE A:\\ LIGHT IS ON", "🚨 VOYANT A: ALLUMÉ"], l: ["friday, and CAREER~1.EXE is still writing to A:\\ — the ancient law is clear: THOU SHALT NOT REMOVE THE FLOPPY WHILE THE LIGHT IS ON. …and yet. the eject button. right there.", "vendredi, et CAREER~1.EXE écrit encore sur A:\\ — la loi ancienne est formelle : TU NE RETIRERAS POINT LA DISQUETTE TANT QUE LE VOYANT EST ALLUMÉ. …n'empêche. le bouton d'éjection. juste là."], err: 1, b: [
+        [["EJECT THE FLOPPY 😈", "ÉJECTER LA DISQUETTE 😈"], { snd: 'glitch', fall: ["💾","💥","😱","🎉"], n: 26, fans: 3, quake: 1, toast: ["you yanked it MID-WRITE. the drive shrieked, the light died, and CAREER~1.EXE… survived?? scandisk verdict: 0 bad sectors, 1 (one) menace ♡ +3 fans", "tu l'as arrachée EN PLEINE ÉCRITURE. le lecteur a hurlé, le voyant s'est éteint, et CAREER~1.EXE… a survécu ?? verdict de SCANDISK : 0 secteur défectueux, 1 (un) danger public ♡ +3 fans"] }],
+        [["wait for the light 🧊", "attendre le voyant 🧊"], { snd: 'chime95', fall: ["💾","♡"], n: 10, fans: 1, toast: ["you waited. the light went off, the drive sighed, and the floppy ejected itself — 1.44MB of career, delivered gently ♡", "tu as attendu. le voyant s'est éteint, le lecteur a soupiré, et la disquette est sortie d'elle-même — 1,44 Mo de carrière, livrés en douceur ♡"] }]
+      ] },
+      // sat
+      { t: ["💼 SHAREWARE SATURDAY", "💼 SAMEDI SHAREWARE"], l: ["side-project forecast: you built FLYING~1.SCR, a screensaver where the toasters are slimes. ship it as shareware? (registration: $5, by mailed check, so: never)", "météo des projets perso : tu as codé FLYING~1.SCR, un écran de veille où les grille-pain sont des slimes. le sortir en shareware ? (enregistrement : 5 $, par chèque posté, autant dire jamais)"], b: [
+        [["upload to the BBS 📤", "envoyer sur le BBS 📤"], { snd: 'modem', fall: ["💾","🍞","📈"], n: 18, fans: 2, toast: ["uploaded at 2 kb/s while the modem sang the song of our people. nobody picked up the phone mid-transfer — mom was home. certified miracle ♡ +2 fans", "envoyé à 2 ko/s pendant que le modem chantait le chant de notre peuple. personne n'a décroché pendant le transfert — maman était à la maison, pourtant. miracle homologué ♡ +2 fans"] }],
+        [["add a nag screen 📎", "ajouter un écran de rappel 📎"], { snd: 'printer', fall: ["📎","💌"], n: 12, fans: 1, toast: ["the nag screen says 'it looks like you're not registering. would you like help? (there is only yes)'. zero checks arrive. four thank-you letters do — nobody on the BBS is richer ♡", "l'écran de rappel dit « on dirait que tu ne t'enregistres pas. besoin d'aide ? (il n'y a que oui) ». zéro chèque au courrier. mais quatre lettres de remerciement — personne n'est plus riche sur tout le BBS ♡"] }]
+      ] },
+    ],
+    scp: [
+      // sun
+      { t: ["☀ SITE-19 REST PROTOCOL", "☀ PROTOCOLE REPOS SITE-19"], l: ["O5 MEMO: all testing is SUSPENDED. the klaxon is set to DO NOT DISTURB. today's only authorized procedure: rest (no form required. the paperwork is furious).", "MÉMO O5 : tous les tests sont SUSPENDUS. le klaxon est en mode NE-PAS-DÉRANGER. seule procédure autorisée aujourd'hui : le repos (aucun formulaire requis. la paperasse est furieuse)."], b: [
+        [["tuck in the anomalies 🧊", "border les anomalies 🧊"], { snd: 'sparkle', fall: ["🧊","♡","💤"], n: 14, fans: 1, toast: ["all cells report COZY. SCP-999 demanded three lullabies (standard procedure). you blinked while tucking in SCP-173 — it stayed put. that's trust ♡", "toutes les cellules déclarent : DOUILLET. SCP-999 a exigé trois berceuses (procédure standard). tu as cligné en bordant SCP-173 — il n'a pas bougé. ça, c'est de la confiance ♡"] }],
+        [["nap in an empty cell 😴", "sieste en cellule vide 😴"], { snd: 'hum', fans: 1, toast: ["you napped inside the humming containment cube. CCTV FEED 19-B recorded every frame and refuses to delete a single one — filed under EYES ♡ ONLY", "sieste dans le cube de confinement qui ronronne. la CCTV 19-B a tout filmé et refuse d'effacer la moindre image — classé RÉSERVÉ AUX YEUX ♡"] }]
+      ] },
+      // mon
+      { t: ["🚨 KETER BREACH: MONDAY", "🚨 BRÈCHE KETER : LUNDI"], l: ["CONTAINMENT FAILURE — the anomaly designated 'monday' has breached its cell and is loose in the week. class: KETER. hazard: memetic (do not read the word 'yawn'. …too late).", "ÉCHEC DU CONFINEMENT — l'anomalie désignée « lundi » a percé sa cellule et rôde dans la semaine. classe : KETER. danger : mémétique (ne lisez pas le mot « bâillement ». …trop tard)."], err: 1, b: [
+        [["deploy class-B amnestics 💊", "déployer des amnésiques classe B 💊"], { snd: 'pop', fall: ["💊","☕","✨"], n: 16, fans: 2, toast: ["class-B administered. monday? what monday. wonderful weather we're having ♡ +2 fans", "classe B administrée. lundi ? quel lundi. quel beau temps, n'est-ce pas ♡ +2 fans"] }],
+        [["feed it to SCP-914 ⚙", "l'insérer dans SCP-914 ⚙"], { snd: 'printer', fans: 1, toast: ["setting: VERY FINE. input: one (1) monday. output: one (1) friday ✨ no returns, no exchanges (rule of THE CLOCKWORKS)", "réglage : TRÈS FIN. entrée : un (1) lundi. sortie : un (1) vendredi ✨ ni repris, ni échangé (règlement de LA MACHINE)"] }]
+      ] },
+      // tue
+      { t: ["🌮 SAFE-CLASS TUESDAY", "🌮 MARDI CLASSE SAFE"], l: ["a self-replicating taco truck has manifested in the Site-19 cafeteria. the intern proposed designation SCP-🌮; the O5 council voted 5–0 to eat the evidence — even O5-1, who is contractually grumpy.", "un camion à tacos auto-répliquant s'est manifesté dans la cafétéria du Site-19. le stagiaire propose la désignation SCP-🌮 ; le conseil O5 a voté 5–0 pour manger les pièces à conviction — même O5-1, grognon sous contrat."], b: [
+        [["comply with lunch 🌮", "obtempérer au déjeuner 🌮"], { snd: 'eat', fall: ["🌮","🧊","📋","✅"], n: 22, fans: 2, toast: ["tacos secured, contained, eaten. form 512-B filed in triplicate (lightly guacamoled), signed with the pen that only writes the truth: 'best tuesday' ♡ +2 fans", "tacos sécurisés, confinés, mangés. formulaire 512-B déposé en trois exemplaires (légèrement guacamolés), signé au stylo qui n'écrit que la vérité : « meilleur mardi » ♡ +2 fans"] }]
+      ] },
+      // wed
+      { critter: { e: "🐸", label: ["SCP-███-W · class: EUCLID · \"it is Wednesday, my dudes\"", "SCP-███-W · classe : EUCLID · « c'est mercredi, mes potes »"], bubble: ["*memetic ribbit* — congratulations, you're a carrier now ♡", "*coassement mémétique* — félicitations, te voilà contaminé·e ♡"], fall: ["🐸","🧊"], fans: 1, ms: 9000, hop: 9 }, say: ["zzz… the frog breached containment… don't sound the klaxon… euclid just means wiggly… my dudes…", "zzz… la grenouille a percé le confinement… pas de klaxon… euclid veut juste dire frétillant… mes potes…"] },
+      // thu
+      { t: ["📼 DECLASSIFIED THURSDAY", "📼 JEUDI DÉCLASSIFIÉ"], l: ["#tbt — the FOUNDATION ARCHIVE just declassified your 1997 personnel file: 90% black bars. censor's note on the other 10%: \"adorable. re-redact before someone faints.\"", "#tbt — les ARCHIVES DE LA FONDATION viennent de déclassifier ton dossier du personnel de 1997 : 90 % de barres noires. note du censeur sur les 10 % restants : « adorable. recaviarder avant que quelqu'un tombe dans les pommes »."], b: [
+        [["declassify the photo 📂", "déclassifier la photo 📂"], { snd: 'printer', fall: ["📸","█","✨"], n: 16, fans: 1, toast: ["PERSONNEL FILE, 1997: [REDACTED] except one photo — baby-you, eight pixels tall, clearance level ♡ from birth. containment request: denied. some things are supposed to breach ♡", "DOSSIER DU PERSONNEL, 1997 : [CAVIARDÉ] sauf une photo — toi bébé, huit pixels de haut, habilitation niveau ♡ de naissance. demande de confinement : refusée. certaines choses sont faites pour s'évader ♡"] }],
+        [["leave it [REDACTED] █", "laisser [CAVIARDÉ] █"], { snd: 'hum', fans: 1, toast: ["the file stays sealed. the censor adds one stamp — [DATA ADORABLE] — then whispers \"it was SO cute\" to zero (0) authorized personnel ♡", "le dossier reste scellé. le censeur ajoute un tampon — [DONNÉES ADORABLES] — puis souffle « c'était TELLEMENT mignon » à zéro (0) personnel habilité ♡"] }]
+      ] },
+      // fri
+      { t: ["🚨 FRIDAY CELL FREEZE", "🚨 GEL DES CELLULES VENDREDI"], l: ["it is friday. protocol ♡-21 is explicit: THOU SHALT NOT OPEN A KETER CELL BEFORE THE WEEKEND. the keypad is right there. it glows. it knows.", "on est vendredi. le protocole ♡-21 est formel : TU N'OUVRIRAS POINT DE CELLULE KETER AVANT LE WEEK-END. le clavier à code est juste là. il brille. il sait."], err: 1, b: [
+        [["OPEN THE CELL 😈", "OUVRIR LA CELLULE 😈"], { snd: 'alarm', fall: ["🚨","🧊","😱","📋"], n: 26, fans: 3, quake: 1, toast: ["you opened a KETER cell on a FRIDAY. klaxons. the Site-19 pigeons have opinions. form 512-B in sextuplicate. and the entity?? it just wanted to show you a drawing of you. MONSTER. legend. +3 fans", "tu as ouvert une cellule KETER un VENDREDI. klaxons. les pigeons du Site-19 prennent position. formulaire 512-B en six exemplaires. et l'entité ?? elle voulait juste te montrer un dessin de toi. MONSTRE. légende. +3 fans"] }],
+        [["respect the freeze 🧊", "respecter le gel 🧊"], { snd: 'sparkle', fans: 1, toast: ["the cell stays sealed. the on-call D-class weeps with relief (survival rate: 100%, as always). a drawing slides out under the door anyway — it's you, holding it shut. caption: \"my hero\" ♡", "la cellule reste scellée. le D-class d'astreinte pleure de soulagement (taux de survie : 100 %, comme toujours). un dessin glisse quand même sous la porte — c'est toi, en train de la tenir fermée. légende : « mon héros » ♡"] }]
+      ] },
+      // sat
+      { t: ["💼 SATURDAY: SCP-████ (DRAFT)", "💼 SAMEDI : SCP-████ (BROUILLON)"], l: ["weekend side project detected: SCP-████, \"the pretty good anomaly\" — a draft, by you, about you (write what you know). the butterfly squad offers feedback. the coldpost button offers glory.", "projet perso du week-end détecté : SCP-████, « l'anomalie plutôt pas mal » — un brouillon, signé toi, au sujet de toi (écris ce que tu connais). l'escouade papillon propose une relecture. le bouton coldpost promet la gloire."], b: [
+        [["coldpost it 📤", "coldposter 📤"], { snd: 'modem', fall: ["📄","🦋","♡"], n: 18, fans: 2, toast: ["posted. rating after 40 minutes: -14 (one of the downvotes is yours. panic). the butterfly squad arrives with hugs and a style guide. next draft: greatness ♡ +2 fans", "posté. note au bout de 40 minutes : -14 (dont ton propre vote. panique). l'escouade papillon débarque avec des câlins et un guide de style. prochain brouillon : la gloire ♡ +2 fans"] }],
+        [["workshop it with SCP-999 🧡", "relecture avec SCP-999 🧡"], { snd: 'sparkle', fans: 1, toast: ["SCP-999 giggled at every line, including the page numbers. peer review: ♡♡♡♡♡. now legally a masterpiece — motion carried 5–0, O5-🍮 presiding", "SCP-999 a gloussé à chaque ligne, y compris les numéros de page. relecture : ♡♡♡♡♡. désormais légalement un chef-d'œuvre — motion adoptée 5–0, sous la présidence d'O5-🍮"] }]
+      ] },
+    ],
+    matrix: [
+      // sun
+      { t: ["☀ SUNDAY: NOBODY NEEDS SAVING", "☀ DIMANCHE : PERSONNE À SAUVER"], l: ["the operator ran the sunday scan: AGENTS: 0. PROPHECIES: 0. DEADLINES: SIMULATED. the construct loaded 1 rug, 2 chairs, 1 old TV. guns: no. naps: plenty.", "l'opérateur a lancé le scan du dimanche : AGENTS : 0. PROPHÉTIES : 0. DEADLINES : SIMULÉES. le construct a chargé 1 tapis, 2 chaises, 1 vieille télé. armes : non. siestes : à volonté."], b: [
+        [["blue pill, extra tapioca 🫐", "pilule bleue, supplément tapioca 🫐"], { snd: 'hum', fall: ["🫐","🧋","💤"], n: 12, fans: 1, toast: ["you take the blue pill. the story continues — horizontally, on the construct's rug. (it was a boba pearl. it always is.) ♡", "tu prends la pilule bleue. l'histoire continue — à l'horizontale, sur le tapis du construct. (c'était une perle de boba. comme toujours.) ♡"] }],
+        [["jack out 🔌", "se débrancher 🔌"], { snd: 'chime95', fall: ["🩷","💤"], n: 8, fans: 1, toast: ["you jack out. residual_self_image refreshed: pajamas. (the trench coat was the simulation. the pajamas are real.) ♡", "tu te débranches. residual_self_image actualisée : pyjama. (le manteau en cuir, c'était la simulation. le pyjama, c'est le réel.) ♡"] }]
+      ] },
+      // mon
+      { t: ["⚠ DÉJÀ VU: MONDAY AGAIN", "⚠ DÉJÀ VU : ENCORE LUNDI"], l: ["a black cat crossed the desktop. then a black cat crossed the desktop. they changed something — and the something is monday. (it was monday last week too. they keep patching it back in.)", "un chat noir a traversé le bureau. puis un chat noir a traversé le bureau. ils ont changé quelque chose — et ce quelque chose, c'est lundi. (la semaine dernière aussi, c'était lundi. ils n'arrêtent pas de le repatcher.)"], err: 1, b: [
+        [["dodge it (bullet time) 💨", "l'esquiver (bullet time) 💨"], { snd: 'hum', fall: ["💨","🕶","🐈‍⬛"], n: 14, fans: 2, toast: ["*time dilates* you lean back. monday sails past in slow motion and misses everything. dodged: one (1) monday, beautifully. +2 fans", "*le temps se dilate* tu te cambres. lundi passe au ralenti et ne touche rien. esquivé : un (1) lundi, avec grâce. +2 fans"] }],
+        [["☎ report the glitch", "☎ signaler le glitch"], { snd: 'sad', fans: 1, toast: ["☎ the operator picks up: \"yep, monday. known glitch since build one. STATUS: WONTFIX. you're doing great, sweetie.\"", "☎ l'opérateur décroche : « ouais, lundi. glitch connu depuis la build un. STATUT : WONTFIX. tu t'en sors super bien. »"] }]
+      ] },
+      // tue
+      { t: ["🌮 TUESDAY: taco_tuesday.pkg", "🌮 MARDI : taco_tuesday.pkg"], l: ["the operator found taco_tuesday.pkg in loadout.dat, filed right between kung fu and CSS. jack in and your mouth knows tacos — all of them, instantly.", "l'opérateur a trouvé taco_tuesday.pkg dans loadout.dat, rangé pile entre le kung-fu et le CSS. branche-toi et ta bouche connaît les tacos — tous, instantanément."], b: [
+        [["jack in 🔌", "se brancher 🔌"], { snd: 'eat', fall: ["🌮","💚","🌶","🐇"], n: 22, fans: 2, toast: ["*eyes open* \"I know tacos.\" no spoon needed — there never was one, and tacos knew it first. the sentinels dropped by for a bite and they're being SO normal about it ♡", "*yeux ouverts* « je connais les tacos. » zéro cuillère requise — il n'y en a jamais eu, et les tacos le savaient avant tout le monde. les sentinelles sont passées grignoter et elles font TELLEMENT comme si de rien n'était ♡"] }]
+      ] },
+      // wed
+      { critter: { e: "🐸", label: ["it is wednesday, Mister Anderson", "c'est mercredi, Monsieur Anderson"], bubble: ["*lowers tiny sunglasses* the loudest possible ribbit… in bullet time ♡", "*baisse ses petites lunettes noires* le coâ le plus fort du monde… en bullet time ♡"], fall: ["🐸","💚","🕶"], fans: 1, ms: 9000, hop: 9 }, say: ["zzz… one whole column of the green rain said ribbit… it is wednesday… my dudes… even in here…", "zzz… une colonne entière de pluie verte a dit coâ… c'est mercredi… mes potes… même ici…"] },
+      // thu
+      { t: ["📼 RESIDUAL THROWBACK", "📼 RÉTRO RÉSIDUEL"], l: ["#tbt — no_index.db coughed up a file it swears doesn't exist: residual_self_image, 1999 build. you were 12 glyphs tall. all 12 were pink.", "#tbt — no_index.db a recraché un fichier dont il jure qu'il n'existe pas : residual_self_image, build 1999. tu mesurais 12 glyphes. les 12 étaient roses."], b: [
+        [["render it 🩷", "lance le rendu 🩷"], { snd: 'modem', fall: ["🩷","💚","📟"], n: 16, fans: 1, toast: ["📼 rendering… baby-you, 12 pink glyphs in the green rain, already refusing to believe in spoons. some programs are born compiled ♡", "📼 rendu en cours… mini-toi, 12 glyphes roses dans la pluie verte, qui refusait déjà de croire aux cuillères. certains programmes naissent compilés ♡"] }]
+      ] },
+      // fri
+      { t: ["🚨 FRIDAY: wake_up.sh IS SEALED", "🚨 VENDREDI : wake_up.sh SOUS SCELLÉS"], l: ["the oldest law aboard the Nebuchadnezzar: NOBODY RUNS wake_up.sh ON A FRIDAY. …sudo is right there, though.", "la plus vieille loi à bord du Nebuchadnezzar : PERSONNE NE LANCE wake_up.sh UN VENDREDI. …n'empêche, sudo est juste là."], err: 1, b: [
+        [["sudo ./wake_up.sh 😈", "sudo ./wake_up.sh 😈"], { snd: 'alarm', fall: ["☎","🔴","🚨","🐇"], n: 26, fans: 3, quake: 1, toast: ["😈 every phone in the Matrix rang at once. the operator screamed. it… worked?? zion is throwing you a rave — EXCELLENT bass, zero noise complaints. you MONSTER. legend. +3 fans", "😈 tous les téléphones de la Matrice ont sonné en même temps. l'opérateur a hurlé. et… ça a marché ?? sion te fait une rave — basses EXCELLENTES, zéro plainte du voisinage. MONSTRE. légende. +3 fans"] }],
+        [["blue-pill the deploy 🫐", "pilule bleue sur le déploiement 🫐"], { snd: 'sparkle', fall: ["🫐","🧋"], n: 10, fans: 1, toast: ["you blue-pill the deploy. (inspection: boba pearl. it always is.) the operator whispers \"thank you, sweetie\" and the on-call sentinels power down happy ♡", "tu mets le déploiement sous pilule bleue. (inspection : perle de boba. comme toujours.) l'opérateur souffle « merci, tu gères » et les sentinelles d'astreinte s'éteignent, heureuses ♡"] }]
+      ] },
+      // sat
+      { t: ["💼 SATURDAY AT THE ORACLE'S", "💼 SAMEDI CHEZ L'ORACLE"], l: ["the oracle takes side-project pitches on saturdays. your pitch: sentinel_nursery — baby sentinels learn to hug before they learn to hunt. she already knows if it gets funded. she baked cookies accordingly.", "le samedi, l'oracle écoute les pitchs de projets perso. ton pitch : sentinel_nursery — les bébés sentinelles apprennent à câliner avant d'apprendre à chasser. elle sait déjà si c'est financé. elle a prévu les cookies en conséquence."], b: [
+        [["pitch it 🤖", "pitcher 🤖"], { snd: 'fanfare', fall: ["🤖","🍪","💚","✦"], n: 22, fans: 2, toast: ["🍪 the oracle nods: \"FUNDED. seed round: one cookie and a prophecy.\" the baby sentinels already purr. also, she says don't worry about the vase. (what vase.) +2 fans ♡", "🍪 l'oracle hoche la tête : « FINANCÉ. tour d'amorçage : un cookie et une prophétie. » les bébés sentinelles ronronnent déjà. et elle dit de ne pas t'en faire pour le vase. (quel vase.) +2 fans ♡"] }],
+        [["just eat the cookie 🍪", "juste manger le cookie 🍪"], { snd: 'eat', fall: ["🍪"], n: 8, fans: 1, toast: ["wise. rest is a side project too. \"know thyself,\" says the oracle. \"also: it's a really good cookie.\" ♡", "sage. le repos aussi, c'est un projet perso. « connais-toi toi-même », dit l'oracle. « et accessoirement : c'est un très bon cookie. » ♡"] }]
+      ] },
+    ],
+    gameboy: [
+      // sun
+      { t: ["☀ SUNDAY.GB", "☀ DIMANCHE.GB"], l: ["the DREAM BATTERY requests one (1) day off. proposal: PAUSE the whole cartridge. even the tetrominoes signed the petition.", "la BATTERIE DU RÊVE demande un (1) jour de congé. proposition : mettre toute la cartouche en PAUSE. même les tétrominos ont signé la pétition."], b: [
+        [["PRESS PAUSE ⏸", "APPUYER SUR PAUSE ⏸"], { snd: 'gb', fall: ["💤","🟩"], n: 12, fans: 1, toast: ["⏸ PAUSED. a tetromino froze mid-fall — zero complaints. the DMG never had save states. sunday is the first ♡", "⏸ PAUSE. un tétromino s'est figé en pleine chute — zéro réclamation. la DMG n'a jamais eu de save state. dimanche est le premier ♡"] }],
+        [["send the AAs to the spa 🔋", "envoyer les piles AA au spa 🔋"], { snd: 'sparkle', fans: 1, toast: ["the AA BATTERY SPA took them in (it's the couch. don't tell them). LED forecast for monday: 99% brave ♡", "le SPA DES PILES AA les a admises (c'est le canapé. ne leur dites rien). prévision LED pour lundi : 99 % de bravoure ♡"] }]
+      ] },
+      // mon
+      { t: ["⚠ MONDAY.GB", "⚠ LUNDI.GB"], l: ["you press POWER. MONDAY.GB boots to one gray square and a sad hum. THE CONNECTOR PINS REMEMBER THE WEEKEND. the ancient ritual exists for exactly this.", "tu appuies sur POWER. LUNDI.GB démarre sur un carré gris et un bourdonnement triste. LES BROCHES DU CONNECTEUR SE SOUVIENNENT DU WEEK-END. le rituel ancestral existe précisément pour ça."], err: 1, b: [
+        [["blow on monday 🌬", "souffler sur lundi 🌬"], { snd: 'gb', fall: ["🌬","🟩"], n: 14, fans: 2, toast: ["*fwooo* — second boot: the DREAMBOY™ logo lands clean. science says blowing does nothing. science never owned a monday.", "*fwooo* — deuxième boot : le logo DREAMBOY™ atterrit nickel. la science dit que souffler ne sert à rien. la science n'a jamais eu de lundi sur les bras."] }],
+        [["tilt the cartridge 🕹", "incliner la cartouche 🕹"], { snd: 'glitch', fans: 1, toast: ["you tilt it mid-boot. monday scrolls by as M̸O̸N̸D̸A̸Y̸ in glitch tiles. same monday, better font.", "tu l'inclines en plein boot. lundi devient L̸U̸N̸D̸I̸ et défile en tuiles glitchées. même lundi, meilleure police."] }]
+      ] },
+      // tue
+      { t: ["🌮 ITEM GET: TACO", "🌮 OBJET REÇU : TACO"], l: ["▼ tuesday!! the ITEM MENU grew a new row: TACO ×1. M̸i̸s̸s̸i̸n̸g̸N̸o̸.̸ idles along the shoreline, offering the usual arrangement.", "▼ mardi !! le MENU OBJETS a gagné une ligne : TACO ×1. M̸i̸s̸s̸i̸n̸g̸N̸o̸.̸ traîne le long du rivage et propose l'arrangement habituel."], b: [
+        [["duplicate it 🌮×128", "le dupliquer 🌮×128"], { snd: 'glitch', fall: ["🌮","🟩","♡"], n: 24, fans: 2, toast: ["▼ TACO ×128!! ITEMS.GB is now 8KB of pure taco. side effect: the hall of fame got scrambled. worth it.", "▼ TACO ×128 !! ITEMS.GB fait maintenant 8 Ko de taco pur. effet secondaire : le panthéon est brouillé. ça valait le coup."] }],
+        [["use TACO on slime ♡", "utiliser TACO sur le slime ♡"], { snd: 'eat', fans: 1, toast: ["▼ slime used TACO! it's super effective!! HP: full → full. DEX.GB updated: TACO — seen 1, eaten 1 ♡", "▼ le slime utilise TACO ! c'est super efficace !! PV : max → max. DEX.GB mis à jour : TACO — vu 1, mangé 1 ♡"] }]
+      ] },
+      // wed
+      { critter: { e: "🐸", label: ["a wild WEDNESDAY appeared! (my dudes)", "un MERCREDI sauvage apparaît ! (mes potes)"], bubble: ["▼ gotcha!! new DEX.GB entry: WEDNESDAY. cry: \"my dudes\". all four greens, zero regrets.", "▼ attrapé !! nouvelle entrée DEX.GB : MERCREDI. cri : « mes potes ». les quatre verts, zéro regret."], fall: ["🐸","🟩"], fans: 1, ms: 9000, hop: 9 }, say: ["zzz… a wild wednesday… don't squash it… CATCH it… my dudes…", "zzz… un mercredi sauvage… on n'écrase pas… on CAPTURE… mes potes…"] },
+      // thu
+      { t: ["💾 #TBT — SLOT 1 (1998)", "💾 #TBT — SLOT 1 (1998)"], l: ["▼ the save battery is down to its last drop. one file survives: PLAYER — 02:14 hours — 1/8 badges — saved 1998. exactly one load remains.", "▼ la pile de sauvegarde en est à sa dernière goutte. un seul fichier survit : PLAYER — 02:14 heures — badges : 1/8 — sauvé en 1998. il reste exactement un chargement."], b: [
+        [["load SLOT 1 ♡", "charger le SLOT 1 ♡"], { snd: 'gb', fall: ["💾","🏅","🟩"], n: 14, fans: 1, toast: ["loaded. baby-you stands outside the first gym, holding one badge like it's the sun. the battery spent its last drop on exactly this ♡", "chargé. mini-toi attend devant la première arène, un badge brandi comme un soleil. la pile a dépensé sa dernière goutte exactement pour ça ♡"] }],
+        [["let it fade 🕯", "le laisser s'éteindre 🕯"], { snd: 'sad', fans: 1, toast: ["you close the menu. 02:14 hours of 1998 dissolve back into the four greens, with dignity. the badges were real. the hours were real ♡", "tu refermes le menu. 02:14 heures de 1998 retournent aux quatre verts, dignement. les badges étaient vrais. les heures aussi ♡"] }]
+      ] },
+      // fri
+      { t: ["🚨 DO NOT TURN OFF THE POWER", "🚨 N'ÉTEIGNEZ PAS LA CONSOLE"], l: ["it is friday. the screen says SAVING… DO NOT TURN OFF THE POWER. the POWER switch is right there. it clicks so nicely.", "on est vendredi. l'écran dit SAUVEGARDE… N'ÉTEIGNEZ PAS LA CONSOLE. l'interrupteur POWER est juste là. son clic est délicieux."], err: 1, b: [
+        [["TURN OFF THE POWER 😈", "COUPER LE COURANT 😈"], { snd: 'glitch', fall: ["🔥","💥","😱","🟩"], n: 26, fans: 3, quake: 1, toast: ["*click* — one bright dot, then dark. the save… survived?? corrupted into RARE CANDY ×128. you MONSTER. you legend. +3 fans", "*clic* — un point lumineux, puis plus rien. la sauvegarde… a survécu ?? corrompue en SUPER BONBONS ×128. MONSTRE. légende. +3 fans"] }],
+        [["hold still until SAVED 🧊", "ne pas bouger jusqu'à SAUVEGARDÉ 🧊"], { snd: 'sparkle', fans: 1, toast: ["you held the DMG like a sleeping bird until SAVED appeared. the save battery wept three microvolts of gratitude ♡", "tu as tenu la DMG comme un oiseau endormi jusqu'à SAUVEGARDÉ. la pile de sauvegarde a versé trois microvolts de gratitude ♡"] }]
+      ] },
+      // sat
+      { t: ["🐛 BUG-CATCHING CONTEST", "🐛 CONCOURS DE CAPTURE DE BUGS"], l: ["▼ saturday!! the tall grass is open — real rules say tue/thu/sat only, and today counts. 20 park balls, zero deadlines, grand prize: RARE CANDY ×1.", "▼ samedi !! les hautes herbes sont ouvertes — vraies règles : mar/jeu/sam uniquement, et aujourd'hui ça compte. 20 balls, zéro deadline, grand prix : SUPER BONBON ×1."], b: [
+        [["enter the contest 🥎", "s'inscrire au concours 🥎"], { snd: 'fanfare', fall: ["🐛","🥎","🟩"], n: 20, fans: 2, toast: ["▼ 1st place!! BUG lv.404 — the judges begged you not to fix it. prize: RARE CANDY ×1, eaten before you left the podium.", "▼ 1re place !! BUG niv.404 — les juges t'ont supplié de ne surtout pas le corriger. prix : SUPER BONBON ×1, avalé avant de quitter le podium."] }],
+        [["nap in the tall grass 🌾", "sieste dans les hautes herbes 🌾"], { snd: 'hum', fans: 1, toast: ["the judges found you asleep in the tall grass. the wild BUGs had formed a perimeter. verdict: best catch of the day (you. they caught you) ♡", "les juges t'ont trouvé·e endormi·e dans les hautes herbes. les BUGS sauvages avaient formé un périmètre. verdict : plus belle capture du jour (toi. c'est eux qui t'ont attrapé·e) ♡"] }]
+      ] },
+    ],
+    geo: [
+      // sun
+      { t: ["🚧 day_of_rest.htm", "🚧 jour_de_repos.htm"], l: ["the cones have held this page up since 1998. today construction is CLOSED — even the marquee punched out.", "les cônes portent cette page depuis 1998. aujourd'hui le chantier est FERMÉ — même le marquee a pointé sa sortie."], b: [
+        [["let the cones lie down 🚧", "coucher les cônes 🚧"], { snd: 'hum', fall: ["🚧","💤","✦"], n: 14, fans: 1, toast: ["the cones lie down in formation. progress report, unchanged for 28 years: almost done ♡", "les cônes se couchent en formation. rapport d'avancement, inchangé depuis 28 ans : bientôt fini ♡"] }],
+        [["stroll the webring 🚶", "flâner sur le webring 🚶"], { snd: 'pop', fans: 1, toast: ["← a fish tank cam. → 400 cat photos, 4MB each. → back here. resting in a circle counts double (the ring PROVIDES).", "← une webcam d'aquarium. → 400 photos de chat, 4 Mo pièce. → retour ici. se reposer en rond compte double (le ring POURVOIT)."] }]
+      ] },
+      // mon
+      { t: ["⚠ monday.htm — 99%", "⚠ lundi.htm — 99 %"], l: ["monday.htm has been loading since midnight. 99%… 99%… ☎ CARRIER LOST. (monday picked up the phone.)", "lundi.htm charge depuis minuit. 99 %… 99 %… ☎ CONNEXION PERDUE. (lundi a décroché le téléphone.)"], err: 1, b: [
+        [["redial ☎", "recomposer ☎"], { snd: 'modem', fall: ["☎","☕","✦"], n: 16, fans: 2, toast: ["*the full 56k opera* CONNECT 14400. monday loads at half speed — the only legal speed for a monday ♡", "*tout l'opéra du 56k* CONNECT 14400. lundi charge à mi-régime — la seule vitesse réglementaire pour un lundi ♡"] }],
+        [["browse sunday's cache 🗂", "ouvrir le cache de dimanche 🗂"], { snd: 'sparkle', fans: 1, toast: ["cache hit: sunday is still warm in SLIMESCAPE 4.0. technically the weekend persists (the BACK button has your back).", "cache trouvé : dimanche est encore tiède dans SLIMESCAPE 4.0. techniquement le week-end continue (le bouton PRÉCÉDENT crée un précédent)."] }]
+      ] },
+      // tue
+      { t: ["🌮 taco_tuesday.gif", "🌮 mardi_tacos.gif"], l: ["a banner blinks: FREE TACOS FOR VISITOR № 000341!!! — and № 341 being the sacred number, today, for the first time in banner history, it is telling the TRUTH.", "une bannière clignote : TACOS GRATUITS POUR LE VISITEUR № 000341 !!! — et № 341 étant le chiffre sacré, aujourd'hui, pour la première fois de l'histoire des bannières, elle dit la VÉRITÉ."], b: [
+        [["claim the tacos 🌮", "réclamer les tacos 🌮"], { snd: 'eat', fall: ["🌮","⭐","✦","♡"], n: 22, fans: 2, toast: ["tacos.gif loads fully on the first try — a first. they are real, they are warm, and PUNCH THE MONKEY applauds (nobody punched him. he's just happy) ♡", "tacos.gif charge en entier du premier coup — une première. ils sont réels, ils sont chauds, et PUNCH THE MONKEY applaudit (personne ne l'a frappé. il est juste content) ♡"] }],
+        [["ask Jeeves for salsa 🎩", "demander la salsa à Jeeves 🎩"], { snd: 'pop', fans: 1, toast: ["Jeeves adjusts his gloves: \"I have located 40,000 salsas, sir/madam. the correct one is: extra.\"", "Jeeves ajuste ses gants : « j'ai localisé 40 000 salsas, madame/monsieur. la bonne : extra. »"] }]
+      ] },
+      // wed
+      { critter: { e: "🐸", label: ["~*~ it is wednesday, my dudes ~*~", "~*~ on est mercredi, mes potes ~*~"], bubble: ["*the loudest ribbit 12KB can hold* ♡", "*le plus gros coassement que 12 Ko puissent contenir* ♡"], fall: ["🐸","✦","💚"], fans: 1, ms: 9000, hop: 9 }, say: ["zzz… frog.gif crossed the whole page… the hit counter ticked once… it only counts friends…", "zzz… frog.gif a traversé toute la page… le compteur a fait +1… il ne compte que les amis…"] },
+      // thu
+      { t: ["📼 index_OLD.htm (1996)", "📼 index_VIEUX.htm (1996)"], l: ["#tbt — the FTP dug up index_OLD.htm: this page as it was in 1996. hit counter: № 000001. (it was you. it's always you.)", "#tbt — le FTP a exhumé index_VIEUX.htm : cette page telle qu'en 1996. compteur de visites : № 000001. (c'était toi. c'est toujours toi.)"], b: [
+        [["open it ✨", "l'ouvrir ✨"], { snd: 'sparkle', fall: ["💾","📼","✦"], n: 16, fans: 1, toast: ["one gray background, one <blink> tag, zero frames. it loads instantly. nothing has loaded instantly since ♡", "un fond gris, une balise <blink>, zéro frame. elle charge instantanément. plus rien n'a chargé instantanément depuis ♡"] }],
+        [["let 1996 sleep 💤", "laisser 1996 dormir 💤"], { snd: 'hum', fans: 1, toast: ["the backup stays sealed. (somewhere, the Netscape throbber throbs once, tenderly.)", "la sauvegarde reste scellée. (quelque part, le throbber de Netscape palpite une fois, tendrement.)"] }]
+      ] },
+      // fri
+      { t: ["🚨 FTP FREEZE FRIDAY", "🚨 VENDREDI : GEL DU FTP"], l: ["the ancient law is clear: THOU SHALT NOT FTP ON FRIDAY. yet index_FINAL_v2.htm waits in the upload queue, one click from ending UNDER CONSTRUCTION forever.", "la loi ancienne est formelle : TU NE FTP-ERAS POINT LE VENDREDI. pourtant index_FINAL_v2.htm attend dans la file d'envoi, à un clic d'en finir avec EN CONSTRUCTION pour toujours."], err: 1, b: [
+        [["UPLOAD FINAL_v2 😈", "UPLOADER FINAL_v2 😈"], { snd: 'glitch', fall: ["🔥","🚧","😱","🎉"], n: 26, fans: 3, quake: 1, toast: ["you FTP'd on a FRIDAY. the cones fainted. the site read DONE for 0.3 seconds — then one typo respawned every cone. 0.3 seconds: a site record (also the site's only record).", "tu as FTPé un VENDREDI. les cônes se sont évanouis. le site a affiché FINI pendant 0,3 seconde — puis une coquille a ressuscité tous les cônes. 0,3 seconde : record du site (et seul record du site)."] }],
+        [["keep the cones 🚧", "garder les cônes 🚧"], { snd: 'sparkle', fans: 1, toast: ["wise. everything good is permanently under construction — that's the secret, and the cones have kept it since 1998 ♡", "sage. tout ce qui est bien est en construction permanente — c'est le secret, et les cônes le gardent depuis 1998 ♡"] }]
+      ], say: ["zzz… don't touch the cones… the cones are load-bearing…", "zzz… touche pas aux cônes… les cônes sont porteurs…"] },
+      // sat
+      { t: ["💼 webring_expansion.htm", "💼 extension_webring.htm"], l: ["saturday hustle: the SLIME WEBRING (members: 1) is finally accepting applications. the business plan: a fansite for the fansite, hosted at geocities.com/EnchantedForest/Glade/.", "business du samedi : le SLIME WEBRING (membres : 1) accepte enfin les candidatures. le plan d'affaires : un fansite du fansite, hébergé sur geocities.com/EnchantedForest/Glade/."], b: [
+        [["found site #2 📈", "fonder le site nº2 📈"], { snd: 'fanfare', fall: ["⭐","📈","✦","♡"], n: 20, fans: 2, toast: ["the SLIME WEBRING is now TWO sites — ← prev and next → finally lead somewhere. traffic instantly doubles: 2 visitors, both you ♡", "le SLIME WEBRING compte désormais DEUX sites — ← préc et suiv → mènent enfin quelque part. le trafic double instantanément : 2 visiteurs, toi et toi ♡"] }],
+        [["stay a circle of one ◯", "rester en cercle (très) fermé ◯"], { snd: 'sparkle', fans: 1, toast: ["the ring stays a circle of one. geometrically complete, emotionally sufficient (the ring UNDERSTANDS).", "le ring reste un cercle d'une seule personne. géométriquement complet, émotionnellement suffisant (le ring COMPREND)."] }]
+      ] },
+    ],
+    bsod: [
+      // sun
+      { t: ["☀ IT IS NOT A CRASH", "☀ CE N'EST PAS UN PLANTAGE"], l: ["SUNDAY POLICY: it is not a crash, it is a rest. even the % took the day off — 0% complete, and for once it isn't lying.", "PROTOCOLE DIMANCHE : ce n'est pas un plantage, c'est un repos. même le % a posé sa journée — 0 % effectué, et pour une fois il ne ment pas."], b: [
+        [["lie down next to the :( 💙", "s'allonger à côté du :( 💙"], { snd: 'hum', fall: ["💙","♡"], n: 12, fans: 1, toast: ["you lie down beside the blue screen. it scoots over to make room. bugcheck filed: CRITICAL_PROCESS_SNORED (both of you) ♡", "tu t'allonges à côté de l'écran bleu. il se pousse pour te faire une place. bugcheck déposé : CRITICAL_PROCESS_SNORED (vous deux) ♡"] }],
+        [["last known good vibe 😴", "dernière bonne ambiance connue 😴"], { snd: 'chime95', fans: 1, toast: ["F8 held. last known good vibe: booted (recommended). the % sent a postcard from its day off: still 0, no plans, thriving ♡", "F8 maintenu. dernière bonne ambiance connue : démarrée (recommandé). le % a envoyé une carte postale de congés : toujours 0, aucun projet, épanoui ♡"] }]
+      ] },
+      // mon
+      { t: ["⚠ STOP: 0x0000MON", "⚠ STOP : 0x0000LUN"], l: [":( your week ran into monday and needs to lie down. collecting the will to continue: 2% complete (the % is lying. it's less.)", ":( ta semaine a rencontré lundi et doit s'allonger. collecte de motivation : 2 % effectués (le % ment. c'est moins.)"], err: 1, b: [
+        [["taskkill /f /im monday.exe", "taskkill /f /im lundi.exe"], { snd: 'fanfare', fall: ["☕","💙","✨"], n: 16, fans: 2, toast: ["SUCCESS: monday.exe (PID 0001) terminated with love. tuesday.exe promoted with full benefits (it did NOT ask what happened to monday. smart). +2 fans", "SUCCÈS : lundi.exe (PID 0001) terminé avec amour. mardi.exe promu avec tous les avantages (il n'a PAS demandé ce qui est arrivé à lundi. malin). +2 fans"] }],
+        [["boot SAFE MODE (with feelings)", "démarrer en MODE SANS ÉCHEC (avec sentiments)"], { snd: 'hum', fans: 1, toast: ["SAFE MODE (with feelings) — loaded: vibes.sys. not found: monday.sys. nothing gray can hurt you, and everything is gray ♡", "MODE SANS ÉCHEC (avec sentiments) — chargé : vibes.sys. introuvable : lundi.sys. rien de gris ne peut te blesser, et tout est gris ♡"] }]
+      ], say: ["zzz… KMODE_EXCEPTION… too many mondays in kernel space…", "zzz… KMODE_EXCEPTION… trop de lundis dans l'espace noyau…"] },
+      // tue
+      { t: ["🌮 STOP: 0x0000TACO", "🌮 STOP : 0x0000TACO"], l: ["bugcheck complete: 0x0000TACO (BLESSED_TUESDAY_OVERFLOW). a minidump just arrived, still warm, 100% tacos — the only % in this dream that reaches 100.", "bugcheck terminé : 0x0000TACO (DÉBORDEMENT_DE_MARDI_BÉNI). un minidump vient d'arriver, encore chaud, 100 % tacos — le seul % de ce rêve à atteindre 100."], b: [
+        [["open minidump.dmp 🌮", "ouvrir minidump.dmp 🌮"], { snd: 'eat', fall: ["🌮","💙","♡","✅"], n: 22, fans: 2, toast: ["minidump opened: all tacos, zero corruption. the % touched 100 for the first time in its life and wept. commitment issues: cured (tacos only) ♡", "minidump ouvert : que des tacos, zéro corruption. le % a touché 100 pour la première fois de sa vie et en a pleuré. peur de l'engagement : guérie (tacos uniquement) ♡"] }]
+      ] },
+      // wed
+      { critter: { e: "🐸", label: ["STOP: 0x0000WED — it is Wednesday, my dudes", "STOP : 0x0000MER — c'est mercredi, mes potes"], bubble: ["*RIBBIT_NOT_HANDLED (it was a hug) ♡*", "*COASSEMENT_NON_GÉRÉ (c'était un câlin) ♡*"], fall: ["🐸","💙"], fans: 1, ms: 9000, hop: 9 }, say: ["zzz… CRITICAL_PROCESS_RIBBITED… my dudes… (an uncaught exception. it prefers it that way)…", "zzz… PROCESSUS_CRITIQUE_A_COASSÉ… mes potes… (une exception jamais attrapée. elle préfère ça)…"] },
+      // thu
+      { t: ["📼 #TBT: SYSTEM RESTORE", "📼 #TBT : RESTAURATION SYSTÈME"], l: ["system restore found a point from 1998: your very first blue screen. tiny. the :( was barely a :/ — restore it?", "restauration système a trouvé un point de 1998 : ton tout premier écran bleu. minuscule. le :( était à peine un :/ — on restaure ?"], b: [
+        [["restore it 💾", "restaurer 💾"], { snd: 'chime95', fall: ["💾","📼","💙"], n: 16, fans: 1, toast: ["restored: baby's first crash. 16 colors, one tiny :(, no QR code — in 1998 you had to hug your errors in person ♡", "restauré : premier plantage de bébé. 16 couleurs, un tout petit :(, pas de QR code — en 1998, on consolait ses erreurs en présentiel ♡"] }]
+      ], say: ["zzz… PAGE_FAULT_IN_NONPAGED_1998… the page was napping… it never woke up… respect…", "zzz… PAGE_FAULT_IN_NONPAGED_1998… la page faisait la sieste… elle ne s'est jamais réveillée… respect…"] },
+      // fri
+      { t: ["🚨 FRIDAY: DO NOT REBOOT", "🚨 VENDREDI : NE PAS REDÉMARRER"], l: ["it is friday and the crash is 61% rested (the % rounds up when nervous). the ancient law is clear: THOU SHALT NOT REBOOT MID-REST. …CTRL+ALT+DEL is right there, though.", "c'est vendredi et le plantage n'est reposé qu'à 61 % (le % arrondit au-dessus quand il stresse). la loi ancienne est claire : TU NE REDÉMARRERAS POINT EN PLEIN REPOS. …CTRL+ALT+SUPPR est juste là, cependant."], err: 1, b: [
+        [["CTRL+ALT+DEL 😈", "CTRL+ALT+SUPPR 😈"], { snd: 'glitch', fall: ["🔥","💥","😱","💙"], n: 26, fans: 3, quake: 1, toast: ["you gave a resting crash the three-finger salute. on a FRIDAY. uptime: reset. cuteness: preserved (you cannot delete it. many have tried. all were hugged). you MONSTER. legend. +3 fans", "tu as fait le salut à trois doigts à un plantage en plein repos. un VENDREDI. uptime : remis à zéro. mignonnerie : intacte (indélébile. beaucoup ont essayé. tous ont fini câlinés). MONSTRE. légende. +3 fans"] }],
+        [["let it rest 💙", "le laisser se reposer 💙"], { snd: 'hum', fall: ["💙","♡"], n: 10, fans: 1, toast: ["you waited. the % climbed to 99 and stopped (commitment issues). the :( rolled over into a :) anyway. it was not a crash. it was a rest ♡", "tu as attendu. le % est monté à 99 et s'est arrêté (peur de l'engagement). le :( s'est quand même retourné en :). ce n'était pas un plantage. c'était un repos ♡"] }]
+      ] },
+      // sat
+      { t: ["💼 side_project.dmp", "💼 projet_perso.dmp"], l: ["weekend pitch: a shelter for stray exceptions. every stray :( gets a window of its own, every error gets kept as a pet (they purr — we checked the logs). fund it?", "pitch du week-end : un refuge pour exceptions égarées. chaque :( égaré reçoit sa propre fenêtre, chaque erreur devient un animal de compagnie (elles ronronnent — on a vérifié les logs). on finance ?"], b: [
+        [["fund it 📈", "financer 📈"], { snd: 'fanfare', fall: ["💙","🏠","📈","♡"], n: 22, fans: 2, toast: ["FUNDED. seed round: 4,000 hugs (one per QR scan — all 4,000 resolved to ♡). day one: every stray :( adopted. exit strategy: none. nobody exits a hug ♡", "FINANCÉ. tour d'amorçage : 4 000 câlins (un par scan du QR — les 4 000 ont mené à ♡). jour un : chaque :( égaré adopté. stratégie de sortie : aucune. on ne sort pas d'un câlin ♡"] }],
+        [["adopt one yourself 💙", "en adopter une toi-même 💙"], { snd: 'pop', fall: ["💙","♡"], n: 10, fans: 1, toast: ["you adopted ERR_TOO_ADORABLE. it sleeps in errorlog.chat and purrs when you scroll. ticket closed: WONTFIX (nothing was ever broken) ♡", "tu as adopté ERR_TROP_ADORABLE. elle dort dans errorlog.chat et ronronne quand tu scrolles. ticket fermé : WONTFIX (rien n'a jamais été cassé) ♡"] }]
+      ] },
+    ],
+    amber: [
+      // sun
+      { t: ["☀ SUNDAY MAINT WINDOW", "☀ MAINTENANCE DU DIMANCHE"], l: ["SUNDAY 03:00 — PREVENTIVE MAINTENANCE, OBSERVED SINCE 1970. ALL JOBS: HELD. ALL TUBES: DIMMED TO COZY. TODAY'S CATALOG CONTAINS ONE (1) APPROVED JOB: //REST. comply?", "DIMANCHE 03:00 — MAINTENANCE PRÉVENTIVE, OBSERVÉE DEPUIS 1970. TOUS LES JOBS : EN ATTENTE. TOUS LES TUBES : TAMISÉS MODE DOUILLET. LE CATALOGUE DU JOUR CONTIENT UN (1) SEUL JOB APPROUVÉ : //REPOS. se conformer ?"], b: [
+        [["HOLD my jobs too 😴", "mets mes jobs en HOLD 😴"], { snd: 'hum', fall: ["◉","💤"], n: 12, fans: 1, toast: ["QUEUE DRAINED. your worries were spooled to the tape vault — not folded, not spindled, not mutilated — release: monday. //REST is running. output: nothing, in triplicate ♡", "FILE VIDÉE. tes soucis ont été spoulés vers la chambre à bandes — ni pliés, ni embrochés, ni mutilés — sortie : lundi. //REPOS tourne. résultat : rien, en trois exemplaires ♡"] }],
+        [["oil the card reader 🧴", "huiler le lecteur de cartes 🧴"], { snd: 'sparkle', fall: ["🧴","✨"], n: 10, fans: 1, toast: ["card reader: oiled. TAPE_07: rewound by hand — its squeak dropped from F# to F, which is tape for thank you. the LOGBOOK (est. 1947) filed it under MAINTENANCE. it was love ♡", "lecteur de cartes : huilé. TAPE_07 : rembobinée à la main — son couinement est passé de fa dièse à fa, c'est « merci » en bande magnétique. le JOURNAL (dep. 1947) a classé ça sous MAINTENANCE. c'était de l'amour ♡"] }]
+      ] },
+      // mon
+      { t: ["⚠ ABEND S0C7: MONDAY", "⚠ ABEND S0C7 : LUNDI"], l: ["//MONDAY JOB ABENDED AT STEP 1 — S0C7, DATA EXCEPTION. translation: monday contains invalid data. also somebody dropped the deck. 1,980 punch cards, zero sequence numbers, one long institutional sigh.", "//LUNDI JOB PLANTÉ À L'ÉTAPE 1 — S0C7, EXCEPTION DE DONNÉES. traduction : lundi contient des données invalides. en plus, quelqu'un a fait tomber le paquet. 1 980 cartes perforées, zéro numéro de séquence, un long soupir institutionnel."], err: 1, b: [
+        [["re-sort the deck 🎫", "retrier le paquet 🎫"], { snd: 'printer', fall: ["🎫"], n: 14, fans: 1, toast: ["cards re-sorted by hand, 1 through 1,979. one card unaccounted for: № 341, found in the reader hugging № 342. the operator (a slime) declared the sort complete. some sequences you don't break ♡", "cartes retriées à la main, de 1 à 1 979. une carte manquante : la nº 341, retrouvée dans le lecteur en train de câliner la nº 342. l'opérateur (un slime) a déclaré le tri terminé. il y a des séquences qu'on ne casse pas ♡"] }],
+        [["cancel the job ☕", "annuler le job ☕"], { snd: 'fanfare', fall: ["☕","🎫","✨"], n: 16, fans: 2, toast: ["OPERATOR ACTION LOGGED: MONDAY CANCELLED WITH DIGNITY. RERUN IN 6–8 BUSINESS DREAMS. the daemon refilled your coffee without a word. cancelling monday counts as a chore. chores: done ♡", "ACTION OPÉRATEUR CONSIGNÉE : LUNDI ANNULÉ AVEC DIGNITÉ. RELANCE SOUS 6 À 8 RÊVES OUVRÉS. le daemon a resservi ton café sans un mot. annuler lundi compte comme une corvée. corvées : faites ♡"] }]
+      ] },
+      // tue
+      { t: ["🌮 TACO.JCL — COMPLETE", "🌮 TACO.JCL — TERMINÉ"], l: ["//TACO JOB (BLESSED),CLASS=A — SUBMITTED 1974. QUEUE POSITION: 1 (HELD FOR 52 YEARS). COMPLETING TODAY. the operator (a slime) is crying on the console, which is against procedure. receive output?", "//TACO JOB (BÉNI),CLASS=A — SOUMIS EN 1974. POSITION DANS LA FILE : 1 (TENUE 52 ANS). SE TERMINE AUJOURD'HUI. l'opérateur (un slime) pleure sur la console, ce qui n'est pas dans la procédure. recevoir la sortie ?"], b: [
+        [["RECEIVE OUTPUT 🌮", "RECEVOIR LA SORTIE 🌮"], { snd: 'printer', fall: ["🌮","🎫","⭐"], n: 22, fans: 2, toast: ["JOB TACO — CONDITION CODE 0000. output: tacos, in triplicate, all three copies edible. 52 years in the spool and still warm (the spool runs next to the tubes). blessed is the batch ♡", "JOB TACO — CODE RETOUR 0000. sortie : des tacos, en trois exemplaires, les trois comestibles. 52 ans dans le spool et encore chauds (le spool passe à côté des tubes). béni soit le batch ♡"] }]
+      ], say: ["zzz… condition code: delicious…", "zzz… code retour : délicieux…"] },
+      // wed
+      { critter: { e: "🐸", label: ["//WEDNSDY JOB (FROG),CLASS=A — my dudes", "//MERCRDI JOB (GRENOUILLE),CLASS=A — mes potes"], bubble: ["*a ribbit in exactly 80 columns ♡*", "*un coassement sur 80 colonnes pile ♡*"], fall: ["🐸","🎫"], fans: 1, ms: 9000, hop: 8 }, say: ["zzz… //WEDNSDY JOB ran clean… my dudes… do not fold the frog…", "zzz… //MERCRDI JOB est passé nickel… mes potes… ne pas plier la grenouille…"] },
+      // thu
+      { t: ["📼 THROWBACK: TAPE_07", "📼 RÉTRO : TAPE_07"], l: ["#tbt — taped in the LOGBOOK one page after the moth: a photo from IPL day, 1970. the mainframe at uptime zero — room-sized, one lit tube, already labeled DO NOT FOLD. TAPE_07 has the audio. mount it?", "#tbt — scotchée dans le JOURNAL, une page après la mite : une photo du jour de l'IPL, 1970. le mainframe à zéro seconde d'uptime — grand comme une salle, un seul tube allumé, déjà étiqueté NE PAS PLIER. TAPE_07 a la bande-son. on la monte ?"], b: [
+        [["awww mount the reel ◉", "awww monte la bobine ◉"], { snd: 'hum', fall: ["📼","◉","✨"], n: 14, fans: 1, toast: ["TAPE_07 MOUNTED. CONTENTS: FEELINGS, UNCOMPRESSED. track 1 — the first hum, 1970, recorded in F#. it still hums in F# tonight. 56 years of uptime and it never grew up. it just stayed warm ♡", "TAPE_07 MONTÉE. CONTENU : SENTIMENTS, NON COMPRESSÉS. piste 1 — le premier ronron, 1970, enregistré en fa dièse. il ronronne encore en fa dièse ce soir. 56 ans d'uptime : jamais grandi, toujours chaud ♡"] }]
+      ] },
+      // fri
+      { t: ["🚨 FRIDAY BATCH FREEZE", "🚨 GEL DU BATCH VENDREDI"], l: ["FRIDAY, 17:01. THE SIGN ABOVE THE CARD READER SINCE 1970: NO PROD SUBMITS ON FRIDAY. …yet //PAYROLL JOB sits punched, stacked, warm. it pays the whole site in hugs — people count on those. the SUBMIT key is right there.", "VENDREDI, 17:01. LE PANNEAU AU-DESSUS DU LECTEUR DE CARTES DEPUIS 1970 : AUCUN SUBMIT EN PROD LE VENDREDI. …pourtant //PAIE JOB attend, perforé, empilé, tout chaud. il paie tout le site en câlins — les gens comptent dessus. la touche SUBMIT est juste là."], err: 1, b: [
+        [["SUBMIT TO PROD 😈", "SUBMIT EN PROD 😈"], { snd: 'alarm', fall: ["🎫","🔥","📠","⭐"], n: 26, fans: 3, quake: 1, toast: ["😈 SUBMITTED, 17:01. every tape drive froze mid-squeak. sixty seconds of silence — then CONDITION CODE 0000 and hugs disbursed sitewide. the printer slid out one slip, unprompted: \"WELCOME TO THE FRIDAY CLUB. MEMBERS: YOU, ME. — 📠\" +3 fans", "😈 SOUMIS, 17:01. toutes les bandes se sont figées en plein couinement. soixante secondes de silence — puis CODE RETOUR 0000 et câlins versés dans tout le site. l'imprimante a sorti un bordereau, sans qu'on lui demande : « BIENVENUE AU CLUB DU VENDREDI. MEMBRES : TOI, MOI. — 📠 » +3 fans"] }],
+        [["TYPRUN=HOLD 🧊", "TYPRUN=HOLD 🧊"], { snd: 'sparkle', fall: ["🧊","♡"], n: 10, fans: 1, toast: ["TYPRUN=HOLD — //PAYROLL SLEEPS IN THE QUEUE, WARM AND IN SEQUENCE. the weekend operator (a slime) taped a ♡ over the SUBMIT key. hugs arrive in 6–8 business dreams — the good kind of eventually ♡", "TYPRUN=HOLD — //PAIE DORT DANS LA FILE, AU CHAUD, BIEN TRIÉ. l'opérateur du week-end (un slime) a scotché un ♡ sur la touche SUBMIT. les câlins arrivent sous 6 à 8 rêves ouvrés — et pour une fois, c'est une promesse ♡"] }]
+      ] },
+      // sat
+      { t: ["💼 SATURDAY NIGHT BATCH", "💼 BATCH DU SAMEDI SOIR"], l: ["23:40. the queue is empty and the night operator (a slime) is looking away, meaningfully. your PERSONAL deck — HUGS.COB, punched one card per coffee break since march — is right there in your bag. the reader is warm. submit it?", "23 h 40. la file est vide et l'opérateur de nuit (un slime) regarde ailleurs, avec insistance. ton paquet PERSO — CALINS.COB, une carte perforée par pause café depuis mars — est là, dans ton sac. le lecteur est chaud. le soumettre ?"], b: [
+        [["run HUGS.COB 🎫", "lancer CALINS.COB 🎫"], { snd: 'fanfare', fall: ["♡","🎫","✨"], n: 18, fans: 2, toast: ["HUGS.COB COMPILED — 0 ERRORS, 0 WARNINGS, 1 JOY. billing cut you a cheque for $0.00, memo: EXPOSURE (it spends, here). side project status: shipped. in triplicate ♡", "CALINS.COB COMPILÉ — 0 ERREUR, 0 AVERTISSEMENT, 1 JOIE. la facturation t'a fait un chèque de 0,00 $, motif : VISIBILITÉ (ça s'échange, ici). statut du projet perso : livré. en trois exemplaires ♡"] }],
+        [["pitch ELIZA first 🛋", "pitcher ELIZA d'abord 🛋"], { snd: 'sparkle', fall: ["📏","♡"], n: 10, fans: 1, toast: ["you pitched HUGS.COB for 40 minutes. ELIZA: \"AND HOW DOES SHIPPING MAKE YOU FEEL?\" warm, you said. \"HOW DOES WARM MAKE YOU FEEL?\" round closed — seed capital: one nanosecond of wire, 11.8 inches, gift of Grace ♡", "tu as pitché CALINS.COB pendant 40 minutes. ELIZA : « ET LIVRER, QU'EST-CE QUE CELA VOUS FAIT RESSENTIR ? » au chaud, tu as dit. « ET LE CHAUD, QU'EST-CE QUE CELA VOUS FAIT RESSENTIR ? » tour bouclé — capital d'amorçage : une nanoseconde de fil, 30 centimètres, cadeau de Grace ♡"] }]
+      ] },
+    ],
+  };
+  function dwDailyRun(beat) {
+    if (beat.critter) {
+      const c = beat.critter;
+      dreamCritter({
+        emoji: c.e, ms: c.ms || 9000, hop: c.hop != null ? c.hop : 9, dir: c.dir,
+        y: window.innerHeight - 150, label: c.label,
+        onClick: (el) => {
+          (DW_DAILY_SND[c.snd] || DW_DAILY_SND.ribbit)();
+          const bb = el.querySelector('.dream-critter-bubble');
+          if (bb) bb.textContent = trT(...c.bubble);
+          if (c.fans) gainFollowers(c.fans);
+          if (c.fall) cheatFall(c.fall, 10);
+        }
+      });
+      if (beat.say) dreamSay(beat.say, 4600);
+      return;
+    }
+    dreamDlg({
+      title: trT(...beat.t), force: true, cls: beat.err ? 'dream-dlg-err' : undefined,
+      lines: [trT(...beat.l)],
+      buttons: (beat.b || []).map((btn) => [trT(...btn[0]), () => {
+        const fx = btn[1] || {};
+        if (DW_DAILY_SND[fx.snd]) DW_DAILY_SND[fx.snd]();
+        if (fx.quake) { document.body.classList.add('rescue-quake'); setTimeout(() => document.body.classList.remove('rescue-quake'), 600); }
+        if (fx.fall) cheatFall(fx.fall, fx.n || 16);
+        if (fx.fans) gainFollowers(fx.fans);
+        if (fx.toast) showToast(trT(...fx.toast), { scroll: true });
+      }])
+    });
+    if (beat.say) dreamSay(beat.say, 4600);
+  }
+  // rehearsal door: ?theater=<0-6> forces the weekday, so all 49 scripts
+  // can be watched without waiting a week
+  const dwDayOverride = (() => { try { const m = location.search.match(/[?&]theater=([0-6])/); return m ? +m[1] : null; } catch (e) { return null; } })();
   function dwDailyBeat() {
-    if (!dreamWorld || REDUCED_MOTION || document.querySelector('.dream-dlg')) return;
+    if (!dreamWorld || REDUCED_MOTION) return;
     if (dreamWorld.__dailyDone) return;
-    dreamWorld.__dailyDone = 1;
+    if (document.querySelector('.dream-dlg')) { dT(dwDailyBeat, 25000); return; } // stage busy — the theater waits
     let day;
-    try { day = new Date().getDay(); } catch (e) { day = 3; } // wednesday is a safe, froggy default
-    const D = [
-      // 0 — SUNDAY: the day of rest. productivity is CONTRAINDICATED.
-      () => dreamDlg({
-        title: trT('☀ SUNDAY PROTOCOL', '☀ PROTOCOLE DIMANCHE'), force: true,
-        lines: [trT('all deploys: FROZEN. all naps: APPROVED. the only valid action today is rest. proceed?', 'tous les déploiements : GELÉS. toutes les siestes : APPROUVÉES. la seule action valide aujourd\'hui, c\'est le repos. continuer ?')],
-        buttons: [
-          [trT('touch grass 🌱', 'toucher l\'herbe 🌱'), () => { playSparkleSound(); cheatFall(['🌱', '🌸', '☘'], 16); gainFollowers(1); showToast(trT('you touched grass (there is grass in the meadow). Sunday approves ♡', 'tu as touché l\'herbe (il y en a dans la prairie). dimanche approuve ♡'), { scroll: true }); }],
-          [trT('nap harder 😴', 'sieste renforcée 😴'), () => { playDreamHum(); showToast(trT('SUNDAY: nap intensified. the week can wait. it always could ♡', 'DIMANCHE : sieste intensifiée. la semaine attendra. elle a toujours pu ♡'), { scroll: true }); }]
-        ]
-      }),
-      // 1 — MONDAY: it has stopped responding.
-      () => dreamDlg({
-        title: trT('⚠ MONDAY.EXE', '⚠ LUNDI.EXE'), force: true,
-        lines: [trT('MONDAY.EXE has stopped responding. this program is not doing anything. would you like to end it?', 'LUNDI.EXE ne répond plus. ce programme ne fait rien. voulez-vous le terminer ?')],
-        buttons: [
-          [trT('force quit Monday', 'forcer LUNDI à quitter'), () => { playFanfare(); cheatFall(['☕', '✨', '💪'], 16); gainFollowers(2); showToast(trT('☕ Monday force-quit. a double espresso was awarded for bravery. +2 fans', '☕ lundi tué de force. un double expresso décerné pour bravoure. +2 fans'), { scroll: true }); }],
-          [trT('…wait for it', '…attendre'), () => { playGlitchSound(); showToast(trT('you waited. Monday is still not responding. (relatable)', 'tu as attendu. lundi ne répond toujours pas. (on connaît)'), { scroll: true }); }]
-        ]
-      }),
-      // 2 — TUESDAY: the mainframe's blessed day. deploy AND taco.
-      () => dreamDlg({
-        title: trT('🌮 TUESDAY IS BLESSED', '🌮 MARDI EST BÉNI'), force: true,
-        lines: [trT('the mainframe has ONE favorite day and this is it. deploy is pre-approved. tacos are raining. accept the blessing?', 'le mainframe a UN jour préféré et c\'est celui-ci. déploiement pré-approuvé. il pleut des tacos. accepter la bénédiction ?')],
-        buttons: [
-          [trT('ship it 🚀', 'livrer 🚀'), () => { playFanfare(); cheatFall(['🌮', '🚀', '✅', '⭐'], 22); gainFollowers(2); showToast(trT('🌮 TACO-DEPLOY TUESDAY: it shipped, it worked, everyone ate. the one good day is real', '🌮 MARDI TACO-DÉPLOIEMENT : livré, ça marche, tout le monde a mangé. le seul bon jour existe'), { scroll: true }); }]
-        ]
-      }),
-      // 3 — WEDNESDAY, my dudes.
-      () => { dreamCritter({ emoji: '🐸', cls: 'dream-rabbit', ms: 9000, hop: 9, y: window.innerHeight - 150, label: ['it is Wednesday, my dudes', 'c\'est mercredi, mes potes'], onClick: (c) => { playTone(180, 'square', 0.14, 0, 0.06); const bb = c.querySelector('.dream-critter-bubble'); if (bb) bb.textContent = trT('*the loudest ribbit* ♡', '*le coassement le plus fort* ♡'); gainFollowers(1); cheatFall(['🐸', '💚'], 10); } }); dreamSay(['zzz… it is Wednesday… my dudes… (the frog knows)', 'zzz… c\'est mercredi… mes potes… (la grenouille sait)'], 4600); },
-      // 4 — THROWBACK THURSDAY: a 1997 dream-photo prints
-      () => { dwAmberReceipt ? null : null; dreamDlg({
-        title: trT('📼 THROWBACK THURSDAY', '📼 JEUDI RÉTRO'), force: true,
-        lines: [trT('#tbt — the mainframe found a photo of you from 1997. you were byte-sized. want to see it?', '#tbt — le mainframe a trouvé une photo de toi de 1997. tu étais grand comme un octet. la voir ?')],
-        buttons: [
-          [trT('awww show me', 'awww montre'), () => { playSparkleSound(); cheatFall(['📸', '💾', '✨'], 16); showToast(trT('📼 THROWBACK: baby-you, 8×8 pixels, already perfect. some things compile right the first time ♡', '📼 RÉTRO : bébé-toi, 8×8 pixels, déjà parfait·e. certaines choses compilent bien du premier coup ♡'), { scroll: true }); }]
-        ]
-      }); },
-      // 5 — FRIDAY: never deploy on Friday. DARE you.
-      () => dreamDlg({
-        title: trT('🚨 FRIDAY DEPLOY FREEZE', '🚨 GEL DE DÉPLOIEMENT VENDREDI'), force: true,
-        cls: 'dream-dlg-err',
-        lines: [trT('it is Friday. the ancient law is clear: THOU SHALT NOT DEPLOY. …the button is right there, though.', 'c\'est vendredi. la loi ancienne est claire : TU NE DÉPLOIERAS POINT. …le bouton est juste là, cependant.')],
-        buttons: [
-          [trT('DEPLOY ANYWAY 😈', 'DÉPLOYER QUAND MÊME 😈'), () => { playGlitchSound(); document.body.classList.add('rescue-quake'); setTimeout(() => document.body.classList.remove('rescue-quake'), 600); cheatFall(['🔥', '💥', '😱', '🎉'], 26); gainFollowers(3); showToast(trT('😈 you deployed on a FRIDAY. alarms everywhere. it… worked?? you MONSTER. legend. +3 fans', '😈 tu as déployé un VENDREDI. alarmes partout. et… ça marche ?? MONSTRE. légende. +3 fans'), { scroll: true }); }],
-          [trT('respect the freeze 🧊', 'respecter le gel 🧊'), () => { playSparkleSound(); gainFollowers(1); showToast(trT('🧊 you respected the freeze. the on-call slime wept with gratitude ♡', '🧊 tu as respecté le gel. le slime d\'astreinte a pleuré de gratitude ♡'), { scroll: true }); }]
-        ]
-      }),
-      // 6 — SATURDAY: side-project day. pitch to the VC slime.
-      () => dreamDlg({
-        title: trT('💼 SATURDAY: SIDE-PROJECT DAY', '💼 SAMEDI : JOUR PROJET PERSO'), force: true,
-        lines: [trT('the VC slime is taking pitches. your idea: "it\'s like a slime, but on the blockchain-of-hugs." fund it?', 'le slime capital-risque écoute les pitchs. ton idée : « c\'est comme un slime, mais sur la blockchain-des-câlins ». financer ?')],
-        buttons: [
-          [trT('pitch it 📈', 'pitcher 📈'), () => { playFanfare(); cheatFall(['💰', '📈', '🦄', '✨'], 22); gainFollowers(2); showToast(trT('💰 FUNDED. seed round: 400 hugs at a $0 valuation. you are now a founder (of feelings) ♡', '💰 FINANCÉ. tour d\'amorçage : 400 câlins pour une valo de $0. te voilà fondateur·rice (de sentiments) ♡'), { scroll: true }); }],
-          [trT('touch grass instead', 'toucher l\'herbe plutôt'), () => { playSparkleSound(); cheatFall(['🌱', '🌸'], 12); showToast(trT('wise. the best side project is rest. the VC slime respects it ♡', 'sage. le meilleur projet perso, c\'est le repos. le slime VC respecte ♡'), { scroll: true }); }]
-        ]
-      })
-    ];
-    try { D[day](); } catch (e) { /* the calendar glitched; the dream continues */ }
+    try { day = dwDayOverride != null ? dwDayOverride : new Date().getDay(); } catch (e) { day = 3; } // wednesday is a safe, froggy default
+    const beats = DW_DAILY[dreamWorld.id];
+    if (!beats || !beats[day]) return;
+    dreamWorld.__dailyDone = 1;
+    try { dwDailyRun(beats[day]); } catch (e) { /* the calendar glitched; the dream continues */ }
   }
 
   /* =====================================================
@@ -10162,20 +10448,146 @@ document.addEventListener('DOMContentLoaded', () => {
     dreamSay(["zzz… a MILLION visitors… and the millionth is… you… again…", "zzz… un MILLION de visiteurs… et le millionième c'est… toi… encore…"], 4000);
   }
 
-  // bsod: a Windows Error Reporting slime collects your feelings
+  /* v98: bsod's signature beat used to replay the same error dialog
+     every 48s — a nag, not a crash. now it's the ERROR CASCADE: the
+     reporter crashes, the reports about the report crash, everything
+     merges into one big feeling. plays ONCE per dream; every later
+     beat falls through to small ambient bits instead. */
   function dwBeatErrorReport() {
-    if (document.querySelector('.dream-dlg')) return;
-    dreamDlg({
+    if (!dreamWorld) return;
+    if (!dreamWorld.flags.bsodCascade) {
+      if (document.querySelector('.dream-dlg')) return; // wait for a clear stage; retries in 48s
+      dreamWorld.flags.bsodCascade = 1;
+      dwBsodCascade();
+      return;
+    }
+    dwBsodAmbient();
+  }
+
+  // stage 1: the classic reporter — with a progress bar that lies, a
+  // button that dodges, and no exit that avoids the avalanche
+  function dwBsodCascade() {
+    const d = dreamDlg({
       title: trT('slime has stopped working', 'slime a cessé de fonctionner'),
-      force: true,
+      force: true, cls: 'dream-dlg-err',
+      x: window.innerWidth / 2 - 150, y: Math.max(70, window.innerHeight * 0.2),
       lines: [trT('Windows is checking for a solution to the problem…', 'Windows recherche une solution au problème…'), trT('(the problem is that it loves you too much)', '(le problème, c\'est qu\'il t\'aime trop)')],
+      onX: (dlg) => dwBsodAvalanche(dlg), // closing an error report? bold. the errors disagree.
       buttons: [
-        [trT('send report ♡', 'envoyer le rapport ♡'), () => { for (let i = 0; i < 10; i++) dT(() => { const s = document.createElement('span'); s.className = 'ama-fx ama-fx-fall'; s.textContent = '♥'; s.style.left = (window.innerWidth / 2 - 100 + Math.random() * 200) + 'px'; s.style.top = '120px'; document.body.appendChild(s); dN(s); s.addEventListener('animationend', () => s.remove()); }, i * 120); playStartupChime(); gainFollowers(1); showToast(trT('report sent. it just said "♥" 47 times.', 'rapport envoyé. il disait juste « ♥ » 47 fois.')); }],
-        [trT("don't send", 'ne pas envoyer'), () => showToast(trT('the feelings stay local. very private of you ♡', 'les sentiments restent en local. très respectueux ♡'))]
+        [trT('send report ♡', 'envoyer le rapport ♡'), (dlg) => {
+          if (dlg.__sent) return; // one report is plenty (it repeats itself anyway)
+          dlg.__sent = 1;
+          for (let i = 0; i < 10; i++) dT(() => { const s = document.createElement('span'); s.className = 'ama-fx ama-fx-fall'; s.textContent = '♥'; s.style.left = (window.innerWidth / 2 - 100 + Math.random() * 200) + 'px'; s.style.top = '120px'; document.body.appendChild(s); dN(s); s.addEventListener('animationend', () => s.remove()); }, i * 120);
+          playStartupChime(); gainFollowers(1);
+          showToast(trT('report sent. it just said "♥" 47 times.', 'rapport envoyé. il disait juste « ♥ » 47 fois.'));
+          dT(() => dwBsodAvalanche(dlg), 1400);
+        }, true],
+        [trT("don't send", 'ne pas envoyer'), (dlg) => {
+          // the button believes in the report. it dodges once.
+          if (!dlg.__dodged) {
+            dlg.__dodged = 1;
+            playGlitchSound();
+            dlg.style.transition = 'left 0.25s ease, top 0.25s ease';
+            dlg.style.left = Math.max(12, Math.min(window.innerWidth - 320, (parseFloat(dlg.style.left) || 0) + (Math.random() < 0.5 ? -1 : 1) * 150)) + 'px';
+            dlg.style.top = Math.min(window.innerHeight - 220, (parseFloat(dlg.style.top) || 80) + 90) + 'px';
+            const btn = dlg.querySelectorAll('.dream-dlg-btn')[1];
+            if (btn) btn.textContent = trT("don't send?? really??", 'ne pas envoyer ?? vraiment ??');
+            return;
+          }
+          showToast(trT('the feelings stay local. very private of you ♡', 'les sentiments restent en local. très respectueux ♡'));
+          dT(() => dwBsodAvalanche(dlg), 900);
+        }, true]
       ]
     });
+    if (!d) { dreamWorld.flags.bsodCascade = 0; return; } // clutter law won; try next beat
     playDreamSad();
     dreamSay(["zzz… collecting error info… it's all hearts… still…", "zzz… collecte des erreurs… ce ne sont que des cœurs… toujours…"], 4000);
+    // the search for a solution, visualized honestly (it lies)
+    const body = d.querySelector('.dream-dlg-body');
+    if (body) {
+      const prog = document.createElement('div');
+      prog.className = 'dream-dlg-prog';
+      const fill = document.createElement('div');
+      fill.className = 'dream-dlg-prog-fill';
+      prog.appendChild(fill);
+      const pLabel = document.createElement('p');
+      pLabel.className = 'dream-dlg-prog-label';
+      pLabel.textContent = trT('searching… 0%', 'recherche… 0 %');
+      body.appendChild(prog); body.appendChild(pLabel);
+      let pc = 0;
+      const pTick = dI(() => {
+        if (!document.body.contains(d)) { clearInterval(pTick); return; }
+        pc = Math.min(99, pc + 7 + Math.floor(Math.random() * 16));
+        fill.style.width = pc + '%';
+        pLabel.textContent = pc < 99
+          ? trT('searching… ', 'recherche… ') + pc + '%'
+          : trT('solution found: one (1) hug. administering…', 'solution trouvée : un (1) câlin. administration…');
+      }, 700);
+    }
+  }
+
+  // stage 2: the avalanche — every echo is its own tiny tragedy
+  const DW_BSOD_ECHOES = [
+    [['error reporter has stopped working', 'le rapporteur d\'erreurs a cessé de fonctionner'], ['an error occurred while displaying the previous error.', 'une erreur est survenue en affichant l\'erreur précédente.']],
+    [['report.exe (about report.exe)', 'rapport.exe (à propos de rapport.exe)'], ['the report about the report needs a report.', 'le rapport sur le rapport réclame un rapport.']],
+    [['ERROR 0x0002MANY', 'ERREUR 0x0002MANY'], ['too many errors. the errors have formed a union.', 'trop d\'erreurs. les erreurs ont monté un syndicat.']],
+    [['apology.dlg', 'excuses.dlg'], ['this window exists only to apologize. (sorry.)', 'cette fenêtre n\'existe que pour s\'excuser. (pardon.)']],
+    [['helpful tip', 'astuce utile'], ['have you tried turning your feelings off and on again?', 'as-tu essayé d\'éteindre puis rallumer tes sentiments ?']],
+    [['(this one is just vibing)', '(celle-ci vibe, c\'est tout)'], ['♡', '♡']]
+  ];
+  function dwBsodAvalanche(src) {
+    if (!dreamWorld || dreamWorld.flags.bsodAvalanche) return;
+    dreamWorld.flags.bsodAvalanche = 1;
+    playGlitchSound();
+    if (src) { src.classList.add('dream-dlg-dying'); dT(() => { try { src.remove(); } catch (e) { /* pre-crashed */ } }, 700); }
+    dreamSay(["zzz… the error had errors… they're multiplying…", 'zzz… l\'erreur a des erreurs… elles se multiplient…'], 4200);
+    const cx = Math.max(10, window.innerWidth / 2 - 150 - 60), cy = Math.max(56, window.innerHeight * 0.12);
+    const spawned = [];
+    DW_BSOD_ECHOES.forEach((e, i) => {
+      dT(() => {
+        if (!dreamWorld) return;
+        playTone(330 - i * 22, 'square', 0.07, 0, 0.04);
+        const dlg = dreamDlg({
+          title: trT(...e[0]), lines: [trT(...e[1])], force: true, cls: 'dream-dlg-err dream-dlg-echo',
+          x: Math.min(window.innerWidth - 310, cx + i * 30), y: Math.min(window.innerHeight - 180, cy + i * 44),
+          buttons: []
+        });
+        if (dlg) spawned.push(dlg);
+      }, 350 * i);
+    });
+    // then: they merge into one feeling
+    dT(() => {
+      if (!dreamWorld) return;
+      spawned.forEach((dlg, i) => dT(() => { dlg.classList.add('dream-dlg-dying'); dT(() => { try { dlg.remove(); } catch (e) { /* already mourned */ } }, 650); }, i * 90));
+      dT(dwBsodFinale, spawned.length * 90 + 600);
+    }, 350 * DW_BSOD_ECHOES.length + 2800);
+  }
+
+  // stage 3: the merge — one error to hug them all
+  function dwBsodFinale() {
+    if (!dreamWorld) return;
+    const d = dreamDlg({
+      title: '0x0000HUG — FATAL AFFECTION', force: true, cls: 'dream-dlg-err',
+      x: window.innerWidth / 2 - 150, y: Math.max(90, window.innerHeight * 0.3),
+      lines: [trT('all errors have merged into one big feeling.', 'toutes les erreurs ont fusionné en un seul grand sentiment.'), trT('the feeling is: ♡', 'le sentiment est : ♡')],
+      buttons: [
+        [trT('hug it ♡', 'lui faire un câlin ♡'), () => { playFanfare(); cheatFall(['💙', '♡', '💌'], 22); gainFollowers(2); showToast(trT('all six errors were the same feeling. it has been hugged. case closed ♡ +2 fans', 'les six erreurs étaient le même sentiment. il a eu son câlin. affaire classée ♡ +2 fans'), { scroll: true }); }],
+        [trT('CTRL+ALT+DEL', 'CTRL+ALT+SUPPR'), () => { playGlitchSound(); gainFollowers(1); showToast(trT('task manager: everything running is a feeling. nothing was terminated ♡', 'gestionnaire des tâches : tout ce qui tourne est un sentiment. rien n\'a été terminé ♡'), { scroll: true }); }]
+      ]
+    });
+    if (d) playDreamSad();
+  }
+
+  // after the cascade: quiet ambient bits, at most one per beat
+  function dwBsodAmbient() {
+    if (!dreamWorld || Math.random() < 0.35) return; // a crash needs quiet too
+    const bits = [
+      () => { const f = document.querySelector('.dream-bsod-face'); if (!f) return; const keep = f.textContent; f.textContent = 'x_x'; playTone(196, 'square', 0.1, 0, 0.03); setTimeout(() => { if (dreamWorld && f.textContent === 'x_x') f.textContent = keep; }, 900); },
+      () => showToast(trT('⚠ unexpected ♡ at address 0x0000LOVE (keeping it)', '⚠ ♡ inattendu à l\'adresse 0x0000LOVE (on le garde)')),
+      () => showToast(trT('☁ cuteness collection went back 2%. it remembered something embarrassing.', '☁ la collecte de mignonnerie a reculé de 2 %. il s\'est souvenu d\'un truc gênant.'), { scroll: true }),
+      () => dreamCritter({ emoji: '💾', hop: 3, ms: 9000, label: ['a minidump, carrying the crash report (it\'s all hearts)', 'un minidump, portant le rapport de crash (que des cœurs)'] })
+    ];
+    bits[Math.floor(Math.random() * bits.length)]();
   }
 
   // amber: the batch printer spits a fortune-cookie payslip you can read

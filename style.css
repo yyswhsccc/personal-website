@@ -8629,6 +8629,35 @@ html[data-theme="dark"] .album-ticker { background: rgba(34, 20, 58, 0.85); colo
 .dream-dlg-btn:active { transform: translate(1px, 1px); box-shadow: 1px 1px 0 var(--shadow); }
 .dream-dlg-err .dream-dlg-bar { background: #c62828; }
 
+/* v98: the ERROR CASCADE — dialogs that die on stage, echoes that
+   jitter like they know, and a progress bar that lies */
+.dream-dlg-dying { pointer-events: none; animation: dream-dlg-die 0.7s ease forwards; }
+@keyframes dream-dlg-die {
+  30% { transform: skewX(-6deg); }
+  100% { transform: translateY(60px) rotate(7deg) skewX(-10deg); opacity: 0; }
+}
+.dream-dlg-echo { animation: dream-dlg-pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), dream-dlg-jitter 1.8s steps(2) 0.5s infinite; }
+@keyframes dream-dlg-jitter {
+  0%, 86% { transform: none; }
+  88% { transform: translate(-2px, 1px) skewX(-3deg); }
+  92% { transform: translate(2px, -1px); }
+  96% { transform: translate(-1px, 0); }
+}
+.dream-dlg-prog {
+  height: 14px;
+  border: 2px solid var(--ink);
+  background: var(--panel);
+  margin-top: 8px;
+  box-shadow: inset 1px 1px 0 var(--shadow);
+}
+.dream-dlg-prog-fill {
+  height: 100%;
+  width: 0;
+  background: repeating-linear-gradient(90deg, #2952cc 0 8px, #4a74e8 8px 16px);
+  transition: width 0.5s steps(3);
+}
+.dream-dlg-prog-label { font-size: 0.78rem; opacity: 0.85; }
+
 /* ---- critters: things that cross the dream ---- */
 .dream-critter {
   position: fixed;
@@ -9287,10 +9316,13 @@ html[data-theme="dark"].dream-bsod .window-header {
 }
 html[data-theme="dark"].dream-bsod ::selection { background: #fff; color: #0a23a8; }
 .dream-bsod-head {
+  /* v98: the crash IS the desktop now, so the head sits centre stage
+     (inset+margin centring, not transform — the entry animation owns
+     transform). pointer-events stays off; only the face glyph is hot. */
   position: fixed;
-  top: 78px;
-  left: 50%;
-  transform: translateX(-50%);
+  inset: 0;
+  margin: auto;
+  height: fit-content;
   z-index: 2555;
   width: min(560px, 92vw);
   color: #fff;
@@ -9299,7 +9331,51 @@ html[data-theme="dark"].dream-bsod ::selection { background: #fff; color: #0a23a
   text-shadow: 2px 2px 0 rgba(0, 0, 40, 0.4);
   animation: dream-badge-in 0.6s ease;
 }
-.dream-bsod-face { font-size: 4rem; line-height: 1; }
+.dream-bsod-face {
+  font-size: 6rem;
+  line-height: 1;
+  /* width: max-content is a bug fix, not a flourish: as a full-width
+     block with pointer-events restored, the face was an invisible
+     560px click-eater that swallowed window ✕ buttons under it.
+     margin auto then re-centres the shrunk glyph on the desktop. */
+  width: max-content;
+  margin: 0 auto 6px;
+  pointer-events: auto;
+  cursor: var(--cursor-heart);
+}
+.dream-bsod-text, .dream-bsod-qr, .dream-bsod-errs { justify-content: center; text-align: center; }
+.dream-bsod-qr { justify-content: center; }
+.dream-bsod-face-pop { animation: bsod-face-pop 0.32s ease; }
+@keyframes bsod-face-pop {
+  40% { transform: scale(1.16) rotate(-4deg); }
+}
+/* the desktop did not survive the crash: 9 icons are collected for
+   their own safety; the two survivors flicker like survivors do.
+   the window rule is the load-bearing one — the app's session-restore
+   reopens windows AFTER the dream's JS sweep, so CSS (which doesn't
+   care about timing) is what actually keeps the crash a crash. only
+   the terminal and the dream journal are allowed on screen. */
+html.dream-bsod .window:not(#win-terminal):not(#win-dreamlog) { display: none !important; }
+html.dream-bsod .desktop-icon-btn { display: none; }
+/* a crash is fullscreen or it is nothing: the bio sidebar and fan wall
+   stand down too, leaving the blue field, the sad face, and the two
+   survivor icons. (all of it restores when the dream ends.) */
+html.dream-bsod .desktop-sidebar,
+html.dream-bsod #fan-wall { display: none !important; }
+html.dream-bsod .desktop-icon-btn[data-window="win-terminal"],
+html.dream-bsod .desktop-icon-btn[data-window="win-dreamlog"] {
+  display: flex;
+  animation: bsod-survivor 6s steps(1) infinite;
+}
+@keyframes bsod-survivor {
+  0%, 91% { opacity: 1; }
+  92%, 94% { opacity: 0.4; }
+  95%, 100% { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html.dream-bsod .desktop-icon-btn[data-window="win-terminal"],
+  html.dream-bsod .desktop-icon-btn[data-window="win-dreamlog"] { animation: none; }
+}
 .dream-bsod-text { font-size: 1.02rem; margin-top: 8px; max-width: 480px; }
 .dream-bsod-qr { display: flex; gap: 12px; margin-top: 14px; align-items: center; }
 .dream-bsod-qr-px {
@@ -9402,8 +9478,7 @@ html[data-theme="dark"].dream-amber .window-title { color: #ffd23f; text-shadow:
 @media (max-width: 760px) {
   .dream-badge { font-size: 0.74rem; padding: 4px 8px; }
   .dream-geo-ring, .dream-bsod-qr { display: none; }
-  .dream-bsod-head { top: 64px; }
-  .dream-bsod-face { font-size: 2.6rem; }
+  .dream-bsod-face { font-size: 3.2rem; }
   .dream-slippy { width: 180px; }
   .scp-keypad-grid { grid-template-columns: repeat(3, 46px); }
   .scp-captcha-grid { grid-template-columns: repeat(3, 48px); }
