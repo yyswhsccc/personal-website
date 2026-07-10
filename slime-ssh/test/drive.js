@@ -67,6 +67,7 @@ function exec(cmd) {
     ['vim', 3800],
     ['echo aHR0cHM6Ly95eXN3aHNjY2MuZ2l0aHViLmlvL3BlcnNvbmFsLXdlYnNpdGUvI3Rlcm1pbmFsCg== | base64 -d', 900],
     ['open "$(echo aHR0cHM6Ly95eXN3aHNjY2MuZ2l0aHViLmlvL3BlcnNvbmFsLXdlYnNpdGUvI3Rlcm1pbmFsCg== | base64 -d)"', 2200],
+    ['macOS shortcut: open "$(echo aHR0cHM6Ly95eXN3aHNjY2MuZ2l0aHViLmlvL3BlcnNvbmFsLXdlYnNpdGUvI3Rlcm1pbmFsCg== | base64 -d)"', 2200],
     ['neofetch', 800],
     ['git push --force', 800],
     ['docker ps', 800],
@@ -90,8 +91,8 @@ function exec(cmd) {
     ['top refresh',         'slime-top — load average'],
     ['vim trap',            ':q doesn\'t work in here either'],
     ['echo decodes door',   'https://yyswhsccc.github.io/personal-website/#terminal'],
-    ['open handled',        'wrong side of the wire'],
-    ['open gives link',     'so here is the door, pre-decoded'],
+    ['open opens the door', 'click it'],
+    ['open gives OSC8 clickable link', '\x1b]8;;https://yyswhsccc.github.io/personal-website/#terminal\x07'],
     ['neofetch',            'slimeOS 5.cute (chroot)'],
     ['git force rejected',  'force push to friendship rejected'],
     ['docker inception',    'docker all the way down'],
@@ -105,6 +106,17 @@ function exec(cmd) {
     console.log((ok ? '  ✓ ' : '  ✗ ') + name);
     if (!ok) fail++;
   }
+
+  // the `macOS shortcut: open …` paste must NOT faceplant as a bad command —
+  // the label is stripped and the line reaches the door like a bare `open`
+  // note: the typed line is echoed back, so "shortcut:" appears as INPUT —
+  // the only real failure symptom is the shell rejecting "macos" as a command
+  const labelOk = !t.includes('macos: command not found');
+  const doorHits = (t.match(/\x1b\]8;;https:\/\/yyswhsccc/g) || []).length;
+  console.log((labelOk ? '  ✓ ' : '  ✗ ') + 'macOS-shortcut label stripped (no "command not found")');
+  if (!labelOk) fail++;
+  console.log((doorHits >= 3 ? '  ✓ ' : '  ✗ ') + 'clickable door served for echo + open + macOS-shortcut (' + doorHits + ' hits)');
+  if (doorHits < 3) fail++;
 
   console.log('— exec (one-shot) battery —');
   const e1 = await exec('whoami');

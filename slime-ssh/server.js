@@ -80,7 +80,17 @@ const ABORT = Symbol('abort'); // thrown to unwind a command when the visitor ^C
    io = { out, t, sleep, pick, isTTY, visitorBump, requestExit } */
 async function respond(rawCmd, io) {
   const { out, t, sleep, pick } = io;
-  const cmd = shClean(rawCmd).slice(0, 200);
+  let cmd = shClean(rawCmd).slice(0, 200);
+  // the typing show prints the door line with a human-facing label:
+  //   "macOS shortcut: open "$(echo … | base64 -d)""
+  // visitors paste the whole line, label and all. strip leading tutorial
+  // labels ("macOS shortcut:", "STEP 2 ·", "$", "> ", "% ") so the real
+  // command underneath is what runs — never a "macos: not found" faceplant.
+  cmd = cmd
+    .replace(/^\s*macos\s+shortcut\s*:\s*/i, '')
+    .replace(/^\s*(?:step\s*\d+\s*[·:.-]\s*)/i, '')
+    .replace(/^\s*[$>%#]\s+/, '')
+    .trim();
   const lower = cmd.toLowerCase();
   const head = lower.split(' ')[0] || '';
 
@@ -265,23 +275,21 @@ async function respond(rawCmd, io) {
        IS the security promise, so we say so, and hand over the door
        pre-decoded (OSC 8 hyperlink where the terminal supports it). */
     if (cmd.indexOf(DOOR_B64.slice(0, 20)) !== -1 || lower.indexOf('yyswhsccc') !== -1 || lower.indexOf('base64') !== -1) {
-      await out('reaching for your browser… ');
-      await sleep(700);
-      await out(RD + 'wrong side of the wire.' + R + '\n');
-      await out(D + '(nothing in here can touch your machine. that is the whole promise.)' + R + '\n');
-      await out('so here is the door, pre-decoded — cmd-click it, or paste it anywhere:\n\n');
-      await out('  ' + C + DOOR_LINK + R + '\n\n');
-      await out(D + '(open it in a browser. survive the locks. tell the slime I typed for you.)' + R + '\n');
+      await out(P + '🚪 opening the door…' + R + '\n');
+      await sleep(500);
+      await out(B + 'it is right here — ' + C + 'click it' + R + B + ' and you are through ♡' + R + '\n\n');
+      await out('   ' + C + B + DOOR_LINK + R + '\n\n');
+      await out(D + '(one click / ⌘-click opens it in YOUR browser. a slime living on a server\n across the ocean can\'t reach your screen — but that link can ♡)' + R + '\n');
     } else {
-      await out('open: this container has no screen. it has a meadow.\n');
-      await out(D + '(URLs open on YOUR side of the wire — cmd-click or copy them out.)' + R + '\n');
+      await out('open: this container has no screen — but it has a door:\n');
+      await out('  ' + C + 'door' + R + D + '   ← type that ♡' + R + '\n');
     }
   } else if (head === 'echo') {
     const msg = cmd.split(' ').slice(1).join(' ');
-    if (msg.indexOf(DOOR_B64.slice(0, 20)) !== -1) { await out(DOOR_URL + '\n' + D + '(decoded it for you. now GO. everyone is waiting ♡)' + R + '\n'); }
+    if (msg.indexOf(DOOR_B64.slice(0, 20)) !== -1) { await out(C + B + DOOR_LINK + R + '\n' + D + '(decoded it for you — one click and GO. everyone is waiting ♡)' + R + '\n'); }
     else { await out((msg || '') + ' ♡\n' + D + '(everything echoed here comes back slightly warmer)' + R + '\n'); }
   } else if (head === 'base64') {
-    if (cmd.indexOf(DOOR_B64.slice(0, 20)) !== -1) { await out(DOOR_URL + '\n' + D + '(decoded it for you. now GO. everyone is waiting ♡)' + R + '\n'); }
+    if (cmd.indexOf(DOOR_B64.slice(0, 20)) !== -1) { await out(C + B + DOOR_LINK + R + '\n' + D + '(decoded it for you — one click and GO. everyone is waiting ♡)' + R + '\n'); }
     else { await out('base64: this container only knows ONE string worth decoding. it is in `env`.\n'); }
   } else if (head === 'flag' || head === 'ctf') {
     await out(P + 'flag{cur1_c0splay1ng_as_a_sh3ll}' + R + '\n' + D + 'the on-site flag (🚩 ctfslime) waits behind the door. different flag. cuter.' + R + '\n');
@@ -289,9 +297,9 @@ async function respond(rawCmd, io) {
     await out('the card dealer lives one URL over:\n');
     await out('  ' + C + 'curl -sL "https://yyswhsccc.github.io/personal-website/pik/$((RANDOM % 5))"' + R + '\n');
   } else if (head === 'door' || head === 'exit' || head === 'logout' || head === 'quit' || head === 'q') {
-    await out((head === 'door' ? 'yes!! THE door:' : 'you were never locked in — only welcomed. the door:') + '\n');
-    await out('  ' + C + 'echo ' + DOOR_B64 + ' | base64 -d' + R + '\n');
-    await out(D + '(open it in a browser. survive the locks. tell the slime I typed for you.)' + R + '\n');
+    await out(P + (head === 'door' ? '🚪 yes!! THE door — click to enter ♡' : 'you were never locked in — only welcomed. click the door ♡') + R + '\n\n');
+    await out('   ' + C + B + DOOR_LINK + R + '\n\n');
+    await out(D + '(one click / ⌘-click opens it in your browser. survive the locks. tell the slime I typed for you.)' + R + '\n');
     if (head !== 'door') io.requestExit();
   } else if (head === 'slime') {
     await out('slime inside slime. recursion base case reached: it is slimes all the way down, and they all say hi ♡\n');
