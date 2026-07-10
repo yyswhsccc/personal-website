@@ -21,7 +21,8 @@
   [2m(plain ssh: any name works, no password. the show replays in there,
   then the prompt is YOURS — [0m[92mls[0m · [92mwhoami[0m · [92msudo rm -rf /[0m · [92mhelp[0m · [92mexit[0m[2m)[0m
 
-  [2mfirewalled at work? the curl-costume shell still answers:[0m
+  [2m`connection refused` / a hang? that is YOUR network eating port 2222
+  (campus & office firewalls love this) — not the slime. side door:[0m
     [2mslime() { curl -sN -G --data-urlencode "c=$*" https://yongshanos-wall.yongshanos.workers.dev/sh; }[0m
 
 [1mSTEP 2 — find the door[0m (it hides. of course it hides.):

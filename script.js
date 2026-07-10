@@ -4709,6 +4709,22 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!input) return;
     if (termVimActive) { termVimHandle(input); return; } // there is no shell inside vim
     if (!piped) termLine((dreamWorld && DS_PS1[dreamWorld.id] ? DS_PS1[dreamWorld.id] + ' ' : 'yongshan@os:~$ ') + input, 't-cmd');
+    // ---- the swear jar, front desk of the WHOLE shell — door, desktop,
+    // even mid-dream. checked before ANY dispatch so profanity can't hide
+    // behind a real command word. three coins → security (a boot). ----
+    if (!piped && /\b(f+u+c*k+\w*|sh[i1]+t+\w*|b[i1]tch\w*|assholes?|cunts?|d[i1]ckhead|bastards?|stfu|nmsl|wcnm|cnm)\b|傻逼|煞笔|沙比|操你|草你|肏|你妈|尼玛|去死|滚蛋/i.test(input)) {
+      doorSwears++;
+      if (doorSwears >= 3) {
+        termLine(trT('⚠ swear jar: [🪙🪙🪙] 3/3 — STRIKE THREE. security has been called. security is a boot.', '⚠ tirelire à jurons : [🪙🪙🪙] 3/3 — STRIKE TROIS. la sécurité a été appelée. la sécurité est une botte.'), 't-err');
+        if (window.__door) window.__door.rescued = true; // no rescue for the ejected
+        setTimeout(doorEject, 900);
+      } else if (doorSwears === 2) {
+        termLine(trT('⚠ swear jar: [🪙🪙] 2/3 — the moderator slime woke up from its nap. it is lacing a very small boot.', '⚠ tirelire à jurons : [🪙🪙] 2/3 — le slime modérateur sort de sa sieste. il lace une très petite botte.'), 't-err');
+      } else {
+        termLine(trT('⚠ swear jar: [🪙] 1/3 — language!! this shell is rated E for Everyone. the slime covered its ears (it has no ears. it improvised).', '⚠ tirelire à jurons : [🪙] 1/3 — langage !! ce shell est classé E pour Everyone. le slime s\'est bouché les oreilles (il n\'en a pas. il a improvisé).'), 't-err');
+      }
+      return;
+    }
     if (!piped && input.indexOf('|') > 0) {
       if (dreamWorld && DREAM_SHELL[dreamWorld.id]) { termLine(trT('the dream does not do plumbing. (pipes are sealed until sunrise.)', 'le rêve ne fait pas de plomberie. (les pipes sont scellés jusqu\'au lever du soleil.)'), 't-err'); return; }
       termRunPipeline(input);
@@ -4800,23 +4816,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (document.body.classList.contains('terminal-only')) {
       const door = doorInit();
       if (window.__doorIdle) { clearTimeout(window.__doorIdle); window.__doorIdle = null; } // the visitor drives now
-      // ---- the swear jar, checked before ANY command dispatch: profanity
-      // hiding behind a real command word ("open …, you &%$#") escapes a
-      // fall-through check, so the jar sits at the door's very front desk.
-      // three coins and security (a boot) is dispatched. ----
-      if (!door.rescued && /\b(f+u+c*k+\w*|sh[i1]+t+\w*|b[i1]tch\w*|assholes?|cunts?|d[i1]ckhead|bastards?|stfu|nmsl|wcnm|cnm)\b|傻逼|煞笔|沙比|操你|草你|肏|你妈|尼玛|去死|滚蛋/i.test(lower)) {
-        doorSwears++;
-        if (doorSwears >= 3) {
-          termLine(trT('⚠ swear jar: [🪙🪙🪙] 3/3 — STRIKE THREE. security has been called. security is a boot.', '⚠ tirelire à jurons : [🪙🪙🪙] 3/3 — STRIKE TROIS. la sécurité a été appelée. la sécurité est une botte.'), 't-err');
-          door.rescued = true; // no rescue for the ejected
-          setTimeout(doorEject, 900);
-        } else if (doorSwears === 2) {
-          termLine(trT('⚠ swear jar: [🪙🪙] 2/3 — the moderator slime woke up from its nap. it is lacing a very small boot.', '⚠ tirelire à jurons : [🪙🪙] 2/3 — le slime modérateur sort de sa sieste. il lace une très petite botte.'), 't-err');
-        } else {
-          termLine(trT('⚠ swear jar: [🪙] 1/3 — language!! this door is rated E for Everyone. the slime covered its ears (it has no ears. it improvised).', '⚠ tirelire à jurons : [🪙] 1/3 — langage !! cette porte est classée E pour Everyone. le slime s\'est bouché les oreilles (il n\'en a pas. il a improvisé).'), 't-err');
-        }
-        return;
-      }
       // the key is her NAME in any reasonable outfit: case, spaces, with or
       // without the family name, even behind a sudo. typos are NOT outfits.
       // …but the door insists on its locks FIRST.
@@ -5316,7 +5315,29 @@ document.addEventListener('DOMContentLoaded', () => {
       termLine(trT(`${cmd}: command not found — try \`help\``, `${cmd} : commande introuvable — essayez \`help\``), 't-err');
       // mercy protocol: a visitor flailing at the door gets RESCUED, cinematically
       if (document.body.classList.contains('terminal-only') && window.__door && !window.__door.rescued) {
+        const d = window.__door;
         const panicky = /help!|idk|do?n'?t know|anyone|please|plz|hello|stuck|lost|confus|how do|what do|no idea|救命|不会|帮帮/i.test(lower);
+        // ---- a wrong ANSWER is its own cry for help: a single short token
+        // while a lock is still waiting looks like a guess, not a command.
+        // three graded guesses and the villain intervenes personally — no
+        // need to fill the whole confusion meter. (mash and panic words
+        // keep their own lanes.)
+        const flat = input.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+        const mashy = /^[a-z]+$/.test(flat) && flat.length >= 5 && (!/[aeiou]/.test(flat) || 'qwertyuiop'.includes(flat) || 'asdfghjkl'.includes(flat) || 'zxcvbnm'.includes(flat));
+        const answerish = !panicky && !mashy && d.stage < d.chain.length && parts.length === 1 && /^[a-z0-9]{1,12}$/i.test(input);
+        if (answerish) {
+          d.wrongs = (d.wrongs || 0) + 1;
+          if (doorFlailLog.length < 8) doorFlailLog.push(input.slice(0, 40));
+          if (d.wrongs >= 3) {
+            termLine(trT('🧩 third graded answer — the door has seen ENOUGH. someone is coming. someone green.', '🧩 troisième copie corrigée — la porte en a assez VU. quelqu\'un arrive. quelqu\'un de vert.'), 't-accent');
+            d.rescued = true;
+            d.rescueKind = 'solver';
+            setTimeout(doorRescue, 700);
+          } else {
+            termLine(trT(`🧩 wrong-answer file: [${'✗'.repeat(d.wrongs)}${'·'.repeat(3 - d.wrongs)}] ${d.wrongs}/3 — the door grades on effort, and the effort has been NOTED ♡`, `🧩 dossier mauvaises réponses : [${'✗'.repeat(d.wrongs)}${'·'.repeat(3 - d.wrongs)}] ${d.wrongs}/3 — la porte note l'effort, et l'effort est CONSIGNÉ ♡`), 't-dim');
+          }
+          return; // an honest guess is not command-flailing
+        }
         doorFlail += panicky ? 2 : 1;
         // every cry goes on the record — the villain quotes the transcript back
         if (doorFlailLog.length < 8) doorFlailLog.push(input.replace(/[\x00-\x1f\x7f]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 40));
@@ -12466,18 +12487,21 @@ document.addEventListener('DOMContentLoaded', () => {
       g2.fillStyle = gTheme.pink;
       g2.fillText('♡', G_W / 2, 78);
     } else if (GAME.state === 'over') {
-      // a dark plate + soft glow behind GAME OVER so it never melts into
-      // whatever pastel (or dream) sky is behind it
+      // the plate wears house colours now: dusk-purple slab + a pink pixel
+      // frame + cream text (the old near-black read as mud on pastel skies;
+      // fixed #3d2350 stays readable under both themes and every dream skin)
       const goTxt = t('game.over');
       const gtw = g2.measureText(goTxt).width;
-      g2.fillStyle = 'rgba(20, 2, 14, 0.55)';
-      for (let rr = 5; rr >= 1; rr--) { g2.globalAlpha = 0.16; g2.fillRect(G_W / 2 - gtw / 2 - 6 - rr, 62 - 15 - rr, gtw + 12 + rr * 2, 22 + rr * 2); }
+      g2.fillStyle = gTheme.pink;
+      for (let rr = 5; rr >= 1; rr--) { g2.globalAlpha = 0.11; g2.fillRect(G_W / 2 - gtw / 2 - 6 - rr, 62 - 15 - rr, gtw + 12 + rr * 2, 22 + rr * 2); }
       g2.globalAlpha = 1;
-      g2.fillStyle = 'rgba(20, 2, 14, 0.62)';
+      g2.fillStyle = gTheme.pink; // pixel frame
+      g2.fillRect(G_W / 2 - gtw / 2 - 10, 46, gtw + 20, 24);
+      g2.fillStyle = '#3d2350';   // dusk slab
       g2.fillRect(G_W / 2 - gtw / 2 - 8, 48, gtw + 16, 20);
       g2.fillStyle = '#14020e';
       g2.fillText(goTxt, G_W / 2 + 1, 63); // ink drop-shadow
-      g2.fillStyle = gTheme.pink;
+      g2.fillStyle = '#fff0fa';   // cream pops on dusk
       g2.fillText(goTxt, G_W / 2, 62);
       if (!GAME.adUsed) {
         // hot-pink chip: readable on every theme, impossible to miss
@@ -22605,12 +22629,12 @@ document.addEventListener('DOMContentLoaded', () => {
   var doorFlailLog = []; // verbatim cries (≤8, each ≤40 chars) — rescue-scene ammunition
   var doorSwears = 0;    // the swear jar. at 3 coins, security (a boot) is dispatched
 
-  /* ---- STRIKE 3: the ejection. the moderator slime clocks in, the
-     terminal is legally reclassified as a football, and the site closes
-     itself behind the visitor. no rescue on this route. ---- */
+  /* ---- STRIKE 3: the ejection. the moderator slime clocks in, a RUDE
+     little slime is summoned to stand trial for the visitor's mouth, and
+     a ceremonial pixel boot punts it clean off the internet. the site
+     closes itself behind the visitor. no rescue on this route. ---- */
   function doorEject() {
     if (document.getElementById('door-eject')) return;
-    const tw = document.getElementById('win-terminal');
     const stage = document.createElement('div');
     stage.id = 'door-eject';
     stage.setAttribute('aria-hidden', 'true');
@@ -22625,21 +22649,36 @@ document.addEventListener('DOMContentLoaded', () => {
     requestAnimationFrame(() => requestAnimationFrame(() => mod.classList.add('is-in')));
     playTone(140, 'sawtooth', 0.3, 0, 0.07);
     setTimeout(() => { bub.textContent = trT('moderator slime. HR sent me. the swear jar is full.', 'slime modérateur. les RH m\'envoient. la tirelire à jurons est pleine.'); }, 700);
+    // the defendant: a rude little slime, mid-swear, zero remorse
+    const rude = document.createElement('div');
+    rude.className = 'eject-rude';
+    const rbub = document.createElement('div');
+    rbub.className = 'rescue-bub eject-rude-bub';
+    rbub.textContent = '@#$%&!!';
+    rude.append(rbub, rescueSlime(false));
+    setTimeout(() => {
+      stage.appendChild(rude);
+      requestAnimationFrame(() => requestAnimationFrame(() => rude.classList.add('is-in')));
+      playTone(190, 'square', 0.12, 0, 0.05);
+      setTimeout(() => { bub.textContent = trT('THAT one. it typed your words. watch this.', 'CELUI-là. il a tapé tes mots. regarde bien.'); }, 900);
+    }, 1600);
     // the boot: ceremonial, enormous, very small by moderator standards
     const boot = document.createElement('div');
     boot.className = 'eject-boot';
     boot.textContent = '🥾';
-    setTimeout(() => { stage.appendChild(boot); playTone(90, 'sawtooth', 0.4, 0, 0.1); }, 2600);
-    // THE PUNT — the terminal window itself is the ball
+    setTimeout(() => { stage.appendChild(boot); playTone(90, 'sawtooth', 0.4, 0, 0.1); }, 3000);
+    // THE PUNT — the rude slime is legally a football now
     setTimeout(() => {
       boot.classList.add('is-kick');
-      if (tw) tw.classList.add('door-yeeted');
+      rude.classList.add('is-flying');
+      rbub.textContent = trT('@#$%aaaaaa—!!', '@#$%aaaaaa—!!');
       document.body.classList.add('rescue-quake-big');
       setTimeout(() => document.body.classList.remove('rescue-quake-big'), 900);
       playTone(60, 'sawtooth', 0.5, 0, 0.14);
       playTone(880, 'square', 0.2, 0.05, 0.05);
-      setTimeout(() => { bub.textContent = trT('yeeted ♡ wash the keyboard.', 'expulsé·e ♡ lave le clavier.'); }, 700);
-    }, 3400);
+      playTone(1560, 'sine', 0.3, 0.12, 0.04); // doppler farewell
+      setTimeout(() => { bub.textContent = trT('yeeted ♡ it lands in a server with soap. wash the keyboard.', 'expulsé ♡ il atterrit dans un serveur avec du savon. lave le clavier.'); }, 800);
+    }, 3800);
     // curtains: black screen + the receipt
     setTimeout(() => {
       const fade = document.createElement('div');
@@ -22650,13 +22689,13 @@ document.addEventListener('DOMContentLoaded', () => {
       fade.appendChild(note);
       stage.appendChild(fade);
       playGlitchSound();
-    }, 5200);
+    }, 6200);
     // …and the site shows itself out (window.close works where the browser
     // allows it; the about:blank fallback ends the show everywhere else)
     setTimeout(() => {
       try { window.close(); } catch (e) { /* self-opened tabs resist */ }
       setTimeout(() => { try { location.replace('about:blank'); } catch (e) { /* curtains stay down */ } }, 700);
-    }, 8600);
+    }, 9600);
   }
   function rescueSlime(hero) {
     const cv = document.createElement('canvas');
@@ -22816,9 +22855,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // the cry the hero answers to: their actual panic word, punctuation shed
     const cry = ((allTyped.match(/help|anyone|somebody|idk|hello|please|plz|stuck|lost|救命|帮帮|不会/i) || [topKey])[0]).replace(/[!?.,;:]+$/, '') || 'help';
 
+    // solver variant: they weren't flailing at the shell — they were
+    // GRADING THEMSELVES against the locks, and failing with conviction
+    const solver = !!(window.__door && window.__door.rescueKind === 'solver');
+
     // beat 1 — the gloat, aimed at their single juiciest habit
     let v1;
-    if (mashHit) v1 = trT(`AHAHAHA!! CAGED!! at some point you gave up on WORDS and typed ${shortQ(mashHit)} — palm, meet keyboard. primal. I respect it. CAGED ANYWAY ♡`, `AHAHAHA !! EN CAGE !! à un moment tu as renoncé aux MOTS pour taper ${shortQ(mashHit)} — la paume sur le clavier. primal. je respecte. EN CAGE QUAND MÊME ♡`);
+    if (solver) v1 = trT(`AHAHAHA!! CAGED!! I graded your answers — ${spec}. all wrong. delivered with FULL confidence. I saw the tiny helpless creature behind every single guess… and I chose VIOLENCE ♡`, `AHAHAHA !! EN CAGE !! j'ai corrigé tes réponses — ${spec}. toutes fausses. livrées avec une assurance TOTALE. j'ai vu la petite créature démunie derrière chaque essai… et j'ai choisi la VIOLENCE ♡`);
+    else if (mashHit) v1 = trT(`AHAHAHA!! CAGED!! at some point you gave up on WORDS and typed ${shortQ(mashHit)} — palm, meet keyboard. primal. I respect it. CAGED ANYWAY ♡`, `AHAHAHA !! EN CAGE !! à un moment tu as renoncé aux MOTS pour taper ${shortQ(mashHit)} — la paume sur le clavier. primal. je respecte. EN CAGE QUAND MÊME ♡`);
     else if (capsHit) v1 = trT(`AHAHAHA!! you are CAGED!! you typed ${shortQ(capsHit)} in FULL CAPS — as if volume compiles. it does not. VIOLENCE does ♡`, `AHAHAHA !! EN CAGE !! tu as tapé ${shortQ(capsHit)} en MAJUSCULES — comme si le volume compilait. non. la VIOLENCE, oui ♡`);
     else if (bangs >= 2) v1 = trT(`AHAHAHA!! you are CAGED, little visitor!! I watched you type ${shortQ(bangHit)} — ${nw(bangs)} exclamation marks. I counted EVERY one. and I chose VIOLENCE ♡`, `AHAHAHA !! EN CAGE, petit·e visiteur·euse !! je t'ai vu taper ${shortQ(bangHit)} — ${nf(bangs)} points d'exclamation. TOUS comptés. et j'ai choisi la VIOLENCE ♡`);
     else if (cjkHit) v1 = trT(`AHAHAHA!! CAGED!! you cried ${shortQ(cjkHit)} — adorable. this cage ships fully localized: despair in EVERY language ♡`, `AHAHAHA !! EN CAGE !! tu as crié ${shortQ(cjkHit)} — adorable. cette cage est entièrement localisée : le désespoir dans TOUTES les langues ♡`);
@@ -22834,7 +22878,9 @@ document.addEventListener('DOMContentLoaded', () => {
         : trT(`your ${shortQ(uniq[uniq.length - 1])}? nobody is coming.`, `ton ${shortQ(uniq[uniq.length - 1])} ? personne ne viendra.`));
     const VILLAIN = [
       v1,
-      trT(`this prison is compiled from your OWN words — ${spec}. artisanal. zero dependencies. escape complexity: O(never). ${v2tail}`, `cette prison est compilée depuis TES propres mots — ${spec}. artisanale. zéro dépendance. complexité d'évasion : O(jamais). ${v2tail}`),
+      solver
+        ? trT(`this prison is compiled from WRONG ANSWERS ONLY — ${spec}. peer-reviewed. every bar is a guess you truly believed in. escape complexity: O(never). partial credit: none.`, `cette prison est compilée UNIQUEMENT de mauvaises réponses — ${spec}. relue par les pairs. chaque barreau est un essai auquel tu croyais fort. complexité d'évasion : O(jamais). points partiels : zéro.`)
+        : trT(`this prison is compiled from your OWN words — ${spec}. artisanal. zero dependencies. escape complexity: O(never). ${v2tail}`, `cette prison est compilée depuis TES propres mots — ${spec}. artisanale. zéro dépendance. complexité d'évasion : O(jamais). ${v2tail}`),
       trT('and NOW — before I `rm -rf` you — allow me to recite my FULL tragic backstory. it begins in 1997, with a missing semicolon on line—', 'et MAINTENANT — avant de te `rm -rf` — laisse-moi réciter ma PLEINE histoire tragique. tout commence en 1997, avec un point-virgule manquant à la ligne—')
     ];
     const timers = [];
@@ -22891,9 +22937,11 @@ document.addEventListener('DOMContentLoaded', () => {
         // the hero answers to whatever THEY actually shouted — spam `anyone`
         // and the sky replies "I AM anyone"; smash the keyboard and the sky
         // is fluent in that too
-        typeInto(hbub, mashHit
-          ? trT(`someone typed ${shortQ(mashHit)}? lucky day — I am FLUENT in keyboard-smash. it translates to: SAVE ME. on it ♡`, `quelqu'un a tapé ${shortQ(mashHit)} ? jour de chance — je parle COURAMMENT le clavier-écrasé. traduction : SAUVEZ-MOI. j'arrive ♡`)
-          : trT(`did someone spam ${shortQ(cry)}? great news. I AM ${cry} ♡`, `quelqu'un a spammé ${shortQ(cry)} ? bonne nouvelle. JE SUIS ${cry} ♡`), 3000);
+        typeInto(hbub, solver
+          ? trT('someone was GUESSING with their whole heart? guessing is just asking for help with extra confidence — and I answer BOTH ♡', 'quelqu\'un DEVINAIT de tout son cœur ? deviner, c\'est demander de l\'aide avec un supplément d\'assurance — et je réponds aux DEUX ♡')
+          : (mashHit
+            ? trT(`someone typed ${shortQ(mashHit)}? lucky day — I am FLUENT in keyboard-smash. it translates to: SAVE ME. on it ♡`, `quelqu'un a tapé ${shortQ(mashHit)} ? jour de chance — je parle COURAMMENT le clavier-écrasé. traduction : SAUVEZ-MOI. j'arrive ♡`)
+            : trT(`did someone spam ${shortQ(cry)}? great news. I AM ${cry} ♡`, `quelqu'un a spammé ${shortQ(cry)} ? bonne nouvelle. JE SUIS ${cry} ♡`)), 3000);
       }, 900);
       // ✦✦✦ THE ULTIMATE — SLIME-GOD OVERDRIVE: charge, then a screen-filling nova ✦✦✦
       setTimeout(() => {
