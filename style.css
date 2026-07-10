@@ -2480,6 +2480,20 @@ html[data-theme="dark"] .ama-feed {
   transform: translateY(0);
 }
 
+/* marquee toast: the full line scrolls past instead of clipping to "…" */
+#email-toast.toast-marquee {
+  max-width: min(440px, 82vw);
+  overflow: hidden;
+  white-space: nowrap;
+}
+#email-toast .toast-marquee-track {
+  display: inline-block;
+  padding-left: 100%;
+  animation: toast-marquee linear forwards;
+  will-change: transform;
+}
+@keyframes toast-marquee { to { transform: translateX(-100%); } }
+
 .toast-hidden {
   display: none;
 }
@@ -9341,6 +9355,20 @@ html[data-theme="dark"].dream-amber .window-title { color: #ffd23f; text-shadow:
   font-size: 2.1rem;
   filter: drop-shadow(0 0 8px rgba(255, 176, 0, 0.4));
 }
+.dream-amber-clickable { cursor: pointer; transition: transform 0.12s; animation: dream-amber-beckon 2.6s ease-in-out infinite; }
+.dream-amber-clickable:hover { transform: scale(1.12) rotate(-3deg); filter: drop-shadow(0 0 14px rgba(255, 176, 0, 0.8)); }
+.dream-amber-poked { animation: dream-amber-shake 0.4s ease; }
+.dream-amber-poke-hint {
+  position: absolute; left: 50%; bottom: -18px; transform: translateX(-50%);
+  font-family: var(--font-pixel); font-size: 0.6rem; white-space: nowrap;
+  color: #ffb000; text-shadow: 0 0 6px rgba(255, 176, 0, 0.6);
+  opacity: 0.75; pointer-events: none;
+}
+@keyframes dream-amber-beckon { 50% { transform: translateY(-3px); } }
+@keyframes dream-amber-shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-4px) rotate(-4deg); } 75% { transform: translateX(4px) rotate(4deg); } }
+/* the endless-receipt gag: this slip unrolls much, much further */
+.dream-amber-longroll { animation: dream-amber-longroll 4.2s steps(30) forwards !important; }
+@keyframes dream-amber-longroll { from { max-height: 0; } to { max-height: 460px; } }
 .dream-amber-slip {
   position: absolute;
   bottom: 85%;
