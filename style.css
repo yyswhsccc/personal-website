@@ -9349,22 +9349,35 @@ html[data-theme="dark"].dream-bsod ::selection { background: #fff; color: #0a23a
 @keyframes bsod-face-pop {
   40% { transform: scale(1.16) rotate(-4deg); }
 }
-/* the desktop did not survive the crash: 9 icons are collected for
-   their own safety; the two survivors flicker like survivors do.
-   the window rule is the load-bearing one — the app's session-restore
-   reopens windows AFTER the dream's JS sweep, so CSS (which doesn't
-   care about timing) is what actually keeps the crash a crash. only
-   the terminal and the dream journal are allowed on screen. */
-html.dream-bsod .window:not(#win-terminal):not(#win-dreamlog) { display: none !important; }
-html.dream-bsod .desktop-icon-btn { display: none; }
+/* v98.3: the crashed desktop's DOOR POLICY. dead icons stay VISIBLE —
+   memorials, gray and occasionally glitching — and clicking one files
+   its own complaint (JS). the window rule is the load-bearing one: the
+   app's session-restore reopens windows AFTER the dream's JS sweep, so
+   CSS (which doesn't care about timing) is what keeps the crash a
+   crash. allowed on screen: the survivors (terminal, journal) and the
+   two exempted witnesses (crash cam, slime_run). */
+html.dream-bsod .window:not(#win-terminal):not(#win-dreamlog):not(#win-game):not(#win-live) { display: none !important; }
+html.dream-bsod .desktop-icon-btn {
+  filter: grayscale(1) brightness(0.72);
+  opacity: 0.6;
+  cursor: not-allowed;
+  animation: bsod-dead-icon 7s steps(1) infinite;
+}
+@keyframes bsod-dead-icon {
+  0%, 88% { transform: none; }
+  89%, 90% { transform: translateX(-2px) skewX(-4deg); }
+  91%, 93% { transform: translateX(1px); }
+  94%, 100% { transform: none; }
+}
 /* a crash is fullscreen or it is nothing: the bio sidebar and fan wall
-   stand down too, leaving the blue field, the sad face, and the two
-   survivor icons. (all of it restores when the dream ends.) */
+   stand down too. (all of it restores when the dream ends.) */
 html.dream-bsod .desktop-sidebar,
 html.dream-bsod #fan-wall { display: none !important; }
 html.dream-bsod .desktop-icon-btn[data-window="win-terminal"],
 html.dream-bsod .desktop-icon-btn[data-window="win-dreamlog"] {
-  display: flex;
+  filter: none;
+  opacity: 1;
+  cursor: inherit;
   animation: bsod-survivor 6s steps(1) infinite;
 }
 @keyframes bsod-survivor {
@@ -9373,9 +9386,87 @@ html.dream-bsod .desktop-icon-btn[data-window="win-dreamlog"] {
   95%, 100% { opacity: 1; }
 }
 @media (prefers-reduced-motion: reduce) {
-  html.dream-bsod .desktop-icon-btn[data-window="win-terminal"],
-  html.dream-bsod .desktop-icon-btn[data-window="win-dreamlog"] { animation: none; }
+  html.dream-bsod .desktop-icon-btn { animation: none; }
 }
+/* ---- the per-file complaints: every dead program grieves its own way ---- */
+.bsod-e-melt { animation: dream-dlg-pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), bsod-melt 5.5s ease-in 0.9s forwards; }
+@keyframes bsod-melt { to { transform: translateY(38px) rotate(3deg) scale(0.96, 0.9); } }
+.bsod-e-shake { animation: dream-dlg-pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), bsod-shake 0.5s ease 0.4s 2; }
+@keyframes bsod-shake { 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+.bsod-e-pulse { animation: dream-dlg-pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), bsod-pulse 1s ease 0.5s 5; }
+@keyframes bsod-pulse { 30% { transform: scale(1.025); } }
+.bsod-e-develop { animation: dream-dlg-pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), bsod-develop 2.4s ease forwards; }
+@keyframes bsod-develop { from { filter: brightness(3.2) contrast(0.4); } to { filter: none; } }
+.bsod-e-static { animation: dream-dlg-pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), bsod-static 1.6s steps(2) 0.4s 3; }
+@keyframes bsod-static {
+  10% { transform: translate(-3px, 1px) skewX(-5deg); opacity: 0.7; }
+  20% { transform: translate(3px, -1px); opacity: 1; }
+  30% { transform: none; }
+  80% { clip-path: inset(20% 0 30% 0); }
+  85% { clip-path: none; }
+}
+.bsod-typing-line { opacity: 0.8; font-style: italic; }
+.bsod-stamp {
+  position: absolute;
+  top: 34%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-14deg);
+  font-family: var(--font-pixel);
+  font-size: 1.3rem;
+  color: #c62828;
+  border: 3px solid #c62828;
+  padding: 2px 10px;
+  background: rgba(255, 255, 255, 0.85);
+  animation: bsod-stamp-slam 0.4s cubic-bezier(0.2, 2.4, 0.4, 1);
+  pointer-events: none;
+}
+.bsod-stamp-ok { color: #1a8f4a; border-color: #1a8f4a; }
+@keyframes bsod-stamp-slam { from { transform: translate(-50%, -50%) rotate(-14deg) scale(2.6); opacity: 0; } }
+.bsod-march { position: absolute; bottom: 4px; left: -20px; font-size: 1rem; animation: bsod-march-walk 2.4s linear forwards; pointer-events: none; }
+@keyframes bsod-march-walk { to { left: calc(100% + 20px); } }
+.bsod-camflash { position: fixed; inset: 0; background: #fff; z-index: 2690; pointer-events: none; animation: bsod-camflash-fade 0.8s ease forwards; }
+@keyframes bsod-camflash-fade { from { opacity: 0.95; } to { opacity: 0; } }
+.bsod-e-granted .dream-dlg-bar { background: #1a8f4a; transition: background 0.5s; }
+/* ---- act three: the swarm (tiny panicking windows)… ---- */
+.dream-dlg-mini { width: min(232px, calc(100vw - 24px)); }
+.dream-dlg-mini .dream-dlg-body { padding: 6px 8px; font-size: 0.76rem; }
+.dream-dlg-mini .dream-dlg-bar { font-size: 0.74rem; padding: 2px 6px; }
+/* …and the CHKDSK /feelings pass that collects every error it crosses */
+.bsod-sweep {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: -60px;
+  height: 44px;
+  z-index: 2695;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, rgba(64, 156, 255, 0), rgba(64, 156, 255, 0.35) 45%, #aee2ff 50%, rgba(64, 156, 255, 0.35) 55%, rgba(64, 156, 255, 0));
+  box-shadow: 0 0 24px rgba(120, 190, 255, 0.5);
+  animation: bsod-sweep-run 2.4s linear forwards;
+}
+.bsod-sweep span {
+  font-family: var(--font-pixel);
+  font-size: 0.8rem;
+  color: #03264d;
+  background: #aee2ff;
+  padding: 1px 8px;
+  border: 2px solid #03264d;
+}
+@keyframes bsod-sweep-run { to { transform: translateY(calc(100vh + 120px)); } }
+.dream-dlg-zap { animation: bsod-zap 0.24s ease-in forwards; pointer-events: none; }
+@keyframes bsod-zap { to { transform: scale(0.05) rotate(20deg); opacity: 0; } }
+.bsod-zap-heart {
+  position: fixed;
+  z-index: 2696;
+  font-size: 1.1rem;
+  transform: translate(-50%, -50%);
+  animation: bsod-zap-heart-float 0.7s ease-out forwards;
+  pointer-events: none;
+}
+@keyframes bsod-zap-heart-float { to { transform: translate(-50%, -140%) scale(1.4); opacity: 0; } }
 .dream-bsod-text { font-size: 1.02rem; margin-top: 8px; max-width: 480px; }
 .dream-bsod-qr { display: flex; gap: 12px; margin-top: 14px; align-items: center; }
 .dream-bsod-qr-px {

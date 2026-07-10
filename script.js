@@ -255,6 +255,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const win = document.getElementById(winId);
     if (!win) return;
 
+    // v98.3: the crashed desktop refuses most programs — each file with
+    // its own error — except its survivors (terminal, journal) and the
+    // two exempted witnesses (crash cam, slime_run). defined with the
+    // bsod dream, far below.
+    if (dreamWorld && dreamWorld.id === 'bsod' && dwBsodGate(winId)) return;
+
     if (!opts.fromHistory) yosPushNav(winId);
 
     const wasClosed = win.classList.contains('window-closed');
@@ -7476,7 +7482,7 @@ document.addEventListener('DOMContentLoaded', () => {
          own safety (CSS hides them), and the night runs on the two
          survivors: the terminal and the dream journal. */
       const bsodSweep = () => document.querySelectorAll('.window:not(.window-closed)').forEach((w) => {
-        if (w.id === 'win-terminal' || w.id === 'win-dreamlog') return;
+        if (w.id === 'win-terminal' || w.id === 'win-dreamlog' || w.id === 'win-game' || w.id === 'win-live') return;
         try { closeWindow(w); } catch (e) { /* it was already gone */ }
       });
       bsodSweep();
@@ -7484,6 +7490,20 @@ document.addEventListener('DOMContentLoaded', () => {
       // sweep twice more so the crash stays a crash
       dT(bsodSweep, 2800);
       dT(bsodSweep, 7000);
+      // v98.3: dead icons are visible again (CSS) — clicking one files
+      // its own complaint. survivors pass; the anchor icon (moodle) is
+      // caught here too, before it can navigate away.
+      const iconGuard = (e) => {
+        const btn = e.target && e.target.closest && e.target.closest('.desktop-icon-btn');
+        if (!btn || !dreamWorld) return;
+        const winId = btn.dataset.window;
+        if (winId === 'win-terminal' || winId === 'win-dreamlog') return;
+        e.preventDefault();
+        e.stopPropagation();
+        if (winId) dwBsodGate(winId); else dwBsodDeny('moodle');
+      };
+      document.addEventListener('click', iconGuard, true);
+      dreamWorld.flags.removers.push(() => document.removeEventListener('click', iconGuard, true));
       const head = document.createElement('div');
       head.className = 'dream-bsod-head';
       head.innerHTML = '<div class="dream-bsod-face">:(</div><div class="dream-bsod-text"></div>';
@@ -7499,8 +7519,8 @@ document.addEventListener('DOMContentLoaded', () => {
           title: trT('☠ DESKTOP.EXE — fatal nap', '☠ DESKTOP.EXE — sieste fatale'), force: true, cls: 'dream-dlg-err',
           x: window.innerWidth / 2 - 150, y: Math.max(64, window.innerHeight * 0.14),
           lines: [
-            trT('the desktop has stopped working. 9 icons were collected for their own safety.', 'le bureau a cessé de fonctionner. 9 icônes ont été mises à l\'abri.'),
-            trT('survivors: terminal.exe (it always survives) and the dream journal ♡', 'survivants : terminal.exe (il survit toujours) et le journal de rêve ♡')
+            trT('the desktop has stopped working. the icons remain as memorials — clicking one files its own complaint.', 'le bureau a cessé de fonctionner. les icônes restent en mémorial — cliquer dépose sa propre réclamation.'),
+            trT('survivors: terminal.exe + the dream journal. exempt by ancient law: the CRASH CAM and slime_run.exe (they never stopped running) ♡', 'survivants : terminal.exe + le journal de rêve. exemptés par la loi ancienne : la CRASH CAM et slime_run.exe (ils n\'ont jamais cessé de tourner) ♡')
           ],
           buttons: [
             [trT('open the terminal →', 'ouvrir le terminal →'), () => { try { openWindow('win-terminal'); } catch (e) { /* even safe mode naps */ } }],
@@ -10635,11 +10655,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (dlg) spawned.push(dlg);
       }, 350 * i);
     });
-    // then: they merge into one feeling
+    // the six die… and their funerals invite EVERYONE (act three: the
+    // swarm floods the screen, then the CHKDSK pass collects them all,
+    // and only then the one big feeling)
     dT(() => {
       if (!dreamWorld) return;
       spawned.forEach((dlg, i) => dT(() => { dlg.classList.add('dream-dlg-dying'); dT(() => { try { dlg.remove(); } catch (e) { /* already mourned */ } }, 650); }, i * 90));
-      dT(dwBsodFinale, spawned.length * 90 + 600);
+      dT(dwBsodSwarm, spawned.length * 90 + 900);
     }, 350 * DW_BSOD_ECHOES.length + 2800);
   }
 
@@ -10668,6 +10690,240 @@ document.addEventListener('DOMContentLoaded', () => {
       () => dreamCritter({ emoji: '💾', hop: 3, ms: 9000, label: ['a minidump, carrying the crash report (it\'s all hearts)', 'un minidump, portant le rapport de crash (que des cœurs)'] })
     ];
     bits[Math.floor(Math.random() * bits.length)]();
+  }
+
+  /* ============ v98.3: the crashed desktop's DOOR POLICY ============
+     every program a visitor tries to open gets refused with its OWN
+     error and its own little animation — except the two survivors
+     (terminal, journal) and the two exempted witnesses: the CRASH CAM
+     (only camera that films crashes from inside) and slime_run.exe
+     (it has never once stopped running). their first open plays a
+     denial that changes its mind mid-sentence. ---- */
+  const DW_BSOD_WINKEY = { 'win-career': 'career', 'win-skills': 'inventory', 'win-ama': 'ama', 'win-education': 'education', 'win-pikdex': 'pikdex', 'win-watch': 'watch', 'win-album': 'album' };
+  var dwBsodDenyAt = 0;
+  const DW_BSOD_DENIES = {
+    career: {
+      t: ['CAREER.EXE — QUEST LOCKED', 'CAREER.EXE — QUÊTE VERROUILLÉE'],
+      l: ['0x0000QUEST: the quest log fell asleep mid-quest. all 47 merged PRs are dreaming of being merged again.', '0x0000QUEST : le journal de quête s\'est endormi en pleine quête. les 47 PR fusionnées rêvent d\'être fusionnées encore.'],
+      b: ['let them dream 💙', 'laisse-les rêver 💙'],
+      cls: 'bsod-e-melt', snd: () => playDreamSad(), fx: () => cheatFall(['📉', '💤'], 8)
+    },
+    inventory: {
+      t: ['SAVE CORRUPTED (EMOTIONALLY)', 'SAUVEGARDE CORROMPUE (ÉMOTIONNELLEMENT)'],
+      l: ['inventory.sav is currently 99% naps. items respawn at sunrise. (Python lv.5 is safe. it is always safe.)', 'inventory.sav est à 99 % de siestes. les objets réapparaissent au lever du soleil. (Python niv.5 est en sécurité. comme toujours.)'],
+      b: ['hold my items 🎒', 'garde mes objets 🎒'],
+      cls: 'bsod-e-shake', snd: () => playGlitchSound(), fx: () => cheatFall(['🎒', '🧪', '⭐', '🧦'], 12)
+    },
+    ama: {
+      t: ['AMA_BOT — AWAY MESSAGE', 'AMA_BOT — MESSAGE D\'ABSENCE'],
+      l: ['the bot watched the crash happen and is composing a feelings report about it.', 'le bot a vu le crash et rédige un rapport de sentiments à son sujet.'],
+      b: ['take your time 💌', 'prends ton temps 💌'],
+      cls: '', snd: () => playDreamPop(),
+      fx: (d) => {
+        const p = document.createElement('p');
+        p.className = 'bsod-typing-line';
+        const body = d.querySelector('.dream-dlg-body');
+        if (body) body.appendChild(p);
+        let n = 0;
+        const iv = dI(() => {
+          if (!document.body.contains(p)) { clearInterval(iv); return; }
+          n++;
+          p.textContent = n < 9 ? trT('ama_bot is typing', 'ama_bot écrit') + '.'.repeat(1 + (n % 3)) : trT('(estimated length: 47 ♥. maybe 48.)', '(longueur estimée : 47 ♥. peut-être 48.)');
+          if (n >= 9) clearInterval(iv);
+        }, 420);
+      }
+    },
+    education: {
+      t: ['READ ERROR — PRIDE BUFFER FULL', 'ERREUR DE LECTURE — TAMPON DE FIERTÉ PLEIN'],
+      l: ['education_awards.txt exceeded the kernel\'s pride buffer. the GPA pages were swapped to /dev/heart.', 'education_awards.txt a dépassé le tampon de fierté du noyau. les pages de GPA ont été échangées vers /dev/heart.'],
+      b: ['acceptable swap 🎓', 'échange acceptable 🎓'],
+      cls: '', snd: () => playTone(140, 'square', 0.16, 0, 0.06),
+      fx: (d) => { const s = document.createElement('span'); s.className = 'bsod-stamp'; s.textContent = 'PAGED OUT'; d.appendChild(s); dT(() => cheatFall(['🎓'], 6), 300); }
+    },
+    pikdex: {
+      t: ['PROCESS NURSERY — DO NOT DISTURB', 'NURSERIE DE PROCESSUS — NE PAS DÉRANGER'],
+      l: ['the pikmin volunteered as emergency RAM. forty tiny processes are holding hands in kernel space.', 'les pikmin se sont portés volontaires comme RAM d\'urgence. quarante petits processus se tiennent la main dans le noyau.'],
+      b: ['so brave 🌱', 'si courageux 🌱'],
+      cls: '', snd: () => playTone(980, 'triangle', 0.07, 0, 0.05),
+      fx: (d) => { for (let i = 0; i < 5; i++) { const s = document.createElement('span'); s.className = 'bsod-march'; s.textContent = '🌱'; s.style.animationDelay = (i * 0.28) + 's'; d.appendChild(s); playTone(700 + i * 90, 'triangle', 0.05, 0.28 * i, 0.03); } }
+    },
+    watch: {
+      t: ['PAIRING LOST (THE WATCH IS FINE)', 'APPAIRAGE PERDU (LA MONTRE VA BIEN)'],
+      l: ['wrist_link.exe dropped mid-hug. the watch now says "reconnecting…" in a very small font. it will wait. watches are patient.', 'wrist_link.exe a lâché en plein câlin. la montre affiche « reconnexion… » en tout petit. elle attendra. les montres sont patientes.'],
+      b: ['tell it I miss it ⌚', 'dis-lui qu\'elle me manque ⌚'],
+      cls: 'bsod-e-pulse', snd: () => { for (let i = 0; i < 4; i++) playTone(1200, 'sine', 0.03, i * 0.5, 0.03); }, fx: null
+    },
+    album: {
+      t: ['MEMORIES OVEREXPOSED', 'SOUVENIRS SUREXPOSÉS'],
+      l: ['every photo is currently a white rectangle — the crash flash was TOO bright. negatives develop by morning.', 'chaque photo est un rectangle blanc — le flash du crash était TROP lumineux. les négatifs seront prêts au matin.'],
+      b: ['wait for morning 📸', 'attendre le matin 📸'],
+      cls: 'bsod-e-develop', snd: () => playSparkleSound(),
+      fx: () => { const f = document.createElement('div'); f.className = 'bsod-camflash'; document.body.appendChild(f); dN(f); setTimeout(() => { try { f.remove(); } catch (e) { /* faded */ } }, 900); }
+    },
+    moodle: {
+      t: ['ERR_OUTSIDE_UNREACHABLE', 'ERR_EXTERIEUR_INJOIGNABLE'],
+      l: ['the outside internet requires a working OS. current OS: a feeling. (the LMS is fine — tell it we said hi.)', 'l\'internet extérieur exige un OS fonctionnel. OS actuel : un sentiment. (le LMS va bien — passe-lui le bonjour.)'],
+      b: ['stay inside 📡', 'rester à l\'intérieur 📡'],
+      cls: 'bsod-e-static', snd: () => playGlitchSound(), fx: null
+    },
+    generic: {
+      t: ['0x0000NOPE', '0x0000NOPE'],
+      l: ['that program is napping in a .dmp file. the crash sends its regards.', 'ce programme fait la sieste dans un fichier .dmp. le crash envoie ses amitiés.'],
+      b: ['fair enough 💙', 'très juste 💙'],
+      cls: 'bsod-e-shake', snd: () => playDreamSad(), fx: null
+    }
+  };
+  function dwBsodDeny(key) {
+    if (Date.now() - dwBsodDenyAt < 700) return; // one tantrum at a time
+    dwBsodDenyAt = Date.now();
+    const s = DW_BSOD_DENIES[key] || DW_BSOD_DENIES.generic;
+    const d = dreamDlg({
+      title: trT(...s.t), force: true, cls: 'dream-dlg-err' + (s.cls ? ' ' + s.cls : ''),
+      lines: [trT(...s.l)],
+      buttons: [[trT(...s.b), () => {}]]
+    });
+    if (!d) return;
+    if (s.snd) { try { s.snd(); } catch (e) { /* silent grief */ } }
+    if (s.fx) { try { s.fx(d); } catch (e) { /* the animation also crashed */ } }
+    // complaints are self-filing: the dialog excuses itself after 8s
+    dT(() => { if (document.body.contains(d)) { d.classList.add('dream-dlg-dying'); dT(() => { try { d.remove(); } catch (e) { /* gone */ } }, 700); } }, 8000);
+  }
+  const DW_BSOD_EXEMPT = {
+    'win-game': {
+      t: ['slime_run.exe has stopped w—', 'slime_run.exe a cessé de f—'],
+      l1: ['checking runtime history…', 'vérification de l\'historique d\'exécution…'],
+      l2: ['correction: slime_run.exe has NEVER stopped running. not once. the crash respects this deeply.', 'correction : slime_run.exe n\'a JAMAIS cessé de tourner. pas une seule fois. le crash respecte ça profondément.'],
+      grant: ['EXEMPTION GRANTED — run forever 🏃', 'EXEMPTION ACCORDÉE — cours pour toujours 🏃']
+    },
+    'win-live': {
+      t: ['CAMERA ACCESS DEN—', 'ACCÈS CAMÉRA REF—'],
+      l1: ['reviewing footage…', 'examen des images…'],
+      l2: ['correction: the CRASH CAM is the only camera that films crashes from the inside. this footage is priceless.', 'correction : la CRASH CAM est la seule caméra qui filme les crashs de l\'intérieur. ces images n\'ont pas de prix.'],
+      grant: ['EXEMPTION GRANTED — keep rolling 🔴', 'EXEMPTION ACCORDÉE — continue de tourner 🔴']
+    }
+  };
+  function dwBsodExemptShow(winId) {
+    const s = DW_BSOD_EXEMPT[winId];
+    const d = dreamDlg({
+      title: trT(...s.t), force: true, cls: 'dream-dlg-err',
+      x: window.innerWidth / 2 - 150, y: Math.max(80, window.innerHeight * 0.24),
+      lines: [trT(...s.l1)], buttons: []
+    });
+    playDreamSad();
+    dT(() => {
+      if (!d || !document.body.contains(d)) return;
+      const body = d.querySelector('.dream-dlg-body');
+      if (body) { const p = document.createElement('p'); p.textContent = trT(...s.l2); body.appendChild(p); }
+      playTone(520, 'triangle', 0.1, 0, 0.05);
+    }, 1200);
+    dT(() => {
+      if (!d || !document.body.contains(d)) return;
+      d.classList.add('bsod-e-granted');
+      const st = document.createElement('span'); st.className = 'bsod-stamp bsod-stamp-ok'; st.textContent = trT('EXEMPT ♡', 'EXEMPTÉ ♡'); d.appendChild(st);
+      const bar = d.querySelector('.dream-dlg-bar span'); if (bar) bar.textContent = trT(...s.grant);
+      playFanfare(); cheatFall(['💙', '✦'], 10);
+    }, 2600);
+    dT(() => {
+      if (!dreamWorld) return;
+      dreamWorld.flags.bsodExempt = dreamWorld.flags.bsodExempt || {};
+      dreamWorld.flags.bsodExempt[winId] = 1;
+      delete dreamWorld.flags.bsodExempt['pending-' + winId];
+      if (d && document.body.contains(d)) { d.classList.add('dream-dlg-dying'); dT(() => { try { d.remove(); } catch (e) { /* stamped away */ } }, 650); }
+      openWindow(winId); // now walks straight through the gate
+    }, 3700);
+  }
+  function dwBsodGate(winId) {
+    if (winId === 'win-terminal' || winId === 'win-dreamlog') return false;
+    const f = dreamWorld.flags;
+    if (winId === 'win-game' || winId === 'win-live') {
+      f.bsodExempt = f.bsodExempt || {};
+      if (f.bsodExempt[winId]) return false; // exemption already granted
+      if (f.bsodExempt['pending-' + winId]) return true; // ceremony mid-play
+      f.bsodExempt['pending-' + winId] = 1;
+      dwBsodExemptShow(winId);
+      return true;
+    }
+    dwBsodDeny(DW_BSOD_WINKEY[winId] || 'generic');
+    return true;
+  }
+
+  /* ---- v98.3: cascade act three — THE SWARM. after the six echoes
+     die, errors pop up EVERYWHERE, accelerating until the screen is
+     full… then the CHKDSK /feelings scanline sweeps down and collects
+     every last one into a 💙. ---- */
+  const DW_BSOD_SWARM_LINES = [
+    ['an error occurred while erroring.', 'une erreur est survenue en se trompant.'],
+    ['this one is also about feelings.', 'celle-ci parle aussi de sentiments.'],
+    ['(unrelated. just lonely.)', '(sans rapport. juste seule.)'],
+    ['have you tried a nap?', 'as-tu essayé une sieste ?'],
+    ['the error union sends regards.', 'le syndicat des erreurs te salue.'],
+    ['error not found (this is an error)', 'erreur introuvable (ceci est une erreur)'],
+    ['♡', '♡'],
+    ['do not worry about me.', 'ne t\'inquiète pas pour moi.'],
+    ['i am new here.', 'je suis nouvelle ici.'],
+    ['the previous error was my fault.', 'l\'erreur précédente était de ma faute.'],
+    ['we are inside your walls (lovingly).', 'nous sommes dans tes murs (avec amour).'],
+    ['this space intentionally errored.', 'cet espace s\'est trompé exprès.'],
+    ['counting errors: too many. recounting.', 'décompte des erreurs : trop. on recompte.'],
+    ['everything is fine. citation needed.', 'tout va bien. référence nécessaire.']
+  ];
+  function dwBsodSwarm() {
+    if (!dreamWorld) return;
+    dreamSay(["zzz… they're multiplying faster… than I can hug…", 'zzz… elles se multiplient plus vite… que mes câlins…'], 4200);
+    const N = Math.max(18, Math.min(30, Math.round((window.innerWidth * window.innerHeight) / 38000)));
+    let when = 0;
+    for (let i = 0; i < N; i++) {
+      when += Math.max(70, 260 - i * 9); // accelerating panic
+      dT(() => {
+        if (!dreamWorld) return;
+        playTone(220 + i * 16, 'square', 0.045, 0, 0.028);
+        const ln = DW_BSOD_SWARM_LINES[i % DW_BSOD_SWARM_LINES.length];
+        const d = dreamDlg({
+          title: trT('error #', 'erreur nº ') + (i + 7), force: true, cls: 'dream-dlg-err dream-dlg-mini',
+          x: 8 + Math.random() * Math.max(60, window.innerWidth - 248),
+          y: 44 + Math.random() * Math.max(80, window.innerHeight - 240),
+          lines: [trT(...ln)], buttons: []
+        });
+        if (d) d.style.transform = 'rotate(' + (Math.random() * 7 - 3.5).toFixed(1) + 'deg)';
+      }, when);
+    }
+    dT(dwBsodSweepClean, when + 1300);
+  }
+  function dwBsodSweepClean() {
+    if (!dreamWorld) return;
+    const DUR = 2400; // must match the .bsod-sweep animation duration
+    const bar = document.createElement('div');
+    bar.className = 'bsod-sweep';
+    const lb = document.createElement('span');
+    lb.textContent = trT('CHKDSK /feelings — collecting errors…', 'CHKDSK /sentiments — collecte des erreurs…');
+    bar.appendChild(lb);
+    document.body.appendChild(bar);
+    dN(bar);
+    playDreamHum();
+    [...document.querySelectorAll('.dream-dlg')].forEach((d) => {
+      const y = Math.max(0, d.getBoundingClientRect().top);
+      const at = 120 + (y / window.innerHeight) * (DUR - 300);
+      dT(() => {
+        if (!document.body.contains(d)) return;
+        d.classList.add('dream-dlg-zap');
+        playTone(420 + (1 - y / window.innerHeight) * 500, 'triangle', 0.06, 0, 0.035);
+        const r = d.getBoundingClientRect();
+        const h = document.createElement('span');
+        h.className = 'bsod-zap-heart';
+        h.textContent = '💙';
+        h.style.left = (r.left + r.width / 2) + 'px';
+        h.style.top = (r.top + r.height / 2) + 'px';
+        document.body.appendChild(h);
+        dN(h);
+        h.addEventListener('animationend', () => h.remove());
+        dT(() => { try { d.remove(); } catch (e) { /* collected twice */ } }, 230);
+      }, at);
+    });
+    dT(() => {
+      try { bar.remove(); } catch (e) { /* the pass ended */ }
+      showToast(trT('errors collected: ALL of them. cuteness: 100% (briefly)', 'erreurs collectées : TOUTES. mignonnerie : 100 % (brièvement)'), { scroll: true });
+      dT(dwBsodFinale, 1100);
+    }, DUR + 500);
   }
 
   // amber: the batch printer spits a fortune-cookie payslip you can read
