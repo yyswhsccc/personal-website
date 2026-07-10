@@ -1199,6 +1199,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (crossed) celebrateMilestone(crossed);
     updateSlimeHud();
     cloudQueueSync();
+    statBump('fans', n); // v99: every browser feeds ONE worldwide fan count
   }
 
   function celebrateMilestone(milestone) {
@@ -4078,7 +4079,9 @@ document.addEventListener('DOMContentLoaded', () => {
       try { if (GAME) GAME.hi = s.hi; } catch (e) { /* pre-boot */ }
     }
     if (s.ch > cheatCensus()) store.set('yos-cheats-cloudn', s.ch);
-    if (s.fn > (pet.followers || 0)) { pet.followers = s.fn; updateSlimeHud(); }
+    // v99: fans became a WORLDWIDE counter — when the shared stats feed
+    // is live it owns the number, and the personal save's fn is legacy
+    if (!(yosStats && typeof yosStats.fans === 'number') && s.fn > (pet.followers || 0)) { pet.followers = s.fn; updateSlimeHud(); }
     setTimeout(() => { try { cloudExtraPull(); } catch (e) { /* annex optional */ } }, 400);
   }
 
@@ -17903,12 +17906,51 @@ document.addEventListener('DOMContentLoaded', () => {
     return '♡♡♡';
   }
 
+  /* ---- v99: the hall goes WORLDWIDE. when the backend answers, the
+     top-10 list shows the one shared board every visitor sees; the
+     local board stays on as the offline fallback. ---- */
+  function lbRenderHall(hall) {
+    const listEl = document.getElementById('lb-local-list');
+    if (!listEl) return;
+    const head = listEl.previousElementSibling;
+    if (head) { head.removeAttribute('data-i18n'); head.textContent = trT('🌍 WORLDWIDE TOP 10', '🌍 TOP 10 MONDIAL'); }
+    listEl.innerHTML = '';
+    if (!hall.length) {
+      const li = document.createElement('li');
+      li.textContent = trT('the worldwide hall is empty — be the FIRST in history ♡', 'le panthéon mondial est vide — sois LA première de l\'histoire ♡');
+      listEl.appendChild(li);
+      return;
+    }
+    hall.forEach((e, i) => {
+      const li = document.createElement('li');
+      const rank = document.createElement('span');
+      rank.className = 'lb-rank';
+      rank.textContent = `${i + 1}.`;
+      const name = document.createElement('strong');
+      name.textContent = String(e.n); // textContent only — the hall is XSS-proof
+      const score = document.createElement('span');
+      score.className = 'lb-score';
+      score.textContent = String(e.s);
+      li.append(rank, ' ', name, ' ', score);
+      listEl.appendChild(li);
+    });
+  }
+
   function renderLeaderboard() {
     const listEl = document.getElementById('lb-local-list');
     const globalEl = document.getElementById('lb-global-line');
     const signEl = document.getElementById('lb-sign-row');
     const keepEl = document.getElementById('lb-keepsake');
     if (!listEl) return;
+
+    // worldwide board, when reachable (local render below stands in
+    // instantly and stays if the visitor is offline)
+    if (wallApi) {
+      fetch(wallApi + '/hall')
+        .then((r) => (r.ok ? r.json() : null))
+        .then((b) => { if (b && b.ok && Array.isArray(b.hall)) lbRenderHall(b.hall); })
+        .catch(() => { /* offline: the local board holds the fort */ });
+    }
 
     const board = store.get('yos-lb', []);
     listEl.innerHTML = '';
@@ -17957,6 +17999,20 @@ document.addEventListener('DOMContentLoaded', () => {
           store.set('yos-lb-pending', 0);
           playFanfare();
           achvUnlock('top10');
+          // v99: the signature also goes on the WORLDWIDE board
+          if (wallApi) {
+            fetch(wallApi + '/hall', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ n: initials, s: current })
+            })
+              .then((r) => (r.ok ? r.json() : null))
+              .then((resp) => {
+                if (resp && resp.made) showToast(trT('🌍 you are on the WORLDWIDE top-10!!', '🌍 tu es dans le TOP 10 MONDIAL !!'), { scroll: true });
+                renderLeaderboard();
+              })
+              .catch(() => { /* the signature stays local until the net returns */ });
+          }
           renderLeaderboard();
         };
       }
@@ -18460,6 +18516,58 @@ document.addEventListener('DOMContentLoaded', () => {
       .then((r) => (r.ok ? r.json() : null))
       .catch(() => null);
   }
+
+  /* ---- 📊 v99: SHARED-WORLD STATS — one number for everyone ----
+     the wall worker keeps global counters (GET /stats, POST /bump).
+     fans is the flagship: every visitor's pets, tricks and dream
+     shenanigans now grow ONE worldwide fan count (seeded from the
+     original 499). localStorage keeps the last-known value as the
+     offline opening act; the cloud owns the truth. ---- */
+  var yosStats = null;
+  var yosStatsAt = 0;
+  function statsApply(stats) {
+    if (!stats) return;
+    yosStats = stats;
+    yosStatsAt = Date.now();
+    if (typeof stats.fans === 'number' && pet && stats.fans !== pet.followers) {
+      pet.followers = stats.fans;
+      updateSlimeHud();
+    }
+  }
+  function statsRefresh() {
+    if (!wallApi) return;
+    fetch(wallApi + '/stats')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((b) => { if (b && b.stats) statsApply(b.stats); })
+      .catch(() => { /* offline — the local mirror holds the fort */ });
+  }
+  function statBump(key, n) {
+    if (!wallApi) return;
+    fetch(wallApi + '/bump', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key: key, n: n })
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((b) => {
+        if (!b || !b.ok) return;
+        if (yosStats) yosStats[b.key] = b.value;
+        if (b.key === 'fans' && pet && typeof b.value === 'number' && b.value !== pet.followers) {
+          pet.followers = b.value;
+          updateSlimeHud();
+        }
+      })
+      .catch(() => { /* the bump stays local; the next sync reconciles */ });
+  }
+  // boot: wait for wall-config, fetch once, then a heartbeat + wake refresh
+  (function statsBoot(tries) {
+    if (wallApi) { statsRefresh(); return; }
+    if (tries < 40) setTimeout(() => statsBoot(tries + 1), 500);
+  })(0);
+  setInterval(statsRefresh, 35000);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && Date.now() - yosStatsAt > 5000) statsRefresh();
+  });
   var albumVideos = []; // session-only: blobs don't fit localStorage
   function albumGet() { const a = store.get('yos-album', []); return Array.isArray(a) ? a : []; }
   function albumAdd(entry) {

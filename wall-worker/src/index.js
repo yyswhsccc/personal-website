@@ -17,12 +17,27 @@
 const ALLOW_ORIGINS = [
   'https://yyswhsccc.github.io',
   'http://localhost:8642',
-  'http://127.0.0.1:8642'
+  'http://127.0.0.1:8642',
+  'http://localhost:8742',
+  'http://127.0.0.1:8742'
 ];
 const MAX_BYTES = 130 * 1024;   // one framed selfie, comfortably
 const PAGE_SIZE = 24;
 const RATE_MAX = 5;             // uploads / hour / visitor
 const WALL_CAP = 600;           // the wall is big. not infinite.
+
+/* ---- 📊 SHARED-WORLD STATS — every visitor sees the same numbers.
+   KV-only counters under s:<name>. the value ALSO rides in metadata,
+   so GET /stats is a single list() — no N+1 reads. bumps are clamped
+   and rate-limited per (salted, hashed) visitor; keys must match an
+   allow-listed prefix so the namespace can't be graffiti'd. ---- */
+const STAT_KEY_RE = /^[a-z0-9:_-]{1,48}$/;
+const STAT_PREFIXES = ['fans', 'likes', 'food:', 'boop:', 'hall:', 'misc:'];
+const STAT_BUMP_MAX = 5;   // the biggest single hop one action may take
+const STAT_RATE_MAX = 120; // bumps / hour / visitor — generous, not infinite
+function statKeyOk(key) {
+  return STAT_KEY_RE.test(key) && STAT_PREFIXES.some((p) => key === p || key.startsWith(p));
+}
 
 function corsHeaders(req) {
   const origin = req.headers.get('Origin') || '';
@@ -561,6 +576,102 @@ export default {
       return json(req, 200, { ok: true, frozen: path.endsWith('freeze') });
     }
 
-    return json(req, 404, { error: 'this hallway has exactly five doors' });
+    /* ---- GET /stats — the whole shared-world counter board, one call.
+       values ride in list() metadata; edge-cached 5s so polling every
+       browser on earth costs one KV list per five seconds, total. ---- */
+    if (req.method === 'GET' && path === '/stats') {
+      const cacheKey = new Request(url.toString(), req);
+      const cached = await caches.default.match(cacheKey);
+      if (cached) {
+        const res = new Response(cached.body, cached);
+        Object.entries(corsHeaders(req)).forEach(([k, v]) => res.headers.set(k, v));
+        return res;
+      }
+      const list = await env.WALL.list({ prefix: 's:', limit: 1000 });
+      const stats = {};
+      list.keys.forEach((k) => { stats[k.name.slice(2)] = (k.metadata && typeof k.metadata.v === 'number') ? k.metadata.v : 0; });
+      const res = json(req, 200, { ok: true, stats });
+      res.headers.set('Cache-Control', 'public, s-maxage=5');
+      ctx.waitUntil(caches.default.put(cacheKey, res.clone()));
+      return res;
+    }
+
+    /* ---- POST /bump — nudge one counter. {key, n} → new value.
+       clamped hop, hourly per-visitor budget, allow-listed keys. KV
+       has no atomic increment; a rare concurrent write may drop a
+       single hop, which for fan-counts is an acceptable heartbreak. ---- */
+    if (req.method === 'POST' && path === '/bump') {
+      let payload;
+      try { payload = await req.json(); } catch (e) { return json(req, 400, { error: 'json only' }); }
+      const key = String((payload && payload.key) || '');
+      if (!statKeyOk(key)) return json(req, 400, { error: 'unknown counter' });
+      let n = Math.round(Number(payload && payload.n));
+      if (!isFinite(n) || n === 0) n = 1;
+      n = Math.max(-1, Math.min(STAT_BUMP_MAX, n)); // -1 permits an un-vote
+      const who = await ipHash(req, env);
+      const rlKey = 'rlb:' + who;
+      const used = parseInt(await env.WALL.get(rlKey) || '0', 10);
+      if (used >= STAT_RATE_MAX) return json(req, 429, { error: 'the counters need a breather ♡' });
+      const cur = parseInt(await env.WALL.get('s:' + key) || '0', 10);
+      const next = Math.max(0, cur + n);
+      await env.WALL.put('s:' + key, String(next), { metadata: { v: next } });
+      ctx.waitUntil(env.WALL.put(rlKey, String(used + 1), { expirationTtl: 3600 }));
+      return json(req, 200, { ok: true, key, value: next });
+    }
+
+    /* ---- GET /hall — the WORLDWIDE arcade top-10 ---- */
+    if (req.method === 'GET' && path === '/hall') {
+      const cacheKey = new Request(url.toString(), req);
+      const cached = await caches.default.match(cacheKey);
+      if (cached) {
+        const res = new Response(cached.body, cached);
+        Object.entries(corsHeaders(req)).forEach(([k, v]) => res.headers.set(k, v));
+        return res;
+      }
+      let hall = [];
+      try { hall = JSON.parse(await env.WALL.get('cfg:hall') || '[]'); } catch (e) { hall = []; }
+      const res = json(req, 200, { ok: true, hall });
+      res.headers.set('Cache-Control', 'public, s-maxage=10');
+      ctx.waitUntil(caches.default.put(cacheKey, res.clone()));
+      return res;
+    }
+
+    /* ---- POST /hall — sign the worldwide board. {n: initials, s: score}.
+       initials are soaped server-side; scores above the save-code cap
+       are either cheats or legends, and both get the same polite no. ---- */
+    if (req.method === 'POST' && path === '/hall') {
+      const who = await ipHash(req, env);
+      const rlKey = 'rlh:' + who;
+      const used = parseInt(await env.WALL.get(rlKey) || '0', 10);
+      if (used >= 10) return json(req, 429, { error: 'the hall admires the enthusiasm (10 signatures/hour)' });
+      let payload;
+      try { payload = await req.json(); } catch (e) { return json(req, 400, { error: 'json only' }); }
+      const n = String((payload && payload.n) || '').toUpperCase().replace(/[^A-Z0-9♡★]/g, '').slice(0, 3) || '???';
+      const s = Math.round(Number(payload && payload.s) || 0);
+      if (!(s > 0 && s <= 131000)) return json(req, 400, { error: 'that score belongs to another universe' });
+      let hall = [];
+      try { hall = JSON.parse(await env.WALL.get('cfg:hall') || '[]'); } catch (e) { hall = []; }
+      hall.push({ n, s, t: new Date().toISOString().slice(0, 10) });
+      hall.sort((a, b) => b.s - a.s);
+      hall = hall.slice(0, 10);
+      await env.WALL.put('cfg:hall', JSON.stringify(hall));
+      ctx.waitUntil(env.WALL.put(rlKey, String(used + 1), { expirationTtl: 3600 }));
+      const made = hall.some((e) => e.n === n && e.s === s);
+      return json(req, 200, { ok: true, hall, made });
+    }
+
+    /* ---- POST /admin/stat — owner sets/corrects a counter exactly ---- */
+    if (req.method === 'POST' && path === '/admin/stat') {
+      if (!isAdmin(req, env)) return json(req, 401, { error: 'the wall knows its owner' });
+      let payload;
+      try { payload = await req.json(); } catch (e) { return json(req, 400, { error: 'json only' }); }
+      const key = String((payload && payload.key) || '');
+      if (!STAT_KEY_RE.test(key)) return json(req, 400, { error: 'bad key' });
+      const v = Math.max(0, Math.round(Number(payload && payload.value) || 0));
+      await env.WALL.put('s:' + key, String(v), { metadata: { v } });
+      return json(req, 200, { ok: true, key, value: v });
+    }
+
+    return json(req, 404, { error: 'this hallway has exactly eight doors' });
   }
 };
