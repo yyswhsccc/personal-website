@@ -546,6 +546,10 @@ export default {
     if (req.method === 'DELETE' && path.startsWith('/photo/')) {
       if (!isAdmin(req, env)) return json(req, 401, { error: 'the wall knows its owner' });
       const id = path.slice(7);
+      // the count only moves for photos that exist — a typo'd or repeated
+      // id used to report ok AND ghost-decrement the wall total
+      const existed = await env.WALL.get('p:' + id);
+      if (existed === null) return json(req, 404, { error: 'no such photo (nothing removed, count untouched)' });
       await env.WALL.delete('p:' + id);
       const count = parseInt(await env.WALL.get('cfg:count') || '1', 10);
       await env.WALL.put('cfg:count', String(Math.max(0, count - 1)));

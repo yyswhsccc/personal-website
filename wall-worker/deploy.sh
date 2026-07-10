@@ -14,13 +14,22 @@ s = re.sub(r'id = "[^"]*"', f'id = "{sys.argv[1]}"', s, count=1)
 open('wrangler.toml','w').write(s)
 PY
 echo "· namespace: $NS_ID"
-ADMIN=$(python3 -c "import secrets;print(secrets.token_urlsafe(24))")
-SALT=$(python3 -c "import secrets;print(secrets.token_urlsafe(16))")
-printf '%s' "$ADMIN" | npx --yes wrangler secret put ADMIN_SECRET
-printf '%s' "$SALT"  | npx --yes wrangler secret put SALT
-npx --yes wrangler deploy
-echo ""
-echo "=============================================="
-echo "ADMIN_SECRET (save this somewhere safe!):"
-echo "$ADMIN"
-echo "=============================================="
+# secrets are minted ONCE — regenerating on every deploy silently
+# invalidated the owner key stored via the site's `wall admin <secret>`.
+# to rotate on purpose: `npx wrangler secret delete ADMIN_SECRET` (and SALT), rerun.
+HAVE=$(npx --yes wrangler secret list 2>/dev/null | python3 -c "import sys,json;names={s.get('name') for s in json.load(sys.stdin)};print('yes' if {'ADMIN_SECRET','SALT'} <= names else 'no')" 2>/dev/null || echo no)
+if [ "$HAVE" = "yes" ]; then
+  echo "· secrets already set — keeping the existing owner key ♡"
+  npx --yes wrangler deploy
+else
+  ADMIN=$(python3 -c "import secrets;print(secrets.token_urlsafe(24))")
+  SALT=$(python3 -c "import secrets;print(secrets.token_urlsafe(16))")
+  printf '%s' "$ADMIN" | npx --yes wrangler secret put ADMIN_SECRET
+  printf '%s' "$SALT"  | npx --yes wrangler secret put SALT
+  npx --yes wrangler deploy
+  echo ""
+  echo "=============================================="
+  echo "ADMIN_SECRET (save this somewhere safe!):"
+  echo "$ADMIN"
+  echo "=============================================="
+fi

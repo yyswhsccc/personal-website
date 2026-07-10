@@ -275,11 +275,15 @@ async function respond(rawCmd, io) {
        IS the security promise, so we say so, and hand over the door
        pre-decoded (OSC 8 hyperlink where the terminal supports it). */
     if (cmd.indexOf(DOOR_B64.slice(0, 20)) !== -1 || lower.indexOf('yyswhsccc') !== -1 || lower.indexOf('base64') !== -1) {
-      await out(P + '🚪 opening the door…' + R + '\n');
+      /* shortest possible path from in here: one ⌘-click. true auto-open
+         is physically impossible across an ssh wire (no terminal lets a
+         remote pop windows on your screen — that is EVERYONE's security
+         promise), so the next-best magic is one honest hint: the very
+         same line at the LOCAL prompt makes macOS swing the door itself. */
+      await out(P + '🚪 opening the door…' + R + '\n\n');
       await sleep(500);
-      await out(B + 'it is right here — ' + C + 'click it' + R + B + ' and you are through ♡' + R + '\n\n');
-      await out('   ' + C + B + DOOR_LINK + R + '\n\n');
-      await out(D + '(one click / ⌘-click opens it in YOUR browser. a slime living on a server\n across the ocean can\'t reach your screen — but that link can ♡)' + R + '\n');
+      await out('   ' + C + B + DOOR_LINK + R + '   ' + D + '← ⌘-click, you are through ♡' + R + '\n\n');
+      await out(D + '(hands-free? `exit` first — this exact line at YOUR prompt opens it all by itself ♡)' + R + '\n');
     } else {
       await out('open: this container has no screen — but it has a door:\n');
       await out('  ' + C + 'door' + R + D + '   ← type that ♡' + R + '\n');
