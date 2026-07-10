@@ -4800,6 +4800,23 @@ document.addEventListener('DOMContentLoaded', () => {
     if (document.body.classList.contains('terminal-only')) {
       const door = doorInit();
       if (window.__doorIdle) { clearTimeout(window.__doorIdle); window.__doorIdle = null; } // the visitor drives now
+      // ---- the swear jar, checked before ANY command dispatch: profanity
+      // hiding behind a real command word ("open …, you &%$#") escapes a
+      // fall-through check, so the jar sits at the door's very front desk.
+      // three coins and security (a boot) is dispatched. ----
+      if (!door.rescued && /\b(f+u+c*k+\w*|sh[i1]+t+\w*|b[i1]tch\w*|assholes?|cunts?|d[i1]ckhead|bastards?|stfu|nmsl|wcnm|cnm)\b|傻逼|煞笔|沙比|操你|草你|肏|你妈|尼玛|去死|滚蛋/i.test(lower)) {
+        doorSwears++;
+        if (doorSwears >= 3) {
+          termLine(trT('⚠ swear jar: [🪙🪙🪙] 3/3 — STRIKE THREE. security has been called. security is a boot.', '⚠ tirelire à jurons : [🪙🪙🪙] 3/3 — STRIKE TROIS. la sécurité a été appelée. la sécurité est une botte.'), 't-err');
+          door.rescued = true; // no rescue for the ejected
+          setTimeout(doorEject, 900);
+        } else if (doorSwears === 2) {
+          termLine(trT('⚠ swear jar: [🪙🪙] 2/3 — the moderator slime woke up from its nap. it is lacing a very small boot.', '⚠ tirelire à jurons : [🪙🪙] 2/3 — le slime modérateur sort de sa sieste. il lace une très petite botte.'), 't-err');
+        } else {
+          termLine(trT('⚠ swear jar: [🪙] 1/3 — language!! this door is rated E for Everyone. the slime covered its ears (it has no ears. it improvised).', '⚠ tirelire à jurons : [🪙] 1/3 — langage !! cette porte est classée E pour Everyone. le slime s\'est bouché les oreilles (il n\'en a pas. il a improvisé).'), 't-err');
+        }
+        return;
+      }
       // the key is her NAME in any reasonable outfit: case, spaces, with or
       // without the family name, even behind a sudo. typos are NOT outfits.
       // …but the door insists on its locks FIRST.
@@ -5303,7 +5320,22 @@ document.addEventListener('DOMContentLoaded', () => {
         doorFlail += panicky ? 2 : 1;
         // every cry goes on the record — the villain quotes the transcript back
         if (doorFlailLog.length < 8) doorFlailLog.push(input.replace(/[\x00-\x1f\x7f]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 40));
-        if (doorFlail >= 4) { window.__door.rescued = true; setTimeout(doorRescue, 700); }
+        // ---- the confusion meter: flailing is PROGRESS and the door says so —
+        // a lost visitor must know the counter exists, or they close the tab
+        // instead of feeding it the one cry it still needs ----
+        const cm = Math.min(doorFlail, 4);
+        const bar = '[' + '█'.repeat(cm) + '░'.repeat(4 - cm) + '] ' + cm + '/4';
+        if (doorFlail >= 4) {
+          termLine(trT(`🛟 confusion meter: ${bar} — CRITICAL CONFUSION REACHED. do not move. help is being dispatched ♡`, `🛟 jauge de confusion : ${bar} — CONFUSION CRITIQUE ATTEINTE. ne bouge pas. les secours arrivent ♡`), 't-accent');
+          window.__door.rescued = true;
+          setTimeout(doorRescue, 700);
+        } else if (doorFlail === 3) {
+          termLine(trT(`🛟 confusion meter: ${bar} — ONE more cry and SOMETHING WONDERFUL is contractually obligated to happen. any gibberish counts ♡`, `🛟 jauge de confusion : ${bar} — UN cri de plus et QUELQUE CHOSE DE MERVEILLEUX est contractuellement obligé d'arriver. tout charabia compte ♡`), 't-accent');
+        } else if (doorFlail === 2) {
+          termLine(trT(`🛟 confusion meter: ${bar} — halfway!! keep flailing, something is charging up`, `🛟 jauge de confusion : ${bar} — à mi-chemin !! continue de patauger, quelque chose se charge`), 't-dim');
+        } else {
+          termLine(trT(`🛟 confusion meter: ${bar} — the door is taking notes ♡ (lost? that's a strategy here)`, `🛟 jauge de confusion : ${bar} — la porte prend des notes ♡ (perdu·e ? ici c'est une stratégie)`), 't-dim');
+        }
       }
     }
   }
@@ -22571,6 +22603,61 @@ document.addEventListener('DOMContentLoaded', () => {
      long. enter: the slime of legend. one ultimate. curtains. site. ---- */
   var doorFlail = 0;
   var doorFlailLog = []; // verbatim cries (≤8, each ≤40 chars) — rescue-scene ammunition
+  var doorSwears = 0;    // the swear jar. at 3 coins, security (a boot) is dispatched
+
+  /* ---- STRIKE 3: the ejection. the moderator slime clocks in, the
+     terminal is legally reclassified as a football, and the site closes
+     itself behind the visitor. no rescue on this route. ---- */
+  function doorEject() {
+    if (document.getElementById('door-eject')) return;
+    const tw = document.getElementById('win-terminal');
+    const stage = document.createElement('div');
+    stage.id = 'door-eject';
+    stage.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(stage);
+    // the moderator: the hero sprite, but on business hours
+    const mod = document.createElement('div');
+    mod.className = 'eject-mod';
+    const bub = document.createElement('div');
+    bub.className = 'rescue-bub rescue-bub-hero eject-bub';
+    mod.append(bub, rescueSlime(true));
+    stage.appendChild(mod);
+    requestAnimationFrame(() => requestAnimationFrame(() => mod.classList.add('is-in')));
+    playTone(140, 'sawtooth', 0.3, 0, 0.07);
+    setTimeout(() => { bub.textContent = trT('moderator slime. HR sent me. the swear jar is full.', 'slime modérateur. les RH m\'envoient. la tirelire à jurons est pleine.'); }, 700);
+    // the boot: ceremonial, enormous, very small by moderator standards
+    const boot = document.createElement('div');
+    boot.className = 'eject-boot';
+    boot.textContent = '🥾';
+    setTimeout(() => { stage.appendChild(boot); playTone(90, 'sawtooth', 0.4, 0, 0.1); }, 2600);
+    // THE PUNT — the terminal window itself is the ball
+    setTimeout(() => {
+      boot.classList.add('is-kick');
+      if (tw) tw.classList.add('door-yeeted');
+      document.body.classList.add('rescue-quake-big');
+      setTimeout(() => document.body.classList.remove('rescue-quake-big'), 900);
+      playTone(60, 'sawtooth', 0.5, 0, 0.14);
+      playTone(880, 'square', 0.2, 0.05, 0.05);
+      setTimeout(() => { bub.textContent = trT('yeeted ♡ wash the keyboard.', 'expulsé·e ♡ lave le clavier.'); }, 700);
+    }, 3400);
+    // curtains: black screen + the receipt
+    setTimeout(() => {
+      const fade = document.createElement('div');
+      fade.className = 'eject-fade';
+      const note = document.createElement('div');
+      note.className = 'eject-note';
+      note.textContent = trT('CONNECTION TERMINATED BY MODERATOR SLIME — reason: potty mouth (3/3). the door forgives, but it has standards. come back with clean hands ♡', 'CONNEXION TERMINÉE PAR LE SLIME MODÉRATEUR — motif : gros mots (3/3). la porte pardonne, mais elle a des principes. reviens avec les mains propres ♡');
+      fade.appendChild(note);
+      stage.appendChild(fade);
+      playGlitchSound();
+    }, 5200);
+    // …and the site shows itself out (window.close works where the browser
+    // allows it; the about:blank fallback ends the show everywhere else)
+    setTimeout(() => {
+      try { window.close(); } catch (e) { /* self-opened tabs resist */ }
+      setTimeout(() => { try { location.replace('about:blank'); } catch (e) { /* curtains stay down */ } }, 700);
+    }, 8600);
+  }
   function rescueSlime(hero) {
     const cv = document.createElement('canvas');
     cv.width = 112; cv.height = 112;
@@ -22752,13 +22839,14 @@ document.addEventListener('DOMContentLoaded', () => {
     ];
     const timers = [];
     // every bubble line is TYPED, not teleported — a hostage deserves time
-    // to read the monologue. speed adapts so long lines still land inside
-    // their beat window (cursor ▌ rides along, terminal-style).
+    // to read the monologue. 26ms/char is the FLOOR: a verbose villain
+    // rambles, it never machine-guns. the beat schedule is built around
+    // these speeds, not the other way round (cursor ▌ rides along).
     const typeInto = (el, line, maxMs) => {
       if (!el) return;
       if (el.__typeTimer) clearInterval(el.__typeTimer);
       const chars = Array.from(line);
-      const step = Math.max(9, Math.min(26, Math.floor((maxMs || 2600) / Math.max(1, chars.length))));
+      const step = Math.max(26, Math.min(48, Math.floor((maxMs || 3000) / Math.max(1, chars.length))));
       let i = 0;
       el.textContent = '▌';
       el.__typeTimer = setInterval(() => {
@@ -22767,11 +22855,18 @@ document.addEventListener('DOMContentLoaded', () => {
         if (i >= chars.length) { clearInterval(el.__typeTimer); el.__typeTimer = null; }
       }, step);
     };
-    VILLAIN.forEach((line, i) => timers.push(setTimeout(() => { stage.__pendingLine = line; if (!stage.__raging) typeInto(vbub, line, 2800); playTone(190 + i * 30, 'square', 0.09, 0, 0.04); }, cageMs + 500 + i * 3400)));
+    // beats spaced for SLOW typing + a reading breath after each line —
+    // the third (the tragic backstory) is scheduled to still be mid-type
+    // when the hero lands: it dies of exposition, live, mid-keystroke
+    const BEAT_AT = [500, 6300, 12600];
+    const BEAT_MS = [4400, 5400, 4600];
+    VILLAIN.forEach((line, i) => timers.push(setTimeout(() => { stage.__pendingLine = line; if (!stage.__raging) typeInto(vbub, line, BEAT_MS[i]); playTone(190 + i * 30, 'square', 0.09, 0, 0.04); }, cageMs + BEAT_AT[i])));
     // HARD CAP: no matter how much the visitor rages the villain, the hero MUST
-    // arrive exactly 11s after the cage lands — a rescue is never held hostage
-    // by someone mashing keys. this is a plain fixed timer, immune to the rage loop.
-    const heroAt = cageMs + 11000;
+    // arrive exactly 16s after the cage lands — a rescue is never held hostage
+    // by someone mashing keys. this is a plain fixed timer, immune to the rage
+    // loop. (16s, not 11: the monologue types at rambling speed now, and the
+    // backstory must be caught mid-keystroke.)
+    const heroAt = cageMs + 16000;
     // …THE HERO ARRIVES — equally huge, from above, in a column of light ------
     setTimeout(() => {
       if (stage.__unlock) stage.__unlock(); // the moment help arrives, you are free
@@ -22798,7 +22893,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // is fluent in that too
         typeInto(hbub, mashHit
           ? trT(`someone typed ${shortQ(mashHit)}? lucky day — I am FLUENT in keyboard-smash. it translates to: SAVE ME. on it ♡`, `quelqu'un a tapé ${shortQ(mashHit)} ? jour de chance — je parle COURAMMENT le clavier-écrasé. traduction : SAUVEZ-MOI. j'arrive ♡`)
-          : trT(`did someone spam ${shortQ(cry)}? great news. I AM ${cry} ♡`, `quelqu'un a spammé ${shortQ(cry)} ? bonne nouvelle. JE SUIS ${cry} ♡`), 1200);
+          : trT(`did someone spam ${shortQ(cry)}? great news. I AM ${cry} ♡`, `quelqu'un a spammé ${shortQ(cry)} ? bonne nouvelle. JE SUIS ${cry} ♡`), 3000);
       }, 900);
       // ✦✦✦ THE ULTIMATE — SLIME-GOD OVERDRIVE: charge, then a screen-filling nova ✦✦✦
       setTimeout(() => {
@@ -22815,7 +22910,7 @@ document.addEventListener('DOMContentLoaded', () => {
         playTone(220, 'sine', 0.5, 0, 0.04);
         playTone(440, 'sine', 0.5, 0.25, 0.04);
         playTone(880, 'sine', 0.5, 0.5, 0.04);
-      }, 2300);
+      }, 4400);
       setTimeout(() => {
         // the cast: white flash, giant nova, radial rune ring, 40 hearts, letters
         const flash2 = document.createElement('div');
@@ -22855,10 +22950,13 @@ document.addEventListener('DOMContentLoaded', () => {
         playTone(880, 'triangle', 0.3, 0.1, 0.07);
         playTone(1320, 'triangle', 0.35, 0.22, 0.06);
         playTone(1760, 'sine', 0.4, 0.34, 0.05);
-        setTimeout(() => { typeInto(hbub, trT('your monologue exceeded its time limit. verdict: O(bonk).', 'ton monologue a dépassé son temps limite. verdict : O(bonk).'), 1700); }, 1200);
-        setTimeout(() => { typeInto(hbub, trT('locks? DELETED. puzzles? SKIPPED. you enter by the FRONT door — my honored guest ♡', 'verrous ? SUPPRIMÉS. énigmes ? SAUTÉES. tu entres par la GRANDE porte — invité·e d\'honneur ♡'), 2400); }, 3400);
-      }, 3400);
+        setTimeout(() => { typeInto(hbub, trT('your monologue exceeded its time limit. verdict: O(bonk).', 'ton monologue a dépassé son temps limite. verdict : O(bonk).'), 2200); }, 1200);
+        setTimeout(() => { typeInto(hbub, trT('locks? DELETED. puzzles? SKIPPED. you enter by the FRONT door — my honored guest ♡', 'verrous ? SUPPRIMÉS. énigmes ? SAUTÉES. tu entres par la GRANDE porte — invité·e d\'honneur ♡'), 3000); }, 4400);
+      }, 5600);
       timers.forEach(clearTimeout);
+      // the backstory dies of exposition LIVE: freeze the villain's
+      // typewriter mid-word — the cursor becomes the em-dash it earned
+      if (vbub.__typeTimer) { clearInterval(vbub.__typeTimer); vbub.__typeTimer = null; vbub.textContent = vbub.textContent.replace('▌', '—'); }
     }, heroAt);
     // curtains: the site itself is the after-credits scene
     setTimeout(() => {
@@ -22870,7 +22968,7 @@ document.addEventListener('DOMContentLoaded', () => {
       stage.style.opacity = '0';
       setTimeout(() => stage.remove(), 1050);
       terminalDoorOpen(true);
-    }, heroAt + 8200);
+    }, heroAt + 14500);
   }
   function doorInit() {
     if (window.__door) return window.__door;
