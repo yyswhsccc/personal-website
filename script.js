@@ -5202,7 +5202,16 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       const idx = args[0] !== undefined && !isNaN(parseInt(args[0], 10)) ? Math.abs(parseInt(args[0], 10)) % TAROT.length : Math.floor(Math.random() * TAROT.length);
       const card = TAROT[idx];
-      const upright = Math.random() < 0.55;
+      let upright = Math.random() < 0.55;
+      // the soul card comes with PITY: fate may tease, it does not bully.
+      // each consecutive reversed CHARIOT raises the upright odds, and the
+      // third is contractually upright — no cursed streaks on HER card.
+      if (idx === 7) {
+        const revs = store.get('yos-chariot-revs', 0);
+        if (revs >= 2) upright = true;
+        else if (revs === 1 && !upright) upright = Math.random() < 0.6; // fate re-rolls once, quietly
+        store.set('yos-chariot-revs', upright ? 0 : revs + 1);
+      }
       const called = args[0] !== undefined; // summoned by number vs dealt by fate
       // v84: VII — THE CHARIOT — is yongshan's own soul card. the wizard
       // treats its number with visible respect (and a little fear).
@@ -10331,8 +10340,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const bub = cineEl('dusk-bubble', slime);
     const say = (pair, ms) => { bub.textContent = trT(...pair); bub.classList.add('is-on'); playTone(523, 'sine', 0.1, 0, 0.03); if (ms) setTimeout(() => bub.classList.remove('is-on'), ms); };
     playTone(392, 'sine', 0.5, 0, 0.04); // dusk settles in E-flat-ish calm
-    setTimeout(() => say(DUSK_DECREES[Math.floor(Math.random() * DUSK_DECREES.length)], 2600), 600);
-    // 3.2s: the officiant reaches the switch and PULLS
+    // the decree stays up long enough to actually READ (4.6s), and the
+    // officiant honours a full 2s beat after it before touching anything
+    setTimeout(() => say(DUSK_DECREES[Math.floor(Math.random() * DUSK_DECREES.length)], 4600), 600);
+    // 5.2s: decree read, pause respected — the officiant reaches the switch and PULLS
     setTimeout(() => {
       slime.classList.add('dusk-slime-pull');
       sw.classList.add('is-off');
@@ -10356,10 +10367,10 @@ document.addEventListener('DOMContentLoaded', () => {
           playTone(1046 + i * 120, 'triangle', 0.12, 0, 0.03);
         }, 900 + i * 260);
       }
-    }, 3200);
-    setTimeout(() => say(DUSK_GOODNIGHTS[Math.floor(Math.random() * DUSK_GOODNIGHTS.length)], 2400), 5600);
-    setTimeout(() => { cine.classList.add('sky-cine-out'); }, 7400);
-    setTimeout(() => { cine.remove(); skyCineBusy = false; }, 8300);
+    }, 5200);
+    setTimeout(() => say(DUSK_GOODNIGHTS[Math.floor(Math.random() * DUSK_GOODNIGHTS.length)], 2400), 7600);
+    setTimeout(() => { cine.classList.add('sky-cine-out'); }, 9400);
+    setTimeout(() => { cine.remove(); skyCineBusy = false; }, 10300);
   }
 
   function dawnCeremony(force) {

@@ -8833,6 +8833,9 @@ html[data-theme="dark"].dream-win95 {
   --dither-pink: conic-gradient(rgba(0, 0, 0, 0.05) 25%, transparent 0 50%, rgba(0, 0, 0, 0.05) 0 75%, transparent 0);
   --dither-purple: conic-gradient(rgba(0, 0, 0, 0.05) 25%, transparent 0 50%, rgba(0, 0, 0, 0.05) 0 75%, transparent 0);
 }
+/* desktop labels are WHITE on the teal wallpaper — as 1995 intended.
+   (--text is tuned for the grey window panels and turns to mud out here) */
+html.dream-win95 .icon-label { color: #ffffff; text-shadow: 1px 1px 0 #000000; }
 html[data-theme="dark"].dream-win95 body {
   background-image: linear-gradient(#008080, #008080);
 }
