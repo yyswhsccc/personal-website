@@ -9166,6 +9166,30 @@ html[data-theme="dark"].dream-gameboy .window-header {
   color: #9bbc0f;
 }
 html[data-theme="dark"].dream-gameboy .window-title { color: #9bbc0f; }
+/* v99.1: DMG CONTRAST PASS — every pairing must be two of the four
+   greens at least two steps apart. several elements were still wearing
+   midnight colours from the base dark theme and sank into the olive:
+   icon labels dragged a BLACK drop-shadow, search cards kept their
+   deep-purple panels, quest-rank badges wore purple text on the
+   darkest green. all re-dressed in honest cartridge greens. */
+html[data-theme="dark"].dream-gameboy .icon-label { color: #0f380f; text-shadow: none; }
+html[data-theme="dark"].dream-gameboy .search-result {
+  background: #9bbc0f;
+  color: #0f380f;
+  border-color: #306230;
+}
+html[data-theme="dark"].dream-gameboy .search-result .sr-title { color: #0f380f; text-shadow: none; }
+html[data-theme="dark"].dream-gameboy .search-result a { color: #0f380f; }
+html[data-theme="dark"].dream-gameboy .quest-rank { color: #9bbc0f; }
+html[data-theme="dark"].dream-gameboy .resto-vote {
+  background: #9bbc0f;
+  color: #0f380f;
+  border-color: #0f380f;
+}
+html[data-theme="dark"].dream-gameboy .resto-vote.voted {
+  background: #306230;
+  color: #9bbc0f;
+}
 /* every sprite joins the DMG palette — yes, the slime too */
 html[data-theme="dark"].dream-gameboy img,
 html[data-theme="dark"].dream-gameboy canvas {
@@ -9425,6 +9449,111 @@ html.dream-bsod .desktop-icon-btn[data-window="win-dreamlog"] {
   pointer-events: none;
 }
 .bsod-stamp-ok { color: #1a8f4a; border-color: #1a8f4a; }
+/* v99.1: on CCTV FEED 19-B the entity IS the show — the slime steps
+   offstage (hidden only inside the live stage, only in the scp dream)
+   and the pixel actor takes the boards */
+html.dream-scp .live-stage .slime-pet { visibility: hidden !important; }
+.scp-stage-actor {
+  position: absolute;
+  bottom: 16%;
+  left: 42%;
+  z-index: 6;
+  pointer-events: auto;
+  cursor: var(--cursor-heart);
+  text-align: center;
+  transition: left 0.9s ease;
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 20, 0.45));
+}
+.scp-actor-px { image-rendering: pixelated; display: block; margin: 0 auto; }
+.scp-actor-cap {
+  margin-top: 4px;
+  font-family: var(--font-pixel);
+  font-size: 0.68rem;
+  color: #fff;
+  background: rgba(20, 8, 30, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  padding: 1px 6px;
+  white-space: nowrap;
+}
+.scp-actor-bub {
+  position: absolute;
+  top: -30px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-pixel);
+  font-size: 0.8rem;
+  color: #1a0a26;
+  background: #fff;
+  border: 2px solid #1a0a26;
+  padding: 2px 7px;
+  white-space: nowrap;
+  animation: bsod-chirp-pop 2.2s ease forwards;
+  pointer-events: none;
+}
+.scp-actor-jolt { animation: scp-actor-jolt 0.4s ease; }
+@keyframes scp-actor-jolt {
+  30% { transform: scale(1.12, 0.88); }
+  60% { transform: scale(0.94, 1.08); }
+}
+.scp-actor-flip .scp-actor-px { transform: scaleX(-1); }
+.scp-actor-forgot { animation: scp-actor-forgot 0.7s ease; }
+@keyframes scp-actor-forgot {
+  50% { opacity: 0.06; filter: blur(2px); }
+}
+.scp-stage-blink {
+  position: absolute;
+  inset: 0;
+  background: #000;
+  z-index: 7;
+  pointer-events: none;
+  animation: scp-stage-blink 0.17s steps(1) forwards;
+}
+@keyframes scp-stage-blink {
+  0% { opacity: 1; }
+  100% { opacity: 0; }
+}
+.scp-actor-bread {
+  position: absolute;
+  bottom: 60%;
+  font-size: 1.2rem;
+  animation: scp-bread-launch 1.1s ease-out forwards;
+  pointer-events: none;
+}
+@keyframes scp-bread-launch {
+  0% { transform: translateY(0) rotate(0); opacity: 1; }
+  55% { transform: translateY(-64px) rotate(160deg); opacity: 1; }
+  100% { transform: translateY(-20px) rotate(340deg); opacity: 0; }
+}
+.scp-actor-dot {
+  position: fixed;
+  z-index: 2699;
+  color: #141414;
+  font-size: 1.1rem;
+  transition: left 0.6s ease-in, top 0.6s ease-in, opacity 0.6s ease-in;
+  pointer-events: none;
+}
+/* v99.1: the O5 council's full-screen verdict stamp */
+.o5-stamp {
+  position: fixed;
+  top: 38%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-12deg);
+  z-index: 2698;
+  font-family: var(--font-pixel);
+  font-size: 2rem;
+  letter-spacing: 2px;
+  color: #c62828;
+  border: 4px solid #c62828;
+  padding: 6px 18px;
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: 4px 4px 0 rgba(0, 0, 20, 0.35);
+  animation: bsod-stamp-slam 0.45s cubic-bezier(0.2, 2.4, 0.4, 1), o5-stamp-fade 2.6s ease forwards;
+  pointer-events: none;
+}
+@keyframes o5-stamp-fade {
+  0%, 72% { opacity: 1; }
+  100% { opacity: 0; }
+}
 @keyframes bsod-stamp-slam { from { transform: translate(-50%, -50%) rotate(-14deg) scale(2.6); opacity: 0; } }
 .bsod-march { position: absolute; bottom: 4px; left: -20px; font-size: 1rem; animation: bsod-march-walk 2.4s linear forwards; pointer-events: none; }
 @keyframes bsod-march-walk { to { left: calc(100% + 20px); } }
@@ -10417,7 +10546,12 @@ body.dream-slowmo {
    entity slime-forms, the emblem, the statue, the store
    ===================================================== */
 .scp-emblem-badge { display: flex; align-items: center; gap: 8px; color: var(--text); }
-.scp-emblem { width: 22px; height: 22px; flex: none; animation: t-spin 14s linear infinite; }
+/* v99.1: the emblem spins on ITS OWN axis. it used to borrow t-spin,
+   whose keyframes include translate(-50%,-50%) (meant for the centred
+   tarot props) — so every lap interpolated toward an up-left offset
+   and the badge appeared to crawl upward while rotating. */
+.scp-emblem { width: 26px; height: 26px; flex: none; animation: scp-emblem-spin 14s linear infinite; }
+@keyframes scp-emblem-spin { to { transform: rotate(360deg); } }
 /* the seven possessions (filters on the habitat slime itself) */
 html.scp-form-999 #slime-pet img { filter: sepia(1) saturate(3.2) hue-rotate(-18deg) brightness(1.05) drop-shadow(0 0 10px rgba(255, 150, 40, 0.7)); }
 html.scp-form-173 #slime-pet img { filter: grayscale(1) sepia(0.35) contrast(1.15) drop-shadow(0 0 6px rgba(120, 120, 120, 0.6)); }

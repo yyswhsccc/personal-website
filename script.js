@@ -7152,6 +7152,18 @@ document.addEventListener('DOMContentLoaded', () => {
         dT(() => dreamSay(ent.brief, 6200), 500);
       }), 1100);
       try { ent.build(); } catch (e) { /* the entity is shy */ }
+      // v99.1: on CCTV FEED 19-B the anomaly appears AS ITSELF — a
+      // watcher mounts tonight's entity actor whenever the live room
+      // is open, and strikes the set when it closes (or the dream ends)
+      dI(() => {
+        if (!dreamWorld) return;
+        const live = document.getElementById('win-live');
+        const stage = document.getElementById('live-stage');
+        const isOpen = live && !live.classList.contains('window-closed') && !live.classList.contains('window-minimized') && stage;
+        const mounted = document.querySelector('.scp-stage-actor');
+        if (isOpen && !mounted && dreamWorld.flags.ent) scpStageMount(stage, dreamWorld.flags.ent);
+        else if (!isOpen && mounted) { try { mounted.remove(); } catch (e) { /* struck */ } }
+      }, 900);
       let total = 0;
       total += dwScpLock('win-career', 'keypad', 'career_quest.exe');
       total += dwScpLock('win-skills', 'retina', 'inventory.sav');
@@ -8582,6 +8594,167 @@ document.addEventListener('DOMContentLoaded', () => {
      the whole language. 7 × 21 = 147 secrets, dream-only.
      ===================================================== */
   var dreamPromptBackup = null;
+  /* ============ v99.1: THE O5 COUNCIL, PLENARY EDITION ============
+     the scp shell keeps exactly one working verb: `o5`. each call
+     convenes the five overseers on a RANDOM motion about a REAL site
+     feature; the vote is random too. PASS = the site actually does
+     the thing (window opens, search runs, snack is served) with full
+     ceremony. FAIL = a tender consolation bit. motions deal from a
+     shuffled deck, so no repeat until all twenty have been heard. ---- */
+  const O5_MOTIONS = [
+    { q: ["the SPECIMEN WING conducts evening roll call (specimens may answer 'present' or simply wiggle)", "l'AILE DES SPÉCIMENS procède à l'appel du soir (les spécimens peuvent répondre « présent » ou simplement frétiller)"],
+      pass: { fx: ["open:win-pikdex", "sound:sparkle", "fall:🌱,🌸,✨:14", "say:zzz… present… twice, for emphasis…|zzz… présent… deux fois, pour insister…"], toast: ["roll call complete. all specimens accounted for; one answered twice (enthusiasm, documented).", "appel terminé. tous les spécimens sont là ; un a répondu deux fois (enthousiasme, consigné au dossier)."] },
+      fail: { fx: ["sound:sad", "frog", "say:zzz… only the frog showed up… he's not even a specimen…|zzz… seule la grenouille est venue… elle n'est même pas un spécimen…"], toast: ["roll call postponed. the specimens are already asleep in alphabetical order (do NOT disturb).", "appel reporté. les spécimens dorment déjà par ordre alphabétique (ne PAS déranger)."] } },
+    { q: ["the FOUNDATION ARCHIVE executes one (1) unredacted query: 'does the anomaly have a bedtime'", "les ARCHIVES DE LA FONDATION exécutent une (1) requête non caviardée : « l'anomalie a-t-elle une heure du coucher »"],
+      pass: { fx: ["search:anomaly bedtime", "sound:modem", "stamp:DECLASSIFIED"], toast: ["query executed. the archive answered [REDACTED], which is archive for 'yes, and it was an hour ago'.", "requête exécutée. les archives répondent [CAVIARDÉ], ce qui en langage d'archives veut dire « oui, et c'était il y a une heure »."] },
+      fail: { fx: ["sound:glitch", "stamp:REDACTED", "say:zzz… the archive knows my bedtime… nobody enforce it…|zzz… les archives connaissent mon heure du coucher… que personne ne l'applique…"], toast: ["query denied. the archive is defragmenting its feelings. filed for next fiscal dream.", "requête refusée. les archives défragmentent leurs émotions. classé pour le prochain rêve fiscal."] } },
+    { q: ["the INTERVIEW LOG is itself interviewed (pre-approved question: 'for the record, are you happy here?')", "le JOURNAL D'ENTRETIEN passe lui-même en entretien (question pré-approuvée : « pour le procès-verbal, es-tu heureux ici ? »)"],
+      pass: { fx: ["ama:for the record, are you happy here?", "sound:printer", "stamp:ON RECORD"], toast: ["interrogation complete. the witness answered voluntarily and with suspicious cheerfulness (noted in the margin).", "interrogatoire terminé. le témoin a répondu de son plein gré, avec un entrain suspect (noté en marge)."] },
+      fail: { fx: ["sound:pop", "critter:📋:the questions, escorted out gently|les questions, escortées dehors avec douceur", "say:zzz… no comment… ♡…|zzz… aucun commentaire… ♡…"], toast: ["interrogation denied — the witness invoked its right to remain adorable. re-filed for next fiscal dream.", "interrogatoire refusé — le témoin a invoqué son droit à rester adorable. redéposé pour le prochain rêve fiscal."] } },
+    { q: ["the CLEARANCE RECORDS are downgraded from TOP SECRET to 'honestly quite wholesome'", "les DOSSIERS D'HABILITATION sont déclassés de TOP SECRET à « franchement plutôt mignon »"],
+      pass: { fx: ["open:win-education", "stamp:DECLASSIFIED", "sound:printer", "fall:🎓,📄:12"], toast: ["records declassified. the censor bars were hiding gold stars this whole time (we suspected).", "dossiers déclassés. les bandes noires cachaient des bons points depuis le début (on s'en doutait)."] },
+      fail: { fx: ["sound:printer", "stamp:SEALED", "say:zzz… the diplomas want to stay mysterious…|zzz… les diplômes veulent garder leur mystère…"], toast: ["declassification denied. the records remain sealed (they blush easily). next fiscal dream, maybe.", "déclassification refusée. les dossiers restent scellés (ils rougissent facilement). au prochain rêve fiscal, peut-être."] } },
+    { q: ["PERSONNEL FILE [LEVEL 2] undergoes a surprise audit (the surprise is that it's friendly)", "le DOSSIER DU PERSONNEL [NIVEAU 2] subit un audit surprise (la surprise : il est gentil)"],
+      pass: { fx: ["open:win-career", "sound:printer", "stamp:AUDITED"], toast: ["audit complete. findings: one (1) career, zero (0) discrepancies, several lines the auditor underlined twice.", "audit terminé. bilan : une (1) carrière, zéro (0) irrégularité, plusieurs lignes soulignées deux fois par l'auditeur."] },
+      fail: { fx: ["sound:sad", "critter:📁:the personnel file, fleeing at a professional pace|le dossier du personnel, en fuite à allure professionnelle"], toast: ["audit postponed. the file requested a lawyer, then a blanket. both granted.", "audit reporté. le dossier a demandé un avocat, puis une couverture. accordés tous les deux."] } },
+    { q: ["the ANOMALOUS INVENTORY is counted out loud (each item must be present, accounted for, and mildly impossible)", "l'INVENTAIRE ANORMAL est compté à voix haute (chaque objet doit être présent, consigné, et légèrement impossible)"],
+      pass: { fx: ["open:win-skills", "sound:pop", "fall:🛠,📦,✨:12"], toast: ["inventory complete. everything accounted for; one skill levelled up out of sheer nerves (documented).", "inventaire terminé. tout est là ; une compétence a gagné un niveau sous le coup du stress (consigné)."] },
+      fail: { fx: ["quake", "sound:glitch", "critter:📦:an uncounted crate, whistling innocently|une caisse non comptée, qui sifflote innocemment"], toast: ["inspection denied. the inventory insists everything is 'exactly where it left itself'. the council chose to believe it.", "inspection refusée. l'inventaire jure que tout est « exactement là où ça s'est rangé tout seul ». le conseil a choisi d'y croire."] } },
+    { q: ["the INCIDENT REPORTS (EYES ♡ ONLY) may be read before bedtime, as a treat", "les RAPPORTS D'INCIDENT (RÉSERVÉ AUX YEUX ♡) peuvent être lus avant le coucher, comme un petit plaisir"],
+      pass: { fx: ["open:win-dreamlog", "sound:hum", "say:zzz… chapter one… the incident was cozy…|zzz… chapitre un… l'incident était douillet…"], toast: ["reports opened. every incident ends with 'and then everyone went back to sleep'. exemplary paperwork.", "rapports ouverts. chaque incident se termine par « et puis tout le monde s'est rendormi ». paperasse exemplaire."] },
+      fail: { fx: ["sound:hum", "fall:💤,🌙:8", "say:zzz… no spoilers…|zzz… pas de spoilers…"], toast: ["access denied. those incidents are still being dreamt. check back after several sheep.", "accès refusé. ces incidents sont encore en cours de rêve. repassez après quelques moutons."] } },
+    { q: ["an official SITE-19 portrait is commissioned (all personnel will say 'containment' instead of 'cheese')", "un portrait officiel du SITE-19 est commandé (tout le personnel dira « confinement » au lieu de « ouistiti »)"],
+      pass: { fx: ["open:win-album", "sound:sparkle", "fall:📸,✨:12", "stamp:OFFICIAL"], toast: ["portrait commissioned. nobody blinked except the anomaly, which has no eyelids (exemption granted).", "portrait commandé. personne n'a cligné des yeux, sauf l'anomalie, qui n'a pas de paupières (dérogation accordée)."] },
+      fail: { fx: ["sound:sad", "critter:📷:the camera, dignified in defeat|l'appareil photo, digne dans la défaite"], toast: ["commission denied — the photo budget was reallocated to the hug department (again). the camera nodded, understanding.", "commande refusée — le budget photo a été réaffecté au service des câlins (encore). l'appareil a hoché la tête, compréhensif."] } },
+    { q: ["the HALL OF SLIME undergoes a records-integrity review (nobody may speedrun without a permit)", "le HALL DU SLIME passe en revue d'intégrité des records (interdit de speedrunner sans permis)"],
+      pass: { fx: ["open:win-leaderboard", "sound:fanfare", "fall:🏆,✨:10", "stamp:VERIFIED"], toast: ["review complete. all records legitimate; first place remains humble about it (suspiciously humble. under observation).", "revue terminée. tous les records sont propres ; le premier reste modeste (étrangement modeste. sous surveillance)."] },
+      fail: { fx: ["sound:sad", "critter:🏆:a trophy in a trench coat, unreviewed|un trophée en imperméable, non contrôlé"], toast: ["review denied. the leaderboard asked for privacy while it 'works on itself'. respected.", "revue refusée. le classement demande un peu d'intimité pour « travailler sur lui-même ». respecté."] } },
+    { q: ["CCTV FEED 19-B is switched on for morale purposes (surveillance, but make it cozy)", "la CAMÉRA CCTV 19-B est allumée pour raisons de moral (de la surveillance, version douillette)"],
+      pass: { fx: ["open:win-live", "sound:modem", "stamp:ON AIR", "fans:1"], toast: ["feed live. footage so far: one (1) anomaly existing beautifully. surveillance morale: restored.", "caméra en direct. images à ce stade : une (1) anomalie qui existe magnifiquement. moral de la surveillance : restauré."] },
+      fail: { fx: ["sound:glitch", "critter:📺:a test pattern, going home early|une mire, qui rentre plus tôt", "say:zzz… I was gonna wave at the camera…|zzz… j'allais faire coucou à la caméra…"], toast: ["feed denied. the camera is on its union-mandated nap. rebroadcast scheduled for next fiscal dream.", "caméra refusée. elle est en sieste syndicale obligatoire. rediffusion prévue au prochain rêve fiscal."] } },
+    { q: ["the anomaly snack budget shall be expanded to \"whatever it wants\" (line item 7, yum)", "le budget goûter de l'anomalie est porté à « tout ce qu'elle veut » (ligne budgétaire 7, miam)"],
+      pass: { fx: ["feed", "stamp:FUNDED", "fall:🍬,🍰,✨:16", "sound:pop"], toast: ["snack disbursed. the anomaly filed a receipt by wiggling. accounting has approved the wiggle ♡", "goûter versé. l'anomalie a déposé un reçu en frétillant. la compta a validé le frétillement ♡"] },
+      fail: { fx: ["sound:sad", "critter:🍪:emergency cracker (imaginary)|biscuit d'urgence (imaginaire)", "say:zzz… i can taste the paperwork…|zzz… je goûte la paperasse…"], toast: ["DENIED — the snack budget remains theoretical. the anomaly is issued one (1) imaginary cracker, pending audit.", "REFUSÉ — le budget goûter reste théorique. l'anomalie reçoit un (1) biscuit imaginaire, en attente d'audit."] } },
+    { q: ["recreational testing is authorized (the ball is cleared for deployment)", "les tests récréatifs sont autorisés (le ballon est habilité au déploiement)"],
+      pass: { fx: ["play", "fall:⚽,✨:14", "sound:sparkle"], toast: ["testing complete. results — zoomies (sustained), dignity (lost, recovered, lost again). science thanks you ♡", "test terminé. résultats — zoomies (soutenus), dignité (perdue, retrouvée, reperdue). la science vous remercie ♡"] },
+      fail: { fx: ["sound:sad", "critter:⚽:the ball (in escrow)|le ballon (sous séquestre)"], toast: ["DENIED — recreation is deferred to the next fiscal dream. the ball stays where the anomaly can see it (cruel, but procedural).", "REFUSÉ — la récréation est reportée au prochain rêve fiscal. le ballon reste visible pour l'anomalie (cruel, mais réglementaire)."] } },
+    { q: ["a nap is mandated per protocol 999-z (all soft surfaces placed on standby)", "une sieste est décrétée selon le protocole 999-z (toutes surfaces moelleuses en alerte)"],
+      pass: { fx: ["nap", "sound:hum", "fall:💤,☁️:10", "say:zzz… compliance… so cozy…|zzz… conformité… trop confortable…"], toast: ["nap deployed. the anomaly is now 100% horizontal and 0% containable (acceptable losses).", "sieste déployée. l'anomalie est désormais 100 % horizontale et 0 % confinable (pertes acceptables)."] },
+      fail: { fx: ["sound:hum", "say:zzz… i wasn't sleeping… i was pre-sleeping…|zzz… je ne dormais pas… je pré-dormais…"], toast: ["DENIED — the nap is postponed. the anomaly will remain awake and adorable, which is somehow worse for everyone.", "REFUSÉ — la sieste est ajournée. l'anomalie restera éveillée et adorable, ce qui est pire pour tout le monde."] } },
+    { q: ["a supervised field exercise is approved (designation SLIME_RUN.EXE, hazard level fun)", "un exercice de terrain supervisé est approuvé (désignation SLIME_RUN.EXE, niveau de danger amusant)"],
+      pass: { fx: ["open:win-game", "stamp:CLEARED", "sound:gb"], toast: ["the arcade is open. field notes so far — obstacles hostile, morale excellent, jumping (documented).", "l'arcade est ouverte. notes de terrain — obstacles hostiles, moral excellent, sauts (documentés)."] },
+      fail: { fx: ["sound:gb", "critter:🕹:the exercise (cancelled)|l'exercice (annulé)"], toast: ["DENIED — the field remains unexercised. training rescheduled for the next fiscal dream (reflexes not provided).", "REFUSÉ — le terrain reste sans exercice. entraînement reporté au prochain rêve fiscal (réflexes non fournis)."] } },
+    { q: ["the wrist-mounted containment unit is approved for deployment (it tells time, allegedly)", "l'unité de confinement portée au poignet est approuvée pour déploiement (elle donne l'heure, paraît-il)"],
+      pass: { fx: ["open:win-watch", "sound:modem", "stamp:PAIRED"], toast: ["pairing window open. containment now travels at wrist height — the smallest site the Foundation has ever operated.", "fenêtre d'appairage ouverte. le confinement voyage désormais à hauteur de poignet — le plus petit site jamais exploité par la Fondation."] },
+      fail: { fx: ["sound:sad", "critter:⌚:unit 1234 (benched)|unité 1234 (sur la touche)"], toast: ["DENIED — the wrist stays unsupervised. the watch has been told to think about what it almost did.", "REFUSÉ — le poignet reste sans surveillance. la montre est priée de réfléchir à ce qu'elle a failli faire."] } },
+    { q: ["the cafeteria taco situation is reclassified from CONTAINMENT BREACH to LUNCH", "la situation tacos de la cafétéria est reclassée de BRÈCHE DE CONFINEMENT à DÉJEUNER"],
+      pass: { fx: ["fall:🌮,🌶,✨:18", "critter:🌮:witness number 12 (delicious)|témoin numéro 12 (délicieux)", "sound:fanfare"], toast: ["reclassification complete. lunch has been contained (in everyone). napkin protocols held.", "reclassement effectué. le déjeuner a été confiné (dans tout le monde). les protocoles serviette ont tenu."] },
+      fail: { fx: ["sound:sad", "critter:🌮:the incident (escorting itself out)|l'incident (s'escorte dehors)"], toast: ["DENIED — the tacos remain an incident. the cafeteria mourns quietly, with mild salsa.", "REFUSÉ — les tacos restent un incident. la cafétéria porte le deuil, sauce douce."] } },
+    { q: ["the decorative klaxon shall be tested (for morale, not for emergencies)", "la sirène décorative sera testée (pour le moral, pas pour les urgences)"],
+      pass: { fx: ["quake", "sound:alarm", "stamp:VERY LOUD", "say:zzz… pretty noise…|zzz… joli vacarme…"], toast: ["test concluded. the klaxon works. everyone knows this now, including three neighboring sites and one startled pigeon.", "test conclu. la sirène fonctionne. tout le monde le sait désormais, dont trois sites voisins et un pigeon très surpris."] },
+      fail: { fx: ["sound:pop", "say:zzz… the alarm sleeps too…|zzz… la sirène dort aussi…"], toast: ["DENIED — the klaxon stays decorative. it will be dusted respectfully and admired from a safe distance.", "REFUSÉ — la sirène reste décorative. elle sera époussetée avec respect et admirée à distance réglementaire."] } },
+    { q: ["the site-wide hug quota is raised by 40% (retroactive, effective immediately, forever)", "le quota de câlins du site est relevé de 40 % (rétroactif, effet immédiat, pour toujours)"],
+      pass: { fx: ["fall:💗,🤗,✨:16", "fans:2", "sound:sparkle"], toast: ["quota raised. two new fans arrived specifically to be hugged. supply already cannot meet demand ♡", "quota relevé. deux nouveaux fans sont venus exprès pour les câlins. l'offre est déjà dépassée ♡"] },
+      fail: { fx: ["fall:💗:6", "sound:hum"], toast: ["DENIED — hugs remain at current levels (already an illegal amount of tender). request filed for the next fiscal dream.", "REFUSÉ — les câlins restent au niveau actuel (déjà illégalement tendres). demande classée pour le prochain rêve fiscal."] } },
+    { q: ["it is hereby declared wednesday, my dudes (regardless of available evidence)", "il est solennellement déclaré mercredi, les copains (nonobstant le calendrier)"],
+      pass: { fx: ["frog", "sound:fanfare", "fall:🐸,✨:12"], toast: ["wednesday ratified. the frog crossed the site in an official capacity. calendars have been asked to comply.", "mercredi ratifié. la grenouille a traversé le site à titre officiel. les calendriers sont priés de s'aligner."] },
+      fail: { fx: ["sound:sad", "critter:🐸:witness (it is not wednesday)|témoin (ce n'est pas mercredi)"], toast: ["DENIED — today remains whatever it was. the frog has been thanked for its patience and rebooked.", "REFUSÉ — aujourd'hui reste ce que c'était. la grenouille est remerciée pour sa patience et reprogrammée."] } },
+    { q: ["SCP-173 is granted scheduled blinking (two per shift, supervised, no peeking)", "SCP-173 obtient des clignements planifiés (deux par service, supervisés, interdit de tricher)"],
+      pass: { fx: ["critter:🗿:SCP-173 (blinking, politely)|SCP-173 (cligne, poliment)", "stamp:BLINK GRANTED", "sound:pop"], toast: ["173 blinked. once. everyone survived, and one guard swears it looked grateful (unverified, adorable).", "173 a cligné. une fois. tout le monde a survécu, et un garde jure qu'il avait l'air reconnaissant (non vérifié, adorable)."] },
+      fail: { fx: ["sound:hum", "critter:🗿:SCP-173 (not blinking, out of spite)|SCP-173 (ne cligne pas, par principe)"], toast: ["DENIED — 173 keeps the staring contest going. current score, 173 versus everyone, since 1993.", "REFUSÉ — 173 poursuit le concours de regard. score actuel, 173 contre tout le monde, depuis 1993."] } },
+  ];
+
+  // the five overseers. 🍮 is the intern's pudding. it always votes yes.
+  const O5_VOTERS = [
+    { n: 'O5-1', yes: [['yes (reluctantly. noted.)', 'oui (à contrecœur. consigné.)'], ['yes. do not make it weird.', 'oui. n\'en faites pas toute une histoire.']],
+      no: [['no (contractually grumpy)', 'non (grognon sous contrat)'], ['no. it is my whole job.', 'non. c\'est littéralement mon métier.']] },
+    { n: 'O5-2', yes: [['yes', 'oui'], ['yes, obviously', 'oui, évidemment']],
+      no: [['no (lost a bet)', 'non (pari perdu)'], ['no, but write down that I hesitated', 'non, mais notez que j\'ai hésité']] },
+    { n: 'O5-3', yes: [['yes (was asleep, woke up for this)', 'oui (dormait, s\'est réveillé pour ça)'], ['yes. now hush.', 'oui. maintenant chut.']],
+      no: [['no (asleep. this counts, legally)', 'non (endormi. ça compte, légalement)'], ['no?? sorry, dreaming. no.', 'non ?? pardon, je rêvais. non.']] },
+    { n: 'O5-4', yes: [['yes (teared up)', 'oui (les larmes aux yeux)'], ['YES. oh, sorry. yes.', 'OUI. oh, pardon. oui.']],
+      no: [['no (crying about it)', 'non (en pleurant)'], ['no, and I hate this part of the job', 'non, et je déteste cette partie du métier']] },
+    { n: 'O5-🍮', yes: [['YES.', 'OUI.'], ['YES. (it is a pudding. it loves everything.)', 'OUI. (c\'est un flan. il aime tout.)']],
+      no: [['YES.', 'OUI.']] } // the pudding does not know how to vote no
+  ];
+  const O5_SND = { fanfare: playFanfare, sparkle: playSparkleSound, glitch: playGlitchSound, alarm: playDreamAlarm, sad: playDreamSad, hum: playDreamHum, printer: playDreamPrinter, pop: playDreamPop, gb: playDreamGB, modem: playDreamModem };
+  function dwO5Stamp(text) {
+    const s = document.createElement('div');
+    s.className = 'o5-stamp';
+    s.textContent = text;
+    document.body.appendChild(s);
+    dN(s);
+    playTone(140, 'square', 0.16, 0, 0.06);
+    dT(() => { try { s.remove(); } catch (e) { /* archived */ } }, 2600);
+  }
+  function dwO5FxOne(f) {
+    const ix = f.indexOf(':');
+    const kind = ix < 0 ? f : f.slice(0, ix);
+    const arg = ix < 0 ? '' : f.slice(ix + 1);
+    if (kind === 'open') { openWindow(arg); return; }
+    if (kind === 'search') {
+      const sf = document.getElementById('address-form');
+      const si = sf && sf.querySelector('input');
+      if (si && sf) { si.value = arg; sf.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); }
+      return;
+    }
+    if (kind === 'ama') { openWindow('win-ama'); dT(() => { try { amaAsk(arg); } catch (e) { /* the bot pleads the ♡ */ } }, 700); return; }
+    if (kind === 'feed' || kind === 'play') { const b = document.getElementById(kind === 'feed' ? 'btn-feed' : 'btn-play'); if (b) b.click(); return; }
+    if (kind === 'nap') { const b = document.getElementById('btn-sleep'); if (b) b.click(); return; }
+    if (kind === 'fall') { const p = arg.split(':'); cheatFall((p[0] || '✨').split(','), Math.min(30, parseInt(p[1], 10) || 12)); return; }
+    if (kind === 'critter') { const p = arg.split(':'); const lbl = (p[1] || '').split('|'); dreamCritter({ emoji: p[0] || '📋', hop: 5, ms: 9500, label: [lbl[0] || '', lbl[1] || lbl[0] || ''] }); return; }
+    if (kind === 'quake') { document.body.classList.add('rescue-quake'); setTimeout(() => document.body.classList.remove('rescue-quake'), 600); return; }
+    if (kind === 'fans') { gainFollowers(Math.min(3, parseInt(arg, 10) || 1)); return; }
+    if (kind === 'sound') { const fn = O5_SND[arg]; if (fn) fn(); return; }
+    if (kind === 'stamp') { dwO5Stamp(arg); return; }
+    if (kind === 'say') { const p = arg.split('|'); dreamSay([p[0], p[1] || p[0]], 4400); return; }
+    if (kind === 'frog') { dreamCritter({ emoji: '🐸', hop: 9, ms: 9000, label: ['it is (honorary) Wednesday, my dudes', 'c\'est (honorifiquement) mercredi, mes potes'], onClick: (c) => { playTone(180, 'square', 0.14, 0, 0.06); const bb = c.querySelector('.dream-critter-bubble'); if (bb) bb.textContent = trT('*a ribbit, by council decree* ♡', '*un coassement, par décret du conseil* ♡'); gainFollowers(1); cheatFall(['🐸', '💚'], 8); } }); return; }
+  }
+  function dwO5Council() {
+    if (!dreamWorld) return;
+    const f = dreamWorld.flags;
+    if (f.o5busy) { dsL('the council is ALREADY in session. one motion at a time. (robert\'s rules of dreams.)', 'le conseil siège DÉJÀ. une motion à la fois. (règles de Robert, édition onirique.)', 't-dim'); return; }
+    f.o5busy = 1;
+    // deal from a shuffled deck: no repeats until all motions are heard
+    if (!f.o5deck || !f.o5deck.length) {
+      f.o5deck = O5_MOTIONS.map((_, i) => i);
+      for (let i = f.o5deck.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = f.o5deck[i]; f.o5deck[i] = f.o5deck[j]; f.o5deck[j] = t; }
+    }
+    const motion = O5_MOTIONS[f.o5deck.pop()];
+    const passes = Math.random() < 0.62;
+    // votes consistent with the outcome. the pudding always votes yes,
+    // so a failed motion is the pudding plus at most one ally.
+    const yesTarget = passes ? 3 + Math.floor(Math.random() * 3) : 1 + Math.floor(Math.random() * 2);
+    const stances = [null, null, null, null, true]; // 🍮 locked to yes
+    let yesLeft = yesTarget - 1;
+    const order = [0, 1, 2, 3].sort(() => Math.random() - 0.5);
+    order.forEach((vi, k) => { const remaining = order.length - k; stances[vi] = yesLeft >= remaining ? true : (yesLeft > 0 && Math.random() < 0.5); if (stances[vi]) yesLeft--; });
+    const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+    let t = 0;
+    const line = (en, fr, cls, snd) => { dT(() => { if (!dreamWorld) return; dsL(en, fr, cls); if (snd) playTone(snd, 'triangle', 0.05, 0, 0.03); }, t); t += 520; };
+    line('THE O5 COUNCIL CONVENES. (all five are in their pajamas.)', 'LE CONSEIL O5 SIÈGE. (tous les cinq en pyjama.)', 't-dim', 500);
+    line('MOTION: "' + trT(...motion.q) + '"', 'MOTION : « ' + trT(...motion.q) + ' »', 't-accent', 620);
+    O5_VOTERS.forEach((v, i) => {
+      const stance = stances[i];
+      const quip = trT(...pick(stance ? v.yes : v.no));
+      line((stance ? '🟢 ' : '🔴 ') + v.n + ': ' + quip, (stance ? '🟢 ' : '🔴 ') + v.n + ' : ' + quip, stance ? 't-ok' : 't-err', 700 + i * 60);
+    });
+    const yesCount = stances.filter(Boolean).length;
+    dT(() => {
+      if (!dreamWorld) { f.o5busy = 0; return; }
+      if (passes) {
+        dsL('MOTION PASSES ' + yesCount + '-' + (5 - yesCount) + '. EXECUTING (with feeling) —', 'MOTION ADOPTÉE ' + yesCount + '-' + (5 - yesCount) + '. EXÉCUTION (avec émotion) —', 't-ok');
+        playFanfare();
+      } else {
+        dsL('MOTION FAILS ' + yesCount + '-' + (5 - yesCount) + '. O5-🍮 has filed a formal pout.', 'MOTION REJETÉE ' + yesCount + '-' + (5 - yesCount) + '. O5-🍮 a déposé une moue officielle.', 't-err');
+        playDreamSad();
+      }
+      const branch = passes ? motion.pass : motion.fail;
+      (branch.fx || []).forEach((fx, i) => dT(() => { try { dwO5FxOne(fx); } catch (e) { /* effect [REDACTED] */ } }, 600 + i * 480));
+      dT(() => { if (dreamWorld) showToast(trT(...branch.toast), { scroll: true }); f.o5busy = 0; }, 600 + (branch.fx || []).length * 480 + 900);
+    }, t + 300);
+  }
+
   const DS_PS1 = { win95: 'C:\\DREAM>', scp: 'site19@scp:~#', matrix: 'operator@neb:~$', gameboy: 'DMG-01>', geo: '~/public_html>', bsod: '0x0000:~>', amber: 'SYS370%' };
   function dsL(en, fr, cls) { termLine(trT(en, fr), cls || ''); }
   function dsBar(label, ms, done, cls) {
@@ -8646,7 +8819,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // explains itself, then deals the full 21-word list on the house
   const DS_HELP = {
     win95: ['HELP.EXE (dream build) loaded from D:\\REM — the waking commands are asleep. tonight, DOS answers to exactly these:', 'HELP.EXE (édition rêve) chargé depuis D:\\REM — les commandes éveillées dorment. cette nuit, le DOS ne répond qu\'à ceci :'],
-    scp: ['per protocol ♡-21: this console is dreaming with you, so your clearance covers these verbs and ONLY these verbs:', 'protocole ♡-21 : cette console rêve avec toi, ton habilitation couvre donc ces verbes et SEULEMENT ces verbes :'],
+    scp: ['per protocol ♡-1: tonight the council holds PLENARY POWERS. one verb rules them all — `o5` convenes the five on a random site-wide motion. they vote. things HAPPEN.', 'protocole ♡-1 : ce soir le conseil détient les PLEINS POUVOIRS. un seul verbe les gouverne tous — `o5` convoque les cinq sur une motion aléatoire. ils votent. des choses SE PRODUISENT.'],
     matrix: ['the operator picks up: "ok. deep breath. the old commands are simulations. here\'s what\'s REAL tonight:"', 'l\'opérateur décroche : « ok. respire. les vieilles commandes sont des simulations. voilà ce qui est RÉEL ce soir : »'],
     gameboy: ['▼ you used HELP! it\'s super effective!! tonight\'s item menu:', '▼ tu utilises AIDE ! c\'est super efficace !! le menu objets du soir :'],
     geo: ['jeeves dusts off the dream sitemap: "the regular pages are napping, madam/sir. tonight\'s 21 are:"', 'jeeves épousette le plan du site onirique : « les pages habituelles font la sieste. les 21 de ce soir sont : »'],
@@ -8890,150 +9063,18 @@ document.addEventListener('DOMContentLoaded', () => {
         } }
       }
     },
-    /* ---- SCP: site19@scp:~# — everything is a protocol ---- */
+    /* ---- SCP: site19@scp:~# — one verb, plenary powers (v99.1) ---- */
     scp: {
-      list: 'clearance',
+      list: 'o5',
       deny: [
-        ['`{c}` requires level 5 clearance. you have: level ♡', '`{c}` requiert une habilitation niveau 5. tu as : niveau ♡'],
-        ['command [REDACTED] by order of O5-🍮', 'commande [CAVIARDÉE] sur ordre de O5-🍮'],
-        ['`{c}` logged as anomalous phrasing. a team is on the way (to hug you).', '`{c}` classé comme formulation anormale. une équipe arrive (pour te faire un câlin).'],
-        ['ACCESS DENIED — but, like, politely.', 'ACCÈS REFUSÉ — mais poliment, hein.']
+        ['`{c}` requires level 5 clearance. you have: level ♡ — petition the council: `o5`', '`{c}` requiert une habilitation niveau 5. tu as : niveau ♡ — saisis le conseil : `o5`'],
+        ['command [REDACTED] by order of O5-🍮. the council hears everything: `o5`', 'commande [CAVIARDÉE] sur ordre de O5-🍮. le conseil entend tout : `o5`'],
+        ['`{c}` logged as anomalous phrasing. a team is on the way (to hug you). meanwhile: `o5`', '`{c}` classé comme formulation anormale. une équipe arrive (pour te faire un câlin). en attendant : `o5`'],
+        ['ACCESS DENIED — but, like, politely. the ONE authorized verb is `o5`.', 'ACCÈS REFUSÉ — mais poliment, hein. le SEUL verbe autorisé est `o5`.']
       ],
       cmds: {
-        clearance: { d: ['show your badge + tonight\'s 21 authorized actions', 'montrer ton badge + les 21 actions autorisées du soir'], fx() {
-          dsL('BADGE: visitor · CLEARANCE: ♡ · AUTHORIZED ACTIONS FOLLOW —', 'BADGE : visiteur · HABILITATION : ♡ · ACTIONS AUTORISÉES CI-DESSOUS —', 't-dim');
-          dsList('scp', 'SITE-19 CONSOLE — authorized verbs:', 'CONSOLE SITE-19 — verbes autorisés :');
-        } },
-        memo: { d: ['re-request tonight\'s urgent dispatch', 're-demander la dépêche urgente du soir'], fx() {
-          if (document.querySelector('.scp-mail-wrap')) { dsL('the memo is already open. it appreciates the enthusiasm.', 'le mémo est déjà ouvert. il apprécie l\'enthousiasme.', 't-dim'); return; }
-          const ent = dreamWorld.flags.ent;
-          if (!ent) { dsL('the mailroom shrugs. try again after the envelope lands.', 'le service courrier hausse les épaules. réessaie après l\'atterrissage de l\'enveloppe.', 't-err'); return; }
-          playDreamPrinter();
-          scpMailShow(ent, 4000 + Math.floor(Math.random() * 5999), null, 'reopen');
-          dsL('the Foundation re-sends the dispatch. same intern, fresh stamp.', 'la Fondation renvoie la dépêche. même stagiaire, tampon tout frais.');
-        } },
-        contain: { d: ['deploy a containment field on the habitat', 'déployer un champ de confinement sur l\'habitat'], fx() {
-          const hab = document.getElementById('slime-habitat');
-          if (hab) { hab.classList.add('ds-contain'); dT(() => hab.classList.remove('ds-contain'), 3400); }
-          playTone(180, 'square', 0.12, 0, 0.06);
-          dsL('containment field deployed around the habitat…', 'champ de confinement déployé autour de l\'habitat…', 't-dim');
-          dT(() => {
-            burstAtSlime(['🧊', '♡'], 5);
-            dreamSay(['hehe. cozy box. anyway—', 'héhé. jolie boîte. bref—'], 3600);
-            dsL('…the entity phased through and is now behind you. containment status: emotional.', '…l\'entité a traversé et se trouve maintenant derrière toi. statut du confinement : émotionnel.', 't-err');
-          }, 2600);
-        } },
-        breach: { d: ['run a containment breach drill (it\'s a drill!!)', 'lancer un exercice de brèche (c\'est un exercice !!)'], fx() {
-          playDreamAlarm();
-          dsFlash('ds-flash-red', 800);
-          dsShake(900);
-          dsL('⚠ CONTAINMENT BREACH DRILL — please walk calmly to your nearest blanket.', '⚠ EXERCICE DE BRÈCHE — merci de marcher calmement vers la couverture la plus proche.', 't-err');
-          dT(() => dsL('drill complete. the anomaly rated it "fun". the alarms rated it "5 stars, would wail again".', 'exercice terminé. l\'anomalie a noté « fun ». les alarmes ont noté « 5 étoiles, je rehurlerais ».', 't-ok'), 2400);
-        } },
-        redact: { d: ['redact two lines of terminal history', 'caviarder deux lignes de l\'historique du terminal'], fx() {
-          const lines = Array.from(termOut.querySelectorAll('.t-line')).slice(-30, -1).filter((l) => l.textContent.length > 8);
-          for (let i = 0; i < 2 && lines.length; i++) {
-            const l = lines.splice(Math.floor(Math.random() * lines.length), 1)[0];
-            l.textContent = l.textContent.replace(/\S/g, '█');
-          }
-          playDreamPrinter();
-          dsL('two lines of history now officially never happened. you saw nothing (legally).', 'deux lignes d\'historique n\'ont officiellement jamais existé. tu n\'as rien vu (légalement).', 't-ok');
-        } },
-        expunge: { d: ['[DATA EXPUNGED] the whole scrollback', '[DONNÉES SUPPRIMÉES] tout l\'historique'], fx() {
-          termOut.innerHTML = '';
-          playGlitchSound();
-          termLine('[DATA EXPUNGED]', 't-err');
-          dsL('the scrollback has been expunged. it knew too much (mostly typos).', 'l\'historique a été supprimé. il en savait trop (surtout des fautes de frappe).', 't-dim');
-        } },
-        amnestics: { d: ['class-B amnestics for the screen', 'amnésiques de classe B pour l\'écran'], fx() {
-          dsFilter('ds-blur', 1900);
-          dT(() => {
-            termOut.innerHTML = '';
-            dsL('class-B administered. what were we doing? exactly. wonderful weather we\'re having.', 'classe B administrée. on faisait quoi ? exactement. quel beau temps, n\'est-ce pas.', 't-ok');
-          }, 1600);
-        } },
-        dclass: { d: ['enroll as D-class personnel (great benefits, actually)', 's\'enrôler comme personnel de classe D (super avantages, en vrai)'], fx() {
-          const n = 10000 + Math.floor(Math.random() * 89999);
-          gainFollowers(1);
-          dsL('welcome, D-' + n + '. your assignment: pet the anomaly. survival rate: 100%. it\'s a good anomaly.', 'bienvenue, D-' + n + '. ta mission : caresser l\'anomalie. taux de survie : 100 %. c\'est une bonne anomalie.', 't-ok');
-          dsL('(orientation video skipped. it was just 40 minutes of the slime waving.)', '(vidéo d\'accueil sautée. c\'était 40 minutes du slime qui fait coucou.)', 't-dim');
-        } },
-        keter: { d: ['reclassify tonight\'s entity: KETER', 'reclasser l\'entité du soir : KETER'], fx() {
-          playDreamAlarm();
-          const ent = dreamWorld.flags.ent || { id: '???' };
-          dsL('SCP-' + ent.id + ' reclassified KETER — grounds: "too powerful to stop hugging".', 'SCP-' + ent.id + ' reclassé KETER — motif : « trop puissant pour arrêter les câlins ».', 't-err');
-          dreamSay(['KETER?! …I DO feel dangerous today ♡', 'KETER ?! …c\'est vrai que je me sens dangereux aujourd\'hui ♡'], 4200);
-        } },
-        euclid: { d: ['reclassify tonight\'s entity: EUCLID', 'reclasser l\'entité du soir : EUCLID'], fx() {
-          const ent = dreamWorld.flags.ent || { id: '???' };
-          dsL('SCP-' + ent.id + ' reclassified EUCLID — meaning: "wiggly. unpredictable. probably fine."', 'SCP-' + ent.id + ' reclassé EUCLID — traduction : « frétillant. imprévisible. sans doute ok. »', 't-ok');
-          dreamSay(['euclid just means the paperwork shrugged…', 'euclid veut juste dire que la paperasse a haussé les épaules…'], 4000);
-        } },
-        safe: { d: ['reclassify tonight\'s entity: SAFE', 'reclasser l\'entité du soir : SAFE'], fx() {
-          playSparkleSound();
-          const ent = dreamWorld.flags.ent || { id: '???' };
-          burstAtSlime(['♡'], 4);
-          dsL('SCP-' + ent.id + ' reclassified SAFE — the safest. tucked in. lullaby administered.', 'SCP-' + ent.id + ' reclassé SAFE — le plus safe. bordé. berceuse administrée.', 't-ok');
-        } },
-        interview: { d: ['record an interview log with the entity', 'enregistrer un journal d\'entretien avec l\'entité'], fx() {
-          const ent = dreamWorld.flags.ent || { id: '???', nick: ['the entity', 'l\'entité'] };
-          dsL('INTERVIEW LOG ' + ent.id + '-♡ — interviewer: you. subject: ' + trT(ent.nick[0], ent.nick[1]), 'JOURNAL D\'ENTRETIEN ' + ent.id + '-♡ — intervieweur : toi. sujet : ' + trT(ent.nick[0], ent.nick[1]), 't-accent');
-          dT(() => dsL('Q: how did you escape containment?', 'Q : comment t\'es-tu évadé du confinement ?', 't-dim'), 800);
-          dT(() => dsL('A: the door was cozy. I am cozier. checkmate.', 'R : la porte était douillette. je suis plus douillet. échec et mat.', 't-ok'), 2200);
-          dT(() => dsL('Q: any demands?', 'Q : des revendications ?', 't-dim'), 3600);
-          dT(() => { dsL('A: one (1) boop. renewable daily.', 'R : un (1) boop. renouvelable chaque jour.', 't-ok'); dsL('[END LOG — interviewer complied immediately]', '[FIN DU JOURNAL — l\'intervieweur a obtempéré immédiatement]', 't-dim'); }, 5000);
-        } },
-        report: { d: ['file the sighting report the memo asked for', 'déposer le rapport de signalement demandé par le mémo'], fx() {
-          dsBar('filing form 512-B (sighting report)', 2400, () => {
-            playSparkleSound(); gainFollowers(2);
-            try { const r = slimeBody.getBoundingClientRect(); swProp(r.left + r.width / 2 - 66, Math.max(8, r.top - 46), 'REPORT — RECEIVED ✓', true); } catch (e) { /* stamped in spirit */ }
-            dsL('report filed. the Foundation thanks you. the intern frames it.', 'rapport déposé. la Fondation te remercie. le stagiaire l\'encadre.', 't-ok');
-          });
-        } },
-        o5: { d: ['petition the O5 council (they vote)', 'saisir le conseil O5 (ils votent)'], fx() {
-          dsL('MOTION: "the anomaly stays adorable" — council votes:', 'MOTION : « l\'anomalie reste adorable » — vote du conseil :', 't-accent');
-          const votes = ['🔴 O5-1: no (contractually grumpy)', '🟢 O5-2: yes', '🟢 O5-3: yes', '🟢 O5-4: yes (teared up)', '🟢 O5-🍮: YES.'];
-          const votesFr = ['🔴 O5-1 : non (grognon sous contrat)', '🟢 O5-2 : oui', '🟢 O5-3 : oui', '🟢 O5-4 : oui (a versé une larme)', '🟢 O5-🍮 : OUI.'];
-          votes.forEach((v, i) => dT(() => dsL(v, votesFr[i], i ? 't-ok' : 't-err'), 600 + i * 700));
-          dT(() => { playFanfare(); dsL('MOTION PASSES 4–1. it is now illegal (site-wide) to not smile at the habitat.', 'MOTION ADOPTÉE 4–1. il est désormais illégal (sur tout le site) de ne pas sourire à l\'habitat.', 't-ok'); }, 4400);
-        } },
-        siren: { d: ['test the site klaxon (sorry in advance)', 'tester le klaxon du site (désolé d\'avance)'], fx() {
-          playDreamAlarm();
-          dsFlash('ds-flash-red', 700);
-          dsL('KLAXON TEST — functional. the pigeons of Site-19 have opinions.', 'TEST KLAXON — fonctionnel. les pigeons du Site-19 ont des avis.', 't-err');
-        } },
-        paperwork: { d: ['summon form 512-B (in triplicate)', 'invoquer le formulaire 512-B (en trois exemplaires)'], fx() {
-          cheatFall(['📄', '📋', '🖊'], 12);
-          dsL('form 512-B ×3 incoming. sign all three. the pen is also an anomaly (it only writes the truth).', 'formulaire 512-B ×3 en approche. signe les trois. le stylo aussi est une anomalie (il n\'écrit que la vérité).', 't-dim');
-        } },
-        crosstest: { d: ['cross-test tonight\'s entity with SCP-426', 'test croisé entre l\'entité du soir et SCP-426'], fx() {
-          const ent = dreamWorld.flags.ent || { id: '???' };
-          dsL('CROSS-TEST: SCP-' + ent.id + ' × SCP-426 (I am a toaster)…', 'TEST CROISÉ : SCP-' + ent.id + ' × SCP-426 (je suis un grille-pain)…', 't-dim');
-          dT(() => {
-            burstAtSlime(['🍞'], 3);
-            playTone(660, 'square', 0.08, 0, 0.05); playTone(880, 'square', 0.1, 0.09, 0.05);
-            dsL('result: the toaster is happy now. everything is jam. ethics committee: "aww".', 'résultat : le grille-pain est heureux. tout est confiture. comité d\'éthique : « oooh ».', 't-ok');
-          }, 1800);
-        } },
-        coldpost: { d: ['post your SCP draft without feedback (bold)', 'poster ton brouillon SCP sans relecture (audacieux)'], fx() {
-          dsBar('posting draft: SCP-████ "the pretty good anomaly"', 1800, (el) => {
-            if (el) el.textContent = trT('posted. rating after 40 minutes: -14.', 'posté. note après 40 minutes : -14.');
-            dsL('the butterfly squad arrives with hugs and a style guide. next draft: greatness.', 'l\'escouade papillon débarque avec des câlins et un guide de style. prochain brouillon : la gloire.', 't-ok');
-          }, 't-err');
-        } },
-        lockdown: { d: ['seal the site (briefly, dramatically)', 'verrouiller le site (brièvement, dramatiquement)'], fx() {
-          dsShake(1100);
-          playTone(90, 'sawtooth', 0.3, 0, 0.07);
-          dreamCritter({ emoji: '🚨', hop: 4, ms: 8000, label: ['SITE LOCKDOWN (decorative)', 'VERROUILLAGE (décoratif)'] });
-          dsL('SITE SEALED. nothing gets in or out except vibes (grandfathered).', 'SITE SCELLÉ. rien n\'entre ni ne sort, sauf les bonnes ondes (droits acquis).', 't-err');
-          dT(() => dsL('lockdown lifted. the doors missed you.', 'verrouillage levé. les portes t\'ont manqué… enfin l\'inverse.', 't-ok'), 3200);
-        } },
-        hug: { d: ['authorized hugging of the anomaly', 'câlin autorisé de l\'anomalie'], fx() {
-          playSparkleSound();
-          gainFollowers(2);
-          burstAtSlime(['♡', '🧡', '✦'], 7);
-          dreamSay(['*receives authorized hug* protocol COMPLIED with ♡', '*reçoit le câlin autorisé* protocole RESPECTÉ ♡'], 4200);
-          dsL('hug delivered per protocol 999-α. side effects: joy (documented).', 'câlin livré selon le protocole 999-α. effets secondaires : la joie (documentée).', 't-ok');
+        o5: { d: ['convene the O5 council on a random site-wide motion (they vote. things happen.)', 'convoquer le conseil O5 sur une motion aléatoire (ils votent. des choses se produisent.)'], fx() {
+          dwO5Council();
         } },
         decommission: { d: ['decommission the dream (council vote = wake up)', 'déclasser le rêve (vote du conseil = réveil)'], fx() {
           dsL('DECOMMISSION VOTE: 4 in favor, 1 against (the 1 wanted five more minutes).', 'VOTE DE DÉCLASSEMENT : 4 pour, 1 contre (le 1 voulait cinq minutes de plus).', 't-dim');
@@ -10006,11 +10047,225 @@ document.addEventListener('DOMContentLoaded', () => {
      an envelope air-drops onto the desktop, tears open, and a typewriter
      briefs you on tonight's escaped instance: what the Foundation is, what
      got out, what to do about it. newcomers learn the rules; fans get the nod. */
+  /* ============ v99.1: THE STAGE BELONGS TO THE ENTITY ============
+     on CCTV FEED 19-B the anomaly appears AS ITSELF: the slime steps
+     aside (CSS hides it inside the stage) and tonight's entity takes
+     the boards in its own pixel body, doing what that entity DOES.
+     seven actors, seven behavior loops, all cleaned up on wake. ---- */
+  function scpPx(rows, pal, scale) {
+    const s = scale || 6;
+    const cv = document.createElement('canvas');
+    cv.width = rows[0].length * s;
+    cv.height = rows.length * s;
+    const x = cv.getContext('2d');
+    rows.forEach((row, ry) => { for (let rx = 0; rx < row.length; rx++) { const ch = row[rx]; if (ch === '.') continue; x.fillStyle = pal[ch] || '#fff'; x.fillRect(rx * s, ry * s, s, s); } });
+    return cv;
+  }
+  const SCP_ACTOR_SPRITES = {
+    999: { pal: { O: '#ffab40', D: '#e08a1e', w: '#ffe0b2', e: '#5d2e00', m: '#7a3c00', b: '#ff7043' }, rows: [
+      '....OOOOOO....', '..OOOOOOOOOO..', '.OwwOOOOOOOOO.', '.OwOOOOOOOOOO.',
+      'OOOeeOOOOeeOOO', 'OOOeeOOOOeeOOO', 'OObOOOOOOOObOO', 'OOOOmmmmmmOOOO',
+      'OOOmmmmmmmmOOO', 'OOOOmmmmmmOOOO', '.OOOOOOOOOOOO.', '..DDDDDDDDDD..'] },
+    173: { pal: { R: '#b8ab9a', G: '#4e7d3a', n: '#a33327', D: '#8a7f70' }, rows: [
+      '..RRRRRR..', '.RRRRRRRR.', '.RGGRRGGR.', '.RRRRRRRR.', '.RRRnnRRR.',
+      '.RRnnnnRR.', '.RRRRRRRR.', 'RRRRRRRRRR', 'RRRRRRRRRR', 'RRRRRRRRRR',
+      'RRRRRRRRRR', '.RRRRRRRR.', '.RRR..RRR.', '.RRR..RRR.', '.DDD..DDD.'] },
+    914: { pal: { B: '#c9a227', G: '#8a6d1f', g: '#f0d060', s: '#3a2f10', D: '#8a6d1f' }, rows: [
+      '.BBBBBBBBBBBBBB.', 'BBGGGBBBBBBGGGBB', 'BGgggGBBBBGgggGB', 'BGgBgGBBBBGgBgGB',
+      'BGgggGBBBBGgggGB', 'BBGGGBBBBBBGGGBB', 'BBBBBBBBBBBBBBBB', 'BssssBBBBBBssssB',
+      'BssssBBBBBBssssB', 'BBBBBBBBBBBBBBBB', '.DDDDDDDDDDDDDD.'] },
+    55: { pal: { Q: '#b9aecb' }, rows: [
+      '...QQQQQQ...', '..QQQQQQQQ..', '.QQQ....QQQ.', '.QQ......QQ.', '.........QQ.',
+      '........QQQ.', '.......QQQ..', '......QQQ...', '.....QQQ....', '.....QQQ....',
+      '............', '.....QQQ....', '.....QQQ....'] },
+    426: { pal: { S: '#c0c7d1', s: '#2b3140', d: '#e05555', f: '#5a6272' }, rows: [
+      '.SSSSSSSSSSSS.', 'SSssSSSSSSssSS', 'SSssSSSSSSssSS', 'SSSSSSSSSSSSSS',
+      'SSSSSSSSSSSdSS', 'SSSSSSSSSSSSSS', '.SSSSSSSSSSSS.', '..ff......ff..'] },
+    3008: { pal: { h: '#6b4f35', f: '#e8c39e', Y: '#ffcc00', B: '#0051ba', s: '#333333' }, rows: [
+      '..hhhh..', '..hhhh..', '..ffff..', '..ffff..', '.YYYYYY.', 'YYYYYYYY',
+      'Y.YYYY.Y', '..YYYY..', '..BBBB..', '..BBBB..', '..B..B..', '..B..B..',
+      '..B..B..', '..s..s..'] },
+    2521: { pal: { k: '#141414', W: '#f2f2f2' }, rows: [
+      '..kk......kk..', '.kkkk..kkkkk..', '.kkkkkkkkkkkk.', 'kkkkkkkkkkkkkk',
+      'kkkWWWkkkkkkkk', 'kkWWkWWkkkkkkk', 'kkkWWWkkkkkkkk', 'kkkkkkkkkkkkkk',
+      'kkkkkkkkkkkkkk', '.kkkkkkkkkkkk.', '..kkk.kkk.kk..', '..kk...kk.....', '...k....k.....'] }
+  };
+  function scpStageMount(stage, ent) {
+    const box = document.createElement('div');
+    box.className = 'scp-stage-actor';
+    const eid = parseInt(ent.id, 10); // entity ids arrive as strings ('055')
+    const spec = SCP_ACTOR_SPRITES[eid] || SCP_ACTOR_SPRITES[999];
+    let cv = scpPx(spec.rows, spec.pal, 6);
+    cv.className = 'scp-actor-px';
+    box.appendChild(cv);
+    const cap = document.createElement('div');
+    cap.className = 'scp-actor-cap';
+    cap.textContent = 'SCP-' + ent.id;
+    box.appendChild(cap);
+    box.style.left = '42%';
+    stage.appendChild(box);
+    dN(box);
+    const jolt = () => { box.classList.remove('scp-actor-jolt'); void box.offsetWidth; box.classList.add('scp-actor-jolt'); };
+    const bubble = (text, ms) => {
+      const b = document.createElement('div');
+      b.className = 'scp-actor-bub';
+      b.textContent = text;
+      box.appendChild(b);
+      setTimeout(() => { try { b.remove(); } catch (e) { /* eaten */ } }, ms || 2400);
+    };
+    const hopTo = (pct) => { box.style.left = Math.max(4, Math.min(82, pct)) + '%'; };
+    /* ---- per-entity choreography ---- */
+    if (eid === 999) {
+      cap.textContent = trT('SCP-999 — live and gelatinous', 'SCP-999 — en direct et gélatineux');
+      dI(() => {
+        if (!document.body.contains(box)) return;
+        hopTo(8 + Math.random() * 70);
+        jolt();
+        playTone(700 + Math.random() * 300, 'triangle', 0.06, 0, 0.03);
+        if (Math.random() < 0.45) bubble('🧡', 1400);
+      }, 1700);
+      box.addEventListener('click', () => {
+        playTone(880, 'triangle', 0.07, 0, 0.05); playTone(1174, 'triangle', 0.08, 0.09, 0.05); playTone(1568, 'triangle', 0.1, 0.18, 0.05);
+        cheatFall(['🧡', '✨'], 8);
+        bubble(trT('*giggles in orange*', '*glousse en orange*'));
+        jolt();
+      });
+    } else if (eid === 173) {
+      cap.textContent = trT('SCP-173 — hold your blink', 'SCP-173 — retiens ton clignement');
+      let warned = 0;
+      dI(() => {
+        if (!document.body.contains(box)) return;
+        const blink = document.createElement('div');
+        blink.className = 'scp-stage-blink';
+        stage.appendChild(blink);
+        setTimeout(() => { hopTo(6 + Math.random() * 74); }, 70); // it moves while you cannot see
+        setTimeout(() => { try { blink.remove(); } catch (e) { /* eyes open */ } }, 170);
+        playTone(90, 'square', 0.05, 0.06, 0.03);
+      }, 4200);
+      box.addEventListener('click', () => {
+        jolt();
+        playTone(120, 'square', 0.08, 0, 0.05);
+        if (!warned) { warned = 1; showToast(trT('it moved 6 times while you read this toast. it is being polite about it.', 'il a bougé 6 fois pendant que tu lisais ce toast. il reste poli.'), { scroll: true }); }
+        else bubble(trT('*concrete politeness*', '*politesse de béton*'));
+      });
+    } else if (eid === 914) {
+      cap.textContent = trT('SCP-914 — setting: VERY FINE', 'SCP-914 — réglage : TRÈS FIN');
+      const RECIPES = [['🥔', '🍟'], ['🧦', '🧣'], ['💌', '💍'], ['🐛', '🦋'], ['⏰', '⌛'], ['📎', '🖇️']];
+      dI(() => {
+        if (!document.body.contains(box)) return;
+        const r = RECIPES[Math.floor(Math.random() * RECIPES.length)];
+        bubble(r[0] + ' →', 1200);
+        for (let i = 0; i < 6; i++) playTone(300 + i * 60, 'square', 0.04, i * 0.12, 0.03);
+        jolt();
+        setTimeout(() => { if (document.body.contains(box)) { bubble('→ ' + r[1] + ' ✨', 2200); playSparkleSound(); } }, 1400);
+      }, 12000);
+      box.addEventListener('click', () => {
+        const settings = ['ROUGH', 'COARSE', '1:1', 'FINE', 'VERY FINE'];
+        cap.textContent = 'SCP-914 — ' + trT('setting: ', 'réglage : ') + settings[Math.floor(Math.random() * settings.length)];
+        playTone(400, 'square', 0.08, 0, 0.05);
+        jolt();
+      });
+    } else if (eid === 55) {
+      cap.textContent = trT('SCP-055 — it is… hm.', 'SCP-055 — c\'est… hum.');
+      dI(() => {
+        if (!document.body.contains(box)) return;
+        box.classList.add('scp-actor-forgot');
+        setTimeout(() => {
+          if (!document.body.contains(box)) return;
+          // redrawn from memory, which nobody has: pixels go missing
+          const pal = { Q: ['#b9aecb', '#a3b8c9', '#c9aeb9', '#aec9b3'][Math.floor(Math.random() * 4)] };
+          const rows = SCP_ACTOR_SPRITES[55].rows.map((r) => r.split('').map((c) => (c !== '.' && Math.random() < 0.22 ? '.' : c)).join(''));
+          const next = scpPx(rows, pal, 6);
+          next.className = 'scp-actor-px';
+          box.replaceChild(next, box.querySelector('.scp-actor-px'));
+          cv = next;
+          box.classList.remove('scp-actor-forgot');
+          cap.textContent = trT(['SCP-055 — it is… hm.', 'SCP-055 — you were JUST told.', 'SCP-055 — ( )'][Math.floor(Math.random() * 3)], ['SCP-055 — c\'est… hum.', 'SCP-055 — on vient de te le dire.', 'SCP-055 — ( )'][Math.floor(Math.random() * 3)]);
+        }, 700);
+        playTone(520, 'sine', 0.3, 0, 0.02);
+      }, 5200);
+      box.addEventListener('click', () => {
+        showToast(trT('you saw it clearly. you have already forgotten ♡', 'tu l\'as vu très clairement. tu as déjà oublié ♡'));
+        playTone(392, 'sine', 0.2, 0, 0.04);
+      });
+    } else if (eid === 426) {
+      cap.textContent = trT('I am SCP-426. I am doing my best.', 'je suis SCP-426. je fais de mon mieux.');
+      const toastUp = () => {
+        if (!document.body.contains(box)) return;
+        jolt();
+        playTone(220, 'square', 0.06, 0, 0.06); playTone(440, 'square', 0.05, 0.07, 0.05);
+        for (let i = 0; i < 2; i++) {
+          const t2 = document.createElement('span');
+          t2.className = 'scp-actor-bread';
+          t2.textContent = '🍞';
+          t2.style.left = (30 + i * 30) + '%';
+          box.appendChild(t2);
+          t2.addEventListener('animationend', () => { try { t2.remove(); } catch (e) { /* crumbs */ } });
+        }
+      };
+      dI(toastUp, 11000);
+      box.addEventListener('click', () => { toastUp(); bubble(trT('*ka-CHUNK*', '*ka-CHUNK*'), 1400); });
+    } else if (eid === 3008) {
+      cap.textContent = trT('STAFF — the store is closed', 'PERSONNEL — le magasin est fermé');
+      let dir = 1, pos = 42;
+      dI(() => {
+        if (!document.body.contains(box)) return;
+        pos += dir * 1.1;
+        if (pos > 80 || pos < 6) { dir = -dir; box.classList.toggle('scp-actor-flip', dir < 0); }
+        box.style.left = pos + '%';
+      }, 120);
+      dI(() => {
+        if (!document.body.contains(box)) return;
+        bubble('🔨', 900);
+        playTone(180, 'square', 0.05, 0, 0.04); playTone(180, 'square', 0.05, 0.14, 0.04);
+        setTimeout(() => { if (document.body.contains(box)) bubble('🪑 ✓', 2600); }, 1100);
+      }, 16000);
+      box.addEventListener('click', () => {
+        box.classList.toggle('scp-actor-flip');
+        showToast(trT('"the store is closed." (it says, restocking your feelings)', '« le magasin est fermé. » (dit-il, en réassortissant tes sentiments)'), { scroll: true });
+        playTone(300, 'sine', 0.1, 0, 0.05);
+      });
+    } else if (eid === 2521) {
+      cap.textContent = '●●｜●●○●●○';
+      const PICTO = ['●● ♥', '● 🍮 ●', '♥ ●●●', '●?●', '(●)'];
+      dI(() => {
+        if (!document.body.contains(box)) return;
+        bubble(PICTO[Math.floor(Math.random() * PICTO.length)], 2000);
+        playTone(80 + Math.random() * 40, 'sine', 0.2, 0, 0.04);
+      }, 4600);
+      box.addEventListener('click', (e) => {
+        // it eats the click itself: a ● flies from the cursor into it
+        const dot = document.createElement('span');
+        dot.className = 'scp-actor-dot';
+        dot.textContent = '●';
+        dot.style.left = e.clientX + 'px';
+        dot.style.top = e.clientY + 'px';
+        document.body.appendChild(dot);
+        dN(dot);
+        const r = box.getBoundingClientRect();
+        requestAnimationFrame(() => { dot.style.left = (r.left + r.width / 2) + 'px'; dot.style.top = (r.top + r.height / 2) + 'px'; dot.style.opacity = '0'; });
+        setTimeout(() => { try { dot.remove(); } catch (e2) { /* swallowed */ } }, 700);
+        playTone(60, 'sine', 0.25, 0.05, 0.06);
+        jolt();
+      });
+    }
+    return box;
+  }
+
+  /* v99.1: the proper emblem — outer ring, centre ring-and-dot, and
+     three ARROWS (shaft + head) pointing inward at 120° apart, the way
+     the Foundation actually draws it. one <g> per arrow, rotated
+     around the true centre so the spin stays on-axis. */
+  const SCP_EMBLEM_ARROW = '<line x1="12" y1="2.9" x2="12" y2="5.9"/><polygon points="9.8,5.6 14.2,5.6 12,8.7" stroke="none"/>';
   const SCP_EMBLEM_SVG = '<svg class="scp-emblem" viewBox="0 0 24 24" aria-hidden="true">'
-    + '<circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>'
-    + '<circle cx="12" cy="12" r="3.4" fill="currentColor"/>'
-    + '<g stroke="currentColor" stroke-width="2.2"><line x1="12" y1="2.2" x2="12" y2="7.4"/><line x1="3.6" y1="17" x2="8" y2="14.4"/><line x1="20.4" y1="17" x2="16" y2="14.4"/></g>'
-    + '</svg>';
+    + '<circle cx="12" cy="12" r="10.6" fill="none" stroke="currentColor" stroke-width="1.6"/>'
+    + '<circle cx="12" cy="12" r="3.4" fill="none" stroke="currentColor" stroke-width="1.7"/>'
+    + '<circle cx="12" cy="12" r="1.1" fill="currentColor"/>'
+    + '<g fill="currentColor" stroke="currentColor" stroke-width="1.9" stroke-linecap="round">'
+    + '<g>' + SCP_EMBLEM_ARROW + '</g>'
+    + '<g transform="rotate(120 12 12)">' + SCP_EMBLEM_ARROW + '</g>'
+    + '<g transform="rotate(240 12 12)">' + SCP_EMBLEM_ARROW + '</g>'
+    + '</g></svg>';
 
   // a censor bar you can peek under (hover on desktop, tap on touch)
   function scpRedact(reveal) {
@@ -12568,16 +12823,10 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function fetchRemoteLikes() {
-    fetch(`${LIKE_API}/get/${LIKE_NS}/${LIKE_KEY}`)
-      .then((r) => (r.ok ? r.json() : { value: 0 }))
-      .then((d) => {
-        remoteLikes = Math.max(0, Number(d.value) || 0);
-        // never show fewer likes than the visitor's own saved one
-        if (siteLiked && remoteLikes === 0) remoteLikes = 1;
-        syncLikeBtn();
-        syncAnonFans();
-      })
-      .catch(() => { /* offline / blocked — local count still works */ });
+    // v99.1: likes live on the wall worker now (one backend for every
+    // shared number). statsRefresh feeds remoteLikes via statsApply,
+    // and quietly retries until wall-config has loaded.
+    statsRefresh();
   }
 
   function initFanWall() {
@@ -12605,18 +12854,10 @@ document.addEventListener('DOMContentLoaded', () => {
       addFanAvatar('you', { you: true, fresh: true, prepend: true, seed });
 
       // optimistic bump, then reconcile with the shared counter
+      // (v99.1: the counter lives on the wall worker now)
       if (remoteLikes !== null) remoteLikes++;
       syncLikeBtn();
-      fetch(`${LIKE_API}/hit/${LIKE_NS}/${LIKE_KEY}`)
-        .then((r) => (r.ok ? r.json() : null))
-        .then((d) => {
-          if (d && Number(d.value) > 0) {
-            remoteLikes = Number(d.value);
-            syncLikeBtn();
-            syncAnonFans();
-          }
-        })
-        .catch(() => { /* like stays local until they're back online */ });
+      statBump('likes', 1);
 
       playFanfare();
       gainFollowers(5);
@@ -18533,6 +18774,13 @@ document.addEventListener('DOMContentLoaded', () => {
       pet.followers = stats.fans;
       updateSlimeHud();
     }
+    // v99.1: site likes moved home from Abacus — same feed, same board
+    if (typeof stats.likes === 'number' && typeof syncLikeBtn === 'function') {
+      remoteLikes = stats.likes;
+      if (siteLiked && remoteLikes === 0) remoteLikes = 1;
+      syncLikeBtn();
+      syncAnonFans();
+    }
   }
   function statsRefresh() {
     if (!wallApi) return;
@@ -18555,6 +18803,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (b.key === 'fans' && pet && typeof b.value === 'number' && b.value !== pet.followers) {
           pet.followers = b.value;
           updateSlimeHud();
+        }
+        if (b.key === 'likes' && typeof b.value === 'number' && typeof syncLikeBtn === 'function') {
+          remoteLikes = b.value;
+          syncLikeBtn();
+          syncAnonFans();
         }
       })
       .catch(() => { /* the bump stays local; the next sync reconciles */ });
