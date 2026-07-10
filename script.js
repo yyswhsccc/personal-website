@@ -7545,6 +7545,23 @@ document.addEventListener('DOMContentLoaded', () => {
     'BATCH #341: dreams processed. results by morning.',
     'SYSLOG: 56 years uptime. one (1) nap. this one.'
   ];
+  /* ---- the receipt portrait: the REAL pixel slime — the exact 14×14
+     grid the rescue cast is drawn from — printed in dot-matrix sepia ink
+     (a slime, as a 1970 printer sees one) ---- */
+  function amberSlimeCanvas() {
+    const cv = document.createElement('canvas');
+    cv.width = 112; cv.height = 112;
+    const x = cv.getContext('2d');
+    const ROWS = [
+      '......FF......', '.....F..F.....', '......FF......', '......S.......',
+      '....PPPPPP....', '..PPPPPPPPPP..', '.PwwPPPPPPPPP.', '.PwPPPPPPPPPP.',
+      'PPPeePPPPeePPP', 'PPbPPPPPPPPbPP', 'PPPPPPmmPPPPPP', 'PPPPPmmmmPPPPP',
+      '.PPPPPPPPPPPP.', '..DDDDDDDDDD..'];
+    const PAL = { P: '#d9c78f', D: '#c0aa6b', w: '#f2e9c8', e: '#5b4a12', m: '#8a6d1f', b: '#c9a04f', S: '#8a6d1f', F: '#a5883a' };
+    ROWS.forEach((row, ry) => { for (let rx = 0; rx < row.length; rx++) { const ch = row[rx]; if (ch === '.') continue; x.fillStyle = PAL[ch] || PAL.P; x.fillRect(rx * 8, ry * 8, 8, 8); } });
+    return cv;
+  }
+
   function dwAmberPrint() {
     if (!dreamWorld) return;
     const p = document.getElementById('dream-amber-printer');
@@ -7552,17 +7569,15 @@ document.addEventListener('DOMContentLoaded', () => {
     playDreamPrinter();
     const slip = document.createElement('div');
     slip.className = 'dream-amber-slip';
-    const art = document.createElement('pre');
-    art.textContent = '  ▗▖\n ▄▀▀▀▀▄\n▐ ◠ ◠ ▌\n▐  ▿  ▌\n ▀▄▄▄▄▀'; // the slime, dot-matrix edition: dome, drip, dimples
     const line = document.createElement('div');
     line.textContent = DW_AMBER_SLIPS[Math.floor(Math.random() * DW_AMBER_SLIPS.length)];
-    slip.appendChild(art); slip.appendChild(line);
+    slip.appendChild(amberSlimeCanvas()); slip.appendChild(line);
     p.appendChild(slip);
     setTimeout(() => slip.classList.add('dream-amber-slip-fly'), 4200);
     setTimeout(() => slip.remove(), 6600);
   }
 
-  /* ---- a reusable printed receipt: pixel face + body lines, then it
+  /* ---- a reusable printed receipt: pixel slime + body lines, then it
      tears off and flutters away. `extra` runs while it hangs. ---- */
   function dwAmberReceipt(bodyLines, extra) {
     const p = document.getElementById('dream-amber-printer');
@@ -7570,9 +7585,7 @@ document.addEventListener('DOMContentLoaded', () => {
     playDreamPrinter();
     const slip = document.createElement('div');
     slip.className = 'dream-amber-slip';
-    const art = document.createElement('pre');
-    art.textContent = '  ▗▖\n ▄▀▀▀▀▄\n▐ ◠ ◠ ▌\n▐  ▿  ▌\n ▀▄▄▄▄▀'; // the slime, dot-matrix edition: dome, drip, dimples
-    slip.appendChild(art);
+    slip.appendChild(amberSlimeCanvas());
     (Array.isArray(bodyLines) ? bodyLines : [bodyLines]).forEach((ln) => {
       const el = document.createElement('div');
       el.textContent = ln;

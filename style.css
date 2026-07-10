@@ -9386,6 +9386,7 @@ html[data-theme="dark"].dream-amber .window-title { color: #ffd23f; text-shadow:
   animation: dream-amber-print 4s steps(14) forwards;
 }
 .dream-amber-slip pre { font-family: monospace; line-height: 1.05; margin-bottom: 4px; }
+.dream-amber-slip canvas { display: block; width: 64px; margin: 0 auto 5px; image-rendering: pixelated; }
 @keyframes dream-amber-print {
   from { max-height: 0; }
   to { max-height: 150px; }
