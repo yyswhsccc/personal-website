@@ -7174,14 +7174,27 @@ document.addEventListener('DOMContentLoaded', () => {
     const cols = Math.floor(cv.width / cell);
     const drops = Array.from({ length: cols }, () => Math.random() * -60);
     dI(() => {
-      x.fillStyle = 'rgba(1, 8, 3, 0.18)';
+      /* v98.1: fade by ERASING old paint, not by adding dark paint.
+         the old rgba fill accumulated into an ~85% black glass over the
+         whole UI — and no window z-index could escape it, because the
+         entire app lives inside .browser-frame's z:10 stacking context
+         while this canvas floats above it at z:40. */
+      x.globalCompositeOperation = 'destination-out';
+      x.fillStyle = 'rgba(0, 0, 0, 0.22)';
       x.fillRect(0, 0, cv.width, cv.height);
+      x.globalCompositeOperation = 'source-over';
       x.font = (cell - 2) + 'px monospace';
       drops.forEach((d, i) => {
         const ch = 'ｱｲｳｴｵ01♡ zzz'[Math.floor(Math.random() * 12)] || '0';
         x.fillStyle = ch === '♡' ? 'rgba(255,143,199,0.5)' : 'rgba(57,211,83,0.4)';
         x.fillText(ch, i * cell, d * cell);
         drops[i] = d * cell > cv.height && Math.random() > 0.98 ? 0 : d + (dreamWorld && dreamWorld.flags.slowmo ? 0.12 : 0.6);
+      });
+      // summoned windows are sacred ground: the rain parts around every
+      // open window (game console included), leaving it at full brightness
+      document.querySelectorAll('.window:not(.window-closed):not(.window-minimized)').forEach((w) => {
+        const r = w.getBoundingClientRect();
+        x.clearRect(r.left - 6, r.top - 6, r.width + 12, r.height + 12);
       });
     }, 70);
   }
