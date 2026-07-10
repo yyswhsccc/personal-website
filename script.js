@@ -11023,6 +11023,15 @@ document.addEventListener('DOMContentLoaded', () => {
     ROWS.forEach((row, ry) => { for (let rx = 0; rx < row.length; rx++) { const ch = row[rx]; if (ch === '.') continue; x.fillStyle = PAL[ch] || PAL.P; x.fillRect(rx * 8, ry * 8, 8, 8); } });
     return cv;
   }
+  // what a hero says while commanding a cleanup crew through a bluescreen
+  const DW_BSOD_HERO_LINES = [
+    ['TASK FORCE PIKMIN — deploy!! every error goes to the recycle bin of feelings!!', 'ESCOUADE PIKMIN — déployez !! chaque erreur part à la corbeille des sentiments !!'],
+    ['0x0000HERO on scene. someone reported a flood?', '0x0000HERO sur place. on m\'a signalé une inondation ?'],
+    ['lift with your leaves, not your stems!!', 'soulevez avec les feuilles, pas avec les tiges !!'],
+    ['no window left behind. drag with love ♡', 'aucune fenêtre laissée derrière. tirez avec amour ♡'],
+    ['I found the bug: it was feelings. it is ALWAYS feelings.', 'j\'ai trouvé le bug : des sentiments. c\'est TOUJOURS des sentiments.'],
+    ['almost done!! this desktop will boot beautiful ♡', 'presque fini !! ce bureau va redémarrer tout beau ♡']
+  ];
   function dwBsodHeroParade() {
     if (!dreamWorld) return;
     const f = dreamWorld.flags;
@@ -11031,52 +11040,85 @@ document.addEventListener('DOMContentLoaded', () => {
     showToast(trT('🦸 the BLUE SLIME HERO has arrived — with the entire pikmin crew ♡', '🦸 le HÉROS SLIME BLEU est arrivé — avec toute l\'escouade pikmin ♡'), { scroll: true });
     const par = document.createElement('div');
     par.className = 'bsod-hero-parade';
+    // the crew: REAL pikmin sprites from the meadow's own generator,
+    // every one in hero blue, mixed growth stages and sizes. the hero
+    // marches at the right end — the front of a left-to-right parade.
+    const CREW = [
+      [208, 0, 34], [214, 1, 40], [220, 2, 46], [211, 0, 36], [217, 1, 42],
+      [223, 2, 44], [209, 1, 38], [215, 0, 34], [221, 2, 46], [213, 1, 40],
+      [219, 0, 36], [216, 2, 44]
+    ];
+    CREW.forEach((c, i) => {
+      const img = document.createElement('img');
+      img.className = 'bsod-pik-img';
+      img.alt = '';
+      try { img.src = pikSprite(hueColor(c[0]), c[1], null); } catch (e) { return; }
+      img.style.width = c[2] + 'px';
+      img.style.animationDelay = (i * 0.09) + 's, ' + (i * 0.13) + 's';
+      par.appendChild(img);
+    });
     const hero = dwBsodHeroCanvas();
     hero.className = 'bsod-hero';
     par.appendChild(hero);
-    ['🌱', '🌷', '🍃', '🌸', '🌱', '🍄', '🌼', '🌱', '🍃', '🌱'].forEach((p, i) => {
-      const s = document.createElement('span');
-      s.className = 'bsod-pik';
-      s.textContent = p;
-      s.style.animationDelay = (i * 0.11) + 's';
-      par.appendChild(s);
-    });
-    par.style.top = Math.round(window.innerHeight * 0.42) + 'px';
+    const bubble = document.createElement('div');
+    bubble.className = 'bsod-hero-bubble';
+    bubble.textContent = trT(...DW_BSOD_HERO_LINES[0]);
+    par.appendChild(bubble);
+    par.style.top = Math.round(window.innerHeight * 0.4) + 'px';
     document.body.appendChild(par);
     dN(par);
-    const x0 = -340, x1 = window.innerWidth + 360, DUR = 5200, t0 = Date.now();
+    // the hero narrates the operation, one order at a time
+    DW_BSOD_HERO_LINES.forEach((ln, i) => {
+      if (!i) return;
+      dT(() => { if (document.body.contains(bubble)) { bubble.textContent = trT(...ln); playTone(660 + i * 40, 'triangle', 0.06, 0, 0.03); } }, 2600 * i);
+    });
+    const W0 = Math.max(560, par.getBoundingClientRect().width);
+    const x0 = -W0 - 60, x1 = window.innerWidth + 120, DUR = 16000, t0 = Date.now();
     let lastBeep = 0;
     const iv = dI(() => {
       const p = Math.min(1, (Date.now() - t0) / DUR);
       const px = x0 + (x1 - x0) * p;
       par.style.left = px + 'px';
-      // every window the parade front passes gets closed, heroically
-      document.querySelectorAll('.dream-dlg:not(.dream-dlg-zap)').forEach((d) => {
+      const front = px + W0 - 40; // the hero's nose
+      // windows are not zapped — they are DRAGGED away, one pikmin
+      // porter each, a few at a time (a crew works in shifts)
+      let lifted = 0;
+      const open = document.querySelectorAll('.dream-dlg:not(.bsod-dragged)');
+      for (let i = 0; i < open.length && lifted < 3; i++) {
+        const d = open[i];
         const r = d.getBoundingClientRect();
-        if (r.left + r.width / 2 < px + 60) {
-          d.classList.add('dream-dlg-zap');
-          const h = document.createElement('span');
-          h.className = 'bsod-zap-heart';
-          h.textContent = '💙';
-          h.style.left = (r.left + r.width / 2) + 'px';
-          h.style.top = (r.top + r.height / 2) + 'px';
-          document.body.appendChild(h);
-          dN(h);
-          h.addEventListener('animationend', () => h.remove());
-          setTimeout(() => { try { d.remove(); } catch (e) { /* saved twice */ } }, 200);
+        if (r.left + r.width / 2 < front) {
+          lifted++;
+          d.classList.add('bsod-dragged');
+          const porter = document.createElement('img');
+          porter.className = 'bsod-dragger';
+          porter.alt = '';
+          try { porter.src = pikSprite(hueColor(206 + Math.floor(Math.random() * 20)), Math.floor(Math.random() * 3), null); } catch (e) { /* the porter called in sick */ }
+          d.appendChild(porter);
+          playTone(520 + Math.random() * 260, 'triangle', 0.05, 0, 0.03);
+          dT(() => { try { d.remove(); } catch (e) { /* hauled */ } }, 1700);
         }
-      });
-      if (Date.now() - lastBeep > 260) { lastBeep = Date.now(); playTone(500 + p * 500, 'triangle', 0.05, 0, 0.03); }
+      }
+      if (Date.now() - lastBeep > 300) { lastBeep = Date.now(); playTone(430 + p * 320, 'triangle', 0.05, 0, 0.025); }
       if (p >= 1) {
         clearInterval(iv);
-        try { par.remove(); } catch (e) { /* marched offstage */ }
-        f.bsodSwarmMode = 'done';
-        cheatFall(['💙', '🌱', '✦'], 20);
-        gainFollowers(2);
-        showToast(trT('the hero closed every window. all ' + (f.bsodSwarmTotal + 22) + ' of them. not one hug was skipped ♡ +2 fans', 'le héros a fermé toutes les fenêtres. les ' + (f.bsodSwarmTotal + 22) + '. pas un seul câlin n\'a été oublié ♡ +2 fans'), { scroll: true });
-        dT(dwBsodFinale, 1400);
+        // stragglers (anything still on stage) get hauled too, then the bow
+        document.querySelectorAll('.dream-dlg:not(.bsod-dragged)').forEach((d, i) => {
+          dT(() => {
+            d.classList.add('bsod-dragged');
+            dT(() => { try { d.remove(); } catch (e) { /* hauled late */ } }, 1700);
+          }, i * 120);
+        });
+        dT(() => {
+          try { par.remove(); } catch (e) { /* marched offstage */ }
+          f.bsodSwarmMode = 'done';
+          cheatFall(['💙', '🌱', '✦'], 20);
+          gainFollowers(2);
+          showToast(trT('the crew hauled away every window. all ' + (f.bsodSwarmTotal + 22) + ' of them. not one hug was skipped ♡ +2 fans', 'l\'escouade a emporté toutes les fenêtres. les ' + (f.bsodSwarmTotal + 22) + '. pas un seul câlin n\'a été oublié ♡ +2 fans'), { scroll: true });
+          dT(dwBsodFinale, 1400);
+        }, 1900);
       }
-    }, 40);
+    }, 60);
   }
 
   // amber: the batch printer spits a fortune-cookie payslip you can read

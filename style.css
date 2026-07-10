@@ -9435,30 +9435,92 @@ html.dream-bsod .desktop-icon-btn[data-window="win-dreamlog"] {
 .dream-dlg-mini { width: min(232px, calc(100vw - 24px)); }
 .dream-dlg-mini .dream-dlg-body { padding: 6px 8px; font-size: 0.76rem; }
 .dream-dlg-mini .dream-dlg-bar { font-size: 0.74rem; padding: 2px 6px; }
-/* …and the HERO: the blue pixel slime marching through with the
-   pikmin crew, closing every window the parade front passes */
+/* …and the HERO: the blue pixel slime — BIG, haloed, narrating —
+   commanding a crew of real blue pikmin who DRAG every window away.
+   the halo is copied stroke for stroke from the meadow's dark-mode
+   pik glow (drop-shadow stack + 1.8s breathing pulse). */
 .bsod-hero-parade {
   position: fixed;
-  left: -340px;
+  left: -700px;
   z-index: 2697;
   pointer-events: none;
   display: flex;
   align-items: flex-end;
-  gap: 10px;
+  gap: 12px;
 }
 .bsod-hero {
-  width: 84px;
-  height: 84px;
+  width: 128px;
+  height: 128px;
   image-rendering: pixelated;
-  animation: bsod-hero-bob 0.5s ease-in-out infinite;
-  filter: drop-shadow(0 6px 10px rgba(0, 0, 30, 0.5));
+  filter:
+    drop-shadow(0 0 2px #ffffff)
+    drop-shadow(0 0 7px #ffd400)
+    drop-shadow(0 0 13px rgba(255, 212, 0, 0.95));
+  animation: bsod-hero-bob 0.42s steps(2) infinite, bsod-pik-halo 1.8s ease-in-out infinite;
 }
-.bsod-pik {
-  font-size: 1.5rem;
-  animation: bsod-hero-bob 0.5s ease-in-out infinite;
-  filter: drop-shadow(0 3px 5px rgba(0, 0, 30, 0.4));
+.bsod-pik-img {
+  image-rendering: pixelated;
+  filter:
+    drop-shadow(0 0 2px #ffffff)
+    drop-shadow(0 0 7px #ffd400)
+    drop-shadow(0 0 13px rgba(255, 212, 0, 0.95));
+  animation: bsod-hero-bob 0.42s steps(2) infinite, bsod-pik-halo 1.8s ease-in-out infinite;
 }
-@keyframes bsod-hero-bob { 50% { transform: translateY(-9px); } }
+@keyframes bsod-hero-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+@keyframes bsod-pik-halo {
+  50% {
+    filter:
+      drop-shadow(0 0 3px #ffffff)
+      drop-shadow(0 0 10px #ffd400)
+      drop-shadow(0 0 20px rgba(255, 212, 0, 1));
+  }
+}
+.bsod-hero-bubble {
+  position: absolute;
+  right: -10px;
+  top: -88px;
+  width: max-content;
+  max-width: 300px;
+  font-family: var(--font-pixel);
+  font-size: 0.78rem;
+  color: #0a234d;
+  background: #fff;
+  border: 2px solid #0a234d;
+  padding: 5px 9px;
+  box-shadow: 3px 3px 0 rgba(0, 0, 40, 0.4);
+}
+.bsod-hero-bubble::after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  right: 48px;
+  border: 8px solid transparent;
+  border-top-color: #fff;
+  border-bottom: 0;
+}
+/* the haul: a porter pikmin lands on the title bar and the whole
+   window is carried off, lifted first, then away down the stage */
+.bsod-dragged { pointer-events: none; animation: bsod-drag-away 1.7s ease-in forwards !important; }
+@keyframes bsod-drag-away {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  18% { transform: translate(6px, -16px) rotate(-3deg); }
+  100% { transform: translate(46vw, 112vh) rotate(16deg); opacity: 0.85; }
+}
+.bsod-dragger {
+  position: absolute;
+  top: -26px;
+  left: 50%;
+  width: 30px;
+  image-rendering: pixelated;
+  filter:
+    drop-shadow(0 0 2px #ffffff)
+    drop-shadow(0 0 7px #ffd400)
+    drop-shadow(0 0 13px rgba(255, 212, 0, 0.95));
+  animation: bsod-hero-bob 0.42s steps(2) infinite;
+}
 .dream-dlg-zap { animation: bsod-zap 0.24s ease-in forwards; pointer-events: none; }
 @keyframes bsod-zap { to { transform: scale(0.05) rotate(20deg); opacity: 0; } }
 .bsod-zap-heart {
