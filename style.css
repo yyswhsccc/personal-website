@@ -9389,12 +9389,12 @@ html[data-theme="dark"].dream-amber .window-title { color: #ffd23f; text-shadow:
 .dream-amber-slip canvas { display: block; width: 64px; margin: 0 auto 5px; image-rendering: pixelated; }
 @keyframes dream-amber-print {
   from { max-height: 0; }
-  to { max-height: 150px; }
+  to { max-height: 260px; }
 }
 .dream-amber-slip-fly { animation: dream-amber-fly 2.4s ease-in forwards; }
 @keyframes dream-amber-fly {
-  0% { transform: rotate(0deg); opacity: 1; max-height: 150px; }
-  100% { transform: translate(120px, -240px) rotate(24deg); opacity: 0; max-height: 150px; }
+  0% { transform: rotate(0deg); opacity: 1; max-height: 260px; }
+  100% { transform: translate(120px, -240px) rotate(24deg); opacity: 0; max-height: 260px; }
 }
 .dream-punchcard .dream-critter-emoji { font-size: 30px; filter: sepia(1) saturate(2) hue-rotate(-10deg); }
 
@@ -9414,7 +9414,7 @@ html[data-theme="dark"].dream-amber .window-title { color: #ffd23f; text-shadow:
   .dream-flash, .dream-pop-flash, .dream-gb-boot, .dream-gb-tetro,
   .dream-critter, .ama-fx, .dream-geo-marquee span, .sw-dream-spin img,
   .dream-amber-slip, .dream-slippy-clip, .dream-critter-emoji { animation: none !important; }
-  .dream-amber-slip { max-height: 150px; }
+  .dream-amber-slip { max-height: 260px; }
 }
 
 /* =====================================================
