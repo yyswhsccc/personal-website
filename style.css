@@ -10782,7 +10782,9 @@ html.scp-form-2521 #slime-pet img, html.scp-form-2521 #slime-pet canvas { filter
   border-bottom: 3px double var(--ink);
   font-family: var(--font-pixel);
 }
-.scp-letter-head .scp-emblem { width: 30px; height: 30px; animation: t-spin 14s linear infinite; }
+/* own-axis spin — t-spin belongs to tarot props whose translate(-50%,-50%)
+   made this one crawl upward every lap (same bug v99.1 fixed on the badge) */
+.scp-letter-head .scp-emblem { width: 30px; height: 30px; animation: scp-emblem-spin 14s linear infinite; }
 .scp-letter-title { display: flex; flex-direction: column; line-height: 1.15; }
 .scp-letter-title b { font-size: 1.06rem; letter-spacing: 1.5px; }
 .scp-letter-title small { font-size: 0.72rem; opacity: 0.75; letter-spacing: 1px; }
