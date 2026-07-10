@@ -7654,6 +7654,7 @@ body.terminal-only .fan-wall-widget,
 body.terminal-only #desk-pik-layer,
 body.terminal-only .cloud-decor,
 body.terminal-only .heart-decor,
+body.terminal-only .mini-danmaku, /* the chat ticker kept broadcasting over the DOOR (and the rescue cage) — backstage means backstage */
 body.terminal-only .window:not(#win-terminal) { display: none !important; }
 body.terminal-only .desktop-area {
   min-height: 100dvh;
