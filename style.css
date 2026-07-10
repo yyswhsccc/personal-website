@@ -7868,15 +7868,15 @@ body.rescue-locked #door-rescue { pointer-events: auto; } /* swallow clicks too 
 .rescue-villain.is-in { transform: translateY(0) scale(1); opacity: 1; }
 .rescue-hero { left: 6%; top: 16%; transform: translateY(-70vh) scale(1); opacity: 1; }
 .rescue-hero.is-in { transform: translateY(0) scale(1); }
-.rescue-actor canvas { width: 190px; image-rendering: pixelated; filter: drop-shadow(0 0 20px rgba(57, 211, 83, 0.7)); animation: rescue-idle 1.6s ease-in-out infinite; }
-.rescue-hero canvas { width: 210px; filter: drop-shadow(0 0 26px rgba(255, 143, 199, 0.95)); }
+.rescue-actor canvas { width: min(280px, 40vw); image-rendering: pixelated; filter: drop-shadow(0 0 20px rgba(57, 211, 83, 0.7)); animation: rescue-idle 1.6s ease-in-out infinite; }
+.rescue-hero canvas { width: min(310px, 44vw); filter: drop-shadow(0 0 26px rgba(255, 143, 199, 0.95)); }
 @keyframes rescue-idle { 50% { transform: translateY(-8px) scale(1.02); } }
 .rescue-bub {
-  max-width: min(460px, 42vw);
+  max-width: min(660px, 60vw);
   margin: 0 auto 12px;
-  padding: 13px 17px;
+  padding: 16px 22px;
   font-family: var(--font-pixel);
-  font-size: 1.02rem;
+  font-size: clamp(1.1rem, 2.6vw, 1.55rem);
   line-height: 1.5;
   background: rgba(3, 12, 5, 0.94);
   border: 3px solid #2ea043;
@@ -7886,11 +7886,11 @@ body.rescue-locked #door-rescue { pointer-events: auto; } /* swallow clicks too 
 .rescue-bub:empty { display: none; }
 .rescue-bub-hero { border-color: #ff8fc7; color: #ffb3dd; box-shadow: 0 0 22px rgba(255, 143, 199, 0.6); }
 /* RAGE: the villain swells, bubble screams green, whole thing pulses */
-#door-rescue.is-rage .rescue-villain { transform: scale(1.5); z-index: 5; }
+#door-rescue.is-rage .rescue-villain { transform: scale(1.65); z-index: 5; }
 #door-rescue.is-rage .rescue-villain canvas { filter: drop-shadow(0 0 40px rgba(57, 211, 83, 1)); animation: rescue-rage-pulse 0.3s steps(2) infinite; }
 #door-rescue.is-rage .rescue-bub-villain {
   max-width: 90vw;
-  font-size: clamp(1.4rem, 5vw, 3rem);
+  font-size: clamp(1.8rem, 5.5vw, 3.5rem);
   font-weight: 700;
   letter-spacing: 3px;
   color: #d6ffe0;
@@ -7907,7 +7907,7 @@ body.rescue-locked #door-rescue { pointer-events: auto; } /* swallow clicks too 
 .rescue-beam {
   position: absolute;
   left: 6%; top: 0; bottom: 0;
-  width: 240px;
+  width: min(320px, 46vw);
   margin-left: -20px;
   background: linear-gradient(180deg, rgba(255, 179, 221, 0.6), rgba(255, 143, 199, 0.08) 70%, transparent);
   filter: blur(6px);
@@ -10438,13 +10438,16 @@ html.ds-blink .window-title { animation: ds-blinky 0.8s steps(1) infinite; }
   overflow: hidden;
   display: flex;
   white-space: nowrap;
-  margin-top: 6px;
+  margin-top: 8px;
   font-family: var(--font-pixel);
-  font-size: 0.74rem;
-  color: var(--pink-hot, #f0509f);
-  opacity: 0.9;
+  /* pause-banner sized, not footnote sized — this is scripture, not fine print */
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #b0135c;
+  opacity: 1;
   pointer-events: none;
 }
+html[data-theme="dark"] .console-mercy { color: #ff9ecf; } /* the dark shell needs the bright ink */
 .console-mercy span {
   flex: none;
   padding-right: 28px;
