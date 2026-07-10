@@ -22806,8 +22806,9 @@ document.addEventListener('DOMContentLoaded', () => {
       setTimeout(() => {
         document.body.classList.remove('rescue-quake'); stage.classList.remove('is-rage'); stage.__raging = 0;
         // resume the monologue where it left off — a mashing visitor (the
-        // rescue's core audience!) must not rage right past the good lines
-        if (stage.__pendingLine) { const vb2 = stage.querySelector('.rescue-bub-villain'); if (vb2) typeInto(vb2, stage.__pendingLine, 2200); }
+        // rescue's core audience!) must not rage right past the good lines.
+        // the retype carries the chain's onDone, so the 3s holds survive rage.
+        if (stage.__pendingLine) { const vb2 = stage.querySelector('.rescue-bub-villain'); if (vb2) typeInto(vb2, stage.__pendingLine, 2200, stage.__pendingDone); }
       }, 1600);
     };
     setTimeout(() => rescueLock(stage, rage), cageMs - 200);
@@ -22888,7 +22889,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // to read the monologue. 26ms/char is the FLOOR: a verbose villain
     // rambles, it never machine-guns. the beat schedule is built around
     // these speeds, not the other way round (cursor ▌ rides along).
-    const typeInto = (el, line, maxMs) => {
+    const typeInto = (el, line, maxMs, onDone) => {
       if (!el) return;
       if (el.__typeTimer) clearInterval(el.__typeTimer);
       const chars = Array.from(line);
@@ -22898,21 +22899,29 @@ document.addEventListener('DOMContentLoaded', () => {
       el.__typeTimer = setInterval(() => {
         i++;
         el.textContent = chars.slice(0, i).join('') + (i < chars.length ? '▌' : '');
-        if (i >= chars.length) { clearInterval(el.__typeTimer); el.__typeTimer = null; }
+        if (i >= chars.length) { clearInterval(el.__typeTimer); el.__typeTimer = null; if (onDone) onDone(); }
       }, step);
     };
-    // beats spaced for SLOW typing + a reading breath after each line —
-    // the third (the tragic backstory) is scheduled to still be mid-type
-    // when the hero lands: it dies of exposition, live, mid-keystroke
-    const BEAT_AT = [500, 6300, 12600];
+    // the READING PLEDGE: every line is typed in full, then holds for a
+    // flat 3 seconds before the next beat is allowed on stage. no fixed
+    // schedule races the typewriter anymore — the show is a chain.
+    const HOLD = 3000;
     const BEAT_MS = [4400, 5400, 4600];
-    VILLAIN.forEach((line, i) => timers.push(setTimeout(() => { stage.__pendingLine = line; if (!stage.__raging) typeInto(vbub, line, BEAT_MS[i]); playTone(190 + i * 30, 'square', 0.09, 0, 0.04); }, cageMs + BEAT_AT[i])));
-    // HARD CAP: no matter how much the visitor rages the villain, the hero MUST
-    // arrive exactly 16s after the cage lands — a rescue is never held hostage
-    // by someone mashing keys. this is a plain fixed timer, immune to the rage
-    // loop. (16s, not 11: the monologue types at rambling speed now, and the
-    // backstory must be caught mid-keystroke.)
-    const heroAt = cageMs + 16000;
+    const estType = (line, maxMs) => { const n = Array.from(line).length; return n * Math.max(26, Math.min(48, Math.floor((maxMs || 3000) / Math.max(1, n)))); };
+    const vBeat = (i) => {
+      if (i >= VILLAIN.length || stage.__curtained) return;
+      stage.__pendingLine = VILLAIN[i];
+      const next = () => { timers.push(setTimeout(() => vBeat(i + 1), HOLD)); };
+      stage.__pendingDone = next;
+      if (!stage.__raging) typeInto(vbub, VILLAIN[i], BEAT_MS[i], next);
+      playTone(190 + i * 30, 'square', 0.09, 0, 0.04);
+    };
+    timers.push(setTimeout(() => vBeat(0), cageMs + 500));
+    // HARD CAP: the hero's arrival is still a plain fixed timer, immune to
+    // rage-stalling — but it is COMPUTED from the actual monologue: both
+    // full beats + their 3s holds + ~3.2s INTO the backstory's typing, so
+    // the third act always dies of exposition mid-keystroke, never unread.
+    const heroAt = cageMs + 500 + estType(VILLAIN[0], BEAT_MS[0]) + HOLD + estType(VILLAIN[1], BEAT_MS[1]) + HOLD + 3200;
     // …THE HERO ARRIVES — equally huge, from above, in a column of light ------
     setTimeout(() => {
       if (stage.__unlock) stage.__unlock(); // the moment help arrives, you are free
@@ -22933,33 +22942,9 @@ document.addEventListener('DOMContentLoaded', () => {
       document.body.classList.add('rescue-quake');
       setTimeout(() => document.body.classList.remove('rescue-quake'), 600);
       playFanfare();
-      setTimeout(() => {
-        // the hero answers to whatever THEY actually shouted — spam `anyone`
-        // and the sky replies "I AM anyone"; smash the keyboard and the sky
-        // is fluent in that too
-        typeInto(hbub, solver
-          ? trT('someone was GUESSING with their whole heart? guessing is just asking for help with extra confidence — and I answer BOTH ♡', 'quelqu\'un DEVINAIT de tout son cœur ? deviner, c\'est demander de l\'aide avec un supplément d\'assurance — et je réponds aux DEUX ♡')
-          : (mashHit
-            ? trT(`someone typed ${shortQ(mashHit)}? lucky day — I am FLUENT in keyboard-smash. it translates to: SAVE ME. on it ♡`, `quelqu'un a tapé ${shortQ(mashHit)} ? jour de chance — je parle COURAMMENT le clavier-écrasé. traduction : SAUVEZ-MOI. j'arrive ♡`)
-            : trT(`did someone spam ${shortQ(cry)}? great news. I AM ${cry} ♡`, `quelqu'un a spammé ${shortQ(cry)} ? bonne nouvelle. JE SUIS ${cry} ♡`)), 3000);
-      }, 900);
-      // ✦✦✦ THE ULTIMATE — SLIME-GOD OVERDRIVE: charge, then a screen-filling nova ✦✦✦
-      setTimeout(() => {
-        hero.classList.add('is-charging');
-        typeInto(hbub, trT('SUDO OVERRIDE ♡ initiating…', 'SUDO OVERRIDE ♡ initialisation…'), 850);
-        // rings converge on the hero as it powers up
-        for (let i = 0; i < 4; i++) {
-          const ring = document.createElement('div');
-          ring.className = 'rescue-charge-ring';
-          ring.style.animationDelay = (i * 0.22) + 's';
-          hero.appendChild(ring);
-          setTimeout(() => ring.remove(), 1600);
-        }
-        playTone(220, 'sine', 0.5, 0, 0.04);
-        playTone(440, 'sine', 0.5, 0.25, 0.04);
-        playTone(880, 'sine', 0.5, 0.5, 0.04);
-      }, 4400);
-      setTimeout(() => {
+      // ✦✦✦ THE ULTIMATE — SLIME-GOD OVERDRIVE: chained, never rushed —
+      // each line types in full, holds its 3 seconds, THEN the next act ✦✦✦
+      const doBlast = () => {
         // the cast: white flash, giant nova, radial rune ring, 40 hearts, letters
         const flash2 = document.createElement('div');
         flash2.className = 'rescue-flash rescue-flash-big';
@@ -22998,16 +22983,48 @@ document.addEventListener('DOMContentLoaded', () => {
         playTone(880, 'triangle', 0.3, 0.1, 0.07);
         playTone(1320, 'triangle', 0.35, 0.22, 0.06);
         playTone(1760, 'sine', 0.4, 0.34, 0.05);
-        setTimeout(() => { typeInto(hbub, trT('your monologue exceeded its time limit. verdict: O(bonk).', 'ton monologue a dépassé son temps limite. verdict : O(bonk).'), 2200); }, 1200);
-        setTimeout(() => { typeInto(hbub, trT('locks? DELETED. puzzles? SKIPPED. you enter by the FRONT door — my honored guest ♡', 'verrous ? SUPPRIMÉS. énigmes ? SAUTÉES. tu entres par la GRANDE porte — invité·e d\'honneur ♡'), 3000); }, 4400);
-      }, 5600);
+        setTimeout(() => {
+          typeInto(hbub, trT('your monologue exceeded its time limit. verdict: O(bonk).', 'ton monologue a dépassé son temps limite. verdict : O(bonk).'), 2200, () => setTimeout(() => {
+            typeInto(hbub, trT('locks? DELETED. puzzles? SKIPPED. you enter by the FRONT door — my honored guest ♡', 'verrous ? SUPPRIMÉS. énigmes ? SAUTÉES. tu entres par la GRANDE porte — invité·e d\'honneur ♡'), 3000, () => setTimeout(curtains, HOLD));
+          }, HOLD));
+        }, 1200);
+      };
+      const doCharge = () => {
+        hero.classList.add('is-charging');
+        typeInto(hbub, trT('SUDO OVERRIDE ♡ initiating…', 'SUDO OVERRIDE ♡ initialisation…'), 850, () => setTimeout(doBlast, HOLD));
+        // rings converge on the hero as it powers up
+        for (let i = 0; i < 4; i++) {
+          const ring = document.createElement('div');
+          ring.className = 'rescue-charge-ring';
+          ring.style.animationDelay = (i * 0.22) + 's';
+          hero.appendChild(ring);
+          setTimeout(() => ring.remove(), 1600);
+        }
+        playTone(220, 'sine', 0.5, 0, 0.04);
+        playTone(440, 'sine', 0.5, 0.25, 0.04);
+        playTone(880, 'sine', 0.5, 0.5, 0.04);
+      };
+      setTimeout(() => {
+        // the hero answers to whatever THEY actually shouted — spam `anyone`
+        // and the sky replies "I AM anyone"; smash the keyboard and the sky
+        // is fluent in that too
+        typeInto(hbub, solver
+          ? trT('someone was GUESSING with their whole heart? guessing is just asking for help with extra confidence — and I answer BOTH ♡', 'quelqu\'un DEVINAIT de tout son cœur ? deviner, c\'est demander de l\'aide avec un supplément d\'assurance — et je réponds aux DEUX ♡')
+          : (mashHit
+            ? trT(`someone typed ${shortQ(mashHit)}? lucky day — I am FLUENT in keyboard-smash. it translates to: SAVE ME. on it ♡`, `quelqu'un a tapé ${shortQ(mashHit)} ? jour de chance — je parle COURAMMENT le clavier-écrasé. traduction : SAUVEZ-MOI. j'arrive ♡`)
+            : trT(`did someone spam ${shortQ(cry)}? great news. I AM ${cry} ♡`, `quelqu'un a spammé ${shortQ(cry)} ? bonne nouvelle. JE SUIS ${cry} ♡`)), 3000, () => setTimeout(doCharge, HOLD));
+      }, 900);
       timers.forEach(clearTimeout);
       // the backstory dies of exposition LIVE: freeze the villain's
       // typewriter mid-word — the cursor becomes the em-dash it earned
       if (vbub.__typeTimer) { clearInterval(vbub.__typeTimer); vbub.__typeTimer = null; vbub.textContent = vbub.textContent.replace('▌', '—'); }
     }, heroAt);
-    // curtains: the site itself is the after-credits scene
-    setTimeout(() => {
+    // curtains: the site itself is the after-credits scene. reached by the
+    // CHAIN (hero's last line + its 3s hold) — the fixed timer below is a
+    // safety backstop only, in case a bubble ever vanishes mid-chain.
+    const curtains = () => {
+      if (stage.__curtained) return;
+      stage.__curtained = 1;
       if (stage.__unlock) stage.__unlock();
       // typewriters off — a removed bubble's interval would tick forever
       ['.rescue-bub-villain', '.rescue-bub-hero'].forEach((sel) => { const b = stage.querySelector(sel); if (b && b.__typeTimer) { clearInterval(b.__typeTimer); b.__typeTimer = null; } });
@@ -23016,7 +23033,8 @@ document.addEventListener('DOMContentLoaded', () => {
       stage.style.opacity = '0';
       setTimeout(() => stage.remove(), 1050);
       terminalDoorOpen(true);
-    }, heroAt + 14500);
+    };
+    setTimeout(curtains, heroAt + 45000);
   }
   function doorInit() {
     if (window.__door) return window.__door;
