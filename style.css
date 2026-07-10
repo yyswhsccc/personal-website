@@ -7915,12 +7915,33 @@ body.rescue-locked #door-rescue { pointer-events: auto; } /* swallow clicks too 
 .eject-rude.is-flying { transition: transform 1.4s cubic-bezier(0.3, 0, 0.85, 0.4); transform: translate(85vw, -170vh) rotate(940deg) scale(0.75); }
 .eject-boot {
   position: absolute; left: -32vw; bottom: 13vh;
-  font-size: clamp(120px, 22vw, 260px);
   transform: rotate(40deg);
   transition: left 0.35s cubic-bezier(0.5, 0, 1, 0.6), transform 0.35s cubic-bezier(0.5, 0, 1, 0.6);
   filter: drop-shadow(0 0 18px rgba(255, 212, 0, 0.6));
 }
+.eject-boot canvas { width: clamp(150px, 24vw, 280px); image-rendering: pixelated; }
 .eject-boot.is-kick { left: 36vw; transform: rotate(-18deg) scale(1.12); }
+/* 42: the whale and the petunias — a brief and beautiful journey */
+#whale-cameo { position: fixed; inset: 0; z-index: 360; pointer-events: none; overflow: hidden; }
+.whale-fall { position: absolute; top: -26vh; text-align: center; animation-name: whale-fall; animation-timing-function: linear; animation-fill-mode: forwards; }
+.whale-fall canvas { display: block; margin: 0 auto; image-rendering: pixelated; }
+.is-whale canvas { width: clamp(120px, 16vw, 200px); }
+.is-petunias canvas { width: clamp(56px, 7vw, 90px); }
+.whale-bub {
+  display: inline-block; margin-bottom: 6px; padding: 6px 10px;
+  font-family: var(--font-pixel); font-size: clamp(0.85rem, 1.6vw, 1.05rem);
+  background: rgba(3, 12, 25, 0.92); border: 2px solid #6cc4f5; color: #a8e0ff;
+  box-shadow: 0 0 14px rgba(108, 196, 245, 0.5); white-space: nowrap;
+}
+@keyframes whale-fall { to { transform: translateY(175vh) rotate(14deg); } }
+/* 1997: gentle semicolon weather over the rescue stage */
+.semi-rain {
+  position: absolute; top: -6vh;
+  font-family: var(--font-pixel); font-size: clamp(1.4rem, 3vw, 2.2rem);
+  color: #7ee787; text-shadow: 0 0 10px rgba(57, 211, 83, 0.8);
+  animation-name: semi-fall; animation-timing-function: linear; animation-fill-mode: forwards;
+}
+@keyframes semi-fall { to { transform: translateY(120vh) rotate(200deg); opacity: 0.15; } }
 .eject-fade { position: absolute; inset: 0; background: #000; opacity: 0; animation: eject-fade-in 1.4s forwards; display: flex; align-items: center; justify-content: center; }
 @keyframes eject-fade-in { to { opacity: 1; } }
 .eject-note { max-width: min(640px, 84vw); font-family: var(--font-pixel); font-size: clamp(1rem, 2.4vw, 1.4rem); line-height: 1.8; color: #ff8fc7; text-align: center; padding: 20px; }

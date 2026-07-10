@@ -3162,6 +3162,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const pend = (k) => { store.set('yos-cheat-next', k); termLine(trT('…armed for your NEXT run of slime_run.exe ♡', '…armé pour ta PROCHAINE run de slime_run.exe ♡'), 't-dim'); };
     switch (key) {
       // pending run-buffs still throw a party RIGHT NOW
+      case 'hhgttg': whalePetunias(); break; // 42: the whale and the petunias make their brief, beautiful journey
       case 'god': pend('god'); cheatFall(['😇', '✨', '♡'], 30); if (!pet.sleeping) showBubble(trT('divine i-frames queued ♡', 'i-frames divines en file ♡'), 2400); break;
       case 'fast': pend('fast'); cheatFall(['💨', '⚡'], 24); break;
       case 'fever': pend('fever'); cheatFall(['🌈', '⭐', '♥'], 34); break;
@@ -3380,7 +3381,7 @@ document.addEventListener('DOMContentLoaded', () => {
     'coffee':             ['☕ speed buff brewing for your next run.', '☕ buff de vitesse en cours d\'infusion pour ta prochaine run.', 'fast'],
     'espresso':           ['☕☕ DOUBLE shot. next run will vibrate.', '☕☕ DOUBLE dose. la prochaine run va vibrer.', 'fast'],
     'sudo make me a sandwich': ['🥪 okay. (you had the audacity. respect.)', '🥪 d\'accord. (tu as osé. respect.)', 'boba'],
-    '42':                 ['🌌 correct. but what was the question?', '🌌 exact. mais quelle était la question ?', 'none'],
+    '42':                 ['🌌 correct. but what was the question?', '🌌 exact. mais quelle était la question ?', 'hhgttg'],
     'meow':               ['🐱 the keyboard-cat approves.', '🐱 le chat-clavier approuve.', 'meow'],
     /* — finale, 98-100 — */
     'to the moon':        ['🚀 20 coins strapped to a rocket. next run. no refunds.', '🚀 20 pièces sanglées à une fusée. prochaine run. non remboursable.', 'rich20'],
@@ -22629,6 +22630,107 @@ document.addEventListener('DOMContentLoaded', () => {
   var doorFlailLog = []; // verbatim cries (≤8, each ≤40 chars) — rescue-scene ammunition
   var doorSwears = 0;    // the swear jar. at 3 coins, security (a boot) is dispatched
 
+  /* ---- 42: the Answer summons the galaxy's two most famous falling
+     objects. the whale is curious about the ground; the petunias have
+     been here before. improbability: 1 in 2^276709 ♡ ---- */
+  function whaleCanvas() {
+    const cv = document.createElement('canvas');
+    cv.width = 112; cv.height = 64;
+    const x = cv.getContext('2d');
+    const ROWS = [
+      '.....ss.......',
+      '..WWWWWWWWW...',
+      '.WWWWWWWWWWWW.',
+      'WeWWWWWWWWWWWD',
+      'WWWWWWWWWWWWD.',
+      '.DDDDDDDDDDD..',
+      '...DD....DD...',
+      '..DD......DD..'];
+    const PAL = { W: '#6cc4f5', D: '#4a9fd4', e: '#14020e', s: '#e8f7ff' };
+    ROWS.forEach((row, ry) => { for (let rx = 0; rx < row.length; rx++) { const ch = row[rx]; if (ch === '.') continue; x.fillStyle = PAL[ch] || PAL.W; x.fillRect(rx * 8, ry * 8, 8, 8); } });
+    return cv;
+  }
+  function petuniasCanvas() {
+    const cv = document.createElement('canvas');
+    cv.width = 56; cv.height = 48;
+    const x = cv.getContext('2d');
+    const ROWS = [
+      '.PP.PP.',
+      'PPPPPPP',
+      '.PGPGP.',
+      '..GGG..',
+      '.TTTTT.',
+      '..TTT..'];
+    const PAL = { P: '#f0509f', G: '#57c689', T: '#8a5a2e' };
+    ROWS.forEach((row, ry) => { for (let rx = 0; rx < row.length; rx++) { const ch = row[rx]; if (ch === '.') continue; x.fillStyle = PAL[ch] || PAL.P; x.fillRect(rx * 8, ry * 8, 8, 8); } });
+    return cv;
+  }
+  function whalePetunias() {
+    if (document.getElementById('whale-cameo')) return;
+    const stage = document.createElement('div');
+    stage.id = 'whale-cameo';
+    stage.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(stage);
+    const drop = (canvas, cls, left, dur, delay, line) => {
+      const wrap = document.createElement('div');
+      wrap.className = 'whale-fall ' + cls;
+      wrap.style.left = left;
+      wrap.style.animationDuration = dur + 's';
+      wrap.style.animationDelay = delay + 's';
+      const bub = document.createElement('div');
+      bub.className = 'whale-bub';
+      bub.textContent = line;
+      wrap.append(bub, canvas);
+      stage.appendChild(wrap);
+    };
+    drop(whaleCanvas(), 'is-whale', '58%', 5.2, 0, trT('…hello, ground ♡', '…bonjour, le sol ♡'));
+    drop(petuniasCanvas(), 'is-petunias', '30%', 4.4, 0.5, trT('oh no. not again.', 'oh non. pas encore.'));
+    playTone(520, 'sine', 0.3, 0, 0.04);
+    playTone(390, 'sine', 0.35, 0.3, 0.04);
+    playTone(260, 'sine', 0.4, 0.6, 0.05);
+    setTimeout(() => playTone(90, 'sawtooth', 0.3, 0, 0.08), 4800); // a soft, very distant landing
+    setTimeout(() => stage.remove(), 7000);
+  }
+
+  /* ---- the ceremonial boot, hand-pixelled (an emoji boot has no soul) ---- */
+  function bootCanvas() {
+    const cv = document.createElement('canvas');
+    cv.width = 112; cv.height = 96;
+    const x = cv.getContext('2d');
+    const ROWS = [
+      '..LLLL........',
+      '..LHHL........',
+      '..LWWL........',
+      '..LHHL........',
+      '..LWWL........',
+      '..LLLL........',
+      '..LLLLL.......',
+      '..LLLLLL......',
+      '..LLLLLLLLL...',
+      '..LLLLLLLLLLL.',
+      '.SLLLLLLLLLLLS',
+      '.SSSSSSSSSSSSS'];
+    const PAL = { L: '#8a5a2e', H: '#c98a4b', S: '#3a2412', W: '#fff0fa' };
+    ROWS.forEach((row, ry) => { for (let rx = 0; rx < row.length; rx++) { const ch = row[rx]; if (ch === '.') continue; x.fillStyle = PAL[ch] || PAL.L; x.fillRect(rx * 8, ry * 8, 8, 8); } });
+    return cv;
+  }
+
+  /* ---- 1997: it is raining semicolons. someone finally understands ---- */
+  function semiRain(host) {
+    for (let i = 0; i < 26; i++) {
+      const s = document.createElement('span');
+      s.className = 'semi-rain';
+      s.textContent = ';';
+      s.style.left = (4 + Math.random() * 92) + '%';
+      s.style.animationDelay = (Math.random() * 0.9) + 's';
+      s.style.animationDuration = (1.8 + Math.random() * 1.4) + 's';
+      host.appendChild(s);
+      setTimeout(() => s.remove(), 4400);
+    }
+    playTone(1180, 'triangle', 0.2, 0, 0.03);
+    playTone(1560, 'triangle', 0.25, 0.15, 0.03);
+  }
+
   /* ---- STRIKE 3: the ejection. the moderator slime clocks in, a RUDE
      little slime is summoned to stand trial for the visitor's mouth, and
      a ceremonial pixel boot punts it clean off the internet. the site
@@ -22665,7 +22767,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // the boot: ceremonial, enormous, very small by moderator standards
     const boot = document.createElement('div');
     boot.className = 'eject-boot';
-    boot.textContent = '🥾';
+    boot.appendChild(bootCanvas());
     setTimeout(() => { stage.appendChild(boot); playTone(90, 'sawtooth', 0.4, 0, 0.1); }, 3000);
     // THE PUNT — the rude slime is legally a football now
     setTimeout(() => {
@@ -22808,7 +22910,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // resume the monologue where it left off — a mashing visitor (the
         // rescue's core audience!) must not rage right past the good lines.
         // the retype carries the chain's onDone, so the 3s holds survive rage.
-        if (stage.__pendingLine) { const vb2 = stage.querySelector('.rescue-bub-villain'); if (vb2) typeInto(vb2, stage.__pendingLine, 2200, stage.__pendingDone); }
+        // (unless the hero already froze him — the bonked stay bonked.)
+        if (stage.__pendingLine && !stage.__villainFrozen) { const vb2 = stage.querySelector('.rescue-bub-villain'); if (vb2) typeInto(vb2, stage.__pendingLine, 2200, stage.__pendingDone); }
       }, 1600);
     };
     setTimeout(() => rescueLock(stage, rage), cageMs - 200);
@@ -22894,22 +22997,41 @@ document.addEventListener('DOMContentLoaded', () => {
       if (el.__typeTimer) clearInterval(el.__typeTimer);
       const chars = Array.from(line);
       const step = Math.max(26, Math.min(48, Math.floor((maxMs || 3000) / Math.max(1, chars.length))));
-      let i = 0;
-      el.textContent = '▌';
+      // RESUMABLE: a rage pause continues the SAME line where it stopped —
+      // never from the top. interrupt him all you like; he WILL finish.
+      // (that is, famously, the whole bit.) a chain stalled by restarts
+      // would otherwise never reach its onDone.
+      let i = (el.__typeLine === line && el.__typeIdx > 0) ? Math.min(el.__typeIdx, chars.length) : 0;
+      el.__typeLine = line;
+      el.__typeIdx = i;
+      const paint = () => { el.textContent = chars.slice(0, i).join('') + (i < chars.length ? '▌' : ''); };
+      paint();
+      // resumed after already finishing (rage hit during the hold):
+      // restore the text, but onDone already fired once — never twice
+      if (i >= chars.length) return;
       el.__typeTimer = setInterval(() => {
         i++;
-        el.textContent = chars.slice(0, i).join('') + (i < chars.length ? '▌' : '');
+        el.__typeIdx = i;
+        paint();
         if (i >= chars.length) { clearInterval(el.__typeTimer); el.__typeTimer = null; if (onDone) onDone(); }
       }, step);
     };
+    // coincidence cameo: coins already in the swear jar? the villain
+    // NOTICED — and takes full credit for being the lenient option
+    if (doorSwears > 0) VILLAIN.splice(1, 0, trT(`and the MOUTH on you!! ${doorSwears} coin${doorSwears > 1 ? 's' : ''} in the swear jar already — ONE more and you'd have met the BOOT instead of me. count your blessings, sailor ♡`, `et cette BOUCHE !! ${doorSwears} pièce${doorSwears > 1 ? 's' : ''} déjà dans la tirelire à jurons — UNE de plus et tu rencontrais la BOTTE au lieu de moi. estime-toi heureux·se, moussaillon ♡`));
+    // coincidence cameo: they typed 1997 — the year of the missing
+    // semicolon. the villain will NOT recover from this. (detected here,
+    // performed after the bonk: grief first, feelings second.)
+    const year1997 = log.some((s) => /\b1997\b/.test(s));
+
     // the READING PLEDGE: every line is typed in full, then holds for a
     // flat 3 seconds before the next beat is allowed on stage. no fixed
     // schedule races the typewriter anymore — the show is a chain.
     const HOLD = 3000;
-    const BEAT_MS = [4400, 5400, 4600];
+    const BEAT_MS = VILLAIN.map((_, i) => (i === VILLAIN.length - 1 ? 4600 : 5400));
     const estType = (line, maxMs) => { const n = Array.from(line).length; return n * Math.max(26, Math.min(48, Math.floor((maxMs || 3000) / Math.max(1, n)))); };
     const vBeat = (i) => {
-      if (i >= VILLAIN.length || stage.__curtained) return;
+      if (i >= VILLAIN.length || stage.__curtained || stage.__villainFrozen) return;
       stage.__pendingLine = VILLAIN[i];
       const next = () => { timers.push(setTimeout(() => vBeat(i + 1), HOLD)); };
       stage.__pendingDone = next;
@@ -22918,10 +23040,11 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     timers.push(setTimeout(() => vBeat(0), cageMs + 500));
     // HARD CAP: the hero's arrival is still a plain fixed timer, immune to
-    // rage-stalling — but it is COMPUTED from the actual monologue: both
-    // full beats + their 3s holds + ~3.2s INTO the backstory's typing, so
-    // the third act always dies of exposition mid-keystroke, never unread.
-    const heroAt = cageMs + 500 + estType(VILLAIN[0], BEAT_MS[0]) + HOLD + estType(VILLAIN[1], BEAT_MS[1]) + HOLD + 3200;
+    // rage-stalling — but it is COMPUTED from the actual monologue: every
+    // beat before the backstory + its 3s hold + ~3.2s INTO the backstory's
+    // typing, so the final act always dies of exposition mid-keystroke.
+    let heroAt = cageMs + 500 + 3200;
+    for (let bi = 0; bi < VILLAIN.length - 1; bi++) heroAt += estType(VILLAIN[bi], BEAT_MS[bi]) + HOLD;
     // …THE HERO ARRIVES — equally huge, from above, in a column of light ------
     setTimeout(() => {
       if (stage.__unlock) stage.__unlock(); // the moment help arrives, you are free
@@ -22983,10 +23106,22 @@ document.addEventListener('DOMContentLoaded', () => {
         playTone(880, 'triangle', 0.3, 0.1, 0.07);
         playTone(1320, 'triangle', 0.35, 0.22, 0.06);
         playTone(1760, 'sine', 0.4, 0.34, 0.05);
+        // the villain is DOWN — the hero drops to a brisk 1s cadence now
+        // (a 3s pause over a flattened opponent reads as a freeze-frame)
+        if (year1997) {
+          // coincidence cameo: matching trauma years. the flattened villain
+          // rallies for ONE more feeling while semicolons rain gently
+          setTimeout(() => {
+            typeInto(vbub, trT('…wait. WAIT. you typed 1997. the year of my missing semicolon. you KNOW my origin story?? we are practically FAMILY———', '…attends. ATTENDS. tu as tapé 1997. l\'année de mon point-virgule perdu. tu CONNAIS mon histoire ?? on est presque de la FAMILLE———'), 3400);
+            semiRain(stage);
+          }, 2400);
+        }
         setTimeout(() => {
-          typeInto(hbub, trT('your monologue exceeded its time limit. verdict: O(bonk).', 'ton monologue a dépassé son temps limite. verdict : O(bonk).'), 2200, () => setTimeout(() => {
-            typeInto(hbub, trT('locks? DELETED. puzzles? SKIPPED. you enter by the FRONT door — my honored guest ♡', 'verrous ? SUPPRIMÉS. énigmes ? SAUTÉES. tu entres par la GRANDE porte — invité·e d\'honneur ♡'), 3000, () => setTimeout(curtains, HOLD));
-          }, HOLD));
+          typeInto(hbub, year1997
+            ? trT('your monologue exceeded its time limit. verdict: O(bonk). (and NO — matching trauma years is not a friendship license.)', 'ton monologue a dépassé son temps limite. verdict : O(bonk). (et NON — partager une année de trauma n\'est pas un permis d\'amitié.)')
+            : trT('your monologue exceeded its time limit. verdict: O(bonk).', 'ton monologue a dépassé son temps limite. verdict : O(bonk).'), 2200, () => setTimeout(() => {
+            typeInto(hbub, trT('locks? DELETED. puzzles? SKIPPED. you enter by the FRONT door — my honored guest ♡', 'verrous ? SUPPRIMÉS. énigmes ? SAUTÉES. tu entres par la GRANDE porte — invité·e d\'honneur ♡'), 3000, () => setTimeout(curtains, year1997 ? 3600 : 1000));
+          }, 1000));
         }, 1200);
       };
       const doCharge = () => {
@@ -23016,7 +23151,10 @@ document.addEventListener('DOMContentLoaded', () => {
       }, 900);
       timers.forEach(clearTimeout);
       // the backstory dies of exposition LIVE: freeze the villain's
-      // typewriter mid-word — the cursor becomes the em-dash it earned
+      // typewriter mid-word — the cursor becomes the em-dash it earned.
+      // the frozen flag also disarms any in-flight rage-resume timer:
+      // a bonked villain does not get to un-freeze itself 1.6s later
+      stage.__villainFrozen = 1;
       if (vbub.__typeTimer) { clearInterval(vbub.__typeTimer); vbub.__typeTimer = null; vbub.textContent = vbub.textContent.replace('▌', '—'); }
     }, heroAt);
     // curtains: the site itself is the after-credits scene. reached by the
