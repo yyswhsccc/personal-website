@@ -10924,64 +10924,159 @@ document.addEventListener('DOMContentLoaded', () => {
     ['counting errors: too many. recounting.', 'décompte des erreurs : trop. on recompte.'],
     ['everything is fine. citation needed.', 'tout va bien. référence nécessaire.']
   ];
-  function dwBsodSwarm() {
-    if (!dreamWorld) return;
-    dreamSay(["zzz… they're multiplying faster… than I can hug…", 'zzz… elles se multiplient plus vite… que mes câlins…'], 4200);
-    const N = Math.max(18, Math.min(30, Math.round((window.innerWidth * window.innerHeight) / 38000)));
-    let when = 0;
-    for (let i = 0; i < N; i++) {
-      when += Math.max(70, 260 - i * 9); // accelerating panic
-      dT(() => {
-        if (!dreamWorld) return;
-        playTone(220 + i * 16, 'square', 0.045, 0, 0.028);
-        const ln = DW_BSOD_SWARM_LINES[i % DW_BSOD_SWARM_LINES.length];
-        const d = dreamDlg({
-          // the hydra's sixteen were #7–#22; the swarm keeps counting
-          title: trT('error #', 'erreur nº ') + (i + 23), force: true, cls: 'dream-dlg-err dream-dlg-mini',
-          x: 8 + Math.random() * Math.max(60, window.innerWidth - 248),
-          y: 44 + Math.random() * Math.max(80, window.innerHeight - 240),
-          lines: [trT(...ln)], buttons: []
-        });
-        if (d) d.style.transform = 'rotate(' + (Math.random() * 7 - 3.5).toFixed(1) + 'deg)';
-      }, when);
+  /* v98.5: act three, final form — THE FLOOD. errors pop faster and
+     faster, BIGGER and bigger, then a carpet pass tiles the viewport
+     until not a sliver of blue survives. then TEN SECONDS of freedom:
+     close one and five more burst out elsewhere (totals run into the
+     hundreds). then the blue pixel slime HERO marches through with
+     the whole pikmin crew and closes every last window on the way. */
+  function dwBsodSwarmClose(dlg) {
+    const f = dreamWorld && dreamWorld.flags;
+    try { dlg.remove(); } catch (e) { /* pre-collected */ }
+    if (!f || f.bsodSwarmMode === 'parade' || f.bsodSwarmMode === 'done') return;
+    playTone(760, 'square', 0.05, 0, 0.04);
+    if (!f.bsodTaunted) {
+      f.bsodTaunted = 1;
+      showToast(trT('you closed one. five more arrived. this is how it works now ♡', 'tu en as fermé une. cinq de plus sont arrivées. c\'est comme ça maintenant ♡'), { scroll: true });
     }
-    dT(dwBsodSweepClean, when + 1300);
+    for (let i = 0; i < 5; i++) dT(() => dwBsodSpawnErr(1.1), i * 60);
   }
-  function dwBsodSweepClean() {
-    if (!dreamWorld) return;
-    const DUR = 2400; // must match the .bsod-sweep animation duration
-    const bar = document.createElement('div');
-    bar.className = 'bsod-sweep';
-    const lb = document.createElement('span');
-    lb.textContent = trT('CHKDSK /feelings — collecting errors…', 'CHKDSK /sentiments — collecte des erreurs…');
-    bar.appendChild(lb);
-    document.body.appendChild(bar);
-    dN(bar);
-    playDreamHum();
-    [...document.querySelectorAll('.dream-dlg')].forEach((d) => {
-      const y = Math.max(0, d.getBoundingClientRect().top);
-      const at = 120 + (y / window.innerHeight) * (DUR - 300);
-      dT(() => {
-        if (!document.body.contains(d)) return;
-        d.classList.add('dream-dlg-zap');
-        playTone(420 + (1 - y / window.innerHeight) * 500, 'triangle', 0.06, 0, 0.035);
-        const r = d.getBoundingClientRect();
-        const h = document.createElement('span');
-        h.className = 'bsod-zap-heart';
-        h.textContent = '💙';
-        h.style.left = (r.left + r.width / 2) + 'px';
-        h.style.top = (r.top + r.height / 2) + 'px';
-        document.body.appendChild(h);
-        dN(h);
-        h.addEventListener('animationend', () => h.remove());
-        dT(() => { try { d.remove(); } catch (e) { /* collected twice */ } }, 230);
-      }, at);
+  function dwBsodSpawnErr(sizeMul, fixed) {
+    if (!dreamWorld) return null;
+    const f = dreamWorld.flags;
+    if (document.querySelectorAll('.dream-dlg').length > 480) return null; // the screen has limits, technically
+    f.bsodSwarmTotal = (f.bsodSwarmTotal || 0) + 1;
+    const n = f.bsodSwarmTotal;
+    // windows grow as the panic does
+    const W = Math.round(Math.min(430, (170 + Math.min(200, n * 2.2)) * (sizeMul || 1) + Math.random() * 46));
+    const x = fixed ? fixed.x : -W * 0.15 + Math.random() * Math.max(60, window.innerWidth - W * 0.7);
+    const y = fixed ? fixed.y : 30 + Math.random() * Math.max(60, window.innerHeight - 140);
+    const ln = DW_BSOD_SWARM_LINES[n % DW_BSOD_SWARM_LINES.length];
+    const d = dreamDlg({
+      // the hydra's sixteen were #7–#22; the flood keeps counting
+      title: trT('error #', 'erreur nº ') + (n + 22), force: true, cls: 'dream-dlg-err dream-dlg-mini',
+      x: Math.max(-40, x), y: Math.max(30, y),
+      lines: [trT(...ln)], buttons: [], onX: dwBsodSwarmClose
     });
+    if (d) {
+      d.style.width = W + 'px';
+      d.style.transform = 'rotate(' + (Math.random() * 6 - 3).toFixed(1) + 'deg)';
+    }
+    return d;
+  }
+  function dwBsodSwarm() {
+    if (!dreamWorld || dreamWorld.flags.bsodSwarmMode) return;
+    const f = dreamWorld.flags;
+    f.bsodSwarmMode = 'flood';
+    dreamSay(["zzz… they're multiplying faster… than I can hug…", 'zzz… elles se multiplient plus vite… que mes câlins…'], 4200);
+    let step = 0;
+    const loop = () => {
+      if (!dreamWorld || f.bsodSwarmMode !== 'flood') return;
+      const batch = 1 + Math.floor(step / 12); // waves grow
+      for (let b = 0; b < batch; b++) {
+        playTone(240 + step * 9 + b * 20, 'square', 0.04, 0, 0.026);
+        dwBsodSpawnErr();
+      }
+      step++;
+      if (step < 44) { dT(loop, Math.max(28, 220 - step * 6)); return; } // faster and faster
+      dwBsodCarpet();
+    };
+    loop();
+  }
+  // the no-gap pass: tile the whole viewport, edge to edge, so not a
+  // sliver of blue survives — then hold still for ten seconds
+  function dwBsodCarpet() {
+    if (!dreamWorld) return;
+    const f = dreamWorld.flags;
+    const cw = 128, ch = 112;
+    const cols = Math.ceil(window.innerWidth / cw) + 1;
+    const rows = Math.ceil(window.innerHeight / ch) + 1;
+    let k = 0;
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        dT(() => {
+          if (!dreamWorld) return;
+          dwBsodSpawnErr(1, { x: c * cw - 40 + Math.random() * 24, y: r * ch - 24 + Math.random() * 18 });
+          if ((c + r) % 4 === 0) playTone(320 + (r * cols + c) * 5, 'square', 0.03, 0, 0.02);
+        }, k * 26);
+        k++;
+      }
+    }
     dT(() => {
-      try { bar.remove(); } catch (e) { /* the pass ended */ }
-      showToast(trT('errors collected: ALL of them. cuteness: 100% (briefly)', 'erreurs collectées : TOUTES. mignonnerie : 100 % (brièvement)'), { scroll: true });
-      dT(dwBsodFinale, 1100);
-    }, DUR + 500);
+      if (!dreamWorld) return;
+      f.bsodSwarmMode = 'packed';
+      showToast(trT('⚠ no desktop detected. only errors. you have TEN seconds — click wisely ♡', '⚠ aucun bureau détecté. que des erreurs. tu as DIX secondes — clique bien ♡'), { scroll: true });
+      dT(dwBsodHeroParade, 10000); // the ten seconds of freedom
+    }, k * 26 + 400);
+  }
+  // the hero: the ACTUAL 14×14 pixel slime, in heroic blue
+  function dwBsodHeroCanvas() {
+    const cv = document.createElement('canvas');
+    cv.width = 112; cv.height = 112;
+    const x = cv.getContext('2d');
+    const ROWS = [
+      '......FF......', '.....F..F.....', '......FF......', '......S.......',
+      '....PPPPPP....', '..PPPPPPPPPP..', '.PwwPPPPPPPPP.', '.PwPPPPPPPPPP.',
+      'PPPeePPPPeePPP', 'PPbPPPPPPPPbPP', 'PPPPPPmmPPPPPP', 'PPPPPmmmmPPPPP',
+      '.PPPPPPPPPPPP.', '..DDDDDDDDDD..'];
+    const PAL = { P: '#5aa0ff', D: '#2a6fd6', w: '#dff0ff', e: '#0b2a6b', m: '#1d4fa8', b: '#8fc2ff', S: '#1d4fa8', F: '#4a86e8' };
+    ROWS.forEach((row, ry) => { for (let rx = 0; rx < row.length; rx++) { const ch = row[rx]; if (ch === '.') continue; x.fillStyle = PAL[ch] || PAL.P; x.fillRect(rx * 8, ry * 8, 8, 8); } });
+    return cv;
+  }
+  function dwBsodHeroParade() {
+    if (!dreamWorld) return;
+    const f = dreamWorld.flags;
+    f.bsodSwarmMode = 'parade';
+    playFanfare();
+    showToast(trT('🦸 the BLUE SLIME HERO has arrived — with the entire pikmin crew ♡', '🦸 le HÉROS SLIME BLEU est arrivé — avec toute l\'escouade pikmin ♡'), { scroll: true });
+    const par = document.createElement('div');
+    par.className = 'bsod-hero-parade';
+    const hero = dwBsodHeroCanvas();
+    hero.className = 'bsod-hero';
+    par.appendChild(hero);
+    ['🌱', '🌷', '🍃', '🌸', '🌱', '🍄', '🌼', '🌱', '🍃', '🌱'].forEach((p, i) => {
+      const s = document.createElement('span');
+      s.className = 'bsod-pik';
+      s.textContent = p;
+      s.style.animationDelay = (i * 0.11) + 's';
+      par.appendChild(s);
+    });
+    par.style.top = Math.round(window.innerHeight * 0.42) + 'px';
+    document.body.appendChild(par);
+    dN(par);
+    const x0 = -340, x1 = window.innerWidth + 360, DUR = 5200, t0 = Date.now();
+    let lastBeep = 0;
+    const iv = dI(() => {
+      const p = Math.min(1, (Date.now() - t0) / DUR);
+      const px = x0 + (x1 - x0) * p;
+      par.style.left = px + 'px';
+      // every window the parade front passes gets closed, heroically
+      document.querySelectorAll('.dream-dlg:not(.dream-dlg-zap)').forEach((d) => {
+        const r = d.getBoundingClientRect();
+        if (r.left + r.width / 2 < px + 60) {
+          d.classList.add('dream-dlg-zap');
+          const h = document.createElement('span');
+          h.className = 'bsod-zap-heart';
+          h.textContent = '💙';
+          h.style.left = (r.left + r.width / 2) + 'px';
+          h.style.top = (r.top + r.height / 2) + 'px';
+          document.body.appendChild(h);
+          dN(h);
+          h.addEventListener('animationend', () => h.remove());
+          setTimeout(() => { try { d.remove(); } catch (e) { /* saved twice */ } }, 200);
+        }
+      });
+      if (Date.now() - lastBeep > 260) { lastBeep = Date.now(); playTone(500 + p * 500, 'triangle', 0.05, 0, 0.03); }
+      if (p >= 1) {
+        clearInterval(iv);
+        try { par.remove(); } catch (e) { /* marched offstage */ }
+        f.bsodSwarmMode = 'done';
+        cheatFall(['💙', '🌱', '✦'], 20);
+        gainFollowers(2);
+        showToast(trT('the hero closed every window. all ' + (f.bsodSwarmTotal + 22) + ' of them. not one hug was skipped ♡ +2 fans', 'le héros a fermé toutes les fenêtres. les ' + (f.bsodSwarmTotal + 22) + '. pas un seul câlin n\'a été oublié ♡ +2 fans'), { scroll: true });
+        dT(dwBsodFinale, 1400);
+      }
+    }, 40);
   }
 
   // amber: the batch printer spits a fortune-cookie payslip you can read

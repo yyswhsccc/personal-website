@@ -9435,31 +9435,30 @@ html.dream-bsod .desktop-icon-btn[data-window="win-dreamlog"] {
 .dream-dlg-mini { width: min(232px, calc(100vw - 24px)); }
 .dream-dlg-mini .dream-dlg-body { padding: 6px 8px; font-size: 0.76rem; }
 .dream-dlg-mini .dream-dlg-bar { font-size: 0.74rem; padding: 2px 6px; }
-/* …and the CHKDSK /feelings pass that collects every error it crosses */
-.bsod-sweep {
+/* …and the HERO: the blue pixel slime marching through with the
+   pikmin crew, closing every window the parade front passes */
+.bsod-hero-parade {
   position: fixed;
-  left: 0;
-  right: 0;
-  top: -60px;
-  height: 44px;
-  z-index: 2695;
+  left: -340px;
+  z-index: 2697;
   pointer-events: none;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(180deg, rgba(64, 156, 255, 0), rgba(64, 156, 255, 0.35) 45%, #aee2ff 50%, rgba(64, 156, 255, 0.35) 55%, rgba(64, 156, 255, 0));
-  box-shadow: 0 0 24px rgba(120, 190, 255, 0.5);
-  animation: bsod-sweep-run 2.4s linear forwards;
+  align-items: flex-end;
+  gap: 10px;
 }
-.bsod-sweep span {
-  font-family: var(--font-pixel);
-  font-size: 0.8rem;
-  color: #03264d;
-  background: #aee2ff;
-  padding: 1px 8px;
-  border: 2px solid #03264d;
+.bsod-hero {
+  width: 84px;
+  height: 84px;
+  image-rendering: pixelated;
+  animation: bsod-hero-bob 0.5s ease-in-out infinite;
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 30, 0.5));
 }
-@keyframes bsod-sweep-run { to { transform: translateY(calc(100vh + 120px)); } }
+.bsod-pik {
+  font-size: 1.5rem;
+  animation: bsod-hero-bob 0.5s ease-in-out infinite;
+  filter: drop-shadow(0 3px 5px rgba(0, 0, 30, 0.4));
+}
+@keyframes bsod-hero-bob { 50% { transform: translateY(-9px); } }
 .dream-dlg-zap { animation: bsod-zap 0.24s ease-in forwards; pointer-events: none; }
 @keyframes bsod-zap { to { transform: scale(0.05) rotate(20deg); opacity: 0; } }
 .bsod-zap-heart {
