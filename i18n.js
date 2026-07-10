@@ -26,8 +26,6 @@ window.YOS_I18N = {
     'file.pikdex': 'pikdex.exe',
     'file.watch': 'wrist_link.exe',
     'file.album': 'photo_album.exe',
-    'file.watch': 'wrist_link.exe',
-    'file.album': 'photo_album.exe',
     'pikdex.footer.l': 'hue_wheel.sys — 50 segments, 0 trackers',
     'pikdex.footer.r': "gotta pluck 'em all ♡",
     'iv.intro': "The HR fairy sent you! Pick a slot in Yongshan's real availability below — once you confirm, both of you automatically receive a confirmation email. ♡",
@@ -367,6 +365,8 @@ window.YOS_I18N = {
     'lb.achv': '🏅 SUCCÈS',
     'lb.cloud': '💾 SAUVEGARDE CLOUD',
     'file.pikdex': 'pikdex.exe',
+    'file.watch': 'lien_poignet.exe',
+    'file.album': 'album_photo.exe',
     'pikdex.footer.l': 'roue_chromatique.sys — 50 segments, 0 traceur',
     'pikdex.footer.r': 'attrape-les tous (en douceur) ♡',
     'iv.intro': "La fée RH t'envoie ! Choisis un créneau dans les vraies disponibilités de Yongshan ci-dessous — dès confirmation, vous recevez tous les deux un courriel automatique. ♡",
@@ -726,7 +726,8 @@ window.YOS_DYN = {
       giddy: 'euphorique', refreshed: 'reposé', grumpy: 'grognon', carried: 'porté',
       bounced: 'rebondi', exhausted: 'épuisé', euphoric: 'euphorique', recovering: 'récupère',
       overstimulated: 'surstimulé', angelic: 'angélique', adored: 'adoré', stuffed: 'repu',
-      drained: 'vidé', 'show-off': 'frimeur', 'snack radar ON': 'radar à snacks ON'
+      drained: 'vidé', 'show-off': 'frimeur', 'snack radar ON': 'radar à snacks ON',
+      bop: 'bop', choreo: 'choré', conductor: "chef d'orchestre", disco: 'disco', recovered: 'remis'
     }
   }
 };

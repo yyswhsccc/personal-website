@@ -391,7 +391,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // v5.2: slamming the arcade shut right after the post-curfew dream
     // ambush — without ever pressing start — is an answer. the slime
     // hears it, takes it well, and writes it down (see swArcadeRejected)
-    if (win.id === 'win-game' && swRejectUntil && Date.now() < swRejectUntil && GAME.state === 'ad') swArcadeRejected();
+    // "without ever pressing start" = still on the attract screen: 'idle'.
+    // (the old check said 'ad' — a state only the revive commercial can reach,
+    //  so the mercy ticker never actually ticked)
+    if (win.id === 'win-game' && swRejectUntil && Date.now() < swRejectUntil && GAME.state === 'idle') swArcadeRejected();
+    // a chameleon dossier left open would keep hue-cycling behind a closed window
+    if (win.id === 'win-pikdex' && typeof pikProfileTimer !== 'undefined' && pikProfileTimer) { clearInterval(pikProfileTimer); pikProfileTimer = null; }
     playCloseSound();
     win.classList.add('window-closed');
     win.classList.remove('window-active');
@@ -415,11 +420,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (win.id === 'win-game' && typeof gameCamExit === 'function') gameCamExit();
     if (win.id === 'win-game' && typeof gameUnrotate === 'function') gameUnrotate();
+    if (win.id === 'win-pikdex' && typeof pikProfileTimer !== 'undefined' && pikProfileTimer) { clearInterval(pikProfileTimer); pikProfileTimer = null; }
     if (win.id === 'win-interview') {
       win.classList.remove('window-itv-modal');
       if (win._homeParent) win._homeParent.insertBefore(win, win._homeNext || null);
       const veil = document.getElementById('itv-backdrop');
       if (veil) veil.remove();
+      // minimizing is also "done booking" — closeWindow un-freezes the
+      // runner here, and leaving itvPause armed would freeze it forever
+      try {
+        if (GAME && GAME.itvPause) {
+          GAME.itvPause = false;
+          if (typeof fxInvincible === 'function') fxInvincible(2.5);
+          if (typeof gToast === 'function') gToast(['▶ resumed!! good luck with the interview ♡', '▶ reprise !! bonne chance pour l\'entretien ♡'], 170);
+        }
+      } catch (e) { /* game not booted */ }
     }
     playCloseSound();
     win.classList.add('window-minimized');
@@ -506,7 +521,10 @@ document.addEventListener('DOMContentLoaded', () => {
         startY = clientY;
 
         const rect = win.getBoundingClientRect();
-        const parentRect = win.offsetParent.getBoundingClientRect();
+        // offsetParent is null while a window rides position:fixed
+        // (itv-modal / door mode) — fall back to the viewport origin
+        const pEl = win.offsetParent;
+        const parentRect = pEl ? pEl.getBoundingClientRect() : { left: 0, top: 0 };
 
         initialLeft = rect.left - parentRect.left;
         initialTop = rect.top - parentRect.top;
@@ -608,6 +626,9 @@ document.addEventListener('DOMContentLoaded', () => {
           focusWindow(win);
           // the live room sent the pet home on minimize — bring it back on stage
           if (win.id === 'win-live' && typeof liveEnter === 'function') setTimeout(liveEnter, 120);
+          // same story for the arcade: minimize sent the reaction cam home,
+          // so the handheld's companion screen needs its slime re-seated
+          if (win.id === 'win-game' && typeof gameCamEnter === 'function') setTimeout(gameCamEnter, 120);
         }
       });
 
@@ -998,13 +1019,16 @@ document.addEventListener('DOMContentLoaded', () => {
     return o;
   }
 
-  function wearOutfit(outfit, announce, tries = 0) {
+  var wearGen = 0; // retries carry their generation — a stale one never dresses the pet
+  function wearOutfit(outfit, announce, tries = 0, gen = null) {
+    if (gen === null) gen = ++wearGen; // fresh intent claims the wardrobe
+    else if (gen !== wearGen) return;  // a newer fit won while we were retrying
     let frames = null;
     // toDataURL can throw on tainted canvases (e.g. file:// image loads) —
     // never let a wardrobe hiccup escape into whatever called us
     try { frames = composeOutfit(outfit); } catch (e) { frames = null; tries += 7; }
     if (!frames) {
-      if (tries < 21) setTimeout(() => wearOutfit(outfit, announce, tries + 1), 600);
+      if (tries < 21) setTimeout(() => wearOutfit(outfit, announce, tries + 1, gen), 600);
       return; // give up gracefully — the bare base sprite still works
     }
     currentOutfit = outfit;
@@ -1442,7 +1466,9 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function runSlimeLoop() {
-    if (!slimeBody || pet.sleeping || pet.busy || isGrabbing) {
+    // pet.dizzy too: the overstim sequence sets scheduleNext:false, but a
+    // wander tick armed BEFORE the dizziness still fires mid-spin — wait it out
+    if (!slimeBody || pet.sleeping || pet.busy || pet.dizzy || isGrabbing) {
       pauseSlimeLoop(1200);
       return;
     }
@@ -2079,10 +2105,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const emailToast = document.getElementById('email-toast');
   const emailVal = 'yuyongshan573@gmail.com';
   let toastTimer = null;
+  let toastHideTimer = null; // the 300ms fade tail — stale, it re-hides a fresh toast
 
   function showToast(text) {
     if (!emailToast) return;
     emailToast.textContent = text;
+    if (toastHideTimer) { clearTimeout(toastHideTimer); toastHideTimer = null; }
     emailToast.classList.remove('toast-hidden');
     void emailToast.offsetWidth;
     emailToast.classList.add('toast-show');
@@ -2090,7 +2118,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (toastTimer) clearTimeout(toastTimer);
     toastTimer = setTimeout(() => {
       emailToast.classList.remove('toast-show');
-      setTimeout(() => emailToast.classList.add('toast-hidden'), 300);
+      toastHideTimer = setTimeout(() => emailToast.classList.add('toast-hidden'), 300);
     }, 3000);
   }
 
@@ -2500,9 +2528,11 @@ document.addEventListener('DOMContentLoaded', () => {
   let amaFanAt = 0; // fans grow at most once per 30s — no farming the bot
 
   function amaAsk(question) {
-    try { achvBump('asks'); } catch (e) { /* pre-achv boot */ }
     const q = question.trim();
     if (!q || amaBusy || !amaFeed) return;
+    // count only questions that actually land — empty/mid-answer submits
+    // used to farm the asks3/asks15/asks50 badges without asking a thing
+    try { achvBump('asks'); } catch (e) { /* pre-achv boot */ }
     amaBusy = true;
 
     playClickSound();
@@ -2535,6 +2565,9 @@ document.addEventListener('DOMContentLoaded', () => {
     amaForm.addEventListener('submit', (e) => {
       e.preventDefault();
       const q = amaInput.value;
+      // bot mid-answer? keep the draft — clearing first silently ate the
+      // question amaAsk was about to reject
+      if (!q.trim() || amaBusy) return;
       amaInput.value = '';
       amaAsk(q);
     });
@@ -2575,6 +2608,9 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function termLink(text, href) {
+    // pipelines capture stdout — a link line must flow through the pipe as
+    // text like everything else, not leak into the DOM mid-pipe
+    if (termCapture) { termCapture.push(String(text)); return; }
     if (!termOut) return;
     const wrap = document.createElement('span');
     wrap.className = 't-line';
@@ -2901,7 +2937,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const j = LOADER_JOKES[Math.floor(Math.random() * LOADER_JOKES.length)];
       termLine(trT(j[0], j[1]), 't-accent');
     },
-    date() { termLine(new Date().toString(), 't-ok'); },
+    /* (duplicate `date` retired — the locale-aware EN/FR one above answers) */
     cal() {
       const now = new Date();
       const y = now.getFullYear(), m = now.getMonth();
@@ -3267,7 +3303,8 @@ document.addEventListener('DOMContentLoaded', () => {
     /* — internet physics, 31-42 — */
     'do a barrel roll':   ['🛩 aileron roll, technically.', '🛩 tonneau barriqué, techniquement.', 'barrel'],
     'barrel roll':        ['🛢 fine. one roll.', '🛢 bon. un seul tonneau.', 'barrel'],
-    'flip':               ['🤸 wheee.', '🤸 wouiii.', 'barrel'],
+    /* 'flip' retired as a spell — it was shadowing the help-advertised
+       TERM_COMMANDS.flip (australia mode); the roll keeps two incantations */
     'matrix':             ['🐇 follow the pink rabbit.', '🐇 suis le lapin rose.', 'matrix'],
     'sunset':             ['🌇 the 9PM ceremony, on demand.', '🌇 la cérémonie de 21h, à la demande.', 'sunset'],
     'sunrise':            ['🌅 the goose handles the honking.', '🌅 l\'oie s\'occupe du klaxon.', 'sunrise'],
@@ -3828,24 +3865,32 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (!navigator.onLine) return Promise.resolve(null);
     if (achvCountsPending) return achvCountsPending;
-    // polite census: max 8 requests in flight instead of ~140 at once
-    const ids = ACHV.map((a) => a.id);
+    // polite census, v2: the hall only ever DISPLAYS counts on unlocked
+    // cards, so only those counters are worth asking about — a fresh
+    // visitor costs ~5 requests, not ~140. paced under the counter API's
+    // burst limit (the old 8-wide stampede got everything past #6 a 429).
+    const got = store.get('yos-achv', {});
+    const ids = ACHV.filter((a) => got[a.id]).map((a) => a.id);
     const vals = new Array(ids.length).fill(0);
     let next = 0;
+    let missed = false; // any 429/network miss taints the census
     const worker = () => {
       const i = next++;
       if (i >= ids.length) return Promise.resolve();
       return fetch(`${ACHV_API}/get/${ACHV_NS}/achv-${ids[i]}`)
-        .then((r) => (r.ok ? r.json() : { value: 0 }))
+        .then((r) => { if (!r.ok && r.status !== 404) missed = true; return r.ok ? r.json() : { value: 0 }; })
         .then((d) => { vals[i] = Math.max(0, Number(d.value) || 0); })
-        .catch(() => { vals[i] = 0; })
+        .catch(() => { missed = true; vals[i] = 0; })
+        .then(() => new Promise((res) => setTimeout(res, 350)))
         .then(worker);
     };
-    achvCountsPending = Promise.all(Array.from({ length: 8 }, worker)).then(() => {
+    achvCountsPending = Promise.all(Array.from({ length: 2 }, worker)).then(() => {
       achvCounts = {};
       ids.forEach((id, i) => { achvCounts[id] = vals[i]; });
-      achvCountsAt = Date.now();
-      store.set('yos-achv-counts-cache', { at: achvCountsAt, counts: achvCounts });
+      // a tainted census is a rumor, not a record: never disk-cache it,
+      // and let the memory copy go stale in 30s so a reopen retries
+      achvCountsAt = missed ? Date.now() - 90000 : Date.now();
+      if (!missed) store.set('yos-achv-counts-cache', { at: achvCountsAt, counts: achvCounts });
       achvCountsPending = null;
       return achvCounts;
     }).catch(() => { achvCountsPending = null; return null; });
@@ -3922,10 +3967,11 @@ document.addEventListener('DOMContentLoaded', () => {
   var cloudLastPacked = -1;
 
   function achvBits() {
-    const got = store.get('yos-achv', {});
-    let bits = 0;
-    ACHV.forEach((a, i) => { if (got[a.id]) bits += Math.pow(2, i); });
-    return bits;
+    // main-slot wire format: bits 0-17 ONLY (SAVE_B_HI = 2^18 sits right
+    // above). bits 18+ travel in the annex counters — packing them here
+    // bleeds into the hi/ch/fn fields and, past 2^53, melts the float
+    // into scientific notation the backend rejects outright.
+    return achvBitsRange(0, 18);
   }
 
   function cheatCensus() {
@@ -4069,9 +4115,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const renames = store.get('yos-cheat-renames', {});
     const s = Object.keys(renames).slice(0, 6).map((k) => (k + '|' + renames[k]).toLowerCase()).join('~').slice(0, 120);
     const chunks = [];
-    for (let i = 0; i < s.length; i += 10) {
+    // 9 chars/counter, not 10: a hot chunk at base 40 is ~40^10 ≈ 1.05e16,
+    // just past 2^53 — the float eats the low digits and the spell garbles.
+    // decode never cared about chunk width, so old saves still read fine.
+    for (let i = 0; i < s.length; i += 9) {
       let v = 0;
-      const part = s.slice(i, i + 10);
+      const part = s.slice(i, i + 9);
       for (let j = 0; j < part.length; j++) {
         const ix = Math.max(0, CLOUD_ALPHA.indexOf(part[j]));
         v = v * 40 + ix + 1; // +1 so leading spaces survive
@@ -4231,17 +4280,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const piks = pikdexEncodeChunks();
     // b4 widened from (118, 138) to (118, 168): the patch achievements push ACHV to 142,
     // past the old annex ceiling — the pull loop already walks 50 bits so only the pack changes
+    // b5 opens (168, 218): the wrist/photo/rescue era pushed ACHV to 177 and the
+    // 9 newest badges were falling off the wire. append-only, like b4 before it.
     const pcs = (typeof pikCountsEncode === 'function') ? pikCountsEncode() : [];
     // wst: one compact counter the WATCH client reads — fans + plucks + wheel%
     const wst = 1 + Math.min(pet.followers || 0, 99999)
       + 100000 * Math.min((typeof pikCountTotal === 'function') ? pikCountTotal() : 0, 9999)
       + 1000000000 * Math.min(100, (typeof pikdexWheelPct === 'function') ? pikdexWheelPct(pikdexGet()) : 0);
-    const payload = [achvBitsRange(18, 68), achvBitsRange(68, 118), achvBitsRange(118, 168), spells.length, piks.n, 2].concat(spells).concat(piks.chunks).concat(pcs).concat([wst]);
+    const payload = [achvBitsRange(18, 68), achvBitsRange(68, 118), achvBitsRange(118, 168), spells.length, piks.n, 2].concat(spells).concat(piks.chunks).concat(pcs).concat([wst, achvBitsRange(168, 218)]);
     const sig = payload.join(',');
     if (sig === cloudExtraLast) return;
     let p = cloudSet(`sv2-${u}-b2`, payload[0])
       .then(() => cloudSet(`sv2-${u}-b3`, payload[1]))
       .then(() => cloudSet(`sv2-${u}-b4`, payload[2]))
+      .then(() => cloudSet(`sv2-${u}-b5`, achvBitsRange(168, 218)))
       .then(() => cloudSet(`sv2-${u}-spn`, spells.length))
       .then(() => cloudSet(`sv2-${u}-pkn`, piks.n))
       .then(() => cloudSet(`sv2-${u}-pkv`, 3)); // wire-format version (v3 = 24-skill pack)
@@ -4255,9 +4307,9 @@ document.addEventListener('DOMContentLoaded', () => {
   function cloudExtraPull() {
     if (!cloudSlot) return;
     const u = cloudSlot.uid;
-    Promise.all([cloudGet(`sv2-${u}-b2`), cloudGet(`sv2-${u}-b3`), cloudGet(`sv2-${u}-b4`), cloudGet(`sv2-${u}-spn`), cloudGet(`sv2-${u}-pkn`), cloudGet(`sv2-${u}-pkv`), cloudGet(`sv2-${u}-pcn`)])
-      .then(([b2, b3, b4, spn, pkn, pkv, pcn]) => {
-        [[b2, 18], [b3, 68], [b4, 118]].forEach(([bits, off]) => {
+    Promise.all([cloudGet(`sv2-${u}-b2`), cloudGet(`sv2-${u}-b3`), cloudGet(`sv2-${u}-b4`), cloudGet(`sv2-${u}-spn`), cloudGet(`sv2-${u}-pkn`), cloudGet(`sv2-${u}-pkv`), cloudGet(`sv2-${u}-pcn`), cloudGet(`sv2-${u}-b5`)])
+      .then(([b2, b3, b4, spn, pkn, pkv, pcn, b5]) => {
+        [[b2, 18], [b3, 68], [b4, 118], [b5, 168]].forEach(([bits, off]) => {
           for (let i = 0; bits > 0 && i < 50; i++) {
             if (Math.floor(bits / Math.pow(2, i)) % 2 === 1 && ACHV[off + i]) achvUnlock(ACHV[off + i].id, true, true);
           }
@@ -4268,7 +4320,7 @@ document.addEventListener('DOMContentLoaded', () => {
             .then((vals) => { if (typeof pikCountsMergeRemote === 'function') pikCountsMergeRemote(vals); }));
         }
         if (spn > 0) {
-          jobs.push(Promise.all(Array.from({ length: Math.min(spn, 12) }, (_, j) => cloudGet(`sv2-${u}-sp${j}`)))
+          jobs.push(Promise.all(Array.from({ length: Math.min(spn, 14) }, (_, j) => cloudGet(`sv2-${u}-sp${j}`))) // 14: 120 chars ÷ 9/chunk
             .then((vals) => {
               const remote = spellDecode(vals);
               const local = store.get('yos-cheat-renames', {});
@@ -4681,6 +4733,46 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
+    // ---- nightmare MELTDOWN: the shell is a triage desk. all input is a fix
+    // attempt. this desk sits ABOVE the dream-shell seal on purpose: the melt
+    // fires INSIDE dreams (the hotfix badge literally says so), and a sealed
+    // shell would leave the visitor draining with no counterplay ----
+    if (GAME && GAME.nm && GAME.nm.attack && GAME.nm.attack.kind === 'melt' && GAME.nm.attack.melt) {
+      const mAtk = GAME.nm.attack;
+      const flat = lower.replace(/[\s;`'"]+/g, '');
+      if (mAtk.melt.answers.indexOf(flat) !== -1) {
+        nmMeltHeal(mAtk);
+        termLine(trT('✔ HOTFIX MERGED. the site snaps back like nothing happened. CI is crying (happy).', '✔ CORRECTIF FUSIONNÉ. le site se remet d\'un coup. la CI pleure (de joie).'), 't-ok');
+        nmResolveAttack(3, '🧯 15-second hotfix!!', '🧯 correctif en 15 secondes !!');
+        achvUnlock('hotfix');
+        return;
+      }
+      if (lower === 'yongshan') {
+        nmMeltHeal(mAtk);
+        termLine(trT('⚡ THE SKELETON KEY force-merges reality. the linter looks away, out of respect.', '⚡ LE PASSE-PARTOUT force-merge la réalité. le linter détourne le regard, par respect.'), 't-ok');
+        nmResolveAttack(2, '⚡ force-merged!!', '⚡ fusion forcée !!');
+        if (typeof pikParade === 'function') pikParade();
+        return;
+      }
+      const secsLeft = Math.max(0, (mAtk.deadline - GAME.frame) / 60).toFixed(1);
+      if (lower === 'hint' || lower === 'help' || lower === 'man' || lower === 'sos') {
+        termLine('   ' + mAtk.melt.dream, 't-err');
+        (mAtk.melt.art || []).forEach((l) => termLine('   ' + l, 't-dim'));
+        termLine('⛑ ' + mAtk.melt.task + '  (' + secsLeft + 's)', 't-accent');
+        return;
+      }
+      mAtk.tries = (mAtk.tries || 0) + 1;
+      const NOPE = [
+        trT('✗ prod is still (adorably) on fire. ' + secsLeft + 's.', '✗ la prod brûle toujours (adorablement). ' + secsLeft + ' s.'),
+        trT('✗ the linter frowns, but believes in you. ' + secsLeft + 's.', '✗ le linter fronce les sourcils, mais croit en toi. ' + secsLeft + ' s.'),
+        trT('✗ nope!! somewhere, a CI pipeline giggles. ' + secsLeft + 's.', '✗ non !! quelque part, une CI pouffe. ' + secsLeft + ' s.'),
+        trT('✗ close, maybe? the smoke says no. ' + secsLeft + 's.', '✗ presque, peut-être ? la fumée dit non. ' + secsLeft + ' s.')
+      ];
+      termLine(NOPE[Math.floor(Math.random() * NOPE.length)], 't-err');
+      if (mAtk.tries === 2) termLine(trT('   (stuck? `hint` reprints the ticket. `yongshan` force-merges — the dev\'s privilege.)', '   (bloqué·e ? `hint` réaffiche le ticket. `yongshan` force-merge — privilège de la dev.)'), 't-dim');
+      return;
+    }
+
     // ---- v83: dream shell — while the site dreams, the waking shell is
     // sealed. only the current world's 21-word dialect gets through. ----
     if (dreamWorld && DREAM_SHELL[dreamWorld.id]) { dreamShellRun(cmd); return; }
@@ -4807,52 +4899,18 @@ document.addEventListener('DOMContentLoaded', () => {
       if (door.tries === 6) matrixGreeterSay(trT('the key is literally her name. I cannot be clearer without RUNNING it for you.', 'la clé est littéralement son nom. je ne peux pas être plus clair sans la TAPER pour toi.'));
     }
 
-    // ---- nightmare MELTDOWN: the shell is a triage desk. all input is a fix attempt ----
-    if (GAME && GAME.nm && GAME.nm.attack && GAME.nm.attack.kind === 'melt' && GAME.nm.attack.melt) {
-      const mAtk = GAME.nm.attack;
-      const flat = lower.replace(/[\s;`'"]+/g, '');
-      if (mAtk.melt.answers.indexOf(flat) !== -1) {
-        nmMeltHeal(mAtk);
-        termLine(trT('✔ HOTFIX MERGED. the site snaps back like nothing happened. CI is crying (happy).', '✔ CORRECTIF FUSIONNÉ. le site se remet d\'un coup. la CI pleure (de joie).'), 't-ok');
-        nmResolveAttack(3, '🧯 15-second hotfix!!', '🧯 correctif en 15 secondes !!');
-        achvUnlock('hotfix');
-        return;
-      }
-      if (lower === 'yongshan') {
-        nmMeltHeal(mAtk);
-        termLine(trT('⚡ THE SKELETON KEY force-merges reality. the linter looks away, out of respect.', '⚡ LE PASSE-PARTOUT force-merge la réalité. le linter détourne le regard, par respect.'), 't-ok');
-        nmResolveAttack(2, '⚡ force-merged!!', '⚡ fusion forcée !!');
-        if (typeof pikParade === 'function') pikParade();
-        return;
-      }
-      const secsLeft = Math.max(0, (mAtk.deadline - GAME.frame) / 60).toFixed(1);
-      if (lower === 'hint' || lower === 'help' || lower === 'man' || lower === 'sos') {
-        termLine('   ' + mAtk.melt.dream, 't-err');
-        (mAtk.melt.art || []).forEach((l) => termLine('   ' + l, 't-dim'));
-        termLine('⛑ ' + mAtk.melt.task + '  (' + secsLeft + 's)', 't-accent');
-        return;
-      }
-      mAtk.tries = (mAtk.tries || 0) + 1;
-      const NOPE = [
-        trT('✗ prod is still (adorably) on fire. ' + secsLeft + 's.', '✗ la prod brûle toujours (adorablement). ' + secsLeft + ' s.'),
-        trT('✗ the linter frowns, but believes in you. ' + secsLeft + 's.', '✗ le linter fronce les sourcils, mais croit en toi. ' + secsLeft + ' s.'),
-        trT('✗ nope!! somewhere, a CI pipeline giggles. ' + secsLeft + 's.', '✗ non !! quelque part, une CI pouffe. ' + secsLeft + ' s.'),
-        trT('✗ close, maybe? the smoke says no. ' + secsLeft + 's.', '✗ presque, peut-être ? la fumée dit non. ' + secsLeft + ' s.')
-      ];
-      termLine(NOPE[Math.floor(Math.random() * NOPE.length)], 't-err');
-      if (mAtk.tries === 2) termLine(trT('   (stuck? `hint` reprints the ticket. `yongshan` force-merges — the dev\'s privilege.)', '   (bloqué·e ? `hint` réaffiche le ticket. `yongshan` force-merge — privilège de la dev.)'), 't-dim');
-      return;
-    }
-
     // ---- the 100 secret codes check in before everything else ----
     const spellRenames = store.get('yos-cheat-renames', {});
+    // hasOwnProperty everywhere below: `constructor`/`toString`/`valueOf`
+    // are inherited truthy keys on EVERY object — unguarded, typing them
+    // printed prototype garbage as if it were a renamed spell
     const customCanonical = Object.keys(spellRenames).find((c) => spellRenames[c] === spellNorm(lower));
-    if (customCanonical && TERM_CHEATS[customCanonical]) {
+    if (customCanonical && Object.prototype.hasOwnProperty.call(TERM_CHEATS, customCanonical)) {
       fireCheat(customCanonical, true);
       return;
     }
-    if (TERM_CHEATS[lower]) {
-      if (spellRenames[lower]) {
+    if (Object.prototype.hasOwnProperty.call(TERM_CHEATS, lower)) {
+      if (Object.prototype.hasOwnProperty.call(spellRenames, lower)) {
         termLine(trT(`⚠ those words are dust. the slime god renamed this spell to \`${spellRenames[lower]}\` — at your request, remember?`, `⚠ ces mots sont poussière. le dieu slime a renommé ce sort en \`${spellRenames[lower]}\` — à ta demande, souviens-toi ?`), 't-err');
         return;
       }
@@ -4909,12 +4967,14 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!adminKey) { termLine(trT('wall: owner tools need `wall admin <secret>` first', 'wall : outils proprio — `wall admin <secret>` d\'abord'), 't-err'); return; }
       if (sub === 'rm' && parts[2]) {
         fetch(wallApi + '/photo/' + parts[2], { method: 'DELETE', headers: { Authorization: 'Bearer ' + adminKey } })
-          .then((r) => termLine(r.ok ? '🗑 removed' : 'refused (' + r.status + ')', r.ok ? 't-ok' : 't-err'));
+          .then((r) => termLine(r.ok ? '🗑 removed' : 'refused (' + r.status + ')', r.ok ? 't-ok' : 't-err'))
+          .catch(() => termLine('wall: unreachable', 't-err'));
         return;
       }
       if (sub === 'freeze' || sub === 'thaw') {
         fetch(wallApi + '/admin/' + sub, { method: 'POST', headers: { Authorization: 'Bearer ' + adminKey } })
-          .then((r) => termLine(r.ok ? (sub === 'freeze' ? '🧊 wall frozen' : '🟢 wall thawed') : 'refused (' + r.status + ')', r.ok ? 't-ok' : 't-err'));
+          .then((r) => termLine(r.ok ? (sub === 'freeze' ? '🧊 wall frozen' : '🟢 wall thawed') : 'refused (' + r.status + ')', r.ok ? 't-ok' : 't-err'))
+          .catch(() => termLine('wall: unreachable', 't-err'));
         return;
       }
       termLine('wall: status · admin <secret> · rm <id> · freeze · thaw', 't-dim');
@@ -5229,7 +5289,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    const handler = TERM_COMMANDS[cmd];
+    const handler = Object.prototype.hasOwnProperty.call(TERM_COMMANDS, cmd) ? TERM_COMMANDS[cmd] : null;
     if (handler) handler();
     else if (tryFuzzyCheat(lower)) { /* the slime god heard a near-spell and took over */ }
     else {
@@ -5346,7 +5406,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!pet.sleeping && !pet.busy) showBubble(trT('you\'ve saved me 10 times. I live in your bookmarks bar now.', 'tu m\'as sauvegardé 10 fois. j\'habite dans ta barre de favoris maintenant.'), 3000);
       } else if (saveClicks >= 5) {
         showToast(trT('the bookmark is now load-bearing', 'le marque-page est désormais porteur'));
-      } else if (saveClicks === 3) {
+      } else if (saveClicks >= 3) { // 3 AND 4 — click 4 must not demote back to the first-save line
         showToast(trT('I remember you. I never forgot ♡', 'je me souviens de toi. je n\'ai jamais oublié ♡'));
       } else if (saveClicks === 2) {
         showToast(trT('already saved!! double pinky promise', 'déjà sauvegardé !! double promesse jurée'));
@@ -6389,7 +6449,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const t0 = Date.now();
     const walkMs = 3600;
     let tick = 0;
+    const el = swEl; // identity badge: if swEl is nulled OR replaced, this walk is over
     const glide = setInterval(() => {
+      // woken mid-walk (cancelSleepwalk) or upstaged (a new walk took the
+      // sprite var): stop driving — untended, this throws every 40ms and
+      // clearInterval is never reached
+      if (swEl !== el) { clearInterval(glide); return; }
       const p = Math.min(1, (Date.now() - t0) / walkMs);
       const ease = p * p * (3 - 2 * p);
       swEl.style.left = (from.x + (to.x - from.x) * ease) + 'px';
@@ -6403,6 +6468,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 40);
   }
 
+  // the two anonymous curtain-call timeouts, now on the books: a walk
+  // cancelled (or upstaged by the dream ritual) must take them along,
+  // or a stale swFinish fires mid-ritual and fades the NEW walker
+  var swLingerTimer = null, swDiveTimer = null;
   function swArrive(target, isGame, directDive, scene) {
     // the sleepwalker "clicks" the feature open, still fast asleep —
     // unless it's already open (direct dives skip the doorbell)
@@ -6419,14 +6488,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (isGame) {
       // dive into the canvas and transmute into a power-up
-      setTimeout(() => {
+      swDiveTimer = setTimeout(() => {
         const cv = document.getElementById('game-canvas');
         const cr = cv ? cv.getBoundingClientRect() : null;
         if (cr && swEl) {
           const from = { x: parseFloat(swEl.style.left), y: parseFloat(swEl.style.top) };
           const to = { x: cr.left + cr.width * 0.3, y: cr.top + cr.height * 0.4 };
           const t0 = Date.now();
+          const el = swEl;
           const dive = setInterval(() => {
+            if (swEl !== el) { clearInterval(dive); return; } // woken or upstaged mid-dive
             const p = Math.min(1, (Date.now() - t0) / 1400);
             swEl.style.left = (from.x + (to.x - from.x) * p) + 'px';
             swEl.style.top = (from.y + (to.y - from.y) * p) + 'px';
@@ -6455,7 +6526,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => showBubble(trT('…did the room just lean? no? cool. cool cool cool.', '…la pièce vient de pencher, non ? non ? cool. très très cool.'), 4200, true), 2600);
         setTimeout(() => document.body.classList.remove('sw-tilt'), 25000);
       }
-      setTimeout(() => swFinish(false), hold);
+      swLingerTimer = setTimeout(() => swFinish(false), hold);
     }
   }
 
@@ -6481,6 +6552,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function cancelSleepwalk() {
     if (sleepwalkTimer) clearTimeout(sleepwalkTimer);
+    if (swLingerTimer) { clearTimeout(swLingerTimer); swLingerTimer = null; }
+    if (swDiveTimer) { clearTimeout(swDiveTimer); swDiveTimer = null; }
     if (swEl) { swEl.remove(); swEl = null; }
     sleepwalkActive = false;
   }
@@ -6642,7 +6715,20 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!ltr) c.classList.add('dream-critter-flip');
     if (opts.onClick) {
       c.classList.add('dream-critter-hot');
-      c.addEventListener('click', (e) => { e.stopPropagation(); opts.onClick(c); }, { once: true });
+      c.addEventListener('click', (e) => {
+        e.stopPropagation();
+        // reactions speak through the bubble — five of six critter spawns
+        // pass only a label, so their click lines were silently swallowed.
+        // build it on demand; if the handler stays quiet, it self-removes.
+        let bb = c.querySelector('.dream-critter-bubble');
+        if (!bb) {
+          bb = document.createElement('div');
+          bb.className = 'dream-critter-bubble';
+          c.appendChild(bb);
+        }
+        opts.onClick(c);
+        if (!bb.textContent) bb.remove();
+      }, { once: true });
     }
     document.body.appendChild(c);
     dN(c);
@@ -7443,6 +7529,9 @@ document.addEventListener('DOMContentLoaded', () => {
   function startDreamWalk(forceW) {
     const w = forceW || dreamPick();
     if (!w || dreamWorld) return;
+    // a feature-tour walk in progress yields the stage — otherwise its
+    // orphaned sprite keeps gliding while the ritual hijacks the swEl var
+    if (swEl || sleepwalkActive) cancelSleepwalk();
     sleepwalkActive = true;
     achvUnlock('dreamwatcher');
     const habitatRect = (typeof liveOpen !== 'undefined' && liveOpen && slimeBody)
@@ -7470,8 +7559,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const t0 = Date.now();
     const walkMs = 3200;
     let tick = 0;
+    const el = swEl; // identity badge — woken OR upstaged, the ritual stops
     const glide = setInterval(() => {
-      if (!swEl) { clearInterval(glide); sleepwalkActive = false; return; } // woken mid-ritual
+      if (swEl !== el) { clearInterval(glide); sleepwalkActive = false; return; } // woken mid-ritual
       const p = Math.min(1, (Date.now() - t0) / walkMs);
       const ease = p * p * (3 - 2 * p);
       swEl.style.left = (from.x + (to.x - from.x) * ease) + 'px';
@@ -7487,10 +7577,13 @@ document.addEventListener('DOMContentLoaded', () => {
           if (bb) bb.textContent = trT('zzz… the dream is getting… BIG…', 'zzz… le rêve devient… GRAND…');
         }
         setTimeout(() => {
-          if (!swEl) { sleepwalkActive = false; return; }
+          if (swEl !== el) { sleepwalkActive = false; return; }
           try { w.sfx(); } catch (e) { /* silent dreams are legal */ }
           dreamFlashIn(w);
           setTimeout(() => {
+            // woken during the flash: the dream never lands (the flash
+            // overlay self-removes, so aborting here leaves no debris)
+            if (swEl !== el) { sleepwalkActive = false; return; }
             swFinish(false);
             dreamBegin(w);
           }, 700);
@@ -8091,7 +8184,7 @@ document.addEventListener('DOMContentLoaded', () => {
           dsL('MSDOG.EXE loaded. he has found 0 files but he tried SO hard.', 'MSDOG.EXE chargé. il a trouvé 0 fichier mais il a essayé TRÈS fort.', 't-ok');
         } },
         y2k: { d: ['fast-forward to midnight, dec 31 1999', 'avance rapide vers minuit, 31 déc 1999'], fx() {
-          dsL('DEC 31 1999 — 23:59:57', 'ˇ31 DÉC 1999 — 23:59:57', 't-dim');
+          dsL('DEC 31 1999 — 23:59:57', '31 DÉC 1999 — 23:59:57', 't-dim');
           dT(() => dsL('23:59:58…', '23:59:58…', 't-dim'), 900);
           dT(() => dsL('23:59:59……', '23:59:59……', 't-err'), 1800);
           dT(() => { playGlitchSound(); dsFlash('ds-flash-white', 700); }, 2700);
@@ -9779,7 +9872,9 @@ document.addEventListener('DOMContentLoaded', () => {
             dT(() => { try { d.remove(); } catch (e) { /* fled */ } }, 1800);
           }
         }, true],
-        [trT('🥎 CATCH', '🥎 CAPTURER'), (d) => { playDreamPop(); gainFollowers(1); const body = d.querySelector('.dream-dlg-body'); if (body && body.children[1]) body.children[1].textContent = trT('> gotcha!! it joins the meadow ♡', '> attrapé !! il rejoint la prairie ♡'); dT(() => { try { d.remove(); } catch (e) {} }, 1600); }]
+        // keepOpen — the "gotcha!!" line needs its 1.6s on stage before the
+        // self-remove; without it the dlg closes instantly and eats the text
+        [trT('🥎 CATCH', '🥎 CAPTURER'), (d) => { playDreamPop(); gainFollowers(1); const body = d.querySelector('.dream-dlg-body'); if (body && body.children[1]) body.children[1].textContent = trT('> gotcha!! it joins the meadow ♡', '> attrapé !! il rejoint la prairie ♡'); dT(() => { try { d.remove(); } catch (e) {} }, 1600); }, true]
       ]
     });
     if (box) playDreamGB();
@@ -10619,14 +10714,14 @@ document.addEventListener('DOMContentLoaded', () => {
     { title: 'terminal.exe — slime_sh', url: 'yongshan.dev/terminal.exe', desc: 'Type help, neofetch, druid, or sudo hire yongshan. A hand-rolled shell.', win: 'win-terminal', k: 'terminal shell cli console bash hacker neofetch sudo' },
     { title: 'slime_run.exe — the offline runner game', url: 'yongshan.dev/slime_run.exe', desc: 'A pixel runner starring the slime. Space to jump. Works with zero internet, unlike most of modern software.', win: 'win-game', k: 'game play runner dino offline jump fun jeu jouer 游戏' },
     { title: 'education_awards.txt', url: 'yongshan.dev/education_awards.txt', desc: 'MSc AI at NTU Singapore (GPA 4.21/5.0) + BSc CS at University of Alberta, with Distinction (top 5%).', win: 'win-education', k: 'education degree university school gpa msc bsc ntu alberta master scholarship distinction études diplôme' },
-    { title: 'fan_wall.exe — people who ♥ this site', url: 'yongshan.dev/fan_wall.exe', desc: 'The avatar wall of everyone who clicked like. You could be on it in one click.', k: 'fan wall like heart love avatar popular 点赞 喜欢' },
+    { title: 'fan_wall.exe — people who ♥ this site', url: 'yongshan.dev/fan_wall.exe', desc: 'The avatar wall of everyone who clicked like. You could be on it in one click.', k: 'fan wall like heart love avatar popular 点赞 喜欢', go() { if (!wallOpen) toggleWall(); const el = document.getElementById('fan-wall'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } },
     { title: 'the slime — a production-grade virtual pet', url: 'yongshan.dev/slime.pet', desc: 'State machine, combo detection, drag physics, sprite frames, auto-nap health protocol. Also: adorable.', win: 'win-start-here', k: 'slime pet cute tamagotchi mascot 史莱姆 宠物 mignon' },
     { title: 'hall_of_slime.exe — global leaderboard', url: 'yongshan.dev/hall_of_slime.exe', desc: 'Local arcade top-10 plus a worldwide tier census. Where does your run rank?', win: 'win-leaderboard', k: 'leaderboard hiscore high score rank top hall record classement 排行榜 排名' },
     { title: 'pikdex.exe — the pikmin collection deck', url: 'yongshan.dev/pikdex.exe', desc: 'Every plucked buddy archived forever: tech names, CS techniques, and a 24-segment hue wheel to complete.', win: 'win-pikdex', k: 'pikdex pikmin collection deck hue wheel colour color roue chromatique collection 图鉴 收集' },
     { title: 'interview_scheduler.exe — book time with Yongshan', url: 'yongshan.dev/interview_scheduler.exe', desc: 'See her availability, pick a slot, both sides get emails. The HR fairy approves.', win: 'win-interview', k: 'interview hire schedule calendar meeting book entretien embauche 面试 日历 约' }
   ];
 
-  function makeSearchResult({ title, url, desc, win, href, sponsored }) {
+  function makeSearchResult({ title, url, desc, win, href, sponsored, go }) {
     const wrap = document.createElement('div');
     wrap.className = 'search-result' + (sponsored ? ' sr-sponsored' : '');
 
@@ -10646,7 +10741,8 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       titleEl = document.createElement('button');
       titleEl.type = 'button';
-      titleEl.addEventListener('click', () => { if (win) openWindow(win); });
+      // not every destination is a window — the fan wall is a sidebar widget
+      titleEl.addEventListener('click', () => { if (typeof go === 'function') go(); else if (win) openWindow(win); });
     }
     titleEl.className = 'sr-title';
     titleEl.textContent = title;
@@ -10758,7 +10854,9 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.type = 'button';
     btn.className = 'resto-vote resto-vote-' + kind;
     const voted = store.get('yos-resto-voted', {});
-    const count = () => restoBase(i, kind) + ((restoCounts && restoCounts[key]) || 0) + (voted[key] ? 0 : 0);
+    // before the census arrives, the visitor's own vote still counts for 1 —
+    // once counts load they already include it (locally bumped or via /hit)
+    const count = () => restoBase(i, kind) + (restoCounts ? (restoCounts[key] || 0) : (voted[key] ? 1 : 0));
     btn.textContent = `${trT(labelPair[0], labelPair[1])} ${count().toLocaleString()}`;
     if (voted[key]) btn.classList.add('voted');
     btn.addEventListener('click', () => {
@@ -10837,7 +10935,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // food query? Yongshan's Edmonton chart IS the whole page —
     // no site results, no web line, just the good eats
-    if (/restaurant|resto|food|eat|boba|hungry|餐厅|美食|吃|奶茶/i.test(query)) {
+    // (\b-anchored: "cr-eat-e", "f-eat-ures" and "rest-o-re" are not lunch —
+    //  unanchored, every query containing "eat"/"resto" got the menu)
+    if (/\b(restaurants?|restos?|food|eats?|eating|boba|hungry|dinner|lunch)\b|餐厅|美食|吃|奶茶/i.test(query)) {
       if (searchMeta) searchMeta.textContent = trT('10 hand-picked spots (0.0001s — all of them delicious)', '10 adresses choisies à la main (0,0001 s — toutes délicieuses)');
       searchResults.appendChild(renderRestoChart());
       return;
@@ -11049,6 +11149,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!active) return;
     // 2) a game mid-run pauses first — the SECOND Esc closes the window
     if (active.id === 'win-game' && typeof GAME !== 'undefined' && GAME.state === 'run' && !GAME.itvPause && !GAME.escPause) {
+      // an open encounter card owns this Esc (it answers "no") — pausing
+      // on the same press double-handled one keystroke
+      if (GAME.event) return;
       GAME.escPause = true;
       GAME.adT = 0;
       GAME.adSkit = Math.floor(Math.random() * 4);
@@ -11443,14 +11546,21 @@ document.addEventListener('DOMContentLoaded', () => {
       if (spread.length) {
         store.set('yos-tarot-spread', []);
         const names = [];
-        spread.forEach((s) => {
-          const c = TAROT[(s.i || 0) % TAROT.length];
-          if (!c) return;
-          const o = s.u ? c.up : c.dn;
-          try { o.fx(); } catch (e) { /* one card fumbled; the spread stands */ }
-          names.push(c.n[0] + (s.u ? '' : ' ⤵'));
-          GAME.decisions.push('fate:' + c.n[0] + (s.u ? ':up' : ':dn'));
-        });
+        // the lives<1 clamp below arrived too late: gSoftHit/fxLife call
+        // gGameOver() the INSTANT lives hit 0, mid-spread — one reversed
+        // Wheel on a 1-♥ run ended it at the gate. the gate flag makes
+        // both of them stay their hand while fate is still dealing.
+        GAME.fateGate = true;
+        try {
+          spread.forEach((s) => {
+            const c = TAROT[(s.i || 0) % TAROT.length];
+            if (!c) return;
+            const o = s.u ? c.up : c.dn;
+            try { o.fx(); } catch (e) { /* one card fumbled; the spread stands */ }
+            names.push(c.n[0] + (s.u ? '' : ' ⤵'));
+            GAME.decisions.push('fate:' + c.n[0] + (s.u ? ':up' : ':dn'));
+          });
+        } finally { GAME.fateGate = false; }
         if (GAME.lives < 1) GAME.lives = 1; // fate may sting — it never kills at the gate
         // negative balances are LEGAL now: the wizard simply opens a tab
         let debtNote = '';
@@ -12079,7 +12189,17 @@ document.addEventListener('DOMContentLoaded', () => {
       gPiksTick();
     } else if (GAME.state === 'run' && GAME.nm && !GAME.event) {
       // nightmare arena: scroll, spawns and score hold their breath —
-      // only jump physics and the boss itself keep moving
+      // only jump physics and the boss itself keep moving.
+      // /DEV/NULL stays on shift though: gPiksTick never runs in here, yet
+      // swallowing the boss's falling exceptions is this skill's whole job
+      (GAME.piks || []).forEach((p) => {
+        const sid = (p.skill || PIK_SKILLS[0]).id;
+        if (sid === 'devnull' && GAME.nm && GAME.nm.shots && GAME.nm.shots.length && GAME.frame >= (p.nullAt || 0)) {
+          p.nullAt = GAME.frame + 420;
+          GAME.nm.shots.pop();
+          if (Math.random() < 0.3) gToast(p.skill.toast, 120);
+        }
+      });
       if (GAME.y > 0 || GAME.vy > 0) {
         GAME.y += GAME.vy;
         GAME.vy -= 0.52;
@@ -12390,7 +12510,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const before = GAME.lives;
     GAME.lives = Math.max(0, Math.min(3, GAME.lives + n));
     if (GAME.lives > before) gMarkJoy();
-    if (GAME.lives === 0) gGameOver();
+    if (GAME.lives === 0) {
+      if (GAME.fateGate) { GAME.lives = 1; return; } // fate stings, never kills at the gate
+      gGameOver();
+    }
   }
   function fxScore(n) { GAME.score = GAME.score + n; } // negative score = "character development"
   function fxInvincible(secs) { GAME.invUntil = GAME.frame + secs * 60; if (secs >= 6) gMarkJoy(); }
@@ -12452,7 +12575,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function gSoftHit() {
     GAME.lives -= 1;
-    if (GAME.lives <= 0) { GAME.lives = 0; gGameOver(); return; }
+    if (GAME.lives <= 0) {
+      if (GAME.fateGate) { GAME.lives = 1; return; } // fate stings, never kills at the gate
+      GAME.lives = 0; gGameOver(); return;
+    }
     fxInvincible(1.8);
     playGlitchSound();
   }
@@ -13922,7 +14048,9 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function gGiveWeapon(id, clean) {
-    const w = WEAPONS[id] || WEAPONS.heart_wand;
+    // keepsakes can be cursed — a beloved vim katana must NOT come back
+    // from the shelf silently reskinned as a heart wand
+    const w = WEAPONS[id] || CURSED_WEAPONS.find((c) => c.id === id) || WEAPONS.heart_wand;
     GAME.weapon = w;
     if (clean) {
       gToast([`equipped: ${w.name[0]}`, `équipé : ${w.name[1]}`], 130);
@@ -15828,6 +15956,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const yes = code === 'KeyY';
     // number keys are deliberate: they pick AND confirm in one press
     let digitPick = false;
+    const selBefore = ev.sel;
     if (code === 'Digit1') { ev.sel = 0; digitPick = true; }
     if (code === 'Digit2') { ev.sel = 1; digitPick = true; }
     if (code === 'Digit3') { ev.sel = 2; digitPick = true; }
@@ -15844,7 +15973,9 @@ document.addEventListener('DOMContentLoaded', () => {
         else gResolveTwoChoice(ev);
       }
     } else if (ev.type === 'reward' || ev.type === 'coach') {
-      if (digitPick && ev.sel <= 2) confirm = true;
+      // a 3-card hand: Digit4 is not a pick — roll sel back or the
+      // highlight (and any confirm) walks off ev.opts into a TypeError
+      if (digitPick) { if (ev.sel <= 2) confirm = true; else ev.sel = selBefore; }
       if (left) ev.sel = (ev.sel + 2) % 3;
       if (right) ev.sel = (ev.sel + 1) % 3;
       if (confirm || yes) {
@@ -16506,11 +16637,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const btn = document.getElementById('lb-sign-btn');
         btn.disabled = false;
         btn.onclick = () => {
-          if (!window.__lbPendingScore) return; // one signature per run, no triples
+          // sign what is pending NOW — the render-time closure goes stale
+          // if a better run lands while the hall stays open
+          const current = window.__lbPendingScore || lbPendingGet() || null;
+          if (!current) return; // one signature per run, no triples
           btn.disabled = true;
           const initials = lbSoap(lbEsc(document.getElementById('lb-initials').value));
           const b = store.get('yos-lb', []);
-          b.push({ n: initials, s: pending });
+          b.push({ n: initials, s: current });
           b.sort((a, c) => c.s - a.s);
           store.set('yos-lb', b.slice(0, 10));
           window.__lbPendingScore = null;
@@ -17332,11 +17466,15 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   function selfieWallAsk(entry) {
     if (!liveOpen || !liveStage) return;
+    // consent is to the text on screen: freeze the mode NOW — wall-config
+    // arriving mid-dialog must never upgrade "just a counter" into a
+    // public upload behind the visitor's back
+    const publicMode = !!wallApi;
     const panel = document.createElement('div');
     panel.className = 'photo-studio';
     const head = document.createElement('div');
     head.className = 'vibe-genre-head';
-    head.textContent = wallApi
+    head.textContent = publicMode
       ? trT('🌍 hang it on the WORLDWIDE WALL? it becomes PUBLIC — every visitor will see it (the owner can take any photo down).', '🌍 l\'accrocher au MUR MONDIAL ? elle devient PUBLIQUE — chaque visiteur la verra (la propriétaire peut retirer toute photo).')
       : trT('🌍 count it on the worldwide selfie wall? (a COUNTER — your photo never leaves this device)', '🌍 la compter sur le mur mondial des selfies ? (un COMPTEUR — ta photo ne quitte jamais cet appareil)');
     const row = document.createElement('div');
@@ -17345,7 +17483,7 @@ document.addEventListener('DOMContentLoaded', () => {
     row.append(
       mk(trT('hang it ♡', 'accroche-la ♡'), () => {
         panel.remove();
-        if (wallApi && entry && entry.d) {
+        if (publicMode && wallApi && entry && entry.d) {
           showToast(trT('🌍 hanging it…', '🌍 accrochage…'));
           wallUpload(entry.d).then((res) => {
             if (res && res.ok) {
@@ -18559,6 +18697,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function gardenStop() {
     if (GARDEN.timer) { clearInterval(GARDEN.timer); GARDEN.timer = null; }
+    // chameleon sprouts keep hue-cycling (each tick minting a fresh
+    // sprite-cache entry) long after the room closes — timers leave too
+    GARDEN.sprouts.forEach((s) => { if (s._hueTimer) { clearInterval(s._hueTimer); s._hueTimer = null; } });
   }
 
   /* ---------- Edmonton weather paints the stage ----------
@@ -18745,7 +18886,15 @@ document.addEventListener('DOMContentLoaded', () => {
     rain:    ["it's RAINING in Edmonton!! blanket-stream time", 'il PLEUT à Edmonton !! stream sous couverture'],
     snow:    ['SNOW in Edmonton!! sweater weather on stage ♡', 'NEIGE à Edmonton !! mode pull sur le plateau ♡'],
     fog:     ['Edmonton is foggy… mysterious streamer era', 'Edmonton dans le brouillard… ère streameuse mystérieuse'],
-    thunder: ['THUNDER over Edmonton!! dramatic lighting, no extra charge', 'TONNERRE sur Edmonton !! éclairage dramatique, sans supplément']
+    thunder: ['THUNDER over Edmonton!! dramatic lighting, no extra charge', 'TONNERRE sur Edmonton !! éclairage dramatique, sans supplément'],
+    // the other 7 kinds the sky can deal — unscripted, they were a TypeError
+    wind:      ['WIND in Edmonton!! the pixels are holding hands', 'du VENT à Edmonton !! les pixels se tiennent la main'],
+    hail:      ['HAIL over Edmonton!! free percussion set', 'GRÊLE sur Edmonton !! percussions gratuites'],
+    sleet:     ['sleet in Edmonton… rain and snow refused to pick a lane', 'grésil à Edmonton… pluie et neige ont refusé de choisir'],
+    dust:      ['dusty gusts in Edmonton — the prairie is exfoliating', "rafales de poussière à Edmonton — la prairie s'exfolie"],
+    heat:      ['HEAT WAVE in Edmonton?! the slime is 3% more liquid', 'CANICULE à Edmonton ?! le slime est 3 % plus liquide'],
+    blizzard:  ['BLIZZARD!! Edmonton has become a loading screen', 'BLIZZARD !! Edmonton est devenue un écran de chargement'],
+    hurricane: ['hurricane-grade winds?! in EDMONTON?! stream from the bunker', "vents d'ouragan ?! à EDMONTON ?! stream depuis le bunker"]
   };
   function applyWx(kind) {
     if (!liveStage || WX_KINDS.indexOf(kind) === -1) return;
@@ -18757,7 +18906,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (liveOpen && wxAnnounced !== kind) {
       wxAnnounced = kind;
       setTimeout(() => {
-        if (liveOpen && !pet.sleeping && !pet.busy) showBubble(trT(WX_LINES[kind][0], WX_LINES[kind][1]), 3000);
+        const wxLine = WX_LINES[kind] || WX_LINES.cloud; // future kinds announce softly instead of throwing
+        if (liveOpen && !pet.sleeping && !pet.busy) showBubble(trT(wxLine[0], wxLine[1]), 3000);
       }, 4200);
     }
   }
@@ -20019,7 +20169,8 @@ document.addEventListener('DOMContentLoaded', () => {
   var camStream = null, camTimer = null, camPrev = null, camBase = null, camBaseN = 0,
       camTrail = [], camDarkFrames = 0, camLastSpeak = 0, camTypeAt = {},
       camPresent = false, camLastMotionAt = 0, camCloseFrames = 0, camTwoFrames = 0,
-      camLumEMA = null, camDimFrames = 0, camBrightFrames = 0, camBlob = null;
+      camLumEMA = null, camDimFrames = 0, camBrightFrames = 0, camBlob = null,
+      camPending = false, camReqGen = 0; // in-flight getUserMedia guard: a stale resolve must stop its own tracks, never leak a live camera
   const camVideo = document.getElementById('live-video');
   const camCanvas = document.createElement('canvas');
   camCanvas.width = CAM_W; camCanvas.height = CAM_H;
@@ -20199,8 +20350,13 @@ document.addEventListener('DOMContentLoaded', () => {
         handDetector = d;
         handLoading = false;
         if (handTimer) clearInterval(handTimer);
-        handTimer = setInterval(handTick, 420);
-        if (camStream) showBubble(trT('hand-cam online!! show me a gesture — I studied ALL of them ♡', 'main-cam en ligne !! montre-moi un geste — je les ai TOUS étudiés ♡'), 2800);
+        // the camera may have been stopped mid-download — keep the detector
+        // warm but don't spin a ticker at a dead stream; the cam-open path
+        // re-arms it on the next session
+        if (camStream) {
+          handTimer = setInterval(handTick, 420);
+          showBubble(trT('hand-cam online!! show me a gesture — I studied ALL of them ♡', 'main-cam en ligne !! montre-moi un geste — je les ai TOUS étudiés ♡'), 2800);
+        }
       })
       .catch(() => { handFailed = true; handLoading = false; });
   }
@@ -20331,6 +20487,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function camStop() {
+    camReqGen++; camPending = false; // any permission-prompt still in flight now self-cancels on resolve
     if (camTimer) { clearInterval(camTimer); camTimer = null; }
     if (cocoTimer) { clearInterval(cocoTimer); cocoTimer = null; }
     if (handTimer) { clearInterval(handTimer); handTimer = null; }
@@ -20338,6 +20495,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (camStream) { camStream.getTracks().forEach((t) => t.stop()); camStream = null; }
     camPrev = null; camBase = null; camBaseN = 0; camTrail = [];
     camPresent = false; camBlob = null; camLumEMA = null; cocoPersons = 0;
+    // streak counters too — a stale 7-frame "dark" streak from last session
+    // would fire a false PEEKABOO one frame into the next one
+    camDarkFrames = 0; camCloseFrames = 0; camTwoFrames = 0; camDimFrames = 0; camBrightFrames = 0;
     const btn = document.getElementById('live-cam');
     if (btn) { btn.setAttribute('aria-pressed', 'false'); btn.textContent = t('live.cam'); btn.classList.remove('cam-on'); }
     const note = document.getElementById('live-cam-note');
@@ -20512,19 +20672,26 @@ document.addEventListener('DOMContentLoaded', () => {
   const camBtn = document.getElementById('live-cam');
   if (camBtn) {
     camBtn.addEventListener('click', () => {
-      if (camStream) { camStop(); return; }
+      if (camStream || camPending) { camStop(); return; }
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         showToast(trT('camera not available in this browser', 'caméra indisponible dans ce navigateur'));
         return;
       }
+      camPending = true;
+      const gen = camReqGen;
       // higher-res frames: the neural detector deserves real pixels
       navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 }, audio: false }).then((stream) => {
+        camPending = false;
+        if (gen !== camReqGen) { stream.getTracks().forEach((tr) => tr.stop()); return; } // toggled off / room closed while the prompt was up
         camStream = stream;
         camVideo.srcObject = stream;
         camVideo.play().catch(() => {});
         camTimer = setInterval(camAnalyse, 140);
         cocoEnsure();
         cocoTimer = setInterval(cocoTick, 1100);
+        // a hand detector warmed up in a previous session re-arms here —
+        // cocoEnsure early-returns once loaded, so nobody else would
+        if (handDetector && !handTimer) handTimer = setInterval(handTick, 420);
         camBtn.setAttribute('aria-pressed', 'true');
         camBtn.textContent = t('live.cam.on');
         camBtn.classList.add('cam-on');
@@ -20532,6 +20699,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (note) note.hidden = false;
         showBubble(trT('I can see you!! wave, nod, show me your stuff ♡', 'je te vois !! coucou, hoche la tête, montre-moi tes trésors ♡'), 3200);
       }).catch(() => {
+        camPending = false;
         showToast(trT('camera permission declined — no worries ♡', 'permission caméra refusée — pas de souci ♡'));
       });
     });
@@ -22444,6 +22612,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   function doorRescue() {
     if (document.getElementById('door-rescue')) return;
+    // the visitor beat the cage to the door — no villain postscript over an open site
+    if (window.__door && window.__door.opened) return;
     clearTimeout(window.__doorIdle);
     if (window.__matrixGreetTimer) { clearInterval(window.__matrixGreetTimer); window.__matrixGreetTimer = null; }
     const g = document.getElementById('matrix-greeter');
@@ -22669,7 +22839,7 @@ document.addEventListener('DOMContentLoaded', () => {
       ['Browser', browser],
       ['OS', os],
       ['Viewport', innerWidth + '×' + innerHeight + ' @' + (window.devicePixelRatio || 1) + 'x'],
-      ['Threads', String(navigator.hardwareConcurrency || '?') + ' cores'],
+      ['Threads', String(navigator.hardwareConcurrency || 8) + ' cores'], // same fallback as the cores lock — the clue must never say '?' while the lock expects 8
       ['Memory', navigator.deviceMemory ? navigator.deviceMemory + 'GB-ish' : 'politely undisclosed'],
       ['Language', navigator.language || '?'],
       ['Online', navigator.onLine ? 'yes' : 'somehow no'],
@@ -22720,6 +22890,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }, o.dense ? 42 : 50);
   }
   function terminalDoorOpen(rescued) {
+    // idempotent: the name-key and a queued mercy rescue can race within
+    // 700ms — whoever arrives second must NOT open the door twice
+    if (window.__door) { if (window.__door.opened) return; window.__door.opened = true; }
     termLine(rescued
       ? trT('🛟 rescued by the slime of legend. compiling the rest of the world…', '🛟 sauvé·e par le slime légendaire. compilation du reste du monde…')
       : trT('🔓 the name IS the key. compiling the rest of the world…', '🔓 le nom EST la clé. compilation du reste du monde…'), 't-ok');
@@ -22889,6 +23062,7 @@ document.addEventListener('DOMContentLoaded', () => {
        sv2-{u}-wgp  — wrist-garden plucks (watch hits, main site consumes)
        sv2-{u}-wgs  — plucks already consumed (so new devices don't double-grant)
        sv2-{u}-wpt  — wrist pets (converted to fans over here)
+       sv2-{u}-wps  — pets already consumed (mirror of wgs, same reason)
        sv2-{u}-wst  — packed status the watch displays (fans/plucks/wheel%) */
   const WATCH_ABC = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
   function watchUidToNum(uid) {
@@ -23016,24 +23190,32 @@ document.addEventListener('DOMContentLoaded', () => {
     shell.appendChild(noBrowser);
   }
   var watchPullTimer = null;
+  var watchVisWired = false;
   function watchPullArm() {
     if (watchPullTimer) return;
     if (!store.get('yos-watch-paired', 0)) return;
     watchPullTimer = setInterval(watchPullSync, 60000); // v86: 150s felt like dial-up — the wrist deserves a minute
     setTimeout(watchPullSync, 5000);
-    document.addEventListener('visibilitychange', () => { if (!document.hidden) watchPullSync(); });
+    if (!watchVisWired) {
+      // one listener for life — unpair/re-pair cycles used to stack a fresh
+      // anonymous copy each time (watchPullSync self-guards when unpaired)
+      watchVisWired = true;
+      document.addEventListener('visibilitychange', () => { if (!document.hidden) watchPullSync(); });
+    }
   }
   var watchPullBusy = false;
   function watchPullSync() {
     if (watchPullBusy || !navigator.onLine || !cloudSlot || !store.get('yos-watch-paired', 0)) return;
     watchPullBusy = true;
     const u = cloudSlot.uid;
-    Promise.all([cloudGet(`sv2-${u}-wgp`), cloudGet(`sv2-${u}-wgs`), cloudGet(`sv2-${u}-wpt`)])
-      .then(([wgp, wgs, wpt]) => {
+    Promise.all([cloudGet(`sv2-${u}-wgp`), cloudGet(`sv2-${u}-wgs`), cloudGet(`sv2-${u}-wpt`), cloudGet(`sv2-${u}-wps`)])
+      .then(([wgp, wgs, wpt, wps]) => {
         const seenP = Math.max(store.get('yos-wgp-seen', 0), wgs || 0);
         const deltaP = Math.max(0, (wgp || 0) - seenP);
         const newPlucks = Math.min(deltaP, 12);
-        const seenT = store.get('yos-wpt-seen', 0);
+        // wps mirrors wgs for pets: without a cloud high-water mark, every
+        // re-pair on a fresh device replayed the whole pet history as fans
+        const seenT = Math.max(store.get('yos-wpt-seen', 0), wps || 0);
         const deltaT = Math.max(0, (wpt || 0) - seenT);
         const newPets = Math.min(deltaT, 60);
         if (newPlucks > 0) {
@@ -23058,6 +23240,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (newPets > 0) {
           const consumedT = seenT + newPets + Math.max(0, deltaT - newPets - 300);
           store.set('yos-wpt-seen', consumedT);
+          cloudSet(`sv2-${u}-wps`, consumedT).catch(() => {});
           gainFollowers(newPets);
         }
         if (newPlucks > 0 || newPets > 0) {

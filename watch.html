@@ -210,10 +210,13 @@
   function mintPin(cb, attempt) {
     attempt = attempt || 0;
     var candidate = 1000 + Math.floor(Math.random() * 9000);
-    if (attempt >= 6 || !navigator.onLine) { cb(candidate); return; }
+    // unverified mint (offline / out of attempts): the candidate may be a
+    // burned pin holding a stranger's save — it must NOT get the
+    // minted-fresh trust pass. cb(…, false) keeps the hijack guard armed.
+    if (attempt >= 6 || !navigator.onLine) { cb(candidate, false); return; }
     get('wpair-' + candidate).then(function (v) {
       if (v > 0) mintPin(cb, attempt + 1); // burned by pairing history — skip it
-      else cb(candidate);
+      else cb(candidate, true); // read back clean — provably nobody's
     });
   }
   function showPairing() {
@@ -238,7 +241,9 @@
       status.textContent = 'listening for the desktop…';
       var tries = 0;
       var verified = false; // first clean read proves the code is ours alone
-      var mintedFresh = Date.now() - LS.get('yosw-pin-ts', 0) < 10 * 60 * 1000;
+      // the trust pass belongs only to codes VERIFIED clean at mint time
+      var mintedFresh = LS.get('yosw-pin-clean', 0) === 1 &&
+        Date.now() - LS.get('yosw-pin-ts', 0) < 10 * 60 * 1000;
       function adopt(v) {
         clearTimers();
         LS.set('yosw-uid', numToUid(v));
@@ -278,9 +283,10 @@
     var stored = LS.get('yosw-pin', 0);
     if (stored) startPolling(stored);
     else {
-      mintPin(function (pin) {
+      mintPin(function (pin, clean) {
         LS.set('yosw-pin', pin);
         LS.set('yosw-pin-ts', Date.now());
+        LS.set('yosw-pin-clean', clean ? 1 : 0);
         startPolling(pin);
       });
     }
@@ -381,10 +387,15 @@
         return;
       }
       if (petsPending <= 0) return;
+      // busy-guard this branch too: on a slow link the 4s timer laps the
+      // in-flight hits and the same queued pets get counted twice upstream
+      flushBusy = true;
       var send = Math.min(petsPending, 3); // three love-packets per flush, max
+      var landed = 0;
       for (var i = 0; i < send; i++) {
         hit('sv2-' + uid + '-wpt').then(function (ok) {
           if (ok) { petsPending = Math.max(0, petsPending - 1); LS.set('yosw-pets-q', petsPending); }
+          if (++landed === send) flushBusy = false; // hit() never rejects — this always releases
         });
       }
     }
