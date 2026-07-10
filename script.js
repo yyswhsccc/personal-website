@@ -7553,7 +7553,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const slip = document.createElement('div');
     slip.className = 'dream-amber-slip';
     const art = document.createElement('pre');
-    art.textContent = ' ▄▄▄▄▄\n▐ ◠ ◠ ▌\n▐  ▿  ▌\n ▀▀▀▀▀';
+    art.textContent = '  ▗▖\n ▄▀▀▀▀▄\n▐ ◠ ◠ ▌\n▐  ▿  ▌\n ▀▄▄▄▄▀'; // the slime, dot-matrix edition: dome, drip, dimples
     const line = document.createElement('div');
     line.textContent = DW_AMBER_SLIPS[Math.floor(Math.random() * DW_AMBER_SLIPS.length)];
     slip.appendChild(art); slip.appendChild(line);
@@ -7571,7 +7571,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const slip = document.createElement('div');
     slip.className = 'dream-amber-slip';
     const art = document.createElement('pre');
-    art.textContent = ' ▄▄▄▄▄\n▐ ◠ ◠ ▌\n▐  ▿  ▌\n ▀▀▀▀▀';
+    art.textContent = '  ▗▖\n ▄▀▀▀▀▄\n▐ ◠ ◠ ▌\n▐  ▿  ▌\n ▀▄▄▄▄▀'; // the slime, dot-matrix edition: dome, drip, dimples
     slip.appendChild(art);
     (Array.isArray(bodyLines) ? bodyLines : [bodyLines]).forEach((ln) => {
       const el = document.createElement('div');
