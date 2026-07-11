@@ -14702,6 +14702,11 @@ document.addEventListener('DOMContentLoaded', () => {
     GAME.nextEventSec = 18 + Math.random() * 6;
     GAME.invUntil = 0;
     GAME.adUsed = false; // one ad-revive per run
+    // v104.1: heal any live meltdown BEFORE dropping the nightmare —
+    // rebooting mid-melt used to strand invert(1)/hue-rotate on <body>
+    // for the whole session (every dream after read as light-green mud)
+    try { nmClearAttack(); } catch (e) { /* nothing to clear */ }
+    document.body.classList.remove('nm-melt-tilt', 'nm-melt-hue', 'nm-melt-invert', 'nm-melt-naked', 'nm-melt-static');
     GAME.nm = null; GAME.nmPx = null; // nightmares don't survive a reboot
     // a run started inside a dream announces its stage (once, proudly)
     if (gDreamSkin) {
