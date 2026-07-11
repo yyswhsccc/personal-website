@@ -9421,11 +9421,29 @@ html.dream-bsod .desktop-icon-btn { display: none; }
    pikmin crew and every desk trinket stand down too. (all of it
    restores when the dream ends.) */
 html.dream-bsod .desktop-sidebar,
-html.dream-bsod #fan-wall,
 html.dream-bsod #desk-pik-layer,
 html.dream-bsod .desk-clock,
 html.dream-bsod .desk-note,
 html.dream-bsod .desk-sticker { display: none !important; }
+/* the fan wall SURVIVES the crash — but the avatar renderer didn't:
+   every fan prints as the kaomoji their identicon was last seen making */
+html.dream-bsod .fan-avatar canvas { display: none; }
+html.dream-bsod .fan-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: #1136c8;
+  border-color: #8ab4ff;
+}
+html.dream-bsod .fan-avatar::after {
+  content: attr(data-kao);
+  color: #ffffff;
+  font-size: 8px;
+  line-height: 1;
+  white-space: nowrap;
+  font-family: var(--font-pixel);
+}
 html.dream-bsod .desktop-icon-btn[data-window="win-terminal"],
 html.dream-bsod .desktop-icon-btn[data-window="win-dreamlog"] {
   display: flex;
@@ -9475,10 +9493,14 @@ html.dream-bsod .desktop-icon-btn[data-window="win-dreamlog"] {
   pointer-events: none;
 }
 .bsod-stamp-ok { color: #1a8f4a; border-color: #1a8f4a; }
-/* v99.1: on CCTV FEED 19-B the entity IS the show — the slime steps
-   offstage (hidden only inside the live stage, only in the scp dream)
-   and the pixel actor takes the boards */
-html.dream-scp .live-stage .slime-pet { visibility: hidden !important; }
+/* v101: during the scp dream the slime is FULLY offstage — body AND
+   voice, in every venue (habitat, live stage, reaction cam). tonight's
+   entity performs everywhere instead, wearing tonight's fit; all
+   dialogue is rerouted to the entity's own bubble (see scpActorSay) */
+html.dream-scp .slime-pet { visibility: hidden !important; pointer-events: none; }
+html.dream-scp #slime-speech-bubble { display: none !important; }
+.scp-stage-actor.scp-habitat-actor { bottom: 6px; left: 34%; z-index: 7; }
+.scp-stage-actor.scp-habitat-actor .scp-actor-cap { font-size: 0.6rem; }
 .scp-stage-actor {
   position: absolute;
   bottom: 16%;

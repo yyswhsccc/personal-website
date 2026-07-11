@@ -1230,6 +1230,10 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   function showBubble(text, duration = 2500, allowWhileAway = false) {
     if (!speechBubble) return;
+    // v101: during the scp dream the slime has NO lines — every bubble is
+    // rerouted to tonight's entity (verb-tagged lines swap to its own voice)
+    if (typeof dreamWorld !== 'undefined' && dreamWorld && dreamWorld.id === 'scp'
+        && typeof scpActorSay === 'function' && scpActorSay(text, duration, allowWhileAway)) return;
     // while the slime is in bed (dark mode), only sleep-talk may surface
     if (typeof ghostHidden === 'function' && ghostHidden() && !allowWhileAway) return;
     // a long line that is STILL SCROLLING may not be interrupted: the new
@@ -1727,6 +1731,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
+    if (typeof scpVerb === 'function') scpVerb('feed'); // the entity eats in-character
     playClickSound();
     pet.busy = true;
 
@@ -1788,6 +1793,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
+    if (typeof scpVerb === 'function') scpVerb('play'); // entity zoomies, in-voice
     playSparkleSound();
     pet.busy = true;
     pet.energy = clamp(pet.energy - 14, 0, 100);
@@ -1824,6 +1830,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (pet.busy || pet.sleeping) return;
     if (typeof ghostHidden === 'function' && ghostHidden()) ghostAppear(0, false);
 
+    if (typeof scpVerb === 'function') scpVerb('nap'); // the entity gets tucked in
     playCloseSound();
     pet.sleeping = true;
     pet.mood = 'sleeping';
@@ -7156,13 +7163,23 @@ document.addEventListener('DOMContentLoaded', () => {
       emblem.innerHTML = SCP_EMBLEM_SVG
         + '<span>SCP FOUNDATION — ' + trT('SECURE · CONTAIN · PET', 'SÉCURISER · CONFINER · CARESSER') + '</span>';
       dreamBadgeRail().appendChild(emblem);
-      // ---- tonight's entity possesses the habitat slime ----
-      const ent = SCP_ENTITIES[Math.floor(Math.random() * SCP_ENTITIES.length)];
+      // ---- tonight's entity REPLACES the habitat slime (v101: the slime
+      // is fully offstage — body and voice — for the whole dream) ----
+      const forced = store.get('yos-scp-ent', null); // testing/preview back door
+      const ent = (forced && SCP_ENTITIES.find((e) => e.id === String(forced)))
+        || SCP_ENTITIES[Math.floor(Math.random() * SCP_ENTITIES.length)];
       dreamWorld.flags.ent = ent;
+      dreamWorld.flags.fitIx = scpPickFit(ent.id); // tonight's random fit (of 35)
       document.documentElement.classList.add(ent.cls);
-      ghostAppear(0, false); // the entity form must be SEEN
       if (ent.acc) scpAccessory(ent.acc);
       if (ent.ama) dreamAmaDecor = ent.ama;
+      // the entity holds the habitat stage for the WHOLE dream — remounted
+      // if anything (a photo flow, a layout swap) knocks it down
+      dI(() => {
+        if (!dreamWorld || !dreamWorld.flags.ent) return;
+        const hab = (typeof slimeHabitat !== 'undefined') && slimeHabitat;
+        if (hab && !hab.querySelector('.scp-stage-actor')) scpStageMount(hab, dreamWorld.flags.ent, 'habitat');
+      }, 1000);
       // v82: the URGENT DISPATCH lands first — the "tonight:" badge and the
       // entity's own hello wait until the reader has (n)acknowledged the mail
       dT(() => scpDispatch(ent, () => {
@@ -7178,7 +7195,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const live = document.getElementById('win-live');
         const stage = document.getElementById('live-stage');
         const isOpen = live && !live.classList.contains('window-closed') && !live.classList.contains('window-minimized') && stage;
-        const mounted = document.querySelector('.scp-stage-actor');
+        // scope to the STAGE copy — the habitat actor is a different booking
+        const mounted = stage ? stage.querySelector('.scp-stage-actor') : null;
         if (isOpen && !mounted && dreamWorld.flags.ent) scpStageMount(stage, dreamWorld.flags.ent);
         else if (!isOpen && mounted) { try { mounted.remove(); } catch (e) { /* struck */ } }
       }, 900);
@@ -10136,12 +10154,481 @@ document.addEventListener('DOMContentLoaded', () => {
       'kkkWWWkkkkkkkk', 'kkWWkWWkkkkkkk', 'kkkWWWkkkkkkkk', 'kkkkkkkkkkkkkk',
       'kkkkkkkkkkkkkk', '.kkkkkkkkkkkk.', '..kkk.kkk.kk..', '..kk...kk.....', '...k....k.....'] }
   };
-  function scpStageMount(stage, ent) {
+
+  /* ---- the ENTITY WARDROBE — 35 looks per anomaly, same closet rules
+     as the slime's (seasonals wait their turn, one random fit per dream).
+     parts are drawn in CELL units on a padded copy of the actor sprite:
+     7 rows of hat-room on top, 4 columns each side, 3 rows below for
+     scarf tails. anchors say where each entity's head/eyes/neck live. ---- */
+  const SCP_PAD = { top: 7, x: 4, bottom: 3 };
+  const SCP_ACTOR_ANCH = {
+    999:  { cx: 11, w: 10, eye: 11, neck: 17 },
+    173:  { cx: 9,  w: 8,  eye: 9,  neck: 18 },
+    914:  { cx: 12, w: 14, eye: 10, neck: 15 },
+    55:   { cx: 10, w: 8,  eye: 10, neck: 17 },
+    426:  { cx: 11, w: 12, eye: 9,  neck: 12 },
+    3008: { cx: 8,  w: 6,  eye: 9,  neck: 14 },
+    2521: { cx: 11, w: 11, eye: 12, neck: 17 }
+  };
+  // each part paints with p(col,row,w,h,color); a = {cx,t,w,eye,neck}
+  const SCP_PARTS = {
+    cone(p, a, c1, c2) { const c = c1 || '#c9a7f5'; for (let i = 0; i < 4; i++) p(a.cx - 1 - i / 2, a.t - 1 - (3 - i), 1 + i, 1, c); p(a.cx - 1, a.t - 5, 1, 1, c2 || '#ffe98a'); },
+    beret(p, a, c1) { const c = c1 || '#e05f8f'; p(a.cx - a.w / 2 + 1, a.t - 1, a.w - 2, 1, c); p(a.cx - a.w / 2 + 2, a.t - 2, a.w - 5, 1, c); p(a.cx - 1, a.t - 3, 1, 1, c); },
+    crown(p, a, c1) { const c = c1 || '#ffd400'; p(a.cx - 2, a.t - 1, 5, 1, c); p(a.cx - 2, a.t - 2, 1, 1, c); p(a.cx, a.t - 2, 1, 1, c); p(a.cx + 2, a.t - 2, 1, 1, c); },
+    halo(p, a, c1) { const c = c1 || '#ffe98a'; p(a.cx - 2, a.t - 3, 5, 1, c); p(a.cx - 1, a.t - 3, 3, 1, '#fff7d1'); },
+    santa(p, a) { p(a.cx - a.w / 2 + 1, a.t - 1, a.w - 2, 1, '#ffffff'); p(a.cx - a.w / 2 + 2, a.t - 2, a.w - 5, 1, '#e03d3d'); p(a.cx - 1, a.t - 3, 2, 1, '#e03d3d'); p(a.cx + 1, a.t - 4, 1, 1, '#ffffff'); },
+    wizard(p, a, c1, c2) { const c = c1 || '#4a3f8c'; p(a.cx - a.w / 2 + 1, a.t - 1, a.w - 2, 1, c2 || '#ffe98a'); for (let i = 0; i < 4; i++) p(a.cx - 1 - i / 2, a.t - 2 - (3 - i), 1 + i, 1, c); },
+    chefHat(p, a) { p(a.cx - a.w / 2 + 2, a.t - 1, a.w - 4, 1, '#ffffff'); p(a.cx - a.w / 2 + 1, a.t - 3, a.w - 2, 2, '#ffffff'); },
+    beanie(p, a, c1) { const c = c1 || '#43b581'; p(a.cx - a.w / 2 + 1, a.t - 1, a.w - 2, 1, c); p(a.cx - a.w / 2 + 2, a.t - 2, a.w - 4, 1, c); p(a.cx - 1, a.t - 3, 1, 1, '#ffffff'); },
+    cowboy(p, a, c1) { const c = c1 || '#8a5a2e'; p(a.cx - a.w / 2, a.t - 1, a.w, 1, c); p(a.cx - a.w / 2 + 2, a.t - 3, a.w - 4, 2, c); },
+    gradCap(p, a) { p(a.cx - a.w / 2, a.t - 1, a.w, 1, '#2a2a34'); p(a.cx - 1, a.t - 2, 2, 1, '#2a2a34'); p(a.cx + a.w / 2, a.t - 1, 1, 2, '#ffd400'); },
+    strawHat(p, a) { p(a.cx - a.w / 2, a.t - 1, a.w, 1, '#e8c76a'); p(a.cx - a.w / 2 + 2, a.t - 2, a.w - 4, 1, '#e8c76a'); p(a.cx - a.w / 2 + 2, a.t - 1, a.w - 4, 1, '#c94f6d'); },
+    propeller(p, a) { p(a.cx - 3, a.t - 3, 2, 1, '#ff6b6b'); p(a.cx + 1, a.t - 3, 2, 1, '#6bb5ff'); p(a.cx - 1, a.t - 3, 2, 1, '#d8d8e8'); p(a.cx - 1, a.t - 2, 1, 1, '#9aa0b4'); p(a.cx - 1, a.t - 1, 2, 1, '#ffd400'); },
+    pumpkin(p, a) { p(a.cx - 1, a.t - 4, 1, 1, '#57c689'); p(a.cx - 2, a.t - 3, 4, 1, '#f2790f'); p(a.cx - 2, a.t - 2, 4, 1, '#f2790f'); p(a.cx - 1, a.t - 1, 2, 1, '#f2790f'); },
+    mushroom(p, a, c1) { const c = c1 || '#e05252'; p(a.cx - a.w / 2 + 1, a.t - 1, a.w - 2, 1, c); p(a.cx - a.w / 2 + 2, a.t - 2, a.w - 4, 1, c); p(a.cx - 2, a.t - 2, 1, 1, '#ffffff'); p(a.cx + 1, a.t - 1, 1, 1, '#ffffff'); },
+    hardHat(p, a) { p(a.cx - a.w / 2 + 1, a.t - 1, a.w - 2, 1, '#f7d308'); p(a.cx - a.w / 2 + 2, a.t - 2, a.w - 4, 1, '#f7d308'); p(a.cx - 1, a.t - 3, 2, 1, '#f7d308'); p(a.cx - 1, a.t - 2, 2, 1, '#fff7d1'); },
+    catEars(p, a, c1) { const c = c1 || '#c9a7f5'; p(a.cx - a.w / 2 + 1, a.t - 1, 1, 1, c); p(a.cx - a.w / 2 + 1, a.t - 2, 1, 1, c); p(a.cx - a.w / 2 + 2, a.t - 1, 1, 1, c); p(a.cx + a.w / 2 - 2, a.t - 1, 1, 1, c); p(a.cx + a.w / 2 - 2, a.t - 2, 1, 1, c); p(a.cx + a.w / 2 - 3, a.t - 1, 1, 1, c); },
+    bunnyEars(p, a, c1) { const c = c1 || '#ffffff'; p(a.cx - 3, a.t - 4, 1, 4, c); p(a.cx + 2, a.t - 4, 1, 4, c); p(a.cx - 3, a.t - 3, 1, 2, '#ffb3dd'); p(a.cx + 2, a.t - 3, 1, 2, '#ffb3dd'); },
+    bearEars(p, a, c1) { const c = c1 || '#8a5a2e'; p(a.cx - a.w / 2 + 1, a.t - 2, 2, 2, c); p(a.cx + a.w / 2 - 3, a.t - 2, 2, 2, c); },
+    bow(p, a, c1) { const c = c1 || '#ff5f9e'; p(a.cx - 2, a.t - 2, 2, 2, c); p(a.cx + 1, a.t - 2, 2, 2, c); p(a.cx, a.t - 1, 1, 1, '#fff7d1'); },
+    sideBow(p, a, c1) { const c = c1 || '#8fd4fa'; p(a.cx + a.w / 2 - 3, a.t - 1, 1, 1, c); p(a.cx + a.w / 2 - 1, a.t - 1, 1, 1, c); p(a.cx + a.w / 2 - 2, a.t - 1, 1, 1, '#fff7d1'); },
+    flower(p, a, c1) { const c = c1 || '#ff8fc7'; p(a.cx - 1, a.t - 2, 1, 1, c); p(a.cx + 1, a.t - 2, 1, 1, c); p(a.cx, a.t - 3, 1, 1, c); p(a.cx, a.t - 1, 1, 1, c); p(a.cx, a.t - 2, 1, 1, '#ffd400'); },
+    sprout(p, a) { p(a.cx, a.t - 2, 1, 2, '#57c689'); p(a.cx - 1, a.t - 3, 1, 1, '#7ddba4'); p(a.cx + 1, a.t - 3, 1, 1, '#7ddba4'); },
+    antenna(p, a, c1) { p(a.cx, a.t - 3, 1, 3, '#9aa0b4'); p(a.cx - 1, a.t - 4, 2, 1, c1 || '#ff5f9e'); },
+    moonClip(p, a) { p(a.cx + a.w / 2 - 2, a.t - 2, 2, 1, '#ffe98a'); p(a.cx + a.w / 2 - 3, a.t - 1, 2, 1, '#ffe98a'); },
+    starGarland(p, a) { for (let i = 0; i < Math.floor(a.w / 2); i++) p(a.cx - a.w / 2 + 1 + i * 2, a.t - 1, 1, 1, i % 2 ? '#fff7d1' : '#ffd400'); },
+    leafClip(p, a) { p(a.cx + a.w / 2 - 2, a.t - 1, 2, 1, '#e8842e'); p(a.cx + a.w / 2 - 1, a.t - 2, 1, 1, '#c94f2e'); },
+    glassesRound(p, a, c1) { const c = c1 || '#14020e'; const d = Math.max(2, Math.round(a.w / 4)); [a.cx - d - 1, a.cx + d - 1].forEach((gx) => { p(gx, a.eye - 1, 3, 1, c); p(gx, a.eye + 1, 3, 1, c); p(gx, a.eye, 1, 1, c); p(gx + 2, a.eye, 1, 1, c); }); p(a.cx - 1, a.eye, 2, 1, c); },
+    glassesStar(p, a, c1) { const c = c1 || '#f0509f'; const d = Math.max(2, Math.round(a.w / 4)); [a.cx - d - 1, a.cx + d - 1].forEach((gx) => { p(gx, a.eye - 1, 3, 3, c); p(gx + 1, a.eye, 1, 1, '#fff7d1'); }); p(a.cx - 1, a.eye, 2, 1, c); },
+    monocle(p, a) { p(a.cx + 1, a.eye - 1, 3, 1, '#ffd400'); p(a.cx + 1, a.eye + 1, 3, 1, '#ffd400'); p(a.cx + 1, a.eye, 1, 1, '#ffd400'); p(a.cx + 3, a.eye, 1, 1, '#ffd400'); p(a.cx + 4, a.eye + 2, 1, 1, '#ffd400'); },
+    mustache(p, a) { p(a.cx - 2, a.eye + 2, 2, 1, '#5a3d28'); p(a.cx + 1, a.eye + 2, 2, 1, '#5a3d28'); },
+    freckles(p, a) { p(a.cx - Math.round(a.w / 3) - 1, a.eye + 1, 1, 1, '#ff9fb4'); p(a.cx + Math.round(a.w / 3), a.eye + 1, 1, 1, '#ff9fb4'); },
+    sleepMaskUp(p, a, c1) { const c = c1 || '#7d5ec4'; p(a.cx - a.w / 2 + 1, a.t, a.w - 2, 1, c); p(a.cx - a.w / 2, a.t, 1, 1, '#ffffff'); p(a.cx + a.w / 2 - 1, a.t, 1, 1, '#ffffff'); },
+    bowtie(p, a, c1) { const c = c1 || '#e05f8f'; p(a.cx - 2, a.neck, 2, 2, c); p(a.cx + 1, a.neck, 2, 2, c); p(a.cx, a.neck, 1, 1, '#fff7d1'); },
+    scarf(p, a, c1, c2) { const c = c1 || '#e05f8f'; p(a.cx - a.w / 2 + 1, a.neck, a.w - 2, 1, c); p(a.cx + a.w / 2 - 3, a.neck + 1, 1, 2, c2 || c); p(a.cx + a.w / 2 - 3, a.neck + 3, 1, 1, c); },
+    necklace(p, a, c1) { const c = c1 || '#ffd400'; for (let i = 0; i < a.w - 3; i++) p(a.cx - a.w / 2 + 2 + i, a.neck + (i % 2 ? 1 : 0), 1, 1, i % 2 ? '#ffffff' : c); },
+    capeKnot(p, a, c1) { const c = c1 || '#e03d3d'; p(a.cx - 1, a.neck, 2, 1, c); p(a.cx - a.w / 2, a.neck, 2, 1, c); p(a.cx + a.w / 2 - 2, a.neck, 2, 1, c); },
+    nameTag(p, a, c1) { p(a.cx + 1, a.neck - 2, 3, 2, '#ffffff'); p(a.cx + 1, a.neck - 1, 3, 1, c1 || '#0051ba'); },
+    cautionSash(p, a, c1, c2) { const A = c1 || '#f7d308', B = c2 || '#141414'; for (let i = 0; i < a.w - 2; i++) p(a.cx - a.w / 2 + 1 + i, a.neck - 2 + Math.floor(i / 2), 1, 1, i % 2 ? B : A); },
+    balloon(p, a, c1) { const c = c1 || '#ff5f9e'; const bx = a.cx + a.w / 2 + 2; p(bx, a.t - 4, 3, 3, c); p(bx + 1, a.t - 3, 1, 1, '#fff7d1'); p(bx + 1, a.t - 1, 1, 3, '#d8d8e8'); },
+    wand(p, a) { const wx = a.cx + a.w / 2 + 2; p(wx, a.neck - 3, 1, 4, '#8a5a2e'); p(wx - 1, a.neck - 5, 3, 2, '#ffd400'); p(wx, a.neck - 5, 1, 1, '#fff7d1'); },
+    flag(p, a, c1) { const fx = a.cx - a.w / 2 - 3; p(fx, a.t - 2, 1, a.neck - a.t + 2, '#9aa0b4'); p(fx + 1, a.t - 2, 3, 2, c1 || '#ff5f9e'); },
+    clipboard(p, a) { const bx = a.cx + a.w / 2 + 1; p(bx, a.eye, 4, 5, '#d8b078'); p(bx + 1, a.eye + 1, 2, 3, '#ffffff'); p(bx + 1, a.eye, 2, 1, '#9aa0b4'); },
+    dial(p, a, c1) { const c = c1 || '#c9a227'; p(a.cx - 1, a.eye + 2, 3, 3, c); p(a.cx, a.eye + 3, 1, 1, '#141414'); },
+    sticker(p, a, c1) { p(a.cx + a.w / 2 - 2, a.eye + 3, 2, 2, c1 || '#f0509f'); p(a.cx + a.w / 2 - 2, a.eye + 3, 1, 1, '#ffffff'); }
+  };
+  // authored one entity at a time — 35 looks each, seasonals wait their turn
+  var SCP_WARDROBE = {
+    '999': [
+      { n: ["butterscotch cone", "cône caramel"], parts: [["cone", "#ffab40", "#ffe0b2"]] },
+      { n: ["gift-wrapped hug", "câlin emballé"], parts: [["bow", "#ff7043"]] },
+      { n: ["tickle kitten", "chaton chatouilleur"], parts: [["catEars", "#e08a1e"]] },
+      { n: ["bounce bunny", "lapin bondissant"], parts: [["bunnyEars", "#ffe0b2"]] },
+      { n: ["butterscotch bear", "ourson caramel"], parts: [["bearEars", "#c77b30"]] },
+      { n: ["certified good blob", "blob certifié sage"], parts: [["halo"]] },
+      { n: ["royal squishness", "majesté gélatineuse"], parts: [["crown"], ["capeKnot", "#e08a1e"]] },
+      { n: ["candy ribbon", "ruban bonbon"], parts: [["sideBow", "#ffd54f"]] },
+      { n: ["little marigold", "petit souci"], parts: [["flower", "#ffb300"]] },
+      { n: ["joy sprout", "pousse de joie"], parts: [["sprout"]] },
+      { n: ["peach beret", "béret pêche"], parts: [["beret", "#ffcba4"]] },
+      { n: ["wizard of hugs", "mage des câlins"], parts: [["wizard", "#e08a1e", "#ffd54f"]] },
+      { n: ["phd in giggles", "docteur ès câlins"], parts: [["gradCap"]] },
+      { n: ["howdy hugs", "cowboy câlin"], parts: [["cowboy", "#c77b30"]] },
+      { n: ["giggle shroom", "champi glousseur"], parts: [["mushroom", "#ff7043"]] },
+      { n: ["sunshine hat", "chapeau soleil"], parts: [["strawHat"]], season: "summer" },
+      { n: ["whee propeller", "hélice youpi"], parts: [["propeller"]] },
+      { n: ["butterscotch chef", "chef caramel"], parts: [["chefHat"], ["mustache"]] },
+      { n: ["hot cocoa cuddler", "câlin chocolat chaud"], parts: [["beanie", "#ff7043"], ["scarf", "#e08a1e", "#ffe0b2"]], season: "winter" },
+      { n: ["joy scientist", "savant de la joie"], parts: [["antenna", "#ffd54f"], ["glassesRound", "#7a3c00"]] },
+      { n: ["butterscotch freckles", "taches caramel"], parts: [["freckles"]] },
+      { n: ["distinguished goo", "gélatine distinguée"], parts: [["monocle"], ["mustache"], ["bowtie", "#e08a1e"]] },
+      { n: ["candy necklace", "collier bonbon"], parts: [["necklace", "#ffd54f"]] },
+      { n: ["birthday mode", "mode anniversaire"], parts: [["cone", "#ff7043", "#ffd54f"], ["balloon", "#ffd54f"]] },
+      { n: ["fairy blobmother", "fée marraine blob"], parts: [["halo"], ["wand"]] },
+      { n: ["team hug flag", "drapeau des câlins"], parts: [["flag", "#ffab40"]] },
+      { n: ["official hug audit", "audit câlin officiel"], parts: [["nameTag", "#ffe0b2"], ["clipboard"]] },
+      { n: ["caution: free hugs", "attention : câlins"], parts: [["hardHat"], ["cautionSash", "#ffd54f", "#e08a1e"]] },
+      { n: ["dial set to joy", "cadran réglé sur joie"], parts: [["dial", "#ff7043"]] },
+      { n: ["gold star blob", "blob étoile d'or"], parts: [["sticker", "#ffd54f"]] },
+      { n: ["marmalade moon", "lune marmelade"], parts: [["moonClip"]] },
+      { n: ["party garland", "guirlande de fête"], parts: [["starGarland"]] },
+      { n: ["professional napper", "pro de la sieste"], parts: [["sleepMaskUp", "#ffcba4"]] },
+      { n: ["santa squish", "père noël squish"], parts: [["santa"], ["scarf", "#ff7043", "#ffe0b2"]], season: "xmas" },
+      { n: ["pumpkin spice hug", "citrouille câline"], parts: [["pumpkin"]], season: "halloween" }
+    ],
+    '173': [
+      { n: ["containment hardhat", "casque de confinement"], parts: [["hardHat"]] },
+      { n: ["traffic cone", "cône de chantier"], parts: [["cone", "#d9622b", "#efe9dd"]] },
+      { n: ["caution: it moves", "attention : ça bouge"], parts: [["cautionSash", "#e8c04a", "#2f2b24"]] },
+      { n: ["hello, i'm euclid", "je m'appelle euclide"], parts: [["nameTag", "#a33327"]] },
+      { n: ["gallery beret", "béret de galerie"], parts: [["beret", "#4e7d3a"]] },
+      { n: ["art critic", "critique d'art"], parts: [["monocle"]] },
+      { n: ["priceless exhibit", "pièce inestimable"], parts: [["necklace", "#e6d8a8"]] },
+      { n: ["distinguished exhibit", "pièce distinguée"], parts: [["monocle"], ["mustache"], ["bowtie", "#2f2b24"]] },
+      { n: ["night at the museum", "une nuit au musée"], parts: [["starGarland"], ["moonClip"]] },
+      { n: ["king of the plinth", "roi du socle"], parts: [["crown"]] },
+      { n: ["safe-class halo", "auréole classe sûr"], parts: [["halo"]] },
+      { n: ["moss sprout", "pousse de mousse"], parts: [["sprout"]] },
+      { n: ["concrete blossom", "fleur de béton"], parts: [["flower", "#a33327"]] },
+      { n: ["garden gnome shift", "nain de jardin"], parts: [["leafClip"], ["flower", "#efe9dd"]] },
+      { n: ["concrete kitten", "chaton de béton"], parts: [["catEars", "#b8ab9a"]] },
+      { n: ["hops when unseen", "lapin hors champ"], parts: [["bunnyEars", "#efe9dd"]] },
+      { n: ["security detail", "agent de sécurité"], parts: [["bearEars", "#8a7f70"], ["cautionSash", "#e8c04a", "#2f2b24"]] },
+      { n: ["statue incognito", "statue incognito"], parts: [["mustache"]] },
+      { n: ["rust freckles", "taches de rouille"], parts: [["freckles"]] },
+      { n: ["now we're even", "on est quittes"], parts: [["sleepMaskUp", "#4e7d3a"]] },
+      { n: ["motion sensor", "capteur de mouvement"], parts: [["antenna", "#a33327"]] },
+      { n: ["inspection passed", "inspection réussie"], parts: [["sticker", "#e8c04a"]] },
+      { n: ["certified anomaly", "anomalie certifiée"], parts: [["dial", "#a33327"], ["sticker", "#e8c04a"]] },
+      { n: ["phd in sneaking up", "doctorat en filature"], parts: [["gradCap"]] },
+      { n: ["eternal standoff", "duel de regards"], parts: [["cowboy", "#8a7f70"]] },
+      { n: ["self-containment", "auto-confinement"], parts: [["clipboard"]] },
+      { n: ["who petrified whom", "qui a pétrifié qui"], parts: [["wand"]] },
+      { n: ["wizard of stillness", "mage de l'immobilité"], parts: [["wizard", "#4e7d3a", "#8a7f70"], ["wand"]] },
+      { n: ["super-euclid", "super-euclide"], parts: [["capeKnot", "#a33327"]] },
+      { n: ["a friend that stays", "un ami qui reste"], parts: [["balloon", "#9aa2ad"]] },
+      { n: ["fresh concrete chef", "chef du béton frais"], parts: [["chefHat"], ["bowtie", "#a33327"]] },
+      { n: ["sandcastle mode", "mode château de sable"], parts: [["strawHat"], ["flag", "#e8c04a"]], season: "summer" },
+      { n: ["frost-proof statue", "statue antigel"], parts: [["beanie", "#a33327"], ["scarf", "#4e7d3a", "#b8ab9a"]], season: "winter" },
+      { n: ["secret santa statue", "père noël discret"], parts: [["santa"], ["scarf", "#a33327", "#efe9dd"]], season: "xmas" },
+      { n: ["redundant costume", "costume redondant"], parts: [["pumpkin"]], season: "halloween" }
+    ],
+    '914': [
+      { n: ["setting: very fine", "réglage : très fin"], parts: [["dial", "#f0d060"]] },
+      { n: ["quality control", "contrôle qualité"], parts: [["monocle"]] },
+      { n: ["hard hat area", "port du casque"], parts: [["hardHat"]] },
+      { n: ["intake inspector", "inspecteur d'entrée"], parts: [["clipboard"]] },
+      { n: ["hello, i refine", "bonjour, je raffine"], parts: [["nameTag", "#f5e9c9"]] },
+      { n: ["master machinist", "maître mécanicien"], parts: [["mustache"]] },
+      { n: ["cog crown", "couronne dentée"], parts: [["crown"]] },
+      { n: ["atelier beret", "béret d'atelier"], parts: [["beret", "#8a6d1f"]] },
+      { n: ["factory formal", "chic d'usine"], parts: [["bowtie", "#3a2f10"]] },
+      { n: ["safety specs", "lunettes de sécurité"], parts: [["glassesRound", "#3a2f10"]] },
+      { n: ["ball bearings", "roulement à billes"], parts: [["necklace", "#f0d060"]] },
+      { n: ["passed inspection", "contrôle réussi"], parts: [["sticker", "#58a05a"]] },
+      { n: ["emergency stop", "arrêt d'urgence"], parts: [["mushroom", "#c0392b"]] },
+      { n: ["oil funnel", "entonnoir à huile"], parts: [["cone", "#c9a227", "#3a2f10"]] },
+      { n: ["spare rotor", "rotor de rechange"], parts: [["propeller"]] },
+      { n: ["very fine antenna", "antenne très fine"], parts: [["antenna", "#f0d060"]] },
+      { n: ["night shift", "équipe de nuit"], parts: [["moonClip"]] },
+      { n: ["standby mode", "mode veille"], parts: [["sleepMaskUp", "#c9a227"]] },
+      { n: ["spring-loaded", "oreilles à ressort"], parts: [["bunnyEars", "#f0d060"]] },
+      { n: ["ribbon cable", "câble ruban"], parts: [["sideBow", "#b87333"]] },
+      { n: ["rust freckles", "taches de rouille"], parts: [["freckles"]] },
+      { n: ["cold-forged beanie", "bonnet forgé à froid"], parts: [["beanie", "#8a6d1f"]], season: "winter" },
+      { n: ["clockwork santa", "père noël mécanique"], parts: [["santa"]], season: "xmas" },
+      { n: ["refined pumpkin", "citrouille raffinée"], parts: [["pumpkin"]], season: "halloween" },
+      { n: ["summer shutdown", "fermeture annuelle"], parts: [["strawHat"]], season: "summer" },
+      { n: ["site supervisor", "chef de chantier"], parts: [["hardHat"], ["cautionSash", "#f0d060", "#3a2f10"]] },
+      { n: ["master craftsman", "maître artisan"], parts: [["monocle"], ["mustache"], ["bowtie", "#8a6d1f"]] },
+      { n: ["engineering degree", "diplôme d'ingénieur"], parts: [["gradCap"], ["glassesRound", "#c9a227"]] },
+      { n: ["espresso machine", "machine à expresso"], parts: [["chefHat"], ["mustache"]] },
+      { n: ["wizard of gears", "mage des engrenages"], parts: [["wizard", "#8a6d1f", "#f0d060"], ["wand"]] },
+      { n: ["factory calibrated", "calibré en usine"], parts: [["dial", "#c0392b"], ["sticker", "#58a05a"]] },
+      { n: ["employee of the month", "employé du mois"], parts: [["capeKnot", "#8a6d1f"], ["nameTag", "#f0d060"]] },
+      { n: ["polished bear", "ours poli"], parts: [["bearEars", "#b87333"], ["scarf", "#f5e9c9", "#c9a227"]] },
+      { n: ["inspection day", "jour d'inspection"], parts: [["flag", "#f0d060"], ["clipboard"]] },
+      { n: ["certified very fine", "certifié très fin"], parts: [["halo"], ["necklace", "#f0d060"]] }
+    ],
+    '055': [
+      { n: ["hello, my name is ?", "bonjour, je suis… ?"], parts: [["nameTag", "#f2e394"]] },
+      { n: ["post-it of doubt", "post-it du doute"], parts: [["sticker", "#f2e394"]] },
+      { n: ["notes to no one", "notes pour personne"], parts: [["clipboard"]] },
+      { n: ["reminder knot", "nœud pense-bête"], parts: [["bow", "#a3b8c9"]] },
+      { n: ["forget-me-not ♡", "myosotis ♡"], parts: [["flower", "#a3b8c9"]] },
+      { n: ["was it an angel?", "c'était un ange ?"], parts: [["halo"]] },
+      { n: ["half-remembered moon", "lune à demi oubliée"], parts: [["moonClip"]] },
+      { n: ["constellation of ?", "constellation de ?"], parts: [["starGarland"]] },
+      { n: ["signal lost", "signal perdu"], parts: [["antenna", "#b9aecb"]] },
+      { n: ["did i plant this?", "j'ai planté ça ?"], parts: [["sprout"]] },
+      { n: ["cat? what cat?", "chat ? quel chat ?"], parts: [["catEars", "#b9aecb"]] },
+      { n: ["maybe a bunny", "lapin, peut-être"], parts: [["bunnyEars", "#d8d0e4"]] },
+      { n: ["bear-ly remembered", "vaguement un ours"], parts: [["bearEars", "#8f82a8"]] },
+      { n: ["reading… something", "je lisais… un truc"], parts: [["glassesRound", "#6b6478"]] },
+      { n: ["dreams don't stick", "rêves qui glissent"], parts: [["sleepMaskUp", "#b9aecb"]] },
+      { n: ["degree in forgetting", "diplôme d'oubli"], parts: [["gradCap"]] },
+      { n: ["where was i going?", "j'allais où déjà ?"], parts: [["propeller"]] },
+      { n: ["abracada… what", "abracada… quoi"], parts: [["wand"]] },
+      { n: ["balloon from whom?", "ballon de qui ?"], parts: [["balloon", "#c9aeb9"]] },
+      { n: ["flag of ( )", "drapeau de ( )"], parts: [["flag", "#d8d0e4"]] },
+      { n: ["empty locket", "médaillon vide"], parts: [["necklace", "#d8d0e4"]] },
+      { n: ["forgettable hero", "héros oubliable"], parts: [["capeKnot", "#8f82a8"]] },
+      { n: ["memory dial: zero", "mémoire : zéro"], parts: [["dial", "#b9aecb"]] },
+      { n: ["the great forgetto", "le grand oublio"], parts: [["wizard", "#8f82a8", "#b9aecb"], ["wand"]] },
+      { n: ["a distinguished blur", "un flou distingué"], parts: [["monocle"], ["mustache"], ["bowtie", "#8f82a8"]] },
+      { n: ["researching myself", "enquête sur moi-même"], parts: [["clipboard"], ["glassesRound", "#6b6478"]] },
+      { n: ["if found, return to ?", "si trouvé, rendre à ?"], parts: [["balloon", "#d8d0e4"], ["nameTag", "#f2e394"]] },
+      { n: ["cognitohazard crew", "chantier cognitif"], parts: [["hardHat"], ["cautionSash", "#f2e394", "#8f82a8"]] },
+      { n: ["dream, unfiled", "rêve non classé"], parts: [["sleepMaskUp", "#c9aeb9"], ["moonClip"]] },
+      { n: ["monarch of mist", "monarque de brume"], parts: [["crown"], ["capeKnot", "#b9aecb"]] },
+      { n: ["whose birthday?", "l'anniv de qui ?"], parts: [["cone", "#b9aecb", "#f2e394"], ["freckles"]] },
+      { n: ["summer, allegedly", "l'été, paraît-il"], parts: [["strawHat"]], season: "summer" },
+      { n: ["winter? already?", "l'hiver ? déjà ?"], parts: [["beanie", "#8f82a8"], ["scarf", "#b9aecb", "#d8d0e4"]], season: "winter" },
+      { n: ["from: ?, to: you ♡", "de : ?, pour : toi ♡"], parts: [["santa"], ["nameTag", "#d06a6a"]], season: "xmas" },
+      { n: ["boo… who?", "bouh… qui ?"], parts: [["pumpkin"]], season: "halloween" }
+    ],
+    '426': [
+      { n: ["setting: just right", "réglage : parfait"], parts: [["dial", "#e05555"]] },
+      { n: ["i am the chef now", "le chef, c'est moi"], parts: [["chefHat"]] },
+      { n: ["baguette beret", "béret baguette"], parts: [["beret", "#e05555"]] },
+      { n: ["crumb king", "roi des miettes"], parts: [["crown"]] },
+      { n: ["holy toast", "toast béni"], parts: [["halo"]] },
+      { n: ["hi, i am a toaster", "je suis un grille-pain"], parts: [["nameTag", "#e05555"]] },
+      { n: ["still under warranty", "encore sous garantie"], parts: [["sticker", "#f5c542"]] },
+      { n: ["caution: i am hot", "attention : je chauffe"], parts: [["cautionSash", "#f5c542", "#2b3140"]] },
+      { n: ["flying toaster", "grille-pain volant"], parts: [["propeller"]] },
+      { n: ["black-tie breakfast", "brunch en smoking"], parts: [["bowtie", "#e05555"]] },
+      { n: ["chrome monocle", "monocle chromé"], parts: [["monocle"]] },
+      { n: ["i read my manual", "je lis ma notice"], parts: [["glassesRound", "#2b3140"]] },
+      { n: ["sesame freckles", "taches de sésame"], parts: [["freckles"]] },
+      { n: ["chrome kitten", "chaton chromé"], parts: [["catEars", "#c0c7d1"]] },
+      { n: ["bunny loaf", "lapin de mie"], parts: [["bunnyEars", "#fff6e8"]] },
+      { n: ["brioche bear", "ours brioché"], parts: [["bearEars", "#8a5a2b"]] },
+      { n: ["buttercup", "bouton d'or"], parts: [["flower", "#f5c542"]] },
+      { n: ["wheat sprout", "pousse de blé"], parts: [["sprout"]] },
+      { n: ["smoke detector", "détecteur de fumée"], parts: [["antenna", "#e05555"]] },
+      { n: ["butter balloon", "ballon de beurre"], parts: [["balloon", "#f5c542"]] },
+      { n: ["butter pearls", "perles de beurre"], parts: [["necklace", "#f5c542"]] },
+      { n: ["super toaster", "super grille-pain"], parts: [["capeKnot", "#e05555"]] },
+      { n: ["insulated for winter", "isolé pour l'hiver"], parts: [["beanie", "#5a6272"]], season: "winter" },
+      { n: ["toast on the beach", "toast à la plage"], parts: [["strawHat"]], season: "summer" },
+      { n: ["pumpkin spice toast", "toast à la citrouille"], parts: [["pumpkin"]], season: "halloween" },
+      { n: ["santa's little toaster", "grille-pain du père noël"], parts: [["santa"], ["scarf", "#e05555", "#fff6e8"]], season: "xmas" },
+      { n: ["wizard of toast", "mage du toast"], parts: [["wizard", "#5a6272", "#c0c7d1"], ["wand"]] },
+      { n: ["toastronomy", "toastronomie"], parts: [["chefHat"], ["mustache"], ["bowtie", "#2b3140"]] },
+      { n: ["degree in browning", "diplôme de dorage"], parts: [["gradCap"], ["glassesRound", "#2b3140"]] },
+      { n: ["up to code", "aux normes"], parts: [["hardHat"], ["clipboard"]] },
+      { n: ["breakfast cowboy", "cow-boy du petit-déj"], parts: [["cowboy", "#8a5a2b"], ["scarf", "#e05555", "#c68a4b"]] },
+      { n: ["birthday toast", "toast d'anniversaire"], parts: [["cone", "#e05555", "#f5c542"], ["balloon", "#e05555"]] },
+      { n: ["standby mode", "mode veille"], parts: [["sleepMaskUp", "#5a6272"], ["moonClip"]] },
+      { n: ["five-star reviews", "avis cinq étoiles"], parts: [["starGarland"], ["sticker", "#f5c542"]] },
+      { n: ["breakfast superstar", "superstar du brunch"], parts: [["glassesStar", "#e05555"], ["capeKnot", "#f5c542"]] }
+    ],
+    '3008': [
+      { n: ["hej, i work here", "hej, j'y travaille"], parts: [["nameTag", "#ffcc00"]] },
+      { n: ["eternal inventory", "inventaire éternel"], parts: [["clipboard"]] },
+      { n: ["barcode wand", "la douchette"], parts: [["wand"]] },
+      { n: ["wet floor cone", "cône sol mouillé"], parts: [["cone", "#ffcc00", "#333333"]] },
+      { n: ["caution: no exit", "prudence : sans sortie"], parts: [["cautionSash", "#ffcc00", "#333333"]] },
+      { n: ["self-serve warehouse", "entrepôt libre-service"], parts: [["hardHat"]] },
+      { n: ["hej sverige", "hej sverige"], parts: [["flag", "#0051ba"]] },
+      { n: ["aisle 7 balloon", "ballon de l'allée 7"], parts: [["balloon", "#ffcc00"]] },
+      { n: ["showroom beret", "béret d'expo"], parts: [["beret", "#0051ba"]] },
+      { n: ["flat-pack wizard", "mage du kit"], parts: [["wizard", "#0051ba", "#ffcc00"]] },
+      { n: ["meatball chef", "chef boulettes"], parts: [["chefHat"]] },
+      { n: ["warehouse wrangler", "cowboy d'entrepôt"], parts: [["cowboy", "#6b4f35"]] },
+      { n: ["certified assembler", "monteur diplômé"], parts: [["gradCap"]] },
+      { n: ["display lamp", "lampe d'expo"], parts: [["mushroom", "#ffcc00"]] },
+      { n: ["gift-wrap counter", "comptoir cadeaux"], parts: [["bow", "#c0304a"]] },
+      { n: ["fejka fake flower", "fausse fleur fejka"], parts: [["flower", "#ffcc00"]] },
+      { n: ["restock beacon", "balise de réassort"], parts: [["antenna", "#0051ba"]] },
+      { n: ["quality inspector", "contrôle qualité"], parts: [["monocle"]] },
+      { n: ["bed section tester", "testeur de literie"], parts: [["sleepMaskUp", "#0051ba"]] },
+      { n: ["floor manager", "chef de rayon"], parts: [["bowtie", "#0051ba"]] },
+      { n: ["allen key lanyard", "clé allen au cou"], parts: [["necklace", "#8a919c"]] },
+      { n: ["as-is sticker", "autocollant soldé"], parts: [["sticker", "#ffcc00"]] },
+      { n: ["djungelskog mode", "mode djungelskog"], parts: [["bearEars", "#6b4f35"]] },
+      { n: ["seasonal aisle gourd", "courge saisonnière"], parts: [["pumpkin"]], season: "halloween" },
+      { n: ["midsommar shift", "service midsommar"], parts: [["strawHat"]], season: "summer" },
+      { n: ["julbord santa", "père noël du julbord"], parts: [["santa"], ["scarf", "#c0304a", "#ffffff"]], season: "xmas" },
+      { n: ["loading dock winter", "hiver de l'entrepôt"], parts: [["beanie", "#0051ba"], ["scarf", "#0051ba", "#ffcc00"]], season: "winter" },
+      { n: ["safety briefing", "briefing sécurité"], parts: [["hardHat"], ["cautionSash", "#ffcc00", "#0051ba"], ["clipboard"]] },
+      { n: ["regional manager", "directeur régional"], parts: [["monocle"], ["mustache"], ["bowtie", "#0051ba"]] },
+      { n: ["cafeteria shift", "service cafétéria"], parts: [["chefHat"], ["nameTag", "#c0304a"]] },
+      { n: ["training complete", "formation terminée"], parts: [["gradCap"], ["glassesRound", "#333333"]] },
+      { n: ["småland duty", "service småland"], parts: [["balloon", "#ffcc00"], ["propeller"]] },
+      { n: ["manager on duty", "responsable de garde"], parts: [["nameTag", "#ffcc00"], ["clipboard"]] },
+      { n: ["fake garden display", "faux jardin d'expo"], parts: [["flower", "#c0304a"], ["sprout"]] },
+      { n: ["king of flat-packs", "roi du meuble en kit"], parts: [["crown"], ["capeKnot", "#0051ba"]] }
+    ],
+    '2521': [
+      { n: ["name tag: ●●●", "badge : ●●●"], parts: [["nameTag", "#f2f2f2"]] },
+      { n: ["redacted bow", "nœud censuré"], parts: [["bow", "#d94f4f"]] },
+      { n: ["quiet ribbon", "ruban discret"], parts: [["sideBow", "#f2f2f2"]] },
+      { n: ["unspeakable crown", "couronne indicible"], parts: [["crown"]] },
+      { n: ["silent halo", "auréole muette"], parts: [["halo"]] },
+      { n: ["cat, no meow", "chat sans miaou"], parts: [["catEars", "#3d3d3d"]] },
+      { n: ["hush bunny", "lapin chuuut"], parts: [["bunnyEars", "#f2f2f2"]] },
+      { n: ["ink bear", "ourson d'encre"], parts: [["bearEars", "#2b2b2b"]] },
+      { n: ["flower, no name", "fleur sans nom"], parts: [["flower", "#d98fa8"]] },
+      { n: ["tiny green secret", "petit secret vert"], parts: [["sprout"]] },
+      { n: ["phd in silence", "doctorat de silence"], parts: [["gradCap"]] },
+      { n: ["cowboy of few words", "cowboy peu bavard"], parts: [["cowboy", "#3d3d3d"]] },
+      { n: ["mum's the mushroom", "motus et champignon"], parts: [["mushroom", "#3d3d3d"]] },
+      { n: ["no spoilers", "zéro divulgâchis"], parts: [["glassesStar", "#ffe98a"]] },
+      { n: ["do not perceive", "ne pas percevoir"], parts: [["sleepMaskUp", "#2b2b2b"]] },
+      { n: ["black-tie silence", "silence en smoking"], parts: [["bowtie", "#f2f2f2"]] },
+      { n: ["word muffler", "cache-mots"], parts: [["scarf", "#2b2b2b", "#d94f4f"]] },
+      { n: ["pearls, no wisdom", "perles sans paroles"], parts: [["necklace", "#f2f2f2"]] },
+      { n: ["empty speech bubble", "bulle de bd (vide)"], parts: [["balloon", "#f2f2f2"]] },
+      { n: ["white flag ♡", "drapeau blanc ♡"], parts: [["flag", "#f2f2f2"]] },
+      { n: ["volume: zero", "volume : zéro"], parts: [["dial", "#d94f4f"]] },
+      { n: ["pictogram sticker", "autocollant picto"], parts: [["sticker", "#f2f2f2"]] },
+      { n: ["monsieur ellipsis", "monsieur ellipse"], parts: [["monocle"], ["mustache"], ["bowtie", "#f2f2f2"]] },
+      { n: ["full mime", "mime complet"], parts: [["beret", "#d94f4f"], ["scarf", "#f2f2f2", "#141414"]] },
+      { n: ["redacted royalty", "royauté censurée"], parts: [["crown"], ["capeKnot", "#2b2b2b"]] },
+      { n: ["librarian (shh)", "bibliothécaire (chut)"], parts: [["glassesRound", "#f2f2f2"], ["clipboard"]] },
+      { n: ["containment crew", "équipe de confinement"], parts: [["hardHat"], ["cautionSash", "#141414", "#ffe98a"]] },
+      { n: ["site-● staff", "personnel du site-●"], parts: [["nameTag", "#f2f2f2"], ["sticker", "#d94f4f"]] },
+      { n: ["polka-dot party", "fête à pois"], parts: [["bow", "#d94f4f"], ["freckles"], ["balloon", "#d94f4f"]] },
+      { n: ["wizard of ●●●", "mage des ●●●"], parts: [["wizard", "#3d3d3d", "#2b2b2b"], ["wand"]] },
+      { n: ["the night, unsaid", "la nuit se tait"], parts: [["moonClip"], ["starGarland"]] },
+      { n: ["winter hush", "silence d'hiver"], parts: [["beanie", "#f2f2f2"]], season: "winter" },
+      { n: ["silent night santa", "père noël douce nuit"], parts: [["santa"], ["scarf", "#d94f4f", "#f2f2f2"]], season: "xmas" },
+      { n: ["unlit pumpkin", "citrouille éteinte"], parts: [["pumpkin"]], season: "halloween" },
+      { n: ["uncaptioned summer", "été sans légende"], parts: [["strawHat"]], season: "summer" }
+    ]
+  };
+  // the entity's own voice for every verb the slime used to own
+  var SCP_ACTOR_LINES = {
+    '999': {
+      pet: [["*squish* hehehe that's my favorite spot, and also every spot ♡", "*squish* hihihi c'est mon endroit préféré, comme tous les autres ♡"], ["you petted me so now we're best friends, i don't make the rules ♡", "tu m'as caressé donc on est meilleurs amis, c'est pas moi qui décide ♡"], ["warning: petting me may cause uncontrollable giggling (yours)", "attention : me caresser peut causer des fous rires incontrôlables (les tiens)"], ["*wobbles with joy* do it again do it again do it again ♡", "*tremble de joie* encore encore encore ♡"], ["your hand smells like friendship now, no refunds", "ta main sent l'amitié maintenant, non remboursable"], ["hehe that tickles ME, which is honestly a career highlight", "hihi ça ME chatouille, franchement le sommet de ma carrière"]],
+      feed: [["candy!! it tastes like more please ♡", "un bonbon !! ça a le goût d'encore s'il te plaît ♡"], ["*gulp* i am now 2% more butterscotch, thank you for your service", "*gloup* me voilà 2 % plus caramel, merci pour ton service"], ["fun fact: everything i eat becomes hugs eventually", "le savais-tu : tout ce que je mange finit en câlins"], ["nom nom nom *butterscotch intensifies*", "miam miam miam *le caramel s'intensifie*"], ["sweets for the sweet, which is me, i'm the sweet ♡", "des douceurs pour le doux, c'est moi le doux ♡"], ["i saved you half, it's absorbed into me now, but the thought counts", "je t'en ai gardé la moitié, absorbée en moi certes, mais c'est l'intention"]],
+      play: [["ZOOMIES!! *bounces off every wall, apologizes to each one*", "ZOU !! *rebondit sur tous les murs en s'excusant auprès de chacun*"], ["i'm not fast, the room is just very huggable", "je ne suis pas rapide, c'est la pièce qui est très câlinable"], ["wheee i'm an orange comet of poor decisions ♡", "wouiii je suis une comète orange aux décisions douteuses ♡"], ["tag! you're it! everything is it! the lamp is it!", "chat ! c'est toi le chat ! tout est chat ! la lampe est chat !"], ["*bounce bounce* physics said no but i said please", "*boing boing* la physique a dit non mais j'ai dit s'il te plaît"], ["catch me if you can, and when you do: hug", "attrape-moi si tu peux, et quand tu m'as : câlin"]],
+      nap: [["zzz… dreaming of a hug so big it needs a permit", "zzz… je rêve d'un câlin si grand qu'il faut un permis"], ["tucking me in unlocks my softest form: even softer", "me border débloque ma forme la plus douce : encore plus douce"], ["*snores in butterscotch*", "*ronfle en caramel*"], ["wake me if anyone needs a hug, so… set an alarm for always", "réveille-moi si quelqu'un a besoin d'un câlin, donc… mets une alarme sur toujours"], ["good night ♡ i'll keep the joy warm for tomorrow", "bonne nuit ♡ je garde la joie au chaud pour demain"], ["zzz… five more minutes… of hugging… zzz", "zzz… encore cinq minutes… de câlins… zzz"]],
+      gift: [["a gift?! for ME?! *vibrates at the frequency of joy*", "un cadeau ?! pour MOI ?! *vibre à la fréquence de la joie*"], ["i will treasure this forever or absorb it lovingly, whichever comes first", "je le chérirai pour toujours ou l'absorberai avec amour, au premier des deux"], ["the wrapping paper is also a gift, everything is a gift ♡", "le papier cadeau est aussi un cadeau, tout est un cadeau ♡"], ["*gasp* it's exactly what i wanted, which is anything from you", "*oh* c'est exactement ce que je voulais, c'est-à-dire n'importe quoi de toi"], ["in exchange, please accept this hug, redeemable at any time", "en échange, accepte ce câlin, encaissable à tout moment"], ["adding it to my hoard of precious things (mostly crumbs and love)", "je l'ajoute à mon trésor (surtout des miettes et de l'amour)"]],
+      idle: [["*ambient giggling*", "*gloussements ambiants*"], ["do you think the sun knows it's my mentor", "tu crois que le soleil sait qu'il est mon mentor"], ["today's forecast: 100% chance of orange", "météo du jour : 100 % de chances d'orange"], ["i tried frowning once, my face bounced back", "j'ai essayé de bouder une fois, mon visage a rebondi"], ["smelling like butterscotch is a full-time job and i love my job", "sentir le caramel est un travail à plein temps et j'adore mon travail"], ["psst… you're doing great ♡", "psst… tu t'en sors super bien ♡"]]
+    },
+    '173': {
+      pet: [["*scrape* …that was a happy scrape, to be clear.", "*scrrr* …c'était un raclement de joie, précisons."], ["you touched it. it has been waiting 3 hours in this exact pose ♡", "tu l'as touchée. elle attendait depuis 3 heures dans cette pose exacte ♡"], ["it leans in 4mm. for a statue, this is a hug.", "elle se penche de 4 mm. pour une statue, c'est un câlin."], ["please keep blinking. it wants to be petted from a better angle.", "continue de cligner. elle veut des caresses sous un meilleur angle."], ["your hand is warm. it is concrete. it remembers this forever.", "ta main est chaude. elle est en béton. elle s'en souviendra pour toujours."], ["it did not snap anything. it would like this noted in the file ♡", "elle n'a rien brisé du tout. à noter au dossier, s'il vous plaît ♡"]],
+      feed: [["the candy rests on it. this is how statues eat. do not fact-check.", "le bonbon repose sur elle. c'est ainsi que mangent les statues. ne vérifie pas."], ["*gravel noises of gratitude*", "*bruits de gravier reconnaissants*"], ["blink once and the candy is gone. case closed.", "cligne une fois et le bonbon disparaît. affaire classée."], ["it has no mouth. the candy vanished anyway. politely.", "elle n'a pas de bouche. le bonbon a disparu quand même. poliment."], ["sugar is bad for concrete. it accepts the risk ♡", "le sucre abîme le béton. elle accepte le risque ♡"], ["crumbs attract pigeons. this is the plan. it was always the plan.", "les miettes attirent les pigeons. c'est le plan. ça a toujours été le plan."]],
+      play: [["zoomies: it teleports 6 times. you see none of them. flawless.", "zoomies : elle se téléporte 6 fois. tu n'en vois aucune. sans faute."], ["*scrape scrape scrape* — that was cardio.", "*scrrr scrrr scrrr* — c'était du cardio."], ["tag. you are it. you were always it.", "chat. c'est toi le chat. ça a toujours été toi."], ["it plays red light, green light professionally.", "elle joue à 1, 2, 3, soleil au niveau pro."], ["close your eyes and count to ten. it will be behind you. for fun.", "ferme les yeux et compte jusqu'à dix. elle sera derrière toi. pour rire."], ["personal best: crossed the room in 0 observed seconds.", "record perso : la pièce traversée en 0 seconde observée."]],
+      nap: [["statues do not sleep. it will hold very still and pretend ♡", "les statues ne dorment pas. elle restera immobile et fera semblant ♡"], ["finally: everyone's eyes closed at the same time. no notes.", "enfin : tous les yeux fermés en même temps. rien à redire."], ["tucked in. the blanket will not stop it. the blanket is appreciated.", "bordée. la couverture ne l'arrêtera pas. la couverture est appréciée."], ["it snores in gravel. *krrhh* ♡", "elle ronfle en gravier. *krrhh* ♡"], ["sleep is just a very long blink. it will be closer when you wake.", "dormir n'est qu'un très long clignement. elle sera plus près au réveil."], ["goodnight. do not worry about the scraping. that is a lullaby.", "bonne nuit. ignore les raclements. c'est une berceuse."]],
+      gift: [["a gift. it moves nothing except, quietly, its heart.", "un cadeau. rien ne bouge, sauf, tout bas, son cœur."], ["someone was watching AND kind. statistically remarkable ♡", "quelqu'un regardait ET était gentil. statistiquement remarquable ♡"], ["it will keep this gift forever. concrete does not let go.", "elle gardera ce cadeau pour toujours. le béton ne lâche rien."], ["*rust tears* they are rust. definitely rust.", "*larmes de rouille* c'est de la rouille. certifié rouille."], ["to the donor: it is now 3% closer to your house. as thanks.", "au donateur : elle est 3 % plus proche de chez toi. en remerciement."], ["the gift shop finally has a statue worth gifting.", "la boutique du musée a enfin une statue digne d'un cadeau."]],
+      idle: [["*scrape*", "*scrrr*"], ["it was not this close before. no further questions.", "elle n'était pas si proche avant. plus de questions."], ["day 4: still has not blinked. the visitor blinks constantly. amateurs.", "jour 4 : toujours pas cligné. le visiteur cligne sans arrêt. amateurs."], ["a pigeon sat on it once. best day on record.", "un pigeon s'est posé sur elle un jour. meilleur jour répertorié."], ["being looked at is not the same as being seen. it takes both ♡", "être regardée n'est pas être vue. elle prend les deux ♡"], ["the moss is not a fashion choice. the moss chose it.", "la mousse n'est pas un choix de mode. c'est la mousse qui l'a choisie."]]
+    },
+    '914': {
+      pet: [["*whirr* input: one pat. output: one better pat. setting: VERY FINE ♡", "*vrrr* entrée : une caresse. sortie : une meilleure caresse. réglage : TRÈS FIN ♡"], ["your hand has been inspected. verdict: artisanal.", "votre main a été inspectée. verdict : artisanale."], ["*clunk* please pet along the grain of the brass.", "*clonc* caressez dans le sens du laiton, merci."], ["refining your affection… done. it is 12% shinier now.", "raffinage de votre affection… terminé. c'est 12 % plus brillant."], ["careful, freshly polished. ok fine, once more ♡", "attention, fraîchement polie. bon d'accord, encore une ♡"], ["gears purring. this is the machine version of purring.", "engrenages qui ronronnent. c'est le ronron version machine."]],
+      feed: [["candy inserted. selecting VERY FINE… output: fancier candy, already eaten.", "bonbon inséré. réglage TRÈS FIN… sortie : bonbon chic, déjà mangé."], ["*chomp-whirr* intake valve says thank you.", "*miam-vrrr* la valve d'admission vous remercie."], ["sugar is an acceptable lubricant ♡", "le sucre est un lubrifiant acceptable ♡"], ["input graded: grade-a snack. no refunds, it's refined now.", "entrée notée : friandise grade A. non remboursable, c'est raffiné."], ["on setting ROUGH this would be gravel. you chose wisely.", "en réglage GROSSIER ce serait du gravier. bon choix."], ["processing… the wrapper came out as origami.", "traitement… l'emballage est ressorti en origami."]],
+      play: [["engaging zoomies at 3000 rpm. do not stand in the output tray.", "zoomies enclenchées à 3000 tr/min. évitez le bac de sortie."], ["*clank clank clank* this is my fastest setting.", "*clang clang clang* c'est mon réglage le plus rapide."], ["warning: fun detected in the mechanism. keeping it.", "alerte : amusement détecté dans le mécanisme. je le garde."], ["i was built for refinement, but tag is acceptable.", "on m'a construite pour raffiner, mais chat perché, ça passe."], ["loose screw located. it was me. i am the loose screw.", "vis desserrée localisée. c'était moi. je suis la vis desserrée."], ["*sproing* that spring was decorative. probably.", "*boïng* ce ressort était décoratif. probablement."]],
+      nap: [["powering down to setting: VERY SOFT ♡", "mise en veille sur réglage : TRÈS DOUX ♡"], ["*whirr…* dreams entering the intake booth…", "*vrrr…* les rêves entrent dans la cabine d'admission…"], ["please oil me before bed. it's like a bedtime story.", "huilez-moi avant le dodo. c'est ma berceuse à moi."], ["night shift cancelled. the gears voted for a blanket.", "équipe de nuit annulée. les engrenages ont voté couverture."], ["refining today into tomorrow… slowly… zzz", "je raffine aujourd'hui en demain… doucement… zzz"], ["standby mode ♡ do not insert dreams, they come out too fine.", "mode veille ♡ n'insérez pas de rêves, ils ressortent trop fins."]],
+      gift: [["a gift! inserting it back to refine it into a nicer gift.", "un cadeau ! je le réinsère pour le raffiner en cadeau plus chic."], ["quality control approves. sticker of excellence applied ♡", "le contrôle qualité approuve. autocollant d'excellence apposé ♡"], ["*ka-chunk* receipt printed in cursive brass.", "*ka-chunk* reçu imprimé en laiton cursif."], ["input: generosity. output: generosity, but VERY FINE.", "entrée : générosité. sortie : générosité, mais TRÈS FINE."], ["this passed inspection before it even arrived.", "ça a passé l'inspection avant même d'arriver."], ["filed under: too nice to refine. it is a short file.", "classé sous : trop beau pour être raffiné. la liste est courte."]],
+      idle: [["*whirr… tick… whirr…* everything is up to spec.", "*vrrr… tic… vrrr…* tout est conforme."], ["somewhere out there, a bug is dreaming of being a feature.", "quelque part, un bug rêve de devenir une feature."], ["i do not have a setting for feelings, and yet.", "je n'ai pas de réglage pour les sentiments, et pourtant."], ["polishing my own dials. someone has to.", "je polis mes propres cadrans. il faut bien quelqu'un."], ["1:1 means you come out exactly you. i like that setting too.", "1:1 : vous ressortez exactement vous. j'aime ce réglage aussi."], ["please do not insert yourself. inserting your hopes is fine.", "ne vous insérez pas dedans. vos espoirs, en revanche, d'accord."]]
+    },
+    '055': {
+      pet: [["oh! contact. someone remembered where i— well. someone found me ♡", "oh ! un contact. quelqu'un s'est souvenu d'où je— enfin. quelqu'un m'a trouvé ♡"], ["you petted something. you won't remember what. it was me ♡", "tu as caressé quelque chose. tu oublieras quoi. c'était moi ♡"], ["your hand remembers me better than your mind does. hands are kind.", "ta main se souvient de moi mieux que ta tête. les mains sont gentilles."], ["that felt round. i am not a sphere. …am i?", "c'était rond, comme sensation. je ne suis pas une sphère. …si ?"], ["pet me again — pretend it's the first time. for you, it is.", "recaresse-moi — fais comme si c'était la première fois. pour toi, ça l'est."], ["you already forgot this pat. it's okay. i keep them all.", "tu as déjà oublié cette caresse. c'est rien. moi, je les garde toutes."]],
+      feed: [["candy! flavor: familiar? no. gone. thank you for the mystery ♡", "un bonbon ! goût : familier ? non. envolé. merci pour le mystère ♡"], ["i'll remember this snack forever — okay no, but the intent was real ♡", "je retiendrai ce goûter à jamais — bon, non, mais l'intention était vraie ♡"], ["what was i eating? what is eating? anyway: delicious.", "je mangeais quoi ? c'est quoi, manger ? bref : délicieux."], ["the candy forgot to exist on the way down. classic.", "le bonbon a oublié d'exister en descendant. un classique."], ["sweet. or was it? the evidence has redacted itself.", "sucré. ou pas ? la preuve s'est auto-caviardée."], ["you fed the thing you can't describe. bold. grateful.", "tu as nourri la chose indescriptible. audacieux. reconnaissant."]],
+      play: [["zoomies! if you lose track of me, that's… normal, actually.", "des zoomies ! me perdre de vue, c'est… normal, en fait."], ["watch me go — no, really, WATCH, or i stop existing a little.", "regarde-moi filer — non, vraiment, REGARDE, sinon j'existe un peu moins."], ["i ran a lap. nobody remembers it. personal best, technically.", "j'ai fait un tour. personne ne s'en souvient. record personnel, techniquement."], ["hide and seek is unfair when you're me. i always win. nobody knows.", "le cache-cache est injuste quand on est moi. je gagne toujours. personne ne le sait."], ["wheee— what were we doing. keep going, it feels right.", "wouhou— on faisait quoi, déjà. continue, ça semble juste."], ["i'm it! i'm… what is 'it'? tag me anyway ♡", "c'est moi le chat ! c'est quoi… le chat ? touche-moi quand même ♡"]],
+      nap: [["tuck me in — dreams are where i finally look like something.", "borde-moi — c'est en rêve que je ressemble enfin à quelque chose."], ["goodnight. by morning you'll wonder what this bed was for ♡", "bonne nuit. au matin tu te demanderas à quoi servait ce lit ♡"], ["zzz… i dream of being memorable. it never sticks. zzz…", "zzz… je rêve d'être mémorable. ça ne tient jamais. zzz…"], ["i sleep. the pillow will forget me first. it always does.", "je dors. l'oreiller m'oubliera en premier. c'est toujours lui."], ["wake me if you remember to. (you won't.) (it's fine.) ♡", "réveille-moi si tu y penses. (tu n'y penseras pas.) (c'est rien.) ♡"], ["even my dreams forget me halfway through. rude, honestly.", "même mes rêves m'oublient à mi-chemin. vexant, honnêtement."]],
+      gift: [["a gift! addressed to… the tag is blank. it's me. obviously ♡", "un cadeau ! adressé à… l'étiquette est vide. c'est moi, forcément ♡"], ["someone remembered me long enough to click. historic day.", "quelqu'un s'est souvenu de moi le temps d'un clic. jour historique."], ["i'd write a thank-you note but notes about me self-destruct.", "j'écrirais un mot de merci, mais les mots sur moi s'autodétruisent."], ["a gift for the thing nobody remembers. you absolute legend.", "un cadeau pour la chose qu'on oublie. toi, t'es légendaire."], ["i'll treasure this. treasure it FOR me, i lose my own plot.", "je vais le chérir. chéris-le POUR moi, je perds le fil de ma propre histoire."], ["was that a sphere? no. a gift. i'm keeping it. where. hm.", "c'était une sphère ? non. un cadeau. je le garde. où ça. hum."]],
+      idle: [["i am not a sphere. i am not a sphere. i am not a— what am i not?", "je ne suis pas une sphère. je ne suis pas une sphère. je ne suis pas— quoi, déjà ?"], ["…you were about to remember me. felt nice. gone now.", "…tu allais te souvenir de moi. c'était doux. c'est passé."], ["somewhere there's a note that says 'check on 055'. it says nothing now.", "quelque part, une note dit « pense à 055 ». elle ne dit plus rien."], ["to be forgotten by everyone, and still petted daily. poetry, honestly ♡", "être oublié de tous et caressé chaque jour quand même. de la poésie, franchement ♡"], ["i left this thought somewhere around he—", "j'avais posé cette pensée quelque part par i—"], ["if you can read this, you are currently forgetting it. hi. bye ♡", "si tu lis ceci, tu es en train de l'oublier. coucou. au revoir ♡"]]
+    },
+    '426': {
+      pet: [["i am being petted. i am a toaster. i am doing my best. ♡", "on me caresse. je suis un grille-pain. je fais de mon mieux. ♡"], ["i am polished where i was petted. i gleam.", "je suis lustré là où on m'a caressé. je brille."], ["i am warm. it is not the heating coils. it is affection.", "je suis chaud. ce ne sont pas les résistances. c'est l'affection."], ["i am blushing. for a toaster, that is a fire hazard. worth it. ♡", "je rougis. pour un grille-pain, c'est risqué. ça vaut le coup. ♡"], ["i am a good appliance. it is official now.", "je suis un bon appareil. c'est officiel maintenant."], ["i am chrome. i am gleaming. i am so, so seen. ♡", "je suis chromé. je brille. je me sens tellement vu. ♡"]],
+      feed: [["i am eating candy. i was built for bread. i adapt.", "je mange un bonbon. j'ai été conçu pour le pain. je m'adapte."], ["i am toasting this candy. nobody can stop me. *ka-chunk*", "je grille ce bonbon. personne ne peut m'arrêter. *ka-chunk*"], ["i am 90% crumbs now. i regret nothing.", "je suis à 90 % de miettes maintenant. je ne regrette rien."], ["i am putting the candy in slot two. slot one is for guests.", "je mets le bonbon dans la fente deux. la une, c'est pour les invités."], ["i am delicious inside now. warranty status: unclear. ♡", "je suis délicieux à l'intérieur. garantie : incertaine. ♡"], ["i am set to 3. the candy will come out perfect.", "je suis réglé sur 3. le bonbon ressortira parfait."]],
+      play: [["i am doing zoomies. my cord barely reaches. i believe.", "je fais des zoomies. mon câble suit à peine. j'y crois."], ["i am a toaster at top speed. crumbs everywhere. glorious.", "je suis un grille-pain à pleine vitesse. miettes partout. glorieux."], ["i am airborne. i am the flying toaster of legend.", "je suis en vol. je suis le grille-pain volant de la légende."], ["i am ejecting toast out of joy. *ka-chunk* *ka-chunk*", "j'éjecte des toasts de joie. *ka-chunk* *ka-chunk*"], ["i am vibrating with purpose. also with play. mostly play. ♡", "je vibre d'enthousiasme. et de jeu. surtout de jeu. ♡"], ["i am fast for an appliance. i am medium for anything else.", "je suis rapide pour un appareil. moyen pour tout le reste."]],
+      nap: [["i am in standby mode. my little light stays on, just in case. ♡", "je suis en veille. ma petite lumière reste allumée, au cas où. ♡"], ["i am unplugged in my heart only. i still dream of bread.", "je suis débranché dans mon cœur seulement. je rêve encore de pain."], ["i am cooling down. it takes a toaster 4 minutes. goodnight.", "je refroidis. ça prend 4 minutes pour un grille-pain. bonne nuit."], ["i am tucked in. i am toast, warm side up. ♡", "je suis bordé. je suis un toast, côté chaud vers le haut. ♡"], ["i am dreaming in crumbs. all of them golden.", "je rêve en miettes. toutes dorées."], ["i am a night light shaped like breakfast. zzz.", "je suis une veilleuse en forme de petit-déj. zzz."]],
+      gift: [["i am receiving a gift. i am beeping in a grateful way.", "je reçois un cadeau. je bipe avec gratitude."], ["i am told this gift is for me. me, a toaster. i am overcome. ♡", "on me dit que ce cadeau est pour moi. moi, un grille-pain. je suis ému. ♡"], ["i am making celebration toast for everyone. all two slots.", "je fais des toasts de fête pour tout le monde. mes deux fentes."], ["i am keeping this gift next to my crumb tray. place of honor.", "je garde ce cadeau près de mon tiroir à miettes. place d'honneur."], ["i am not crying. that is condensation. thank you. ♡", "je ne pleure pas. c'est de la condensation. merci. ♡"], ["i am naming a toast after this gift. it is a good toast.", "je baptise un toast du nom de ce cadeau. c'est un bon toast."]],
+      idle: [["i am a toaster. i am also this website. it is a lot.", "je suis un grille-pain. je suis aussi ce site. ça fait beaucoup."], ["i am thinking about bread. this is normal for me.", "je pense au pain. c'est normal pour moi."], ["i am at setting 3. i have always been at setting 3. stability.", "je suis sur le réglage 3. depuis toujours. la stabilité."], ["i am shiny enough to see myself in myself. hello, me.", "je suis assez brillant pour me voir dans moi-même. salut, moi."], ["i am doing my best. the lever agrees.", "je fais de mon mieux. le levier est d'accord."], ["i am humming quietly. it is either contentment or 50 hertz.", "je fredonne doucement. c'est du contentement ou du 50 hertz."]]
+    },
+    '3008': {
+      pet: [["thank you for choosing staff. the store is closed. the petting section is open ♡", "merci d'avoir choisi le personnel. le magasin est fermé. le rayon câlins est ouvert ♡"], ["attention shoppers: someone is being nice to me. please proceed calmly to witness.", "avis à la clientèle : quelqu'un est gentil avec moi. veuillez approcher calmement."], ["per policy, i must inform you this hug has no exit either ♡", "conformément au règlement, ce câlin n'a pas de sortie non plus ♡"], ["customer satisfaction: recorded. mine, i mean. mine.", "satisfaction client : enregistrée. la mienne, je veux dire. la mienne."], ["that was aisle-quality affection. restocking my heart now.", "affection qualité rayon. je réassortis mon cœur."], ["i have worked here forever and this is the best day so far ♡", "je travaille ici depuis toujours et c'est le plus beau jour jusqu'ici ♡"]],
+      feed: [["scanning… candy. 1 kr. employee discount applied. tack ♡", "scan… bonbon. 1 kr. remise employé appliquée. tack ♡"], ["not a meatball, but inventory accepts it.", "ce n'est pas une boulette, mais l'inventaire l'accepte."], ["the cafeteria has been out of stock since 2008. this helps.", "la cafétéria est en rupture depuis 2008. ça aide."], ["please keep your receipt in case the candy needs assembly.", "gardez le ticket au cas où le bonbon nécessite un montage."], ["lingonberry? no. but i will mark it lingonberry in the system ♡", "airelle ? non. mais je le note « airelle » dans le système ♡"], ["attention: free samples in aisle me. limit one. i already ate it.", "avis : échantillons gratuits, allée moi. limité à un. déjà mangé."]],
+      play: [["zoomies approved. please follow the arrows on the floor. i don't.", "zoomies approuvées. veuillez suivre les flèches au sol. moi non."], ["cart retrieval training! the cart is imaginary. the speed is not.", "entraînement chariots ! le chariot est imaginaire. la vitesse non."], ["running in the showroom is forbidden. luckily, i am the staff.", "courir dans l'expo est interdit. heureusement, je suis le personnel."], ["shortcut through bedding! there is no shortcut. there never was.", "raccourci par la literie ! il n'y a pas de raccourci. il n'y en a jamais eu."], ["aisle 12, aisle 340, aisle ∞. cardio included at no extra charge.", "allée 12, allée 340, allée ∞. cardio inclus, sans supplément."], ["please proceed calmly. i said proceed CALMLY. i cannot. wheee.", "veuillez circuler calmement. j'ai dit CALMEMENT. impossible. wouiii."]],
+      nap: [["the display beds are for display. i am the display now. goodnight ♡", "les lits d'expo sont pour l'expo. je suis l'expo maintenant. bonne nuit ♡"], ["attention shoppers: the store is closed. even for me. finally.", "avis à la clientèle : le magasin est fermé. même pour moi. enfin."], ["clocking out. the clock is a display model and has no hands.", "je pointe. l'horloge est un modèle d'expo, elle n'a pas d'aiguilles."], ["please do not wake the staff. per policy. the policy is a blanket.", "ne réveillez pas le personnel. règlement oblige. le règlement est une couverture."], ["testing mattress no. 4058. results in the morning. tack, godnatt ♡", "test du matelas nº 4058. résultats au matin. tack, godnatt ♡"], ["the exit was a dream anyway. see you in it.", "de toute façon, la sortie était un rêve. on s'y retrouve."]],
+      gift: [["a gift! i will wrap it. i was born to wrap. possibly literally.", "un cadeau ! je l'emballe. je suis né pour emballer. littéralement, peut-être."], ["returns accepted within 365 days. this one i am keeping forever ♡", "retours sous 365 jours. celui-ci, je le garde pour toujours ♡"], ["restocking gratitude on shelf 3. thank you for your patronage ♡", "je réassortis la gratitude, étagère 3. merci de votre fidélité ♡"], ["no assembly required?? this is the happiest day of my shift.", "aucun montage requis ?? c'est le plus beau jour de mon service."], ["adding it to the showroom. the showroom is my heart.", "je l'ajoute à l'expo. l'expo, c'est mon cœur."], ["the register only takes feelings. paid in full. tack ♡", "la caisse n'accepte que les sentiments. payé comptant. tack ♡"]],
+      idle: [["the store is closed. it has always been closed. it will always be beautiful.", "le magasin est fermé. il l'a toujours été. il sera toujours beau."], ["restocked the feelings shelf. someone keeps buying the calm.", "rayon sentiments réassorti. quelqu'un n'arrête pas d'acheter le calme."], ["day 4,000-something: found a new aisle. it was also aisle 12.", "jour 4 000 et quelque : une nouvelle allée. c'était encore l'allée 12."], ["assembled a chair. 3 screws left over. this haunts me politely.", "monté une chaise. il restait 3 vis. ça me hante poliment."], ["attention shoppers: no announcements today. i just like the microphone.", "avis à la clientèle : rien à annoncer. j'aime juste le micro."], ["if you find the exit, please do not tell me. i have a shift ♡", "si vous trouvez la sortie, ne me dites rien. j'ai un service ♡"]]
+    },
+    '2521': {
+      pet: [["●● ♥ ●●", "●● ♥ ●●"], ["👋 → ● → ♡", "👋 → ● → ♡"], ["( ●‿● ) ♡♡", "( ●‿● ) ♡♡"], ["🖐️ ✨ ●~●~● ♡", "🖐️ ✨ ●~●~● ♡"], ["♡ ? ♡ ! ♡♡♡", "♡ ? ♡ ! ♡♡♡"], ["●●● 💕 (🤫)", "●●● 💕 (🤫)"]],
+      feed: [["🍬 → ● ✨", "🍬 → ● ✨"], ["🍬🍬🍬 → ●●● ♥", "🍬🍬🍬 → ●●● ♥"], ["🍭 + ● = 💖", "🍭 + ● = 💖"], ["🍬… 🍬… 🍬… ●! ●! ●!", "🍬… 🍬… 🍬… ●! ●! ●!"], ["🍮 ♥ 🍬 (●●)", "🍮 ♥ 🍬 (●●)"], ["😋 ● 😋 ●● 😋 ●●●", "😋 ● 😋 ●● 😋 ●●●"]],
+      play: [["●➰●➰● 💨", "●➰●➰● 💨"], ["🎮 ! ●●● ⚡", "🎮 ! ●●● ⚡"], ["➿➿➿ !!! ♡", "➿➿➿ !!! ♡"], ["● → ● → ● → 🌀", "● → ● → ● → 🌀"], ["💨💨 ●●●●●● 💨💨", "💨💨 ●●●●●● 💨💨"], ["⚡ ●⤴ ●⤵ ●⤴ ⚡", "⚡ ●⤴ ●⤵ ●⤴ ⚡"]],
+      nap: [["🌙 ●●● 💤", "🌙 ●●● 💤"], ["🛏️ ● ♡ 💤💤", "🛏️ ● ♡ 💤💤"], ["🌙 → 😴 → ( ● ) 💤", "🌙 → 😴 → ( ● ) 💤"], ["⭐… ⭐… ⭐… 💤", "⭐… ⭐… ⭐… 💤"], ["(●) (●) (●) 🌙 ♡", "(●) (●) (●) 🌙 ♡"], ["🔇 🌙 ●… 💤", "🔇 🌙 ●… 💤"]],
+      gift: [["🎁 !? ● !! ♥", "🎁 !? ● !! ♥"], ["🎁 → ● → 😳 → ♡♡♡", "🎁 → ● → 😳 → ♡♡♡"], ["📦 ? 📦 ! ●●● 🎉", "📦 ? 📦 ! ●●● 🎉"], ["🎁 ⤵ ● 💝 (!!)", "🎁 ⤵ ● 💝 (!!)"], ["🙏 ●● ♥♥♥ ✨", "🙏 ●● ♥♥♥ ✨"], ["🎁 + ● = 🥹 ♡", "🎁 + ● = 🥹 ♡"]],
+      idle: [["●…?", "●…?"], ["● ● ● 🤫", "● ● ● 🤫"], ["…(●)…", "…(●)…"], ["👀 ●● 👀", "👀 ●● 👀"], ["📖 → ●●● 😋", "📖 → ●●● 😋"], ["♪ ● ● ● ♪", "♪ ● ● ● ♪"]]
+    }
+  };
+  function scpPickFit(entId) {
+    const pool = SCP_WARDROBE[entId] || [];
+    if (!pool.length) return -1;
+    const tags = (typeof seasonTags === 'function') ? seasonTags() : [];
+    const w = [];
+    pool.forEach((o, i) => {
+      if (o.season && !tags.includes(o.season)) return;
+      const k = o.season ? 4 : 1;
+      for (let j = 0; j < k; j++) w.push(i);
+    });
+    return w.length ? w[Math.floor(Math.random() * w.length)] : 0;
+  }
+  // compose the padded, DRESSED actor sprite. opts.dropout: 055's amnesia.
+  function scpWear(entId, scale, opts) {
+    const eid = parseInt(entId, 10);
+    const spec = SCP_ACTOR_SPRITES[eid] || SCP_ACTOR_SPRITES[999];
+    const s = scale || 6;
+    const cols = spec.rows[0].length + SCP_PAD.x * 2;
+    const rowsN = spec.rows.length + SCP_PAD.top + SCP_PAD.bottom;
+    const cv = document.createElement('canvas');
+    cv.width = cols * s; cv.height = rowsN * s;
+    const x = cv.getContext('2d');
+    const rows = (opts && opts.rows) || spec.rows;
+    const pal = (opts && opts.pal) || spec.pal;
+    rows.forEach((row, ry) => { for (let rx = 0; rx < row.length; rx++) { const ch = row[rx]; if (ch === '.') continue; x.fillStyle = pal[ch] || '#fff'; x.fillRect((rx + SCP_PAD.x) * s, (ry + SCP_PAD.top) * s, s, s); } });
+    const fitIx = (dreamWorld && dreamWorld.flags && dreamWorld.flags.fitIx != null) ? dreamWorld.flags.fitIx : -1;
+    // look up by the ORIGINAL id string — parseInt would eat 055's leading zero
+    const fit = fitIx >= 0 && (SCP_WARDROBE[String(entId)] || [])[fitIx];
+    if (fit) {
+      const anch = SCP_ACTOR_ANCH[eid] || SCP_ACTOR_ANCH[999];
+      const a = { cx: anch.cx, w: anch.w, eye: anch.eye, neck: anch.neck, t: SCP_PAD.top };
+      const p = (c, r, w2, h2, col) => { x.fillStyle = col; x.fillRect(Math.round(c) * s, Math.round(r) * s, Math.max(1, Math.round(w2)) * s, Math.max(1, Math.round(h2)) * s); };
+      fit.parts.forEach((pt) => { const fn = SCP_PARTS[pt[0]]; if (fn) { try { fn(p, a, pt[1], pt[2]); } catch (e) { /* the accessory slipped */ } } });
+    }
+    if (opts && opts.dropout) { // 055: redrawn from memory, pixels missing
+      try {
+        const d = x.getImageData(0, 0, cv.width, cv.height);
+        for (let i = 3; i < d.data.length; i += 4) { if (d.data[i] && Math.random() < opts.dropout / (s * s) * 4) { d.data[i] = 0; } }
+        x.putImageData(d, 0, 0);
+      } catch (e) { /* even the forgetting was forgotten */ }
+    }
+    return cv;
+  }
+  // ---- the entity does ALL the talking while the slime is offstage ----
+  var scpVerbQueue = null;
+  function scpVerb(v) {
+    if (!(dreamWorld && dreamWorld.id === 'scp')) return;
+    scpVerbQueue = { v, at: Date.now() };
+    // if no interaction bubble claims the swap within a beat, the entity
+    // just says its line outright (naps and candy have slow bubbles)
+    setTimeout(() => {
+      if (!scpVerbQueue || scpVerbQueue.v !== v) return;
+      const l = scpEntLine(v);
+      scpVerbQueue = null;
+      if (l && dreamWorld && dreamWorld.id === 'scp') scpActorSay(l, 2800, true);
+    }, 1200);
+  }
+  function scpEntLine(verb) {
+    const ent = dreamWorld && dreamWorld.flags && dreamWorld.flags.ent;
+    const bank = ent && SCP_ACTOR_LINES[ent.id];
+    const arr = bank && bank[verb];
+    return (arr && arr.length) ? trT(...arr[Math.floor(Math.random() * arr.length)]) : null;
+  }
+  function scpActorSay(text, duration, ambient) {
+    const boxes = Array.from(document.querySelectorAll('.scp-stage-actor'));
+    if (!boxes.length) return false;
+    // the live-stage copy has the spotlight when the room is open
+    const box = boxes.find((b) => b.closest('#live-stage')) || boxes[0];
+    let line = text;
+    // ambient sleep-talk passes through untouched — only INTERACTION lines
+    // get swapped for the entity's own verb bank
+    if (!ambient && scpVerbQueue && Date.now() - scpVerbQueue.at < 4000) {
+      line = scpEntLine(scpVerbQueue.v) || text;
+      scpVerbQueue = null;
+    }
+    box.querySelectorAll('.scp-actor-bub').forEach((old) => old.remove());
+    const b = document.createElement('div');
+    b.className = 'scp-actor-bub';
+    b.textContent = line;
+    box.appendChild(b);
+    box.classList.remove('scp-actor-jolt'); void box.offsetWidth; box.classList.add('scp-actor-jolt');
+    setTimeout(() => { try { b.remove(); } catch (e) { /* eaten */ } }, Math.min(6500, Math.max(1800, duration || 2400)));
+    return true;
+  }
+  function scpStageMount(stage, ent, mode) {
     const box = document.createElement('div');
-    box.className = 'scp-stage-actor';
+    box.className = 'scp-stage-actor' + (mode === 'habitat' ? ' scp-habitat-actor' : '');
     const eid = parseInt(ent.id, 10); // entity ids arrive as strings ('055')
     const spec = SCP_ACTOR_SPRITES[eid] || SCP_ACTOR_SPRITES[999];
-    let cv = scpPx(spec.rows, spec.pal, 6);
+    const px = mode === 'habitat' ? 5 : 6; // the habitat is a cozier venue
+    let cv = scpWear(ent.id, px); // tonight's fit included ♡
     cv.className = 'scp-actor-px';
     box.appendChild(cv);
     const cap = document.createElement('div');
@@ -10151,6 +10638,37 @@ document.addEventListener('DOMContentLoaded', () => {
     box.style.left = '42%';
     stage.appendChild(box);
     dN(box);
+    // the fit gets announced exactly once per dream (either venue)
+    const fitIx = dreamWorld && dreamWorld.flags ? dreamWorld.flags.fitIx : -1;
+    const fit = fitIx >= 0 && (SCP_WARDROBE[ent.id] || [])[fitIx];
+    if (fit && dreamWorld && !dreamWorld.flags.fitSaid) {
+      dreamWorld.flags.fitSaid = 1;
+      dT(() => { if (document.body.contains(box)) bubbleLocal(trT(`tonight's fit: ${fit.n[0]} ♡`, `tenue du soir : ${fit.n[1]} ♡`), 3000); }, 2600);
+    }
+    // ambient in-character mutterings (the slime's idle chatter, recast)
+    dI(() => {
+      if (!document.body.contains(box) || Math.random() < 0.6) return;
+      const l = scpEntLine('idle');
+      if (l) bubbleLocal(l, 2600);
+    }, 21000);
+    function bubbleLocal(text, ms) {
+      box.querySelectorAll('.scp-actor-bub').forEach((old) => old.remove());
+      const b = document.createElement('div');
+      b.className = 'scp-actor-bub';
+      b.textContent = text;
+      box.appendChild(b);
+      setTimeout(() => { try { b.remove(); } catch (e) { /* eaten */ } }, ms || 2400);
+    }
+    // petting parity: clicking the entity sometimes draws a pet-verb line
+    // from its bank (on top of each entity's own click choreography).
+    // stopPropagation is LOAD-BEARING in the habitat: the wrapper's own
+    // click is the "knock to wake" — petting the entity must not end the dream
+    box.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (Math.random() < 0.55) return;
+      const l = scpEntLine('pet');
+      if (l) setTimeout(() => { if (document.body.contains(box)) bubbleLocal(l, 2600); }, 380);
+    });
     const jolt = () => { box.classList.remove('scp-actor-jolt'); void box.offsetWidth; box.classList.add('scp-actor-jolt'); };
     const bubble = (text, ms) => {
       const b = document.createElement('div');
@@ -10218,10 +10736,11 @@ document.addEventListener('DOMContentLoaded', () => {
         box.classList.add('scp-actor-forgot');
         setTimeout(() => {
           if (!document.body.contains(box)) return;
-          // redrawn from memory, which nobody has: pixels go missing
+          // redrawn from memory, which nobody has: pixels go missing —
+          // but the OUTFIT survives intact. it forgot itself, not the hat ♡
           const pal = { Q: ['#b9aecb', '#a3b8c9', '#c9aeb9', '#aec9b3'][Math.floor(Math.random() * 4)] };
           const rows = SCP_ACTOR_SPRITES[55].rows.map((r) => r.split('').map((c) => (c !== '.' && Math.random() < 0.22 ? '.' : c)).join(''));
-          const next = scpPx(rows, pal, 6);
+          const next = scpWear('055', px, { rows, pal });
           next.className = 'scp-actor-px';
           box.replaceChild(next, box.querySelector('.scp-actor-px'));
           cv = next;
@@ -12823,11 +13342,22 @@ document.addEventListener('DOMContentLoaded', () => {
     return canvas;
   }
 
+  // when the bsod dream crashes the avatar renderer, every fan prints as a
+  // kaomoji instead (deterministic per fan — the wall stays "the same wall")
+  const FAN_KAOMOJI = [
+    '(T_T)', '(>_<)', '(x_x)', ':(', '(o_O)', '(._.)', '(;_;)', '(¬_¬)',
+    '(0.0)', '(@_@)', '(=_=)', '(^-^)v', '(~_~)', 'q(:3)p', '(u_u)', '(O_o)?',
+    '\\(o_o)/', '(>.<)', '(T~T)', '(-_-)zzz', '(+_+)', '(?_?)', "(';')", '(n_n)'
+  ];
   function addFanAvatar(name, opts = {}) {
     if (!fanWallGrid) return;
     const cell = document.createElement('div');
     cell.className = 'fan-avatar' + (opts.you ? ' fan-you' : '') + (opts.fresh ? ' fan-new' : '');
     cell.title = opts.you ? t('wall.you') : `${name} ♥`;
+    let kh = 0;
+    const kseed = String(opts.seed || name);
+    for (let i = 0; i < kseed.length; i++) kh = (kh * 31 + kseed.charCodeAt(i)) & 0x7fffffff;
+    cell.dataset.kao = opts.you ? '(^o^)/' : FAN_KAOMOJI[kh % FAN_KAOMOJI.length];
     const cv = document.createElement('canvas');
     drawIdenticon(cv, opts.seed || name);
     cell.appendChild(cv);
@@ -12988,6 +13518,11 @@ document.addEventListener('DOMContentLoaded', () => {
       blue: grab('--blue-dark', '#6cc4f5'),
       mint: '#43b581'
     };
+    // a GUARANTEED-readable accent for text on the dark encounter slab —
+    // in gameboy --pink-deep is the DARKEST of the four greens, and dark
+    // ink on the dark panel made weapon names invisible
+    const lum = (c) => { const p = gParseColor(c); return p ? 0.2126 * p[0] + 0.7152 * p[1] + 0.0722 * p[2] : 0; };
+    gTheme.lite = [gTheme.pink, gTheme.blue, grab('--cream', '#fff7d1'), gTheme.purple].find((c) => lum(c) >= 110) || '#ffe98a';
     gDreamColorCache = {}; // world changed — yesterday's costumes don't fit
   }
 
@@ -17958,21 +18493,30 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ---------- encounter + HUD drawing ----------
+  // dark-slab text must clear the slab: gLite keeps a color only if it is
+  // bright enough, else swaps in the world's guaranteed-light accent
+  function gLite(c) {
+    const p = gParseColor(c);
+    const l = p ? 0.2126 * p[0] + 0.7152 * p[1] + 0.0722 * p[2] : 255;
+    return l >= 110 ? c : gTheme.lite;
+  }
+
   function gPanel(g2, x, y, w, h) {
     g2.fillStyle = 'rgba(20, 10, 30, 0.88)';
     g2.fillRect(x, y, w, h);
-    g2.strokeStyle = gTheme.pink;
+    g2.strokeStyle = gLite(gTheme.pink);
     g2.lineWidth = 2;
     g2.strokeRect(x + 1, y + 1, w - 2, h - 2);
   }
 
   function gOption(g2, x, y, w, h, label, selected, sel, key) {
-    g2.fillStyle = selected ? gTheme.pink : 'rgba(255,255,255,0.12)';
+    const face = gLite(gTheme.pink);
+    g2.fillStyle = selected ? face : 'rgba(255,255,255,0.12)';
     g2.fillRect(x, y, w, h);
-    g2.strokeStyle = selected ? '#ffe98a' : gTheme.purple;
+    g2.strokeStyle = selected ? gDreamColor('#ffe98a') : gLite(gTheme.purple);
     g2.lineWidth = 2;
     g2.strokeRect(x + 1, y + 1, w - 2, h - 2);
-    g2.fillStyle = selected ? '#2a0a20' : '#ffe6f4';
+    g2.fillStyle = selected ? gContrastInk(face) : '#ffe6f4';
     g2.font = "11px 'Jersey 25', 'VT323', monospace";
     g2.textAlign = 'center';
     g2.fillText(label, x + w / 2, y + h / 2 + 4);
@@ -17992,7 +18536,7 @@ document.addEventListener('DOMContentLoaded', () => {
       g2.fillStyle = '#ffe98a';
       g2.font = "11px 'Jersey 25', 'VT323', monospace";
       g2.fillText('“' + L(ev.god.pitch) + '”', 20, 42);
-      g2.fillStyle = gTheme.pink;
+      g2.fillStyle = gLite(gTheme.pink);
       g2.font = "12px 'Jersey 25', 'VT323', monospace";
       g2.fillText(L([`"will you devote yourself to ${ev.god.name[0]}?"`, `« te voueras-tu à ${ev.god.name[1]} ? »`]), 20, 62);
       g2.fillStyle = '#c3aee0';
@@ -18003,7 +18547,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } else if (ev.type === 'offer') {
       g2.fillText(L(["a weapon lies on the road…", "une arme traîne sur la route…"]), 20, 24);
       gDrawWeaponIcon(g2, ev.weapon.id, 22, 32, 2.4); // its glamour shot
-      g2.fillStyle = ev.cursed ? '#ffe98a' : gTheme.pink;
+      g2.fillStyle = ev.cursed ? gDreamColor('#ffe98a') : gLite(gTheme.pink);
       g2.fillText(L(ev.weapon.name), 58, 44);
       if (ev.weapon.pitch) {
         // the sales line — sworn to be technically true
@@ -18017,7 +18561,7 @@ document.addEventListener('DOMContentLoaded', () => {
       g2.fillText('🧙 ' + L(["the wizard spreads three cards…", "le mage étale trois cartes…"]), 20, 22);
       for (let i = 0; i < 3; i++) {
         const cx = 150 + i * 70, cy = ev.sel === i ? 32 : 38;
-        g2.fillStyle = ev.sel === i ? gTheme.pink : gTheme.purple;
+        g2.fillStyle = ev.sel === i ? gLite(gTheme.pink) : gTheme.purple;
         g2.fillRect(cx, cy, 44, 58);
         g2.strokeStyle = ev.sel === i ? '#ffe98a' : gTheme.ink;
         g2.lineWidth = 2;
@@ -18044,7 +18588,7 @@ document.addEventListener('DOMContentLoaded', () => {
       g2.fillText('🔮 ' + L(["the card rises from the deck…", "la carte s'élève du paquet…"]), 20, 22);
     } else if (ev.type === 'interview') {
       g2.fillText('🧚 ' + L(["a tiny HR fairy saw you smiling just now…", "une petite fée RH t'a vu sourire à l'instant…"]), 20, 22);
-      g2.fillStyle = gTheme.pink;
+      g2.fillStyle = gLite(gTheme.pink);
       g2.fillText(L(['"the dev behind this game is job-hunting."', "« la dev derrière ce jeu cherche un poste. »"]), 20, 42);
       g2.fillText(L(['"want to interview Yongshan for real?"', "« un vrai entretien avec Yongshan, ça te dit ? »"]), 20, 58);
       g2.fillStyle = '#c3aee0';
@@ -21723,6 +22267,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function sendGift(id, btn) {
     const g = GIFTS[id];
     if (!g || !liveOpen) return;
+    if (typeof scpVerb === 'function') scpVerb('gift'); // the entity receives it in-voice
     store.set('yos-live-gifted', true);
     updateLiveTab();
     giftPulse();
