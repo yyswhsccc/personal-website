@@ -991,7 +991,171 @@ document.addEventListener('DOMContentLoaded', () => {
     return ok ? frames : null;
   }
 
+
+  /* ---- v103: the DREAM RACKS — 14 looks per world. while the site
+     dreams, the wardrobe swaps to the world's own capsule collection
+     (sidebar, live stage AND the runner all wear the same fit). ---- */
+  const DREAM_OUTFITS = {
+    win95: [
+      { n: ["clippy cosplay", "cosplay trombone"], parts: [["glassesRound", "#dfdfdf"], ["antenna", "#c0c0c0"]] },
+      { n: ["setup wizard", "assistant d'installation"], parts: [["wizard", "#000080", "#008080"]] },
+      { n: ["blue screen nap", "sieste écran bleu"], parts: [["sleepMaskUp", "#000080"]] },
+      { n: ["screensaver mode", "mode écran de veille"], parts: [["starGarland"]] },
+      { n: ["please-wait cone", "cône veuillez patienter"], parts: [["cone", "#dfdfdf", "#ffd700"]] },
+      { n: ["56k headphones", "casque 56k"], parts: [["headphones", "#808080"]] },
+      { n: ["solitaire dealer", "croupier du solitaire"], parts: [["monocle"], ["mustache"], ["bowtie", "#000080"]] },
+      { n: ["taskbar scarf", "écharpe barre des tâches"], parts: [["scarf", "#c0c0c0", "#008080"]] },
+      { n: ["safe mode angel", "ange du mode sans échec"], parts: [["halo"]] },
+      { n: ["overclocked fan", "ventilo overclocké"], parts: [["propeller"]] },
+      { n: ["tooltip balloon", "ballon d'infobulle"], parts: [["balloon", "#ffffe1"]] },
+      { n: ["ms paint artist", "artiste ms paint"], parts: [["beret", "#008080"], ["freckles"]] },
+      { n: ["cd-rom necklace", "collier cd-rom"], parts: [["necklace", "#dfdfdf"]] },
+      { n: ["maximized monarch", "monarque maximisé"], parts: [["crown"], ["capeKnot", "#000080"]] }
+    ],
+    scp: [
+      { n: ["[eyes redacted]", "[yeux caviardés]"], parts: [["sleepMaskUp", "#0a0a0d"]] },
+      { n: ["keter clearance", "accréditation kéter"], parts: [["necklace", "#ffd23f"]] },
+      { n: ["containment cone", "cône de confinement"], parts: [["cone", "#ffd23f", "#0a0a0d"]] },
+      { n: ["breach beacon", "gyrophare de brèche"], parts: [["antenna", "#c62828"]] },
+      { n: ["classified: safe", "classé : sûr"], parts: [["halo"]] },
+      { n: ["keter kitten", "chaton kéter"], parts: [["catEars", "#c62828"]] },
+      { n: ["memetic menace", "menace mémétique"], parts: [["glassesStar", "#ffd23f"]] },
+      { n: ["d-class beanie", "bonnet de classe-d"], parts: [["beanie", "#ffd23f"]] },
+      { n: ["staff thaumaturge", "thaumaturge maison"], parts: [["wizard", "#0a0a0d", "#ffd23f"]] },
+      { n: ["junior researcher", "chercheur junior"], parts: [["capeKnot", "#e8eaee"], ["glassesRound", "#0a0a0d"], ["bowtie", "#c62828"]] },
+      { n: ["o5 overseer", "surveillant o5"], parts: [["crown"], ["monocle"]] },
+      { n: ["mtf epsilon-slime", "fim epsilon-slime"], parts: [["beret", "#0a0a0d"], ["scarf", "#0a0a0d", "#ffd23f"]] },
+      { n: ["scp-999 cosplay", "cosplay scp-999"], parts: [["freckles"], ["balloon", "#ffd23f"]] },
+      { n: ["canteen anomaly", "anomalie de cantine"], parts: [["chefHat"], ["mustache"]] }
+    ],
+    matrix: [
+      { n: ["the chosen slime", "le slime élu"], parts: [["capeKnot", "#141414"], ["glassesRound", "#141414"]] },
+      { n: ["mister anderslime", "monsieur anderslime"], parts: [["glassesRound", "#141414"], ["bowtie", "#141414"], ["antenna", "#141414"]] },
+      { n: ["follow the white bunny", "suis le lapin blanc"], parts: [["bunnyEars", "#ffffff"]] },
+      { n: ["oracle's cookies", "cookies de l'oracle"], parts: [["chefHat"], ["glassesRound", "#b8ff5e"]] },
+      { n: ["pick your pill", "choisis ta pilule"], parts: [["cone", "#ff3b5c", "#3b6cff"]] },
+      { n: ["there is no wand", "il n'y a pas de baguette"], parts: [["wand"]] },
+      { n: ["code rain scarf", "écharpe pluie de code"], parts: [["scarf", "#3dff7c", "#141414"]] },
+      { n: ["call the operator", "appelle l'opérateur"], parts: [["headphones", "#141414"]] },
+      { n: ["exit signal", "signal de sortie"], parts: [["antenna", "#2bff8f"]] },
+      { n: ["the slimechitect", "le slimechitecte"], parts: [["wizard", "#141414", "#3dff7c"]] },
+      { n: ["déjà vu cat", "chat du déjà vu"], parts: [["catEars", "#141414"], ["freckles"]] },
+      { n: ["sudo crown", "couronne sudo"], parts: [["crown"]] },
+      { n: ["hacker beanie", "bonnet de hackeur"], parts: [["beanie", "#141414"]] },
+      { n: ["string of code", "collier de code"], parts: [["necklace", "#3dff7c"]] }
+    ],
+    gameboy: [
+      { n: ["gift cartridge", "cartouche cadeau"], parts: [["bow", "#9bbc0f"]] },
+      { n: ["cat-ridge ears", "oreilles chat-touche"], parts: [["catEars", "#306230"]] },
+      { n: ["link cable scarf", "écharpe câble link"], parts: [["scarf", "#8bac0f", "#0f380f"]] },
+      { n: ["extra-life mushroom", "champignon 1-up"], parts: [["mushroom", "#8bac0f"]] },
+      { n: ["dead pixel freckles", "taches de pixels morts"], parts: [["freckles"]] },
+      { n: ["chiptune headphones", "casque chiptune"], parts: [["headphones", "#0f380f"]] },
+      { n: ["fresh save sprout", "pousse nouvelle partie"], parts: [["sprout"]] },
+      { n: ["8-bit balloon", "ballon 8 bits"], parts: [["balloon", "#9bbc0f"]] },
+      { n: ["star power shades", "lunettes invincibles"], parts: [["glassesStar", "#8bac0f"]] },
+      { n: ["konami code wizard", "mage du code konami"], parts: [["wizard", "#306230", "#8bac0f"], ["glassesRound", "#0f380f"]] },
+      { n: ["final boss, phase 2", "boss final, phase 2"], parts: [["capeKnot", "#0f380f"], ["mustache"], ["bowtie", "#0f380f"]] },
+      { n: ["paused mid-level", "pause en plein niveau"], parts: [["sleepMaskUp", "#306230"], ["beanie", "#306230"]] },
+      { n: ["high score party", "fête du high score"], parts: [["cone", "#9bbc0f", "#306230"], ["bow", "#8bac0f"]] },
+      { n: ["sleep mode bear", "ours mode veille"], parts: [["bearEars", "#306230"], ["scarf", "#306230", "#c4cfa1"]] }
+    ],
+    geo: [
+      { n: ["under construction", "en construction"], parts: [["cone", "#ffd23f", "#05010f"]] },
+      { n: ["webring halo", "auréole webring"], parts: [["halo"]] },
+      { n: ["marquee scarf", "écharpe défilante"], parts: [["scarf", "#ff2fae", "#41e0ff"]] },
+      { n: ["midi on autoplay", "midi en boucle"], parts: [["headphones", "#ff2fae"]] },
+      { n: ["netscape cape", "cape netscape"], parts: [["capeKnot", "#41e0ff"]] },
+      { n: ["56k antenna", "antenne 56k"], parts: [["antenna", "#41e0ff"]] },
+      { n: ["cursor trail", "traînée de curseur"], parts: [["starGarland"]] },
+      { n: ["hit counter charm", "collier compteur"], parts: [["necklace", "#ffd23f"]] },
+      { n: ["blink tag balloon", "ballon clignotant"], parts: [["balloon", "#ff2fae"]] },
+      { n: ["tiled bg flower", "fleur en mosaïque"], parts: [["flower", "#ff2fae"]] },
+      { n: ["chatroom cat", "chat du tchat"], parts: [["catEars", "#ff2fae"], ["glassesRound", "#41e0ff"]] },
+      { n: ["wizard of html", "mage du html"], parts: [["wizard", "#05010f", "#ffd23f"], ["glassesStar", "#ffd23f"]] },
+      { n: ["sign my guestbook", "signez mon livre d'or"], parts: [["wand"], ["bowtie", "#ff2fae"]] },
+      { n: ["propeller webmaster", "webmestre à hélice"], parts: [["propeller"], ["glassesRound", "#ffe98a"]] }
+    ],
+    bsod: [
+      { n: ["blue screen cape", "cape écran bleu"], parts: [["capeKnot", "#1136c8"]] },
+      { n: ["loading dots", "points de chargement"], parts: [["necklace", "#ffffff"]] },
+      { n: ["fan at 100%", "ventilo à 100%"], parts: [["propeller"]] },
+      { n: ["safe mode cone", "cône mode sans échec"], parts: [["cone", "#0a23a8", "#ffffff"]] },
+      { n: ["scarf stuck at 99%", "écharpe coincée à 99%"], parts: [["scarf", "#1136c8", "#ffffff"]] },
+      { n: ["busy cursor halo", "auréole curseur occupé"], parts: [["halo"]] },
+      { n: ["no signal antenna", "antenne sans signal"], parts: [["antenna", "#5aa0ff"]] },
+      { n: ["hold music headset", "casque musique d'attente"], parts: [["headphones", "#1136c8"]] },
+      { n: ["dead pixel freckles", "taches de pixels morts"], parts: [["freckles"]] },
+      { n: ["memory leak balloon", "ballon fuite mémoire"], parts: [["balloon", "#ffffff"]] },
+      { n: ["stop code scholar", "érudit des codes stop"], parts: [["gradCap"], ["glassesRound", "#ffffff"]] },
+      { n: ["certified tech support", "support technique agréé"], parts: [["monocle"], ["mustache"], ["bowtie", "#8ab4ff"]] },
+      { n: ["kernel wizard", "mage du noyau"], parts: [["wizard", "#0a23a8", "#5aa0ff"], ["wand"]] },
+      { n: ["hibernate.sys", "veille prolongée.sys"], parts: [["sleepMaskUp", "#8ab4ff"], ["moonClip"]] }
+    ],
+    amber: [
+      { n: ["punch-card bow", "nœud carte perforée"], parts: [["bow", "#f4e4bc"]] },
+      { n: ["the original bug", "le bug originel"], parts: [["antenna", "#e09c00"]] },
+      { n: ["abend halo", "auréole abend"], parts: [["halo"]] },
+      { n: ["propeller head", "tête à hélice"], parts: [["propeller"]] },
+      { n: ["console cowboy", "cowboy de la console"], parts: [["cowboy", "#e09c00"]] },
+      { n: ["terminal cat", "chat du terminal"], parts: [["catEars", "#ffb000"]] },
+      { n: ["sysop headphones", "casque du sysop"], parts: [["headphones", "#ffb000"]] },
+      { n: ["uptime crown", "couronne d'uptime"], parts: [["crown"]] },
+      { n: ["dot-matrix scarf", "écharpe matricielle"], parts: [["scarf", "#ffb000", "#f4e4bc"]] },
+      { n: ["wizard of JCL", "mage du JCL"], parts: [["wizard", "#e09c00", "#ffd23f"], ["wand"]] },
+      { n: ["cobol scholar", "érudit cobol"], parts: [["gradCap"], ["glassesRound", "#ffd23f"]] },
+      { n: ["mainframe magnate", "magnat du mainframe"], parts: [["monocle"], ["mustache"], ["bowtie", "#0d0800"]] },
+      { n: ["overnight batch cap", "bonnet du batch de nuit"], parts: [["cone", "#e09c00", "#f4e4bc"], ["sleepMaskUp", "#ffb000"]] },
+      { n: ["batch chef", "chef du batch"], parts: [["chefHat"], ["bowtie", "#ffb000"]] }
+    ]
+  };
+  // what the slime says doing its verbs INSIDE each world
+  const DREAM_ACTIONS = {
+    win95: {
+      feed: [["it looks like you're feeding me. would you like help? yes. always yes.", "on dirait que tu me nourris. besoin d'aide ? oui. toujours oui."], ["installing snack… ██████░░ 87% complete. do not turn off the slime.", "installation du goûter… ██████░░ 87 %. n'éteignez pas le slime."], ["yum.exe is not responding. just kidding. yum.exe never stops.", "miam.exe ne répond pas. je rigole. miam.exe ne s'arrête jamais."], ["this snack needs 4 mb of ram. i have jelly. close enough.", "ce goûter exige 4 mo de ram. j'ai de la gelée. ça ira."]],
+      play: [["solitaire win! watch my cards bounce everywhere ♡", "victoire au solitaire ! regarde mes cartes rebondir ♡"], ["i pressed START. nothing can stop me now.", "j'ai cliqué sur DÉMARRER. plus rien ne m'arrête."], ["swept all the mines! well, found one. with my face.", "démineur terminé ! enfin, une trouvée. avec mon visage."], ["dial-up noises at full volume. this is my favorite song.", "bruits de modem à fond. c'est ma chanson préférée."]],
+      trick: [["watch: *becomes hourglass* please wait… forever ♡", "regarde : *devient sablier* veuillez patienter… à jamais ♡"], ["i moved your files somewhere very safe. c:\\somewhere. you're welcome.", "j'ai rangé tes fichiers en lieu très sûr. c:\\quelquepart. de rien."], ["ta-da! blue screen! don't worry, my feelings were saved to disk.", "ta-da ! écran bleu ! t'inquiète, mes sentiments sont sauvés sur disque."], ["minimized myself. now you have to maximize me ♡", "je me suis réduit. à toi de m'agrandir ♡"]]
+    },
+    scp: {
+      feed: [["ration #4 from the canteen: flavor [data expunged] ♡", "ration n°4 de la cantine : goût [données supprimées] ♡"], ["snack contained. it never stood a chance", "goûter confiné. il n'avait aucune chance"], ["requesting seconds, o5 approval pending", "je demande du rab, approbation o5 en attente"], ["nom nom — please log this in addendum 999-b ♡", "miam miam — à consigner dans l'addendum 999-b ♡"]],
+      play: [["hide and seek with 173: nobody blink!!", "cache-cache avec 173 : personne ne cligne !!"], ["tag! reclassifying fun as keter", "chat ! le fun est reclassé kéter"], ["me and the hazard cone are besties now", "le cône de danger et moi, c'est pour la vie"], ["breach drill! i'm the breach ♡", "exercice de brèche ! la brèche, c'est moi ♡"]],
+      trick: [["escaped containment! ta-da! okay okay i'll go back", "évadé du confinement ! ta-da ! bon, bon, j'y retourne"], ["this trick is a cognitohazard. you saw nothing", "ce tour est un danger cognitif : vous n'avez rien vu"], ["[trick expunged by order of the o5 council]", "[tour supprimé sur ordre du conseil o5]"], ["amnestics? never heard of them. what trick?", "amnésiques ? connais pas. quel tour ?"]]
+    },
+    matrix: {
+      feed: [["tastes like chicken? everything tastes like chicken here ♡", "un goût de poulet ? ici, tout a un goût de poulet ♡"], ["the oracle said i'd love this cookie. she was right ♡", "l'oracle avait prédit que j'adorerais ce cookie. bien vu ♡"], ["there is no spoon. i eat with my face now", "il n'y a pas de cuillère. je mange avec le visage"], ["yum, digital rain — crunchy little 1s, chewy little 0s ♡", "miam, pluie numérique — des 1 croquants, des 0 fondants ♡"]],
+      play: [["look, bullet time! i dodge in slow motion (i only have slow motion)", "regarde, bullet time ! j'esquive au ralenti (je n'ai que ça)"], ["i know kung fu! ...okay, i know one bounce", "je connais le kung-fu ! ...bon, un rebond"], ["chasing the white rabbit. it's just me in bunny ears ♡", "je poursuis le lapin blanc. c'est juste moi en oreilles ♡"], ["nobody lands the first jump. good thing i bounce ♡", "personne ne réussit le premier saut. heureusement, je rebondis ♡"]],
+      trick: [["whoa, déjà vu — did i just do that trick twice?", "oh, déjà vu — je viens de faire cette figure deux fois ?"], ["dodge this ♡ *backflips in bullet time*", "esquive ça ♡ *salto en bullet time*"], ["that wasn't a glitch in the matrix. i totally meant to do that", "ce n'était pas un bug dans la matrice. c'était totalement voulu"], ["free your mind. my mind is free. my body is 90% gel", "libère ton esprit. le mien est libre. mon corps est 90 % gel"]]
+    },
+    gameboy: {
+      feed: [["nom nom... +5 hp! it's super effective ♡", "miam miam... +5 pv ! c'est super efficace ♡"], ["blowing on this snack first, like a stubborn cartridge", "je souffle sur le snack d'abord, comme sur une cartouche têtue"], ["item get: snack. save before eating? yes ♡", "objet obtenu : snack. sauvegarder avant de manger ? oui ♡"], ["tastes like 1989 in four shades of green", "un goût de 1989 en quatre nuances de vert"]],
+      play: [["press start ♡ player one: a slime", "appuie sur start ♡ joueur un : un slime"], ["new high score: 3 bounces! entering initials: s l m", "nouveau record : 3 bonds ! initiales : s l m"], ["found a link cable — that makes us co-op forever", "câble link trouvé — on est en coop pour toujours"], ["hold a+b to run! ...i have no legs. hold a+b to bounce!", "a+b pour courir ! ...pas de jambes. a+b pour bondir !"]],
+      trick: [["↑ ↑ ↓ ↓ ← → ← → b a — 30 bonus wiggles unlocked ♡", "↑ ↑ ↓ ↓ ← → ← → b a — 30 gigotages bonus débloqués ♡"], ["frame-perfect flip! no witnesses, no replay. trust me", "pirouette frame-perfect ! aucun témoin, pas de replay. crois-moi"], ["clipped through the wall! not a bug, it's a speedrun", "j'ai traversé le mur ! c'est pas un bug, c'est un speedrun"], ["quicksave... trick... quickload. flawless every time", "sauvegarde... le tour... chargement. parfait à chaque fois"]]
+    },
+    geo: {
+      feed: [["om nom ♡ this pixel snack is best viewed in 800×600", "miam ♡ ce pixel-goûter se déguste en 800×600"], ["downloading snack... 56k... 3 hours remaining... worth it ♡", "goûter en téléchargement... 56k... 3 heures restantes... ça vaut le coup ♡"], ["yum! my hit counter just ticked 000001 → 000002 ♡", "miam ! mon compteur vient de passer de 000001 à 000002 ♡"], ["gulp! please sign my guestbook if u enjoyed this snack", "glou ! signez mon livre d'or si le goûter vous a plu"]],
+      play: [["wheee ♡ surfing the webring — next site, prev site, next site!", "wouiii ♡ je surfe le webring — site suivant, précédent, suivant !"], ["let's dance!! the midi is on loop and nothing can stop it", "on danse !! le midi tourne en boucle et rien ne peut l'arrêter"], ["chasing my own sparkly cursor trail ♡ almost caught it", "je poursuis ma traînée de curseur étoilée ♡ je l'ai presque"], ["careful! this play area is under construction (forever)", "attention ! cette aire de jeu est en chantier (pour toujours)"]],
+      trick: [["ta-da!! i blinked like a <blink> tag ♡ netscape would be proud", "ta-da !! j'ai cligné comme une balise <blink> ♡ netscape serait fier"], ["trick complete! adding it to my page: new!! *spinning gif*", "tour réussi ! je l'ajoute à ma page : new !! *gif qui tourne*"], ["i scrolled myself across the screen like a marquee ♡", "je me suis fait défiler à l'écran comme un marquee ♡"], ["*does trick* you are visitor no. 001998 to witness this ♡", "*fait son tour* vous êtes le visiteur n°001998 de ce spectacle ♡"]]
+    },
+    bsod: {
+      feed: [["snack 100% downloaded... okay 99%. okay it's been 99% for a while ♡", "goûter téléchargé à 100%... bon, 99%. ça fait un moment que c'est 99% ♡"], ["collecting snack info... collected. eaten. the minidump smells like crumbs", "collecte des infos du goûter... collectées. mangées. le minidump sent la miette"], ["error: snack_not_found. fixed it. the fix was you ♡", "erreur : goûter_introuvable. corrigée. le correctif, c'était toi ♡"], [":( became :) — a critical snack has restored the system", ":( devenu :) — un goûter critique a restauré le système"]],
+      play: [["spinning like the busy cursor! wheee... please wait...", "je tournoie comme le curseur occupé ! wouhou... veuillez patienter..."], ["playing in safe mode: same fun, lower resolution", "je joue en mode sans échec : même fun, résolution en moins"], ["your pc ran into a game and needs to bounce", "votre pc a rencontré un jeu et doit rebondir"], ["achievement unlocked: 0x0000FUN", "succès débloqué : 0x0000FUN"]],
+      trick: [["watch me blue-screen on purpose... :( ... ta-da! fully recovered", "regarde, je fais un écran bleu exprès... :( ... ta-da ! restauré"], ["trick 30% complete. 30%. still 30%. surprise! it was done all along", "tour à 30 %. 30 %. toujours 30 %. surprise ! il était fini depuis le début"], ["stop code: TRICK_SUCCESS_TOO_CUTE", "code d'arrêt : TOUR_TROP_MIGNON"], ["i rebooted mid-flip and landed the update ♡", "j'ai redémarré en plein salto et j'ai réussi la mise à jour ♡"]]
+    },
+    amber: {
+      feed: [["punch cards again? extra holes, extra fiber ♡", "encore des cartes perforées ? plus de trous, plus de fibres ♡"], ["input accepted. snack loaded into core memory", "entrée acceptée. goûter chargé en mémoire centrale"], ["processing snack... batch complete in 4-6 business hours", "goûter en traitement... lot terminé sous 4 à 6 heures ouvrées"], ["01 snack pic x(999). value 'delicious'.", "01 gouter pic x(999). value 'délicieux'."]],
+      play: [["catch the tape reel! careful, it's 2400 feet long", "attrape la bobine ! attention, elle fait 730 mètres"], ["goto play. goto play. goto play. no exit condition ♡", "goto jouer. goto jouer. goto jouer. aucune sortie de boucle ♡"], ["spinning like a 9-track drive at load point ♡", "je tourne comme un dérouleur 9 pistes au point de charge ♡"], ["new high score, printed on greenbar in 132 columns", "record battu, imprimé sur papier listing en 132 colonnes"]],
+      trick: [["abend s0c7! kidding — that was just my somersault", "abend s0c7 ! mais non — c'était juste ma galipette"], ["ta-da! i sorted myself into ebcdic order", "ta-da ! je me suis trié en ordre ebcdic"], ["trick complete. see attached core dump for details ♡", "tour réussi. détails dans le core dump ci-joint ♡"], ["i can juggle three batch jobs — results by 6 a.m.", "je jongle avec trois jobs batch — résultats à 6 h du matin"]]
+    }
+  };
+  function dreamActLine(verb) {
+    if (typeof dreamWorld === 'undefined' || !dreamWorld || dreamWorld.id === 'scp') return null; // scp: the entity speaks
+    const bank = DREAM_ACTIONS[dreamWorld.id];
+    const arr = bank && bank[verb];
+    return (arr && arr.length) ? trT(...arr[Math.floor(Math.random() * arr.length)]) : null;
+  }
   function wardrobePool() {
+    // a dreaming site dresses from the world's own rack (v103)
+    if (typeof dreamWorld !== 'undefined' && dreamWorld && DREAM_OUTFITS[dreamWorld.id]) return DREAM_OUTFITS[dreamWorld.id];
     return (resolvedTheme() === 'dark') ? DARK_OUTFITS : LIGHT_OUTFITS;
   }
 
@@ -1620,6 +1784,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // --- double-click trick ---
   function slimeTrick() {
+    { const dl = dreamActLine('trick'); if (dl) setTimeout(() => showBubble(dl, 2600), 900); }
     if (pet.busy || pet.sleeping || isGrabbing) return;
     playSparkleSound();
     gainFollowers(3);
@@ -1732,6 +1897,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (typeof scpVerb === 'function') scpVerb('feed'); // the entity eats in-character
+    { const dl = dreamActLine('feed'); if (dl) setTimeout(() => showBubble(dl, 2600), 1300); }
     playClickSound();
     pet.busy = true;
 
@@ -1794,6 +1960,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (typeof scpVerb === 'function') scpVerb('play'); // entity zoomies, in-voice
+    { const dl = dreamActLine('play'); if (dl) setTimeout(() => showBubble(dl, 2800), 1750); }
     playSparkleSound();
     pet.busy = true;
     pet.energy = clamp(pet.energy - 14, 0, 100);
@@ -6531,6 +6698,60 @@ document.addEventListener('DOMContentLoaded', () => {
     return r.width > 0 && r.top > 0 && r.bottom < window.innerHeight;
   }
 
+  /* ---- v102: the NIGHT DESK ----
+     a visitor who has never run the arcade IN THE DARK gets the
+     nightmare express: after 15 active seconds of dark mode the slime
+     sleepwalks over and opens the arcade itself (the first dark run
+     then detonates into THE NIGHTMARE at second ten — see gBeginRun).
+     after that the night keeps house rhythm: first-time visitors serve
+     the 6:59 curfew and then dream; returning visitors are walked into
+     a random deep dream at the 2-minute mark, no paperwork. */
+  var swForceGame = false;   // one-shot: the next walk aims at the arcade, dice waived
+  var swExpressDive = false; // the express dive auto-presses START on landing
+  var nightDarkMs = 0;       // ACTIVE ms spent in the dark (parked tabs don't count)
+  var nightStayMs = 0;       // ACTIVE ms this visit, any theme
+  var nightExpressFired = false;
+  var nightDreamDone = false;
+  const NIGHT_RETURNING = !!store.get('yos-return', null);
+  store.set('yos-return', 1); // from now on, this browser is family
+
+  function nightExpressFire() {
+    if (nightExpressFired) return;
+    if (store.get('yos-played-dark', null)) { nightExpressFired = true; return; }
+    const gw = document.getElementById('win-game');
+    if (gw && !gw.classList.contains('window-closed')) { nightExpressFired = true; return; } // found it themselves
+    if (dreamWorld || sleepwalkActive) return; // busy stage — try again next tick
+    swForceGame = true;
+    swExpressDive = true;
+    try { startSleepwalk(); } finally { swForceGame = false; }
+    // only a walk that actually left the bed counts as a departure
+    if (sleepwalkActive) nightExpressFired = true;
+    else swExpressDive = false;
+  }
+  setInterval(() => {
+    if (document.body.classList.contains('terminal-only')) return;
+    if (typeof swVisitorEngaged === 'function' && !swVisitorEngaged()) return;
+    nightStayMs += 5000;
+    if (resolvedTheme() !== 'dark') return;
+    nightDarkMs += 5000;
+    // the express: 15 active dark seconds, once, for dark-arcade first-timers
+    if (nightDarkMs >= 15000 && !nightExpressFired && !store.get('yos-played-dark', null)) nightExpressFire();
+    // the 2-minute dream: returning visitors skip the queue (and the curfew);
+    // first-timers only board if no curfew is running (the curfew pipeline
+    // delivers their dream with ceremony instead)
+    if (nightStayMs >= 120000 && !nightDreamDone && !dreamWorld && !sleepwalkActive
+        && !gameActive() && window.innerWidth >= 560) {
+      if (swCurfewOn()) {
+        if (!NIGHT_RETURNING) return; // let the curfew flow deliver it
+        swCurfewLeft = 0; swLiftDone = true; // regulars ride past the checkpoint, quietly
+        store.set('yos-sw-curfew-left', 0);
+      }
+      nightDreamDone = true;
+      store.set('yos-dream-cd', 0);
+      try { startDreamWalk(); } catch (e) { nightDreamDone = false; }
+    }
+  }, 5000);
+
   function startSleepwalk() {
     if (document.body.classList.contains('terminal-only')) return; // the door hates popups
     // sleepwalks also launch from a maximized live room: a sleeping
@@ -6551,13 +6772,13 @@ document.addEventListener('DOMContentLoaded', () => {
       line = SW_GAME_LINE;
       isGame = true;
       directDive = true;
-    } else if (dreamWorldEligible() && Math.random() < 0.9) {
+    } else if (!swForceGame && dreamWorldEligible() && Math.random() < 0.9) {
       // v6.6: post-curfew walks are 90% DEEP DREAMS — the whole site
       // becomes the dream. the remaining 10% keeps the on-site mischief
       // (terminal typing, AMA questions, sticky notes…) in rotation
       startDreamWalk();
       return;
-    } else if (Math.random() < swGameChance()) {
+    } else if (swForceGame || Math.random() < swGameChance()) {
       target = document.getElementById('chip-game');
       line = SW_GAME_LINE;
       isGame = true;
@@ -8124,6 +8345,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const dur = remainMs || (10 + Math.random() * 5) * 60000; // the requested 10–15 min
     dreamWorld = { id: w.id, w, until: Date.now() + dur, total: remainMs ? 15 * 60000 : dur, timers: [], nodes: [], flags: { removers: [] } };
     document.documentElement.classList.add('dreaming', w.cls);
+    try { rotateOutfit(false); } catch (e) { /* the rack jammed — yesterday's fit survives */ }
     try { gSyncDreamSkin(); } catch (e) { /* the arcade dreams later */ }
     try { dreamAdaptOn(w); } catch (e) { /* the theme wears what it can */ }
     store.set('yos-dream', { id: w.id, until: dreamWorld.until });
@@ -12231,6 +12453,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (e) { /* the journal tucked itself in */ }
     document.querySelectorAll('.scp-locked-body').forEach((n) => n.classList.remove('scp-locked-body'));
     document.documentElement.classList.remove('dreaming', w.cls);
+    try { rotateOutfit(false); } catch (e) { /* home rack, whenever it's ready */ }
     try { gSyncDreamSkin(); } catch (e) { /* the arcade wakes later */ }
     store.set('yos-dream', null);
     store.set('yos-dream-cd', Date.now() + 6 * 60000); // one reality bend per while
@@ -13621,8 +13844,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // dark anchor → deep → accent → highlight (luminance ascending)
     bsod:   [[8, 29, 122], [47, 86, 214], [138, 180, 255], [234, 243, 255]],
     matrix: [[2, 24, 12], [15, 122, 58], [61, 255, 124], [204, 255, 228]],
-    amber:  [[22, 14, 2], [122, 82, 0], [255, 176, 0], [255, 233, 184]]
+    amber:  [[22, 14, 2], [122, 82, 0], [255, 176, 0], [255, 233, 184]],
+    // v103: the REAL DMG-01 palette, hard-snapped — four flat planes of
+    // layered green instead of the old whole-canvas CSS film (grayscale+
+    // sepia+hue-rotate read as "green cellophane", not a Game Boy)
+    gameboy: [[15, 56, 15], [48, 98, 48], [139, 172, 15], [155, 188, 15]]
   };
+  const G_RAMP_SNAP = { gameboy: 1 }; // DMG has no in-between greens. period.
   const G_DREAM_DESAT = { win95: 0.3, scp: 0.35 }; // match saturate(0.7)/grayscale(0.35)
   var gDreamColorCache = {};
   function gParseColor(col) {
@@ -13646,6 +13874,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const ramp = G_DREAM_RAMPS[gDreamSkin];
     if (ramp) { // mono world: luminance picks the seat on the ramp
       const t = Math.min(1, Math.max(0, (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255));
+      if (G_RAMP_SNAP[gDreamSkin]) { // quantized worlds take the NEAREST stop, no blending
+        return ramp[Math.round(t * (ramp.length - 1))];
+      }
       const seg = Math.min(ramp.length - 2, Math.floor(t * (ramp.length - 1)));
       const f = t * (ramp.length - 1) - seg;
       const a = ramp[seg], z = ramp[seg + 1];
@@ -13659,8 +13890,8 @@ document.addEventListener('DOMContentLoaded', () => {
     return [r, g, b];
   }
   function gDreamColor(col) {
-    // geo is natively neon; gameboy's canvas is DMG'd wholesale by CSS
-    if (!gDreamSkin || gDreamSkin === 'geo' || gDreamSkin === 'gameboy' || !col) return col;
+    // geo is natively neon and keeps its own colors
+    if (!gDreamSkin || gDreamSkin === 'geo' || !col) return col; // gameboy now rides the snapped DMG ramp
     const hit = gDreamColorCache[col];
     if (hit) return hit;
     const p = gParseColor(col);
@@ -13678,7 +13909,7 @@ document.addEventListener('DOMContentLoaded', () => {
   var gTintedSprites = {};
   function gWorldSprite(img) {
     // per-pixel port of a PNG onto the dream ramp (the protagonist itself)
-    if (!gDreamSkin || gDreamSkin === 'geo' || gDreamSkin === 'gameboy') return img;
+    if (!gDreamSkin || gDreamSkin === 'geo') return img; // gameboy: true 4-green port, not a film
     if (!img || !(img.complete === undefined || img.complete) || !(img.naturalWidth || img.width)) return img;
     const key = img.src ? gDreamSkin + '|' + (img.src + '').slice(-48) : null;
     if (key && gTintedSprites[key]) return gTintedSprites[key];
@@ -13716,6 +13947,133 @@ document.addEventListener('DOMContentLoaded', () => {
     win95: ['⊞', '✕'], scp: ['⚠', '█'], matrix: ['ｱ', '0'], gameboy: ['▲', '■'],
     geo: ['★', '✧'], bsod: [':(', '▓'], amber: ['♦', '▚']
   };
+
+
+  /* ==== v103: WORLD SET-PIECES — each dream's signature moment ====
+     every ~30-40s of clean running (no event, no boss, no nightmare)
+     the world itself performs: bouncing solitaire payouts, bullet time,
+     low-battery rescues… short, loud, and generous. the point is that
+     a first-time visitor trips over ONE of these inside the first
+     minute and texts a friend. */
+  function gSlimeBox() {
+    return { x: GAME.nm ? GAME.nmPx : G_SLIME_X, y: G_GROUND - G_SLIME_S - GAME.y, w: G_SLIME_S, h: G_SLIME_S };
+  }
+  function gGimmickStart() {
+    const k = gDreamSkin;
+    const mk = (items, extra) => { GAME.gimmick = Object.assign({ kind: k, t: 0, items }, extra || {}); };
+    const spread = (n, fn) => Array.from({ length: n }, (v, i) => fn(i));
+    if (k === 'win95') {
+      // SOLITAIRE PAYDAY: the winning cascade bounces through — touch cards for coins
+      mk(spread(6, (i) => ({ x: G_W + 30 + i * 46, y: 24 + (i % 3) * 18, vx: -(2.6 + (i % 3) * 0.5), vy: 1.2, glyph: '♥♦♣♠'[i % 4], got: false })));
+      gToast(['🃏 SOLITAIRE VICTORY!! the cards are bouncing — catch them!!', '🃏 VICTOIRE AU SOLITAIRE !! les cartes rebondissent — attrape-les !!'], 200);
+      playFanfare();
+    } else if (k === 'scp') {
+      // CONTAINMENT BREACH: an anomaly sprints through — boop it for coins
+      mk([{ x: G_W + 24, y: G_GROUND - 34, vx: -4.4, vy: 0, glyph: '🗿', got: false }], { alarm: 1 });
+      gToast(['🚨 CONTAINMENT BREACH!! boop the anomaly to re-contain it ♡', '🚨 BRÈCHE DE CONFINEMENT !! boop l\'anomalie pour la re-confiner ♡'], 200);
+      playTone(392, 'sawtooth', 0.2, 0, 0.06); playTone(311, 'sawtooth', 0.2, 0.22, 0.06);
+    } else if (k === 'matrix') {
+      // BULLET TIME: the world slows; you look incredible
+      mk([], { until: GAME.frame + 190 });
+      setMod('speed', 0.42, 3.2);
+      gToast(['🕶 BULLET TIME. dodge like nobody is rendering you', '🕶 BULLET TIME. esquive comme si personne ne te calculait'], 190);
+      playTone(90, 'sine', 0.5, 0, 0.08);
+    } else if (k === 'gameboy') {
+      // LOW BATTERY: the screen dims — grab the AA to relight it
+      mk([{ x: G_W + 30, y: G_GROUND - 58, vx: -2.4, vy: 0, glyph: '🔋', got: false }], { dim: 1 });
+      gToast(['🔋 LOW BATTERY!! grab the spare AA before the screen fades!!', '🔋 BATTERIE FAIBLE !! attrape la pile AA avant que l\'écran s\'éteigne !!'], 200);
+      playTone(220, 'square', 0.12, 0, 0.05); playTone(180, 'square', 0.14, 0.14, 0.05);
+    } else if (k === 'geo') {
+      // HIT COUNTER ROLLOVER: visitor 10000 — golden digits rain
+      mk(spread(5, (i) => ({ x: G_W + 20 + i * 52, y: 12 + (i % 3) * 14, vx: -(2.1 + (i % 2) * 0.6), vy: 0.9, glyph: String((i * 3) % 10), got: false })));
+      gToast(['🎉 VISITOR №10000!! the hit counter is raining digits!!', '🎉 VISITEUR N°10000 !! le compteur pleut des chiffres !!'], 200);
+      playSparkleSound();
+    } else if (k === 'bsod') {
+      // CUTENESS GATHERING: catch the white ✚ — fill the % that always lied
+      mk(spread(6, (i) => ({ x: G_W + 26 + i * 44, y: 18 + (i % 3) * 16, vx: -(2.2 + (i % 3) * 0.4), vy: 0.8, glyph: '✚', got: false })), { got: 0 });
+      gToast(['💙 collecting cuteness: 0% … help it actually reach 100%!!', '💙 collecte de mignonnerie : 0 % … aide-la à VRAIMENT atteindre 100 % !!'], 200);
+      playTone(523, 'triangle', 0.1, 0, 0.04);
+    } else if (k === 'amber') {
+      // PC LOAD COIN: the printer prints a coin trail right onto the track
+      mk(spread(6, (i) => ({ x: G_W + 30 + i * 34, y: G_GROUND - 22, vx: -3, vy: 0, glyph: '⛁', got: false })), { paper: 1 });
+      gToast(['📠 PC LOAD COIN — the mainframe is printing your paycheck!!', '📠 PC LOAD COIN — le mainframe imprime ta paie !!'], 200);
+      playTone(300, 'square', 0.06, 0, 0.04); playTone(300, 'square', 0.06, 0.1, 0.04);
+    }
+  }
+  function gGimmickTick() {
+    if (!gDreamSkin) { GAME.gimmick = null; return; }
+    if (!GAME.gimmick) {
+      if (!GAME.nextGimmickAt) GAME.nextGimmickAt = GAME.frame + 900 + (gStateHash('gmk') % 500);
+      if (GAME.frame >= GAME.nextGimmickAt && !GAME.event && !GAME.boss && !GAME.nm) gGimmickStart();
+      return;
+    }
+    const g = GAME.gimmick;
+    g.t++;
+    const sb = gSlimeBox();
+    let alive = false;
+    g.items.forEach((it) => {
+      if (it.got) return;
+      it.x += it.vx * (gDreamSkin === 'matrix' ? 1 : modVal('speed'));
+      it.y += it.vy;
+      if (it.vy && it.y > G_GROUND - 26) { it.y = G_GROUND - 26; it.vy = -Math.abs(it.vy) * 0.8; } // cards bounce
+      else if (it.vy) it.vy += 0.06;
+      if (it.x > -30) alive = true;
+      // generous pickup box — set-pieces are gifts, not exams
+      if (it.x < sb.x + sb.w + 6 && it.x + 22 > sb.x - 6 && it.y < sb.y + sb.h + 8 && it.y + 22 > sb.y - 8) {
+        it.got = true;
+        playSparkleSound();
+        if (g.kind === 'win95') { fxCoins(3); fxScore(15); }
+        else if (g.kind === 'scp') { fxCoins(6); fxScore(60); gToast(['🗿 RE-CONTAINED (by boop). the Foundation thanks you ♡', '🗿 RE-CONFINÉE (par boop). la Fondation te remercie ♡'], 170); }
+        else if (g.kind === 'gameboy') { fxCoins(8); fxScore(40); g.dim = 0; gToast(['🔋 +1 AA!! the backlight LIVES (there was never a backlight)', '🔋 +1 pile AA !! le rétroéclairage VIT (il n\'y en a jamais eu)'], 180); }
+        else if (g.kind === 'geo') { fxCoins(2); fxScore(20); }
+        else if (g.kind === 'bsod') { fxCoins(2); g.got++; if (g.got >= 4) { fxFever(5); gToast(['💙 cuteness: 100% — for once it did NOT lie ♡', '💙 mignonnerie : 100 % — pour une fois ça ne mentait pas ♡'], 200); g.got = -99; } }
+        else if (g.kind === 'amber') { fxCoins(2); playTone(300 + g.t, 'square', 0.04, 0, 0.03); }
+      }
+    });
+    if (g.until) { if (GAME.frame >= g.until) { fxScore(40); GAME.gimmick = null; } }
+    else if (!alive || g.t > 420) GAME.gimmick = null;
+    if (!GAME.gimmick) GAME.nextGimmickAt = GAME.frame + 1700 + (gStateHash('gmk' + GAME.frame) % 700);
+  }
+  function gDrawGimmick(g2) {
+    const g = GAME.gimmick;
+    if (!g) return;
+    if (g.alarm && (g.t >> 4) % 2) { // breach: the edges pulse hazard-red
+      g2.fillStyle = 'rgba(198, 40, 40, 0.18)';
+      g2.fillRect(0, 0, G_W, 5); g2.fillRect(0, G_H - 5, G_W, 5);
+    }
+    if (g.dim) { // low battery: the DMG panel fades toward nap
+      g2.fillStyle = 'rgba(15, 56, 15, ' + Math.min(0.42, g.t / 400) + ')';
+      g2.fillRect(0, 0, G_W, G_H);
+    }
+    if (g.kind === 'matrix') { // afterimages while time crawls
+      g2.fillStyle = 'rgba(61, 255, 124, 0.2)';
+      const sb = gSlimeBox();
+      g2.fillRect(sb.x - 12, sb.y + 4, sb.w, sb.h - 4);
+      g2.fillRect(sb.x - 22, sb.y + 8, sb.w, sb.h - 8);
+      return;
+    }
+    g.items.forEach((it) => {
+      if (it.got || it.x < -30) return;
+      if (g.kind === 'win95') { // proper little cards
+        g2.fillStyle = '#ffffff';
+        g2.fillRect(it.x, it.y, 16, 22);
+        g2.strokeStyle = gDreamColor('#000080');
+        g2.strokeRect(it.x + 0.5, it.y + 0.5, 15, 21);
+        g2.fillStyle = ('♥♦'.indexOf(it.glyph) >= 0) ? '#d40000' : '#14020e';
+        g2.font = "11px 'Jersey 25', 'VT323', monospace";
+        g2.fillText(it.glyph, it.x + 4, it.y + 15);
+      } else {
+        g2.font = "16px 'Jersey 25', 'VT323', monospace";
+        g2.fillStyle = g.kind === 'geo' ? '#ffd23f' : g.kind === 'bsod' ? '#ffffff' : g.kind === 'amber' ? '#ffb000' : '#ffe6f4';
+        g2.fillText(it.glyph, it.x, it.y + 14);
+      }
+    });
+    if (g.kind === 'bsod' && g.got >= 0) { // the honest progress bar
+      g2.fillStyle = 'rgba(255,255,255,0.8)';
+      g2.font = "10px 'Jersey 25', 'VT323', monospace";
+      g2.fillText('cuteness: ' + Math.min(100, g.got * 25) + '%', G_W / 2 - 30, 14);
+    }
+  }
 
   // one backdrop pass per frame, drawn under everything else
   function gDrawDreamBg(g2) {
@@ -13791,6 +14149,16 @@ document.addEventListener('DOMContentLoaded', () => {
   };
   const G_W = 480, G_H = 160, G_GROUND = 132, G_SLIME_X = 46, G_SLIME_S = 34;
 
+  // v103: the runner borrows the pet's CURRENT dressed frame (outfits and
+  // dream racks included). data-URL frames decode in a tick; until then
+  // the bare cutout keeps the seat warm.
+  var gFitImg = null, gFitSrc = '';
+  function gFitSprite() {
+    const src2 = (typeof OUTFIT_FRAMES === 'object' && OUTFIT_FRAMES && typeof OUTFIT_FRAMES.base === 'string') ? OUTFIT_FRAMES.base : null;
+    if (!src2) return gSprite;
+    if (src2 !== gFitSrc) { gFitSrc = src2; gFitImg = new Image(); gFitImg.src = src2; }
+    return (gFitImg && gFitImg.complete && gFitImg.naturalWidth) ? gFitImg : gSprite;
+  }
   const gSprite = new Image();
   gSprite.src = 'assets/slime_pet_cutout.png';
 
@@ -13812,6 +14180,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function gReset() {
+    GAME.gimmick = null; GAME.nextGimmickAt = 0; // fresh run, fresh set-pieces
     GAME.obs = [];
     GAME.speed = 3.4;
     GAME.score = 0;
@@ -13937,6 +14306,30 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  /* ---- v102: one canonical way to begin a run (space, tap, or the
+     sleepwalking slime itself). first run in the DARK is special:
+     ten seconds in, the dream curdles into THE NIGHTMARE — with a
+     ten-second escort shield so every first-timer actually MEETS it. ---- */
+  function gBeginRun() {
+    GAME.state = 'run';
+    gReset();
+    playClickSound();
+    if (!navigator.onLine) achvUnlock('nowifi');
+    const dark = resolvedTheme() === 'dark';
+    if (dark && !store.get('yos-played-dark', null)) {
+      store.set('yos-played-dark', 1); // this run counts, however it ends
+      gToast(['🌙 first run in the dark… something is already dreaming about you', '🌙 première course dans le noir… quelque chose rêve déjà de toi'], 240);
+      fxInvincible(10.5); // the escort: nothing may eat you before the main event
+      setTimeout(() => { if (GAME.state === 'run' && !GAME.nm) gNightmareStart(); }, 10000);
+      return;
+    }
+    // a saved nightmare stirs: in the dark, it comes back for you
+    if (dark && store.get('yos-nm-save', null)) {
+      gToast(['💾 a saved NIGHTMARE stirs… it returns in a few seconds', '💾 un CAUCHEMAR sauvegardé s\'agite… il revient dans quelques secondes'], 220);
+      setTimeout(() => { if (GAME.state === 'run' && !GAME.nm) gNightmareStart(); }, 6000);
+    }
+  }
+
   function gJump() {
     if (GAME.event) return; // world is frozen mid-encounter
     if (GAME.state === 'ad') return; // the sponsor bought these 15 seconds
@@ -13948,15 +14341,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (GAME.state === 'idle' || GAME.state === 'over') {
       if (GAME.state === 'over' && Date.now() < (GAME.overLockUntil || 0)) return; // read the offer first ♡
-      GAME.state = 'run';
-      gReset();
-      playClickSound();
-      if (!navigator.onLine) achvUnlock('nowifi');
-      // a saved nightmare stirs: in the dark, it comes back for you
-      if (resolvedTheme() === 'dark' && store.get('yos-nm-save', null)) {
-        gToast(['💾 a saved NIGHTMARE stirs… it returns in a few seconds', '💾 un CAUCHEMAR sauvegardé s\'agite… il revient dans quelques secondes'], 220);
-        setTimeout(() => { if (GAME.state === 'run' && !GAME.nm) gNightmareStart(); }, 6000);
-      }
+      gBeginRun();
       return;
     }
     if (GAME.y <= 0) {
@@ -14111,10 +14496,11 @@ document.addEventListener('DOMContentLoaded', () => {
       g2.fillText('💨', baseX - 30, G_GROUND - GAME.y - 16);
       g2.restore();
     }
-    if (gSprite.complete && gSprite.naturalWidth) {
-      // the protagonist dreams in the world's colors — a true palette port,
-      // not a filter approximation (per-pixel, cached per world)
-      g2.drawImage(gWorldSprite(gSprite), baseX, yTop, G_SLIME_S, h);
+    const fitImg = gFitSprite();
+    if (fitImg.complete === undefined || (fitImg.complete && (fitImg.naturalWidth || fitImg.width))) {
+      // the protagonist wears TODAY'S FIT in the world's colors — a true
+      // palette port of the dressed sprite (per-pixel, cached per look)
+      g2.drawImage(gWorldSprite(fitImg), baseX, yTop, G_SLIME_S, h);
     } else {
       g2.fillStyle = gDreamColor('#7ee0a3');
       g2.fillRect(baseX + 4, yTop + 8, G_SLIME_S - 8, h - 8);
@@ -14520,6 +14906,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ---- BOSS WAVE: a 404 kaiju + a heart-wand power-up ----
     if (gLive()) {
+      gGimmickTick(); // the world's own set-pieces run between bosses
       if (!GAME.boss && !GAME.nm && GAME.score >= GAME.nextBossAt) {
         const kinds = [
           { kind: 'kaiju', hp: 5, name: ['!! 404 KAIJU !!  grab the wand ♥', '!! KAIJU 404 !!  prends la baguette ♥'] },
@@ -14527,6 +14914,13 @@ document.addEventListener('DOMContentLoaded', () => {
           { kind: 'cookie', hp: 4, name: ['!! COOKIE BANNER !!  reject all ♥', '!! BANDEAU COOKIES !!  tout refuser ♥'] }
         ];
         const pick = kinds[Math.floor(Math.random() * kinds.length)];
+        // v103: inside a dream the boss walks on IN COSTUME — same three
+        // mechanics, the world's own monsters (names from the pack)
+        const bossPack = gPackFor(gDreamSkin);
+        if (bossPack) {
+          const dress = bossPack.bosses[pick.kind];
+          if (dress && dress.name) pick.name = ['!! ' + dress.name[0].toUpperCase() + ' !!', '!! ' + dress.name[1].toUpperCase() + ' !!'];
+        }
         GAME.boss = { x: G_W + 40, y: 30, hp: pick.hp, t: 0, flash: 0, leaving: false, kind: pick.kind, name: pick.name };
         GAME.pickup = { x: G_W + 120 };
         playTone(196, 'sawtooth', 0.3, 0, 0.05);
@@ -14630,6 +15024,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     GAME.obs.forEach((o) => gDrawObstacle(g2, o));
+    gDrawGimmick(g2);
 
     if (GAME.pickup) gDrawMat(g2, G_MATS.wand, GAME.pickup.x, G_GROUND + G_SLIME_S - 4 - 18, 2);
     GAME.shots.forEach((sh) => {
@@ -14656,11 +15051,12 @@ document.addEventListener('DOMContentLoaded', () => {
           g2.lineWidth = 2;
           g2.strokeRect(bs.x + 1, bs.y + 1, 64, 28);
           g2.font = "9px 'Jersey 25', 'VT323', monospace";
-          g2.fillText('🍪 COOKIES?', bs.x + 5, bs.y + 12);
+          const ckPack = gPackFor(gDreamSkin);
+          g2.fillText(ckPack ? ckPack.bosses.cookie.text : '🍪 COOKIES?', bs.x + 5, bs.y + 12);
           g2.fillStyle = gTheme.pink;
           g2.fillRect(bs.x + 5, bs.y + 17, 20, 9);
           g2.fillStyle = '#ffffff';
-          g2.fillText('OK', bs.x + 10, bs.y + 24);
+          g2.fillText(ckPack ? ckPack.bosses.cookie.button : 'OK', bs.x + 10, bs.y + 24);
         } else if (bs.kind === 'conflict') {
           // two kaiju halves that refuse to merge
           const off = Math.sin(bs.t * 0.2) * 3;
@@ -14668,12 +15064,14 @@ document.addEventListener('DOMContentLoaded', () => {
           gDrawMat(g2, G_MATS.boss, bs.x + 18, bs.y - off, 2);
           g2.fillStyle = gTheme.pink;
           g2.font = "10px 'Jersey 25', 'VT323', monospace";
-          g2.fillText('<<<<<<< HEAD', bs.x - 6, bs.y - 4);
+          const cfPack = gPackFor(gDreamSkin);
+          g2.fillText(cfPack ? cfPack.bosses.conflict.shout : '<<<<<<< HEAD', bs.x - 6, bs.y - 4);
         } else {
           gDrawMat(g2, G_MATS.boss, bs.x, bs.y, 3);
           g2.fillStyle = gDreamColor('#2a0a20'); // deep plum: readable on the pink belly in any theme
           g2.font = "10px 'Jersey 25', 'VT323', monospace";
-          g2.fillText('404', bs.x + 13, bs.y + 24);
+          const kjPack = gPackFor(gDreamSkin);
+          g2.fillText(kjPack ? kjPack.bosses.kaiju.belly : '404', bs.x + 13, bs.y + 24);
         }
         if (bs.t < 80 && !bs.leaving) {
           g2.fillStyle = gTheme.pink;
@@ -14749,11 +15147,11 @@ document.addEventListener('DOMContentLoaded', () => {
       g2.globalAlpha = 1;
       g2.fillStyle = gTheme.pink; // pixel frame
       g2.fillRect(G_W / 2 - gtw / 2 - 10, 46, gtw + 20, 24);
-      g2.fillStyle = '#3d2350';   // dusk slab
+      g2.fillStyle = gDreamColor('#3d2350');   // dusk slab (world-mapped in dreams)
       g2.fillRect(G_W / 2 - gtw / 2 - 8, 48, gtw + 16, 20);
-      g2.fillStyle = '#14020e';
+      g2.fillStyle = gDreamColor('#14020e');
       g2.fillText(goTxt, G_W / 2 + 1, 63); // ink drop-shadow
-      g2.fillStyle = '#fff0fa';   // cream pops on dusk
+      g2.fillStyle = gDreamColor('#fff0fa');   // cream pops on dusk
       g2.fillText(goTxt, G_W / 2, 62);
       if (!GAME.adUsed) {
         // accent chip: hot pink at home, the world's accent inside a dream
@@ -16340,8 +16738,223 @@ document.addEventListener('DOMContentLoaded', () => {
     crypto_pickaxe: [['#a8e0ff', 2, 1, 8, 2], ['#5fa8dc', 2, 3, 2, 1], ['#5fa8dc', 8, 3, 2, 1], ['#8a5a2e', 5, 3, 2, 9], ['#ffffff', 3, 1, 1, 1]]
   };
 
+
+  /* ==== v103: G_DREAM_PACKS — every dream restocks the WHOLE arcade ====
+     weapons, gods, shop and boss dressing, one pack per world (tarot is
+     the only encounter that keeps its home form — the wizard travels).
+     authored one world at a time; effects reuse the house fx helpers. */
+  const G_DREAM_PACKS = {
+  "win95": {
+    weapons: {
+      clean: [
+        { id: "retro_start_hammer", clean: true, rate: 14, name: ["the START hammer", "le marteau DÉMARRER"], pitch: ["to stop a bug, you press START. this made perfect sense in 1995", "pour arrêter un bug, tu appuies sur DÉMARRER. parfaitement logique en 1995"], pixKind: "hammer", colors: ["#c0c0c0", "#008080", "#000080"] },
+        { id: "retro_floppy_blaster", clean: true, rate: 10, name: ["floppy blaster 1.44MB", "blaster à disquettes 1,44 Mo"], pitch: ["fires 1.44 MB of pure damage. please insert disk 2 of 6 to continue", "tire 1,44 Mo de dégâts purs. veuillez insérer la disquette 2 sur 6"], pixKind: "blaster", colors: ["#000080", "#dfdfdf", "#c0c0c0"] },
+        { id: "retro_solitaire_cannon", clean: true, rate: 12, name: ["solitaire victory cannon", "canon solitaire victorieux"], pitch: ["every hit triggers the winning-card bounce. dopamine, 1995 edition", "chaque tir déclenche la cascade de cartes gagnante. dopamine, édition 1995"], pixKind: "cannon", colors: ["#008080", "#ffffff", "#d40000"] }
+      ],
+      cursed: [
+        { id: "retro_trial_cd", rate: 10, name: ["📀 500 FREE HOURS ONLINE!!", "📀 500 HEURES EN LIGNE GRATUITES !!"], pitch: ["america's shiniest coaster. 500 free hours, no strings attached*", "le dessous-de-verre le plus brillant du pays. 500 h gratuites, sans engagement*"], reveal: ["it dials up mid-run. the line is busy AND billed: 1 coin/sec for 15s", "il se connecte en pleine course. ligne occupée ET facturée : 1 pièce/s pendant 15 s"], pixKind: "blade", colors: ["#dfdfdf", "#c9a7f5", "#a8e0ff"], fx: () => setMod('drain', 1, 15) },
+        { id: "retro_ram_doubler", rate: 10, name: ["💾 DOWNLOAD_MORE_RAM.EXE", "💾 TELECHARGE_PLUS_DE_RAM.EXE"], pitch: ["doubles your RAM over the phone line. 100% free* (*you are the product)", "double ta RAM par la ligne téléphonique. 100 % gratuit* (*le produit, c'est toi)"], reveal: ["it installs 14 toolbars. each one takes commission: -30% of your wallet", "il installe 14 barres d'outils. chacune prend sa commission : -30 % du portefeuille"], pixKind: "sword", colors: ["#57c689", "#ffd400", "#c0c0c0"], fx: () => fxCoins(-Math.ceil(GAME.coins * 0.3)) }
+      ]
+    },
+    gods: [
+      { icon: "📎", name: ["Saint Clippy, patron of unsolicited help", "Saint Trombine, patron de l'aide non sollicitée"], pitch: ["it looks like you're praying. would you like help with that?", "on dirait que tu es en train de prier. veux-tu de l'aide pour ça ?"], bf: ["he opens three helpful windows inside your heart.", "il ouvre trois fenêtres utiles dans ton cœur."], rf: ["he'll ask again in 5 minutes. forever.", "il redemandera dans 5 minutes. pour toujours."] },
+      { icon: "☎️", name: ["the Dial-Up Banshee", "la Banshee du 56k"], pitch: ["SCREEE-KRRSH-DING-DING… (that was a blessing, in 56k)", "SCRIII-KRRCH-DING-DING… (c'était une bénédiction, en 56k)"], bf: ["you're connected. NOBODY touch the house phone.", "te voilà en ligne. que PERSONNE ne touche au téléphone fixe."], rf: ["NO CARRIER.", "PORTEUSE PERDUE."] },
+      { icon: "⌛", name: ["the Hourglass Eternal, god of Please Wait", "le Sablier Éternel, dieu de Veuillez Patienter"], pitch: ["every blessing arrives eventually. time remaining: 3 seconds (since 1995)", "toute bénédiction finit par arriver. temps restant : 3 secondes (depuis 1995)"], bf: ["you are now buffering. nothing can touch a loading soul.", "te voilà en chargement. rien ne peut toucher une âme qui charge."], rf: ["(Not Responding)", "(Ne répond pas)"] }
+    ],
+    shop: { keeperLine: ["welcome to Setup. click NEXT to browse. NEXT to buy. NEXT. just keep clicking NEXT ♡", "bienvenue dans l'assistant. clique SUIVANT pour voir. SUIVANT pour acheter. SUIVANT ♡"], items: [
+        { icon: "⏩", price: 5, name: ["the TURBO button", "le bouton TURBO"], out: { t: ["speed +18% for 15s. the real button did nothing. THIS one works", "vitesse +18 % pendant 15 s. le vrai bouton ne faisait rien. CELUI-CI marche"], fx: () => setMod('speed', 1.18, 15) } },
+        { icon: "💖", price: 14, name: ["hearts.exe (1 heart, mint)", "damedepique.exe (1 cœur, neuf)"], out: { t: ["+1 ♥ dealt straight from the deck. shooting the moon sold separately", "+1 ♥ distribué direct du paquet. la lune est vendue séparément"], fx: () => fxLife(1) } },
+        { icon: "🧱", price: 8, name: ["3D maze screensaver", "écran de veille labyrinthe 3D"], out: { t: ["8s untouchable: the bugs get lost in the maze looking for you", "8 s intouchable : les bugs se perdent dans le labyrinthe en te cherchant"], fx: () => fxInvincible(8) } },
+        { icon: "🃏", price: 9, name: ["solitaire victory cannon", "canon solitaire victorieux"], out: { t: ["equipped! every defeated bug does the winning-card cascade", "équipé ! chaque bug vaincu fait la cascade de cartes gagnante"], fx: () => gGiveWeapon("retro_solitaire_cannon", false) } },
+        { icon: "🖱️", price: 11, name: ["✨ 10,000 FREE CURSORS ✨", "✨ 10 000 CURSEURS GRATUITS ✨"], trap: true, out: { t: ["they all self-install. you are now 30% toolbar by weight. +10 style", "tout s'installe tout seul. tu es maintenant 30 % barre d'outils. +10 style"], fx: () => { setMod('size', 1.3, 12); fxScore(10); } } }
+    ] },
+    bosses: { kaiju: { name: ["the Blue Screen Behemoth", "le Béhémoth Écran Bleu"], belly: "FATAL 0E" }, conflict: { name: ["OK vs Cancel", "OK contre Annuler"], shout: "ABORT RETRY FAIL" }, cookie: { name: ["the Shareware Nag (day 847 of 30)", "le Nagware (jour 847 sur 30)"], text: "TRIAL EXPIRED!", button: "BUY" } }
+  },
+  "scp": {
+    weapons: {
+      clean: [
+        { id: "scp_redaction_marker", clean: true, rate: 12, name: ["redaction marker ██", "marqueur de caviardage ██"], pitch: ["deletes bugs from the record. legally, they never existed", "efface les bugs du dossier. légalement, ils n'ont jamais existé"], pixKind: "wand", colors: ["#0a0a0d", "#e8eaee", "#ffd23f"] },
+        { id: "scp_amnestic_spritz", clean: true, rate: 10, name: ["class-A amnestic spritz", "spray amnésique classe A"], pitch: ["one spray and the bug forgets it ever spawned. fresh citrus scent", "une pulvérisation et le bug oublie avoir spawné. parfum agrumes frais"], pixKind: "blaster", colors: ["#e8eaee", "#c62828", "#ffd23f"] },
+        { id: "scp_pocket_cell", clean: true, rate: 14, name: ["pocket containment cell", "cellule de confinement de poche"], pitch: ["secures, contains, and if the bug is cute: pets", "sécurise, confine, et si le bug est mignon : caresse"], pixKind: "cannon", colors: ["#ffd23f", "#0a0a0d"] }
+      ],
+      cursed: [
+        { id: "scp_keter_blade", rate: 10, name: ["⚠️ SCP-████ (keter, gently used)", "⚠️ SCP-████ (keter, peu servi)"], pitch: ["cleared by O5 vote: 6 yes, 5 no, 2 vanished. that's a majority", "validé par vote O5 : 6 oui, 5 non, 2 disparus. c'est une majorité"], reveal: ["it IS the containment breach. bugs hear the alarm and sprint", "la brèche de confinement, c'est ELLE. les bugs entendent l'alarme et sprintent"], pixKind: "blade", colors: ["#c62828", "#0a0a0d", "#ffd23f"], fx: () => { GAME.spawnIn = 1; setMod('speed', 1.12, 30); } },
+        { id: "scp_999_hammer", rate: 10, name: ["🧸 SCP-999 foam hammer", "🧸 marteau en mousse SCP-999"], pitch: ["clinically proven to cure sadness on impact. peer-reviewed by hugs", "cliniquement prouvé contre la tristesse à l'impact. relu par des câlins"], reveal: ["it giggles 'UWU' at every bonk. your jumps shrink 15% from secondhand shame", "il glousse « UWU » à chaque coup. tes sauts rétrécissent de 15 % de honte"], pixKind: "hammer", colors: ["#ffa63f", "#ffd23f", "#e8eaee"], fx: () => { setMod('uwu', 1, 45); setMod('jump', 0.85, 45); } }
+      ]
+    },
+    gods: [
+      { icon: "⬛", name: ["the Black Bar of ██████", "la Barre Noire de ██████"], pitch: ["I redact all embarrassing facts. yours are forming a queue.", "je caviarde tous les faits gênants. les tiens font la queue."], bf: ["your browser history is now [DATA EXPUNGED].", "ton historique de navigation est désormais [DONNÉES SUPPRIMÉES]."], rf: ["noted. in the permanent record. in bold.", "c'est noté. au dossier permanent. en gras."] },
+      { icon: "💊", name: ["the Amnestic Fairy (class-C)", "la Fée Amnésique (classe C)"], pitch: ["forget your problems! side effects: see 'problems', forgotten", "oublie tes problèmes ! effets secondaires : voir « problèmes », oubliés"], bf: ["worried about what? exactly. have a mint ♡", "inquiet·e de quoi ? exactement. tiens, un bonbon à la menthe ♡"], rf: ["you'll remember this refusal forever. that IS the curse.", "tu te souviendras de ce refus pour toujours. c'est ÇA, la malédiction."] },
+      { icon: "🧍", name: ["saint D-9341, patron of expendables", "saint D-9341, patron des consommables"], pitch: ["I survived every single test. statistically, one of us had to.", "j'ai survécu à tous les tests. statistiquement, il en fallait bien un."], bf: ["he lends you his lucky orange jumpsuit.", "il te prête sa combinaison orange porte-bonheur."], rf: ["he shrugs. survivors can afford to.", "il hausse les épaules. les survivants peuvent se le permettre."] }
+    ],
+    shop: { keeperLine: ["psst. it all fell off a containment truck. legally ♡", "psst. tout est tombé d'un camion de confinement. légalement ♡"], items: [
+        { icon: "👟", price: 6, name: ["anomalous insoles (safe class)", "semelles anomales (classe safe)"], out: { t: ["+35% jump. the anomaly is contained in your shoes now. probably", "+35 % de saut. l'anomalie est confinée dans tes chaussures. sans doute"], fx: () => setMod('jump', 1.35, 25) } },
+        { icon: "🚧", price: 8, name: ["hazard tape cocoon", "cocon de ruban de danger"], out: { t: ["8s invincible. even bugs respect signage", "8 s d'invincibilité. même les bugs respectent la signalétique"], fx: () => fxInvincible(8) } },
+        { icon: "🫀", price: 14, name: ["spare heart (donor: [REDACTED])", "cœur de rechange (donneur : [CENSURÉ])"], out: { t: ["+1 ♥. don't ask questions. it can't either", "+1 ♥. pose pas de questions. lui non plus"], fx: () => fxLife(1) } },
+        { icon: "🖍️", price: 9, name: ["redaction marker ██ (surplus)", "marqueur ██ (surplus)"], out: { t: ["equipped! bugs are now a clerical error", "équipé ! les bugs sont désormais une erreur administrative"], fx: () => gGiveWeapon("scp_redaction_marker", false) } },
+        { icon: "☢️", price: 11, name: ["✨ AUTHENTIC KETER CORE ✨", "✨ NOYAU KETER AUTHENTIQUE ✨"], trap: true, out: { t: ["it's a fire alarm. the bugs heard it. they run faster now. toward you", "c'est une alarme incendie. les bugs l'ont entendue. ils accélèrent. vers toi"], fx: () => setMod('speed', 1.22, 12) } }
+    ] },
+    bosses: { kaiju: { name: ["SCP-682, the hard-to-jog-past reptile", "SCP-682, le reptile difficile à dépasser"], belly: "SCP-682" }, conflict: { name: ["[REDACTED] vs [DATA EXPUNGED]", "[CENSURÉ] contre [DONNÉES SUPPRIMÉES]"], shout: "[DATA EXPUNGED]" }, cookie: { name: ["the mandatory amnestic banner", "la bannière d'amnésiques obligatoire"], text: "💊 AMNESTICS?", button: "GULP" } }
+  },
+  "matrix": {
+    weapons: {
+      clean: [
+        { id: "slimetrix_no_spoon", clean: true, rate: 13, name: ["the no-spoon 🥄", "la non-cuillère 🥄"], pitch: ["there is no spoon. there IS damage. do not try to bend the refund policy", "il n'y a pas de cuillère. il y a des dégâts. n'essaie pas de plier la politique de retour"], pixKind: "wand", colors: ["#c6cbdb", "#3dff7c"] },
+        { id: "slimetrix_deja_vu_cat", clean: true, rate: 11, name: ["déjà-vu cat launcher", "lance-chat déjà-vu"], pitch: ["fires the same black cat twice. not a glitch. it's the same cat. wait", "tire deux fois le même chat noir. pas un glitch. c'est le même chat. attends"], pixKind: "cannon", colors: ["#010a04", "#2bff8f", "#b8ff5e"] },
+        { id: "slimetrix_rain_katana", clean: true, rate: 9, name: ["digital rain katana", "katana de pluie numérique"], pitch: ["wake up, samurai. it cuts divs. everything here is divs", "réveille-toi, samouraï. il tranche des divs. tout ici est en divs"], pixKind: "katana", colors: ["#3dff7c", "#b8ff5e", "#010a04"] }
+      ],
+      cursed: [
+        { id: "slimetrix_smith_blaster", rate: 10, name: ["🕶️ Agent Smith Service Pistol", "🕶️ Pistolet de Service Agent Smith"], pitch: ["one bullet becomes many. efficiency, purpose, a nice suit", "une balle en devient plusieurs. efficacité, détermination, un beau costard"], reveal: ["it multiplied the BUGS. they wear suits now. faster, and they call you mr. anderson", "il a multiplié les BUGS. costards, plus rapides, et ils t'appellent m. anderson"], pixKind: "blaster", colors: ["#1a1f1a", "#c6cbdb", "#3dff7c"], fx: () => { GAME.spawnIn = 1; setMod('speed', 1.12, 30); } },
+        { id: "slimetrix_cypher_steak", rate: 10, name: ["🥩 Cypher's 9-Years-Real Steak Knife", "🥩 Couteau à Steak 9-Ans-Réel de Cypher"], pitch: ["ignorance is bliss. this steak is juicy, delicious, and 100% rendered", "l'ignorance, c'est le bonheur. ce steak est juteux, délicieux et 100 % rendu"], reveal: ["cypher sold your wallet's coordinates to the agents. -30%. he regrets nothing", "cypher a vendu les coordonnées de ton portefeuille aux agents. -30 %. il ne regrette rien"], pixKind: "blade", colors: ["#c65a4a", "#8a5a2e", "#3dff7c"], fx: () => fxCoins(-Math.ceil(GAME.coins * 0.3)) }
+      ]
+    },
+    gods: [
+      { icon: "😎", name: ["morpheus, sommelier of pills", "morpheus, sommelier de pilules"], pitch: ["take the red pill: see how deep the CSS goes. the blue one is just grape", "prends la pilule rouge : vois jusqu'où va le CSS. la bleue est juste au raisin"], bf: ["you wake up. the whole level was one big div with overflow: hidden", "tu te réveilles. tout le niveau était un seul div en overflow: hidden"], rf: ["you wake up in your bed and believe whatever you want to. (it was grape)", "tu te réveilles dans ton lit et tu crois ce que tu veux. (c'était du raisin)"] },
+      { icon: "🥄", name: ["the spoon child", "l'enfant à la cuillère"], pitch: ["do not try to bend the spoon. that's impossible. the fee, however, bends", "n'essaie pas de plier la cuillère. c'est impossible. le tarif, lui, se plie"], bf: ["there is no spoon. there is, apparently, a blessing", "il n'y a pas de cuillère. il y a, apparemment, une bénédiction"], rf: ["the spoon that does not exist is somehow disappointed in you", "la cuillère qui n'existe pas est quand même déçue de toi"] },
+      { icon: "🍪", name: ["the oracle (she bakes)", "l'oracle (elle fait des cookies)"], pitch: ["I know why you're here. have a cookie — you already said yes, I checked", "je sais pourquoi tu es là. prends un cookie — tu as déjà dit oui, j'ai vérifié"], bf: ["she knew. the cookie was already warm when you decided", "elle savait. le cookie était déjà chaud quand tu t'es décidé·e"], rf: ["'you already refused last tuesday,' she says. 'this one's for the road'", "« tu as déjà refusé mardi dernier », dit-elle. « celui-ci, c'est pour la route »"] }
+    ],
+    shop: { keeperLine: ["you said 'guns. lots of guns.' all I had was juice and a cat. same energy", "tu as dit « des flingues, plein de flingues ». j'avais du jus et un chat. même énergie"], items: [
+        { icon: "🐇", price: 6, name: ["white rabbit juice", "jus de lapin blanc"], out: { t: ["+35% jump for 25s. follow the white rabbit. it does leg day daily", "+35 % de saut pendant 25 s. suis le lapin blanc. il fait leg day tous les jours"], fx: () => setMod('jump', 1.35, 25) } },
+        { icon: "🕶️", price: 8, name: ["bullet-time shades", "lunettes bullet-time"], out: { t: ["8s invincible. you lean back dramatically. everything misses", "8 s invincible. tu te penches en arrière, très dramatique. tout te rate"], fx: () => fxInvincible(8) } },
+        { icon: "☎️", price: 14, name: ["hardline call (1 exit)", "ligne fixe (1 sortie)"], out: { t: ["+1 ♥. the operator found you an exit. the phone rang JUST in time", "+1 ♥. l'opérateur t'a trouvé une sortie. le téléphone a sonné JUSTE à temps"], fx: () => fxLife(1) } },
+        { icon: "🐈‍⬛", price: 9, name: ["a black cat (again?)", "un chat noir (encore ?)"], out: { t: ["equipped! you've bought this exact cat before. you will again", "équipé ! tu as déjà acheté ce chat exact. et tu le rachèteras"], fx: () => gGiveWeapon("slimetrix_deja_vu_cat", false) } },
+        { icon: "🥋", price: 10, name: ["KUNG FU (INSTANT DOWNLOAD)", "KUNG-FU (TÉLÉCHARGEMENT INSTANTANÉ)"], trap: true, out: { t: ["download complete!! wrong port. the BUGS know kung fu now. oops", "téléchargement terminé !! mauvais port. les BUGS connaissent le kung-fu. oups"], fx: () => setMod('speed', 1.22, 12) } }
+    ] },
+    bosses: { kaiju: { name: ["squiddy.exe, sentinel of the deep code", "squiddy.exe, sentinelle du code profond"], belly: "WAKE UP" }, conflict: { name: ["neo & smith: merge denied", "neo & smith : fusion refusée"], shout: "MR. ANDERSON!!" }, cookie: { name: ["the oracle's consent banner", "la bannière cookie de l'oracle"], text: "oracle cookie?", button: "EAT" } }
+  },
+  "gameboy": {
+    weapons: {
+      clean: [
+        { id: "dmg_link_cable", clean: true, rate: 12, name: ["link cable whip", "fouet câble link"], pitch: ["trades every bug to a friend's handheld. no takebacks, that's the lore", "échange chaque bug vers la console d'un copain. aucun retour, c'est le lore"], pixKind: "wand", colors: ["#306230", "#8bac0f", "#9bbc0f"] },
+        { id: "dmg_cart_blower", clean: true, rate: 10, name: ["cartridge blower", "souffle-cartouche"], pitch: ["applies one firm, disappointed puff per bug. works 60% of every time", "applique un souffle ferme et déçu par bug. marche 60 % du temps, à chaque fois"], pixKind: "blaster", colors: ["#8bac0f", "#0f380f", "#9bbc0f"] },
+        { id: "dmg_pocket_cannon", clean: true, rate: 15, name: ["pocket ball cannon", "canon à pocket balls"], pitch: ["catches bugs at a base rate of 11.9%. gotta miss 'em all first", "attrape les bugs à un taux de base de 11,9 %. il faut d'abord tous les rater"], pixKind: "cannon", colors: ["#9bbc0f", "#306230", "#0f380f"] }
+      ],
+      cursed: [
+        { id: "dmg_rare_candy_blade", rate: 10, name: ["🍬 Rare Candy Blade lv.100", "🍬 Lame Super Bonbon niv.100"], pitch: ["instant level 100!! zero grinding, zero effort, zero asterisks*", "niveau 100 instantané !! zéro farm, zéro effort, zéro astérisque*"], reveal: ["levels here are measured in width. CHONK +25%, stats not included", "ici les niveaux se mesurent en largeur. CHONK +25 %, stats non incluses"], pixKind: "blade", colors: ["#9bbc0f", "#306230"], fx: () => setMod('size', 1.25, 25) },
+        { id: "dmg_missingno_katana", rate: 10, name: ["▓▒░ MissingNo. Katana", "▓▒░ Katana MissingNo."], pitch: ["duplicates the 6th item in your bag ×128. glitch-certified since '89", "duplique le 6e objet de ton sac ×128. glitch certifié depuis 89"], reveal: ["your 6th item was BUGS. now they're ×128 and faster. old glitches never die", "ton 6e objet : des BUGS. les voilà ×128 et plus rapides. les vieux glitchs ne meurent jamais"], pixKind: "katana", colors: ["#0f380f", "#8bac0f", "#306230"], fx: () => { GAME.spawnIn = 1; setMod('speed', 1.12, 30); } }
+      ]
+    },
+    gods: [
+      { icon: "🔋", name: ["the Twin Saints of AA", "les Saints Jumeaux AA"], pitch: ["we hold 30 hours of destiny. the red light is a lie we tell together", "nous portons 30 heures de destin. la lumière rouge est un mensonge qu'on partage"], bf: ["the low-battery light vows to stay red a little longer.", "la lumière rouge jure de tenir encore un peu."], rf: ["they roll behind the couch. forever.", "elles roulent derrière le canapé. pour toujours."] },
+      { icon: "💨", name: ["Our Lady of the Blown Cartridge", "Notre-Dame de la Cartouche Soufflée"], pitch: ["one holy puff fixes anything. science says no. 1989 says yes.", "un souffle sacré répare tout. la science dit non. 1989 dit oui."], bf: ["she exhales. somewhere, a save file survives.", "elle souffle. quelque part, une sauvegarde survit."], rf: ["she inhales instead. that can't be good.", "elle inspire à la place. mauvais signe."] },
+      { icon: "🕹️", name: ["the Elder of ↑↑↓↓←→", "l'Ancien du ↑↑↓↓←→"], pitch: ["30 lives await those who press in order. no pressure. okay, some pressure.", "30 vies attendent qui appuie dans l'ordre. sans pression. bon, un peu."], bf: ["←→BA. somewhere, a cheat activates in your honor.", "←→BA. quelque part, un cheat s'active en ton honneur."], rf: ["you pressed START too early. the Elder saw.", "tu as appuyé START trop tôt. l'Ancien a vu."] }
+    ],
+    shop: { keeperLine: ["trade-in value: 2 coins. sale price: 40. that's retro economics, kid ♡", "reprise : 2 pièces. prix de vente : 40. c'est l'économie du rétro, gamin ♡"], items: [
+        { icon: "🔋", price: 5, name: ["fresh AAs (name brand)", "piles AA neuves (de marque)"], out: { t: ["speed +18% for 15s. the screen goes from 4 shades to 4 BRIGHTER shades", "vitesse +18 % pendant 15 s. l'écran passe de 4 nuances à 4 nuances PLUS VIVES"], fx: () => setMod('speed', 1.18, 15) } },
+        { icon: "💾", price: 14, name: ["bottled save point", "point de sauvegarde en bouteille"], out: { t: ["+1 ♥. death is now a suggestion. reload responsibly", "+1 ♥. la mort n'est plus qu'une suggestion. recharge avec modération"], fx: () => fxLife(1) } },
+        { icon: "🌈", price: 9, name: ["rainbow fever (4 shades)", "fièvre arc-en-ciel (4 nuances)"], out: { t: ["8s of fever in 4 glorious greens. the rainbow is implied", "8 s de fièvre en 4 verts glorieux. l'arc-en-ciel est sous-entendu"], fx: () => fxFever(8) } },
+        { icon: "💨", price: 7, name: ["cartridge blower", "souffle-cartouche"], out: { t: ["equipped! one firm, disappointed puff per bug", "équipé ! un souffle ferme et déçu par bug"], fx: () => gGiveWeapon("dmg_cart_blower", false) } },
+        { icon: "🎮", price: 12, name: ["★128-IN-1 MEGA CART★", "★MÉGA CARTOUCHE 128-EN-1★"], trap: true, out: { t: ["126 games are the same golf. the other 2? also golf. +1 coin found in the box", "126 jeux sont le même golf. les 2 autres ? golf aussi. +1 pièce trouvée dans la boîte"], fx: () => fxCoins(1) } }
+    ] },
+    bosses: { kaiju: { name: ["Cartzilla, the unblown", "Cartzilla, jamais soufflée"], belly: "BLOW HERE" }, conflict: { name: ["version green & version green", "version verte & version verte"], shout: "NEED LINK CABLE" }, cookie: { name: ["the eternal saving screen", "l'écran de sauvegarde éternel"], text: "DON'T TURN OFF", button: "OFF" } }
+  },
+  "geo": {
+    weapons: {
+      clean: [
+        { id: "geo_marquee_katana", clean: true, rate: 11, name: ["<marquee> katana", "katana <marquee>"], pitch: ["slices left-to-right forever. deprecated by the W3C, stopped by no one", "tranche de gauche à droite en boucle. déprécié par le W3C, arrêté par personne"], pixKind: "katana", colors: ["#ff2fae", "#41e0ff"] },
+        { id: "geo_glitter_wand", clean: true, rate: 14, name: ["glitter graphics wand", "baguette à paillettes gif"], pitch: ["fires hand-tiled sparkle gifs. 12KB each, worth every second of loading", "tire des gifs scintillants faits main. 12 Ko pièce, chaque seconde de chargement se mérite"], pixKind: "wand", colors: ["#ffd23f", "#ff2fae", "#ffe98a"] },
+        { id: "geo_counter_cannon", clean: true, rate: 9, name: ["hit counter cannon", "canon compteur de visites"], pitch: ["every bug you hit counts as a visitor. finally, traffic", "chaque bug touché compte comme un visiteur. enfin du trafic"], pixKind: "cannon", colors: ["#41e0ff", "#ffd23f"] }
+      ],
+      cursed: [
+        { id: "geo_midi_blaster", rate: 10, name: ["🎹 AUTOPLAY MIDI Blaster", "🎹 Blaster MIDI (autoplay)"], pitch: ["greets every enemy with a 30KB orchestra. mute buttons weren't invented yet", "accueille chaque ennemi avec un orchestre de 30 Ko. le bouton muet n'existait pas encore"], reveal: ["the bugs think it's a rave. they mosh 22% faster. the song never ends", "les bugs croient à une rave. ils poguent 22 % plus vite. la chanson ne finit jamais"], pixKind: "blaster", colors: ["#ff2fae", "#41e0ff", "#ffe98a"], fx: () => { GAME.spawnIn = 1; setMod('speed', 1.12, 30); } },
+        { id: "geo_webspace_pickaxe", rate: 10, name: ["⛏️ FREE UNLIMITED WEBSPACE Pickaxe", "⛏️ Pioche HÉBERGEMENT GRATUIT ILLIMITÉ"], pitch: ["dig up free hosting forever!!* (*forever = until acquisition)", "creuse un hébergement gratuit pour toujours !!* (*toujours = jusqu'au rachat)"], reveal: ["the host got acquired. your neighborhood was deleted. -30% coins, never backed up", "l'hébergeur a été racheté. ton quartier a été supprimé. -30 % des pièces, jamais sauvegardées"], pixKind: "pickaxe", colors: ["#ffd23f", "#41e0ff"], fx: () => fxCoins(-Math.ceil(GAME.coins * 0.3)) }
+      ]
+    },
+    gods: [
+      { icon: "🚧", name: ["the Patron Saint of Under Construction", "le Saint Patron de l'Éternel Chantier"], pitch: ["I bless every unfinished thing. this page. that gif. you.", "je bénis tout ce qui est inachevé. cette page. ce gif. toi."], bf: ["your little digging-man gif digs for YOU now.", "ton petit bonhomme-pelleteur gif creuse pour TOI désormais."], rf: ["he leaves a traffic cone in your path. it's load-bearing.", "il pose un cône de chantier sur ta route. il est porteur."] },
+      { icon: "☎️", name: ["the Dial-Up Banshee", "la Banshee du 56k"], pitch: ["my scream IS the blessing. 56k of pure grace. just don't pick up the phone.", "mon cri EST la bénédiction. 56k de grâce pure. surtout, ne décroche pas le téléphone."], bf: ["SCREEEE-hisss-bong. you are connected to fortune at 4.2 KB/s.", "SCRIIII-pshhh-bong. te voilà connecté·e à la fortune à 4,2 Ko/s."], rf: ["your mom picks up the phone. the blessing disconnects.", "ta mère décroche le téléphone. la bénédiction se déconnecte."] },
+      { icon: "🕛", name: ["Y2K, the bug at the end of time", "Y2K, le bug de la fin des temps"], pitch: ["I end the world every january 1st. current record: 0 wins. this year feels different.", "je détruis le monde chaque 1er janvier. bilan : 0 victoire. cette année, je le sens bien."], bf: ["he rolls your odometer back to 00. factory-fresh destiny.", "il remet ton compteur à 00. destin sorti d'usine."], rf: ["fine. your savings are now stored in two digits.", "très bien. tes économies sont désormais stockées sur deux chiffres."] }
+    ],
+    shop: { keeperLine: ["welcome, visitor #000002!! (i'm #000001. it's my counter)", "bienvenue, visiteur n°000002 !! (le n°000001 c'est moi. c'est mon compteur)"], items: [
+        { icon: "📡", price: 5, name: ["broadband demo (15 sec)", "démo haut débit (15 s)"], out: { t: ["pages load BEFORE the snack run. speed +18%. witchcraft", "les pages chargent AVANT le goûter. vitesse +18 %. sorcellerie"], fx: () => setMod('speed', 1.18, 15) } },
+        { icon: "🛡️", price: 8, name: ["pop-up blocker (shareware)", "anti-popups (shareware)"], out: { t: ["8s where NOTHING pops up on you. not bugs, not even ads", "8 s où RIEN ne te saute dessus. ni bugs, ni pubs"], fx: () => fxInvincible(8) } },
+        { icon: "🏆", price: 4, name: ["cool site of the day award", "prix du site cool du jour"], out: { t: ["+80 score. self-nominated, self-judged, 100% official", "+80 points. auto-nominé, auto-jugé, 100 % officiel"], fx: () => fxScore(80) } },
+        { icon: "🧮", price: 9, name: ["hit counter cannon", "canon compteur de visites"], out: { t: ["equipped!! every hit is a visitor. your stats never looked better", "équipé !! chaque coup est un visiteur. tes stats n'ont jamais été aussi belles"], fx: () => gGiveWeapon("geo_counter_cannon", false) } },
+        { icon: "🎊", price: 11, name: ["🎉 1,000,000th VISITOR PRIZE!!", "🎉 PRIX DU 1 000 000e VISITEUR !!"], trap: true, out: { t: ["the banner was a gif. your prize: 1 coin, shipping included ♡", "la bannière était un gif. ton prix : 1 pièce, port compris ♡"], fx: () => fxCoins(1) } }
+    ] },
+    bosses: { kaiju: { name: ["GIFZILLA (still loading)", "GIFZILLA (chargement…)"], belly: "▓▓▓░ 87%" }, conflict: { name: ["the Frameset that Never Aligned", "le Frameset Jamais Aligné"], shout: "NOFRAMES!!" }, cookie: { name: ["the Punch-the-Monkey Banner", "la Bannière Frappe-le-Singe"], text: "PUNCH THE 🐒!", button: "WIN!" } }
+  },
+  "bsod": {
+    weapons: {
+      clean: [
+        { id: "bsod_sad_wand", clean: true, rate: 12, name: [":( wand", "baguette :("], pitch: ["fires :( at bugs. they run into a problem and need to restart", "tire des :( sur les bugs. ils rencontrent un problème et doivent redémarrer"], pixKind: "wand", colors: ["#ffffff", "#8ab4ff", "#1136c8"] },
+        { id: "bsod_taskkill", clean: true, rate: 10, name: ["ctrl+alt+del blaster", "blaster ctrl+alt+suppr"], pitch: ["ends any task politely. the task is not consulted", "termine n'importe quelle tâche poliment. la tâche n'est pas consultée"], pixKind: "blaster", colors: ["#8ab4ff", "#ffffff", "#0a23a8"] },
+        { id: "bsod_qr_cannon", clean: true, rate: 15, name: ["QR code cannon", "canon à QR codes"], pitch: ["every hit prints a QR explaining why the bug died. nobody scans it", "chaque tir imprime un QR expliquant pourquoi le bug est mort. personne ne le scanne"], pixKind: "cannon", colors: ["#ffffff", "#0a23a8"] }
+      ],
+      cursed: [
+        { id: "bsod_progress_blade", rate: 10, name: ["✨ 100% COMPLETED BLADE ✨", "✨ LAME TERMINÉE À 100 % ✨"], pitch: ["100% complete. it says so right on the blade. numbers can't lie*", "terminée à 100 %. c'est écrit dessus. les chiffres ne mentent pas*"], reveal: ["stuck at 100% since tuesday. so are your legs: speed +20% until IT says so (20s)", "coincée à 100 % depuis mardi. tes jambes aussi : vitesse +20 % tant qu'ELLE veut (20 s)"], pixKind: "blade", colors: ["#8ab4ff", "#ffffff", "#1136c8"], fx: () => setMod('speed', 1.2, 20) },
+        { id: "bsod_minidump_hammer", rate: 10, name: ["🗃️ Deluxe Minidump Hammer", "🗃️ Marteau Minidump Deluxe"], pitch: ["collects some info about each hit, so someone can be told what happened*", "collecte des infos sur chaque coup, pour que quelqu'un soit prévenu*"], reveal: ["full dump collected. of your wallet. 30% written to C:\\gone forever", "dump complet collecté. de ton portefeuille. 30 % écrits dans C:\\disparu"], pixKind: "hammer", colors: ["#ffffff", "#8ab4ff", "#0a23a8"], fx: () => fxCoins(-Math.ceil(GAME.coins * 0.3)) }
+      ]
+    },
+    gods: [
+      { icon: "☹️", name: ["the Great :(", "le Grand :("], pitch: ["your run has run into a problem. stay calm — I'm collecting some cuteness", "ta course a rencontré un problème. reste calme — je collecte un peu de mignonnerie"], bf: ["it smiles. :) — an error never seen before.", "il sourit. :) — une erreur jamais observée."], rf: ["it deepens. :(( — sadness escalated to level 2.", "il s'assombrit. :(( — tristesse escaladée au niveau 2."] },
+      { icon: "🔄", name: ["Saint Reboot", "Saint Redémarrage"], pitch: ["I fix 90% of everything by turning it off and on. the other 10% confess eventually", "je répare 90 % de tout en l'éteignant et le rallumant. le reste finit par avouer"], bf: ["your problems do not survive the shutdown.", "tes soucis ne survivent pas à l'extinction."], rf: ["your restart is now scheduled. at the worst possible time.", "ton redémarrage est planifié. au pire moment possible."] },
+      { icon: "🗂️", name: ["Lady Minidump", "Dame Minidump"], pitch: ["I know exactly what went wrong. it's all in a file nobody can open ♡", "je sais exactement ce qui a planté. tout est dans un fichier que personne n'ouvre ♡"], bf: ["she opens the file just for you. inside: comfort.", "elle ouvre le fichier rien que pour toi. dedans : du réconfort."], rf: ["refusal logged. error code 0x0000FEEL.", "refus consigné. code d'erreur 0x0000FEEL."] }
+    ],
+    shop: { keeperLine: ["the register bluescreened. prices are whatever it last remembered ♡", "la caisse a fait un écran bleu. les prix sont ceux dont elle se souvient ♡"], items: [
+        { icon: "🛟", price: 5, name: ["safe mode springs", "ressorts mode sans échec"], out: { t: ["+35% jump for 25s. only essential drivers were loaded", "+35 % de saut 25 s. seuls les pilotes essentiels sont chargés"], fx: () => setMod('jump', 1.35, 25) } },
+        { icon: "🛡️", price: 8, name: ["restore point bubble", "bulle point de restauration"], out: { t: ["8s invincible. whatever happens, it officially didn't", "8 s invincible. quoi qu'il arrive, officiellement rien n'est arrivé"], fx: () => fxInvincible(8) } },
+        { icon: "💙", price: 14, name: ["heart recovered from the dump", "cœur récupéré du minidump"], out: { t: ["+1 ♥. found intact in the minidump. beats in blue now", "+1 ♥. retrouvé intact dans le minidump. il bat en bleu désormais"], fx: () => fxLife(1) } },
+        { icon: "🪄", price: 9, name: [":( wand (display unit)", "baguette :( (modèle d'expo)"], out: { t: ["equipped! bugs will now run into a problem", "équipée ! les bugs vont maintenant rencontrer un problème"], fx: () => gGiveWeapon("bsod_sad_wand", false) } },
+        { icon: "💾", price: 11, name: ["2TB FREE RAM (DOWNLOAD NOW!!)", "2 To de RAM GRATUITE (TÉLÉCHARGE !!)"], trap: true, out: { t: ["the RAM downloads directly into you. CHONK +30%. so much memory", "la RAM se télécharge directement dans toi. CHONK +30 %. tant de mémoire"], fx: () => { setMod('size', 1.3, 12); fxScore(10); } } }
+    ] },
+    bosses: { kaiju: { name: ["!! BLUESCREEN KAIJU !!  grab the wand ♥", "!! KAIJU ÉCRAN BLEU !!  prends la baguette ♥"], belly: "0x0000FEEL" }, conflict: { name: ["!! NOT-RESPONDING TWINS !!  end task ♥", "!! JUMEAUX SANS RÉPONSE !!  fin de tâche ♥"], shout: "NOT RESPONDING" }, cookie: { name: ["!! LYING PROGRESS BAR !!  refuse to wait ♥", "!! BARRE DE PROGRÈS MENTEUSE !!  refuse d'attendre ♥"], text: "99% COMPLETE", button: "WAIT" } }
+  },
+  "amber": {
+    weapons: {
+      clean: [
+        { id: "s370_punch_dealer", clean: true, rate: 11, name: ["punch card dealer", "distributeur de cartes perforées"], pitch: ["deals 80 columns of damage. do not fold, spindle, or mutilate", "inflige 80 colonnes de dégâts. ne pas plier, perforer ni mutiler"], pixKind: "blade", colors: ["#f4e4bc", "#e09c00", "#0d0800"] },
+        { id: "s370_jcl_staff", clean: true, rate: 14, name: ["JCL submit staff", "bâton SUBMIT JCL"], pitch: ["runs //STEP1 EXEC PGM=DELETE on every bug. ships overnight. overnight is now", "lance //STEP1 EXEC PGM=DELETE sur chaque bug. livré de nuit. la nuit, c'est maintenant"], pixKind: "staff", colors: ["#ffb000", "#ffd23f"] },
+        { id: "s370_line_printer", clean: true, rate: 9, name: ["1403 line printer lance", "lance-imprimante 1403"], pitch: ["prints NO at 1100 lines per minute. the noise alone counts as damage", "imprime NON à 1100 lignes par minute. le bruit seul compte comme dégâts"], pixKind: "cannon", colors: ["#e09c00", "#f4e4bc", "#ffb000"] }
+      ],
+      cursed: [
+        { id: "s370_cobol_sceptre", rate: 10, name: ["📜 Self-Documenting COBOL Sceptre", "📜 Sceptre COBOL auto-documenté"], pitch: ["so readable it needs zero comments. four DIVISIONs of pure clarity", "si lisible qu'il n'exige aucun commentaire. quatre DIVISIONs de pure clarté"], reveal: ["every shot is a full PARAGRAPH. CHONK +25% from the boilerplate", "chaque tir est un PARAGRAPHE entier. CHONK +25 % de boilerplate"], pixKind: "wand", colors: ["#ffd23f", "#f4e4bc"], fx: () => setMod('size', 1.25, 25) },
+        { id: "s370_timeshare_sabre", rate: 10, name: ["🖥️ Time-Sharing Sabre (unlimited*)", "🖥️ Sabre en Temps Partagé (illimité*)"], pitch: ["all the mainframe's power, whenever you want*  (*see rate card)", "toute la puissance du mainframe, quand tu veux*  (*voir grille tarifaire)"], reveal: ["billed by the cpu-second. rental fee: 1 coin/sec for 15s", "facturé à la seconde CPU. location : 1 pièce/s pendant 15 s"], pixKind: "sword", colors: ["#ffb000", "#0d0800", "#ffd23f"], fx: () => setMod('drain', 1, 15) }
+      ]
+    },
+    gods: [
+      { icon: "🦋", name: ["the First Moth (est. 1947)", "la Mite Originelle (dep. 1947)"], pitch: ["I am the original bug, found taped in a logbook. every other bug is a tribute act.", "je suis le bug originel, scotché dans un journal de bord. les autres ? des reprises."], bf: ["taped into your logbook: 'first actual case of luck being found.'", "scotchée dans ton journal : « premier cas réel de chance trouvée. »"], rf: ["she flies straight into your relays. it's tradition.", "elle fonce droit dans tes relais. c'est la tradition."] },
+      { icon: "☕", name: ["the Night Operator", "l'Opérateur de Nuit"], pitch: ["I run the 3am batch. be nice, or your job goes after payroll. payroll takes six hours.", "je lance le batch de 3 h. sois sympa, ou ton job passe après la paie. la paie dure six heures."], bf: ["your job jumps the queue. payroll never knows.", "ton job double la file. la paie n'en saura rien."], rf: ["requeued. new priority: after everything, twice.", "remis en file. nouvelle priorité : après tout le reste, deux fois."] },
+      { icon: "📼", name: ["the Tape Librarian", "la Bibliothécaire des Bandes"], pitch: ["I know where every byte sleeps. mislabel one reel and I'll know where YOU sleep.", "je sais où dort chaque octet. étiquette mal une bobine et je saurai où TU dors."], bf: ["she mounts fortune on drive 042, rewound with love.", "elle monte la fortune sur le lecteur 042, rembobinée avec amour."], rf: ["your luck was rotated offsite. retrieval: 6–8 weeks.", "ta chance part en stockage externe. récupération : 6 à 8 semaines."] }
+    ],
+    shop: { keeperLine: ["nothing here is for sale — it's all leased. monthly. like the real thing ♡", "rien ici n'est à vendre — tout est en leasing. mensuel. comme à l'époque ♡"], items: [
+        { icon: "☕", price: 5, name: ["night-shift percolator shot", "shot de percolateur de nuit"], out: { t: ["speed +18% for 15s. brewed monday. it's thursday", "vitesse +18 % pendant 15 s. infusé lundi. on est jeudi"], fx: () => setMod('speed', 1.18, 15) } },
+        { icon: "🛡️", price: 8, name: ["anti-static wristband", "bracelet antistatique"], out: { t: ["8s invincible. you are finally properly grounded", "8 s invincible. te voilà enfin correctement relié·e à la terre"], fx: () => fxInvincible(8) } },
+        { icon: "🎴", price: 8, name: ["punch card dealer (gov surplus)", "distributeur de cartes perforées (surplus d'État)"], out: { t: ["equipped! do not fold, spindle, or mutilate", "équipé ! ne pas plier, perforer ni mutiler"], fx: () => gGiveWeapon("s370_punch_dealer", false) } },
+        { icon: "💖", price: 14, name: ["hot-spare heart (failover ready)", "cœur de secours (failover prêt)"], out: { t: ["+1 ♥. swaps in with zero downtime. five nines of love", "+1 ♥. bascule sans interruption. cinq neufs d'amour"], fx: () => fxLife(1) } },
+        { icon: "🍩", price: 12, name: ["INFINITE MEMORY UPGRADE (a whole 64 KB)", "EXTENSION MÉMOIRE INFINIE (64 Ko entiers)"], trap: true, out: { t: ["it's a crate of ferrite donuts. CHONK +30% — core memory is HEAVY", "c'est une caisse de tores en ferrite. CHONK +30 % — la mémoire à tores, ça PÈSE"], fx: () => { setMod('size', 1.3, 12); fxScore(10); } } }
+    ] },
+    bosses: { kaiju: { name: ["Big Iron (it heard you say 'cloud')", "Big Iron (il t'a entendu dire « cloud »)"], belly: "ABEND S0C4" }, conflict: { name: ["the dropped deck: cards 1–40 vs 41–80", "le paquet tombé : cartes 1–40 vs 41–80"], shout: "OUT OF SEQUENCE!" }, cookie: { name: ["the dot-matrix jam banner", "la bannière du bourrage matriciel"], text: "PC LOAD LETTER", button: "WHAT" } }
+  }
+  };
+  // world badges: each pack weapon borrows its pixKind's hand-pixelled
+  // silhouette, re-dressed in the world's colors (area-ranked: the
+  // biggest color family wears colors[0], and so on down the shelf)
+  const G_PIX_BASE = { wand: 'heart_wand', blaster: 'bubble_blaster', blade: 'legacy_blade', hammer: 'gold_hammer', staff: 'css_staff', straw: 'boba_straw', pickaxe: 'crypto_pickaxe', cannon: 'meow_cannon', katana: 'vim_katana', sword: 'rgb_sword' };
+  const G_PACK_PIX = {};
+  Object.values(G_DREAM_PACKS).forEach((pack) => {
+    pack.weapons.clean.concat(pack.weapons.cursed).forEach((w) => {
+      const base = WEAPON_PIX[G_PIX_BASE[w.pixKind] || 'heart_wand'];
+      const area = {};
+      base.forEach(([c, , , w2, h2]) => { area[c] = (area[c] || 0) + w2 * h2; });
+      const ranked = Object.keys(area).sort((a, b) => area[b] - area[a]);
+      const map = {};
+      ranked.forEach((c, i) => { if (w.colors[i]) map[c] = w.colors[i]; });
+      G_PACK_PIX[w.id] = base.map(([c, x2, y2, w2, h2]) => [map[c] || c, x2, y2, w2, h2]);
+    });
+  });
+  function gPackFor(skin) { return skin ? G_DREAM_PACKS[skin] || null : null; }
+  function gPackWeapon(id) {
+    for (const k in G_DREAM_PACKS) {
+      const ws = G_DREAM_PACKS[k].weapons;
+      const hit = ws.clean.find((w) => w.id === id) || ws.cursed.find((w) => w.id === id);
+      if (hit) return hit;
+    }
+    return null;
+  }
+
   function gDrawWeaponIcon(g2, id, x, y, s) {
-    const pix = WEAPON_PIX[id];
+    const pix = WEAPON_PIX[id] || G_PACK_PIX[id];
     if (!pix) return;
     pix.forEach(([c, px2, py2, w2, h2]) => {
       g2.fillStyle = gDreamColor(c); // badges dress for the world they visit
@@ -16364,7 +16977,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function gGiveWeapon(id, clean) {
     // keepsakes can be cursed — a beloved vim katana must NOT come back
     // from the shelf silently reskinned as a heart wand
-    const w = WEAPONS[id] || CURSED_WEAPONS.find((c) => c.id === id) || WEAPONS.heart_wand;
+    const w = WEAPONS[id] || CURSED_WEAPONS.find((c) => c.id === id) || gPackWeapon(id) || WEAPONS.heart_wand;
     GAME.weapon = w;
     if (clean) {
       gToast([`equipped: ${w.name[0]}`, `équipé : ${w.name[1]}`], 130);
@@ -16423,6 +17036,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // the sleepwalker dove into the arcade — transmute into blessings
   function gSleepwalkerBlessing() {
+    // the nightmare express presses START itself: the dive that opened
+    // the arcade also begins the run (which, being a first dark run,
+    // detonates into THE NIGHTMARE ten seconds later — see gBeginRun)
+    if (swExpressDive) {
+      swExpressDive = false;
+      if (GAME.state !== 'run') setTimeout(() => { if (GAME.state === 'idle' || GAME.state === 'over') gBeginRun(); }, 900);
+    }
     if (GAME.state === 'run') {
       fxFever(6);
       fxClearBugs();
@@ -17200,6 +17820,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const NM_SUMMON_FX = { captcha: nmSummonCaptcha, resume: nmSummonResume, term: nmSummonTerminal, bsod: nmSummonBsod, pik: nmSummonPikRescue, melt: nmSummonMelt };
   // dev/testing backdoor (read-mostly) — also a fun console toy ♡
   try {
+    window.__yosGMK = { // sibling toy: summon the world's set-piece on demand
+      force() { if (GAME.state === 'run' && gDreamSkin && !GAME.gimmick) { GAME.nextGimmickAt = GAME.frame; return true; } return false; }
+    };
     window.__yosNM = {
       force() { if (GAME.state === 'run' && !GAME.nm) { gNightmareStart(); return true; } return false; },
       state() {
@@ -18219,12 +18842,14 @@ document.addEventListener('DOMContentLoaded', () => {
     playTone(880, 'triangle', 0.18, 0.12, 0.05);
 
     if (type === 'god') {
-      const god = gPick(GODS, 'god');
+      const pack = gPackFor(gDreamSkin);
+      const god = gPick(pack ? pack.gods : GODS, 'god');
       GAME.event = { type: 'god', god, sel: 0 };
     } else if (type === 'tarot') {
       GAME.event = { type: 'tarot', sel: 1, phase: 'pick', taunt: gPick(WIZ_TAUNTS, 'wt'), tauntT: 0, confirmsLeft: 1 + (gStateHash('cf') % 2), cards: null };
     } else if (type === 'shop') {
-      const pool = [...SHOP_ITEMS];
+      const packShop = gPackFor(gDreamSkin) && gPackFor(gDreamSkin).shop;
+      const pool = packShop ? [...packShop.items] : [...SHOP_ITEMS];
       const items = [];
       for (let i = 0; i < 3; i++) items.push(pool.splice(gStateHash('shop' + i) % pool.length, 1)[0]);
       // dark-mode exclusive: the dream muffler, so the roommate sleeps through your run
@@ -18252,7 +18877,10 @@ document.addEventListener('DOMContentLoaded', () => {
       GAME.event = { type: 'shop', items, prices, mark, surge, limited, sold: [false, false, false], sel: 0 };
     } else {
       const cursed = gStateHash('ofr') % 100 < 55;
-      const w = cursed ? gPick(CURSED_WEAPONS, 'cw') : WEAPONS[gPick(['bubble_blaster', 'baguette', 'meow_cannon'], 'ow')];
+      const packW = gPackFor(gDreamSkin) && gPackFor(gDreamSkin).weapons;
+      const w = packW
+        ? (cursed ? gPick(packW.cursed, 'cw') : gPick(packW.clean, 'ow'))
+        : (cursed ? gPick(CURSED_WEAPONS, 'cw') : WEAPONS[gPick(['bubble_blaster', 'baguette', 'meow_cannon'], 'ow')]);
       GAME.event = { type: 'offer', weapon: w, cursed, sel: 0 };
     }
   }
@@ -18734,7 +19362,17 @@ document.addEventListener('DOMContentLoaded', () => {
         g2.fillText(L(["←/→ choose · ␣ claim", "←/→ choisir · ␣ réclamer"]), 20, 112);
       }
     } else if (ev.type === 'shop') {
+      // v103: inside a dream the boba cat franchises — the sign and the
+      // sales patter come from the world's own pack
+      const shopPack = gPackFor(gDreamSkin) && gPackFor(gDreamSkin).shop;
       g2.fillText('🐱🧋 ' + L(["boba cat's roadside shop", "l'échoppe du chat-boba"]) + `   ⛁${GAME.coins}`, 20, 22);
+      if (shopPack) {
+        g2.save();
+        g2.fillStyle = '#c3aee0';
+        g2.font = "9px 'Jersey 25', 'VT323', monospace";
+        g2.fillText('“' + L(shopPack.keeperLine) + '”', 20, 110);
+        g2.restore();
+      }
       for (let i = 0; i < 3; i++) {
         const it = ev.items[i];
         const bx = 24 + i * 140;

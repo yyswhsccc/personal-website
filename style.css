@@ -9213,7 +9213,10 @@ html[data-theme="dark"].dream-gameboy .resto-vote.voted {
 }
 /* every sprite joins the DMG palette — yes, the slime too */
 html[data-theme="dark"].dream-gameboy img,
-html[data-theme="dark"].dream-gameboy canvas {
+/* v103: the GAME canvas paints its own four DMG greens now (snapped ramp
+   in gDreamMapRgb) — the cellophane filter only dresses the canvases that
+   can't repaint themselves (identicons, pikdex wheel, minicharts) */
+html[data-theme="dark"].dream-gameboy canvas:not(#game-canvas) {
   filter: grayscale(1) sepia(1) hue-rotate(52deg) saturate(2) brightness(0.92) contrast(1.05);
 }
 /* …but never twice: containers that wear --dream-grade already DMG their
@@ -11334,3 +11337,42 @@ html.dreaming .live-stage .wx-sprite { display: none; }
 }
 #mini-danmaku .dm-hush:hover { opacity: 1; }
 #mini-danmaku.dm-hidden .dm-line { display: none !important; }
+
+/* ==== v103: the console SHELL dreams too — the handheld body wears each
+   world's hardware (the house dusk-purple shell inside the gameboy dream
+   read as an off-brand accessory; a DMG shell is pea-cream, period) ==== */
+html[data-theme="dark"].dream-gameboy .window-game,
+html[data-theme="dark"].dream-gameboy .window-game.window-game-big.game-console {
+  background-image: linear-gradient(rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 40%),
+    linear-gradient(135deg, #c4cfa1, #a9b78c);
+}
+html[data-theme="dark"].dream-bsod .window-game,
+html[data-theme="dark"].dream-bsod .window-game.window-game-big.game-console {
+  background-image: linear-gradient(rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0) 40%),
+    linear-gradient(135deg, #0c28bd, #081d8f);
+}
+html[data-theme="dark"].dream-matrix .window-game,
+html[data-theme="dark"].dream-matrix .window-game.window-game-big.game-console {
+  background-image: linear-gradient(rgba(61, 255, 124, 0.12), rgba(0, 0, 0, 0) 40%),
+    linear-gradient(135deg, #04170c, #010a04);
+}
+html[data-theme="dark"].dream-amber .window-game,
+html[data-theme="dark"].dream-amber .window-game.window-game-big.game-console {
+  background-image: linear-gradient(rgba(255, 176, 0, 0.12), rgba(0, 0, 0, 0) 40%),
+    linear-gradient(135deg, #1c1204, #0d0800);
+}
+html[data-theme="dark"].dream-win95 .window-game,
+html[data-theme="dark"].dream-win95 .window-game.window-game-big.game-console {
+  background-image: linear-gradient(rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0) 40%),
+    linear-gradient(135deg, #c0c0c0, #9a9a9a);
+}
+html[data-theme="dark"].dream-scp .window-game,
+html[data-theme="dark"].dream-scp .window-game.window-game-big.game-console {
+  background-image: linear-gradient(rgba(255, 210, 63, 0.08), rgba(0, 0, 0, 0) 40%),
+    linear-gradient(135deg, #16171c, #0a0a0d);
+}
+html[data-theme="dark"].dream-geo .window-game,
+html[data-theme="dark"].dream-geo .window-game.window-game-big.game-console {
+  background-image: linear-gradient(rgba(255, 47, 174, 0.14), rgba(0, 0, 0, 0) 40%),
+    linear-gradient(135deg, #140a2e, #05010f);
+}
