@@ -11255,20 +11255,21 @@ html.dreaming #icon-dreamlog .icon-visual-emoji {
   padding-top: 8px;
 }
 
-/* ---- the whole cast dreams along (one grade per world) ----
+/* ---- the cast dreams along — but THE SLIME STAYS PINK (v105) ----
    --dream-grade lives beside each world's palette. mono worlds collapse
    hue FIRST (grayscale/sepia) then tint — a naked hue-rotate only spins
    the 50-hue pik wheel into a different rainbow (the old bsod swamp bug).
-   the same grade dresses every container the slime & pikmin live in:
-   the live stage, the desktop walker layer, the habitat (which also
-   rides inside the game's reaction cam), the mercy coach flyer, and
-   the milestone parades. */
-html[data-theme="dark"].dreaming .live-stage,
+   the grade dresses the pikmin crews and stage furniture, but NEVER the
+   slime itself: its body keeps its true colors in every dream, in every
+   venue (habitat, stage, runner) — only its OUTFIT dresses for the world.
+   hence per-member grading on the stage instead of one container filter
+   (a container filter cannot exempt a child). */
 html[data-theme="dark"].dreaming #desk-pik-layer,
-html[data-theme="dark"].dreaming .profile-avatar-wrapper,
-html[data-theme="dark"].dreaming .slime-coach,
 html[data-theme="dark"].dreaming .pik-parade,
 html[data-theme="dark"].dreaming .cham-burst {
+  filter: var(--dream-grade, none);
+}
+html[data-theme="dark"].dreaming .live-stage > *:not(.slime-pet):not(.dream-venue-fx):not(.tamagotchi-bubble):not(.scp-stage-actor):not(.mini-danmaku):not(.photo-studio) {
   filter: var(--dream-grade, none);
 }
 html[data-theme="dark"].dream-scp .live-stage { outline: 3px solid #ffd23f; outline-offset: -3px; }

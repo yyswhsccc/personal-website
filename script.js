@@ -14998,11 +14998,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     const fitImg = gFitSprite();
     if (fitImg.complete === undefined || (fitImg.complete && (fitImg.naturalWidth || fitImg.width))) {
-      // the protagonist wears TODAY'S FIT in the world's colors — a true
-      // palette port of the dressed sprite (per-pixel, cached per look)
-      g2.drawImage(gWorldSprite(fitImg), baseX, yTop, G_SLIME_S, h);
+      // v105: the protagonist keeps its TRUE colors in every dream —
+      // only the OUTFIT (already part of the dressed frame) wears the
+      // world. no palette port, no tint, just the slime being itself ♡
+      g2.drawImage(fitImg, baseX, yTop, G_SLIME_S, h);
     } else {
-      g2.fillStyle = gDreamColor('#7ee0a3');
+      g2.fillStyle = '#7ee0a3'; // the stand-in blob stays honest too
       g2.fillRect(baseX + 4, yTop + 8, G_SLIME_S - 8, h - 8);
       g2.fillStyle = gTheme.ink;
       g2.fillRect(baseX + 10, yTop + 14, 3, 3);
