@@ -11328,6 +11328,7 @@ html.dreaming .live-stage .wx-sprite { display: none; }
    chat OFF              → a proper 💬 button waits to bring it back */
 #mini-danmaku .dm-hush {
   display: none;
+  pointer-events: auto; /* the box itself is pointer-transparent — without this, clicks fell through to the desktop */
   min-width: 22px;
   height: 22px;
   padding: 0 5px;
@@ -11443,4 +11444,33 @@ html[data-theme="dark"].dream-geo .window-game.window-game-big.game-console {
 .dl-gb-ar-a { position: static !important; }
 @media (prefers-reduced-motion: reduce) {
   .dl-gb-ar-screen { box-shadow: 0 0 0 3px #8bac0f; }
+}
+
+/* ==== v104.2: the console HARDWARE dreams too — the big side pills kept
+   their house pink/purple + gold halo inside every world (a hot-pink
+   quit button glowing gold in the matrix). in dreams they wear the
+   world's palette, halo included. ==== */
+html[data-theme="dark"].dreaming .console-btn {
+  background: linear-gradient(var(--panel-pink), var(--panel-purple));
+  border-color: color-mix(in srgb, var(--pink-hot) 80%, transparent);
+  box-shadow:
+    0 0 6px color-mix(in srgb, var(--pink-hot) 85%, transparent),
+    0 0 14px color-mix(in srgb, var(--pink-hot) 55%, transparent);
+}
+html[data-theme="dark"].dreaming .console-btn:hover {
+  box-shadow: 0 0 8px var(--pink-hot), 0 0 20px color-mix(in srgb, var(--pink-hot) 80%, transparent);
+}
+html[data-theme="dark"].dreaming .console-btn:active {
+  box-shadow: 0 0 4px color-mix(in srgb, var(--pink-hot) 70%, transparent);
+}
+html[data-theme="dark"].dreaming .console-btn-eject {
+  background: linear-gradient(var(--pink-hot), var(--pink));
+}
+html[data-theme="dark"].dreaming .console-btn-label {
+  color: var(--text);
+  text-shadow: 1px 1px 0 var(--shadow);
+}
+html[data-theme="dark"].dreaming .console-btn-eject .console-btn-label {
+  color: var(--cream);
+  text-shadow: 1px 1px 0 var(--shadow);
 }
