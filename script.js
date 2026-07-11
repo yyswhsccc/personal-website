@@ -2039,8 +2039,37 @@ document.addEventListener('DOMContentLoaded', () => {
   // --- mini danmaku: low-key bullet chat once the window is closed ---
   const danmakuBox = document.getElementById('mini-danmaku');
 
+  // v101.1: the bullet chat can be HUSHED — a tiny mute chip lives in the
+  // box itself (it was covering sightlines with no off switch). the choice
+  // persists; the chip stays visible either way so it can be un-hushed.
+  if (danmakuBox) {
+    const hush = document.createElement('button');
+    hush.type = 'button';
+    hush.className = 'dm-hush';
+    const hushSync = () => {
+      const off = !!store.get('yos-danmaku-off', false);
+      danmakuBox.classList.toggle('dm-hidden', off);
+      hush.textContent = off ? '💬' : '✕';
+      const tt = off ? trT('bullet chat: show', 'chat en rafale : afficher') : trT('bullet chat: hide', 'chat en rafale : masquer');
+      hush.title = tt;
+      hush.setAttribute('aria-label', tt);
+      hush.setAttribute('aria-pressed', String(off));
+    };
+    hush.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const off = !store.get('yos-danmaku-off', false);
+      store.set('yos-danmaku-off', off);
+      if (off) danmakuBox.querySelectorAll('.dm-line').forEach((l) => l.remove());
+      hushSync();
+      try { playClickSound(); } catch (e2) { /* silent click */ }
+    });
+    danmakuBox.appendChild(hush);
+    hushSync();
+  }
+
   function pushDanmaku(payload, isDonation, force) {
     if (!danmakuBox) return;
+    if (danmakuBox.classList.contains('dm-hidden')) return; // hushed ♡
     // the door (and its rescue cinematic) is a chat-free zone — the stream
     // simulation keeps running backstage, but nothing may leak over the cage
     if (document.body.classList.contains('terminal-only')) return;
@@ -2063,7 +2092,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     danmakuBox.appendChild(line);
-    while (danmakuBox.children.length > 3) danmakuBox.removeChild(danmakuBox.firstChild);
+    // prune LINES only — the hush chip is furniture, not chat
+    while (danmakuBox.querySelectorAll('.dm-line').length > 3) {
+      const oldest = danmakuBox.querySelector('.dm-line');
+      if (!oldest) break;
+      oldest.remove();
+    }
 
     setTimeout(() => {
       line.classList.add('dm-out');
@@ -2072,7 +2106,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function clearDanmaku() {
-    if (danmakuBox) danmakuBox.innerHTML = '';
+    if (danmakuBox) danmakuBox.querySelectorAll('.dm-line').forEach((l) => l.remove());
   }
 
   // Chat command buttons
@@ -8036,6 +8070,55 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 40);
   }
 
+  /* ---- v101.1: dream venues — the live stage & the habitat trade
+     Edmonton's weather for the world's own sky: a field of world-glyphs
+     with randomized drift/size/opacity, reseeded every ~40s so no two
+     minutes of the dream look alike ---- */
+  const DREAM_VENUE = {
+    win95: { g: ['⊞', '✕', '▭', '⏳'], m: 'dvf-float', n: 8 },
+    scp: { g: ['▓', '█', '⚠', '●'], m: 'dvf-float', n: 9 },
+    matrix: { g: ['0', '1', 'ｱ', 'ﾈ', 'ﾎ'], m: 'dvf-fall', n: 14 },
+    gameboy: { g: ['▲', '■', '♪', '●'], m: 'dvf-float', n: 8 },
+    geo: { g: ['★', '✦', '♥', '~'], m: 'dvf-float', n: 12 },
+    bsod: { g: [':(', '▓', '0x', '¤'], m: 'dvf-fall', n: 10 },
+    amber: { g: ['▚', '▞', '♦', '·'], m: 'dvf-float', n: 9 }
+  };
+  function dreamVenueSeed(host, conf) {
+    if (!host) return;
+    let fx = host.querySelector(':scope > .dream-venue-fx');
+    if (!fx) {
+      fx = document.createElement('div');
+      fx.className = 'dream-venue-fx';
+      fx.setAttribute('aria-hidden', 'true');
+      host.prepend(fx);
+      dN(fx); // struck with the rest of the set on wake
+    }
+    fx.innerHTML = '';
+    for (let i = 0; i < conf.n; i++) {
+      const s = document.createElement('span');
+      s.textContent = conf.g[Math.floor(Math.random() * conf.g.length)];
+      s.className = conf.m;
+      s.style.left = (2 + Math.random() * 92) + '%';
+      if (conf.m !== 'dvf-fall') s.style.top = (4 + Math.random() * 78) + '%';
+      s.style.fontSize = (9 + Math.random() * 13) + 'px';
+      s.style.opacity = (0.16 + Math.random() * 0.34).toFixed(2);
+      s.style.animationDuration = ((conf.m === 'dvf-fall' ? 7 + Math.random() * 9 : 3 + Math.random() * 5)).toFixed(1) + 's';
+      s.style.animationDelay = (-Math.random() * 9).toFixed(1) + 's';
+      fx.appendChild(s);
+    }
+    fx._seededAt = Date.now();
+  }
+  function dreamVenueTick() {
+    if (!dreamWorld || (typeof REDUCED_MOTION !== 'undefined' && REDUCED_MOTION)) return;
+    const conf = DREAM_VENUE[dreamWorld.id];
+    if (!conf) return;
+    [document.getElementById('live-stage'), (typeof slimeHabitat !== 'undefined') ? slimeHabitat : null].forEach((host) => {
+      if (!host) return;
+      const fx = host.querySelector(':scope > .dream-venue-fx');
+      if (!fx || Date.now() - (fx._seededAt || 0) > 38000) dreamVenueSeed(host, conf);
+    });
+  }
+
   function dreamBegin(w, remainMs, resumed) {
     if (dreamWorld) return;
     const dur = remainMs || (10 + Math.random() * 5) * 60000; // the requested 10–15 min
@@ -8051,6 +8134,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (Object.keys(seen).length >= DREAM_WORLDS.length) achvUnlock('dreamtour');
     try { w.build(!!resumed); } catch (e) { /* a half-built dream is still a dream */ }
     dreamNarrator(!!resumed);
+    // the venues dress for the world (Edmonton's weather stands down)
+    dT(dreamVenueTick, 700);
+    dI(dreamVenueTick, 4200);
     // v6.2: every world keeps a signature set-piece on a loop, so a
     // 10–15 min dream never runs out of surprises
     dT(dreamSignatureBeat, resumed ? 12000 : 26000);
@@ -21181,6 +21267,8 @@ document.addEventListener('DOMContentLoaded', () => {
   function wxDecor(kind) {
     if (!liveStage) return;
     liveStage.querySelectorAll('.wx-sprite').forEach((el) => el.remove());
+    // dream venues own the sky — no Edmonton sprites inside a dream
+    if (document.documentElement.classList.contains('dreaming')) return;
     const dark = resolvedTheme() === 'dark';
     const add = (spr, w, l, t, cls) => {
       const im = document.createElement('img');
@@ -21273,11 +21361,11 @@ document.addEventListener('DOMContentLoaded', () => {
     wxCurrent = kind;
     wxDecor(kind);
     wxSfx(kind);
-    if (liveOpen && wxAnnounced !== kind) {
+    if (liveOpen && wxAnnounced !== kind && !dreamWorld) { // dreams have their own sky to talk about
       wxAnnounced = kind;
       setTimeout(() => {
         const wxLine = WX_LINES[kind] || WX_LINES.cloud; // future kinds announce softly instead of throwing
-        if (liveOpen && !pet.sleeping && !pet.busy) showBubble(trT(wxLine[0], wxLine[1]), 3000);
+        if (liveOpen && !pet.sleeping && !pet.busy && !dreamWorld) showBubble(trT(wxLine[0], wxLine[1]), 3000);
       }, 4200);
     }
   }
@@ -21464,6 +21552,16 @@ document.addEventListener('DOMContentLoaded', () => {
       })
       .catch(() => { /* offline — the default pastel sky stays up */ });
   }
+
+  // the sky stays ≤1 minute stale WHEREVER it is watched: the live room
+  // has its own on-air timer (liveEnter); this one covers the arcade,
+  // whose rain/snow read the same forecast while the live room is closed
+  setInterval(() => {
+    try {
+      const gw = document.getElementById('win-game');
+      if (!liveOpen && gw && !gw.classList.contains('window-closed')) liveWeather();
+    } catch (e) { /* the forecast can wait a minute */ }
+  }, 60000);
 
   /* ---------- gifts ---------- */
   /* ============ GIFT CHOREOGRAPHY ENGINE ============
