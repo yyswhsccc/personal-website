@@ -2228,6 +2228,16 @@ document.addEventListener('DOMContentLoaded', () => {
       store.set('yos-danmaku-off', off);
       if (off) danmakuBox.querySelectorAll('.dm-line').forEach((l) => l.remove());
       hushSync();
+      // un-hushing answers INSTANTLY — a live line, not a leap of faith
+      if (!off) {
+        const back = document.createElement('button');
+        back.type = 'button';
+        back.className = 'dm-line dm-donation';
+        back.textContent = trT('💬 chat is BACK!! did you miss us ♡', '💬 le chat est DE RETOUR !! on t\'a manqué ♡');
+        back.addEventListener('click', () => { openWindow('win-chat'); clearDanmaku(); });
+        danmakuBox.appendChild(back);
+        setTimeout(() => { back.classList.add('dm-out'); setTimeout(() => back.remove(), 550); }, 5200);
+      }
       try { playClickSound(); } catch (e2) { /* silent click */ }
     });
     danmakuBox.appendChild(hush);
@@ -3975,6 +3985,7 @@ document.addEventListener('DOMContentLoaded', () => {
     { id: 'gift500', icon: '🎆', m: 'gifts', v: 500, n: ['GDP Contributor', 'Contributeur·rice au PIB'], d: ['500 gifts. the stream economy issued you a passport.', '500 cadeaux. l\'économie du stream t\'a délivré un passeport.'], t: ['five hundred parcels.', 'cinq cents colis.'] },
     { id: 'nap300', icon: '🌌', m: 'naps', v: 300, n: ['Curator of Dreams', 'Conservateur·rice des Rêves'], d: ['300 naps curated. the dream museum has a you-shaped statue.', '300 siestes organisées. le musée du rêve a une statue à ton effigie.'], t: ['three hundred lullabies.', 'trois cents berceuses.'] },
     { id: 'jump100', icon: '🐇', m: 'jumps', v: 100, n: ['Bunny Apprentice', 'Apprenti·e Lapin'], d: ['100 jumps. the rabbits accepted your application.', '100 sauts. les lapins ont accepté ta candidature.'], t: ['the first hundred hops.', 'les cent premiers bonds.'] },
+    { id: 'gbchampion', icon: '🎮', n: ['Dream Boy Champion', 'Champion Dream Boy'], d: ['won all 35 BONUS CARTRIDGE microgames. the dex was only the tutorial.', 'a gagné les 35 microjeux de la CARTOUCHE BONUS. le dex n\'était que le tutoriel.'], t: ['complete the dream dex. then keep pressing A.', 'complète le dex des rêves. puis continue d\'appuyer sur A.'] },
     { id: 'chameleon', icon: '🦎', n: ['The Impossible Shade', 'La Teinte Impossible'], d: ['plucked the hidden CHAMELEON pikmin — it refuses to pick a colour. mood.', 'a cueilli le pikmin CAMÉLÉON caché — il refuse de choisir une couleur. tellement relatable.'], t: ['1 in 10 sprouts hides a secret.', '1 pousse sur 10 cache un secret.'] },
     { id: 'colorpicker', icon: '🎨', n: ['Color Picker', 'Pipette à Couleurs'], d: ['25% of the hue wheel collected. the eyedropper nods, professionally.', '25 % de la roue chromatique. la pipette hoche la tête, en pro.'], t: ['pluck across the rainbow.', 'cueille à travers l\'arc-en-ciel.'] },
     { id: 'halftone', icon: '🖨️', n: ['Halftone Hero', 'Héros du Demi-Ton'], d: ['half the hue wheel. serious print-shop energy.', 'la moitié de la roue. sérieuse énergie d\'imprimerie.'], t: ['the wheel is half full.', 'la roue est à moitié pleine.'] },
@@ -10271,7 +10282,472 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
   }
+
+  /* ==================================================================
+     v104: the BONUS CARTRIDGE 🎮 — dex complete? the tall grass grows
+     an arcade. 35 WarioWare-sized microgames on a strict 4-green DMG
+     screen, one random cartridge per visit ([▶] shuffles, [A] replays).
+     wins collect on a shelf; all 35 crowns you DREAM BOY CHAMPION.
+     ================================================================== */
+  const AR_G = ['#0f380f', '#306230', '#8bac0f', '#9bbc0f']; // the only four colors in this cathedral
+  const AR_W = 160, AR_H = 96;
+  var arGlyphCache = {};
+  // any emoji, quantized onto the DMG palette (dark ink on light field)
+  function arGlyph(glyph, size) {
+    const key = glyph + '/' + size;
+    if (arGlyphCache[key]) return arGlyphCache[key];
+    const c = document.createElement('canvas');
+    c.width = size; c.height = size;
+    const x = c.getContext('2d');
+    x.font = Math.round(size * 0.9) + "px 'Segoe UI Emoji', 'Apple Color Emoji', 'Jersey 25', monospace";
+    x.textAlign = 'center';
+    x.textBaseline = 'middle';
+    x.fillStyle = AR_G[0];
+    x.fillText(glyph, size / 2, size / 2 + 1);
+    try {
+      const d = x.getImageData(0, 0, size, size);
+      const px = d.data;
+      for (let i = 0; i < px.length; i += 4) {
+        if (px[i + 3] < 60) { px[i + 3] = 0; continue; }
+        const t = (0.2126 * px[i] + 0.7152 * px[i + 1] + 0.0722 * px[i + 2]) / 255;
+        const g = AR_G[Math.min(2, Math.round(t * 3))]; // sprites keep to the 3 darker greens
+        px[i] = parseInt(g.slice(1, 3), 16); px[i + 1] = parseInt(g.slice(3, 5), 16); px[i + 2] = parseInt(g.slice(5, 7), 16);
+        px[i + 3] = 255;
+      }
+      x.putImageData(d, 0, 0);
+    } catch (e) { /* tainted? the raw glyph still reads */ }
+    arGlyphCache[key] = c;
+    return c;
+  }
+  function arDrawGlyph(g2, glyph, cx, cy, size) {
+    g2.drawImage(arGlyph(glyph, size || 14), Math.round(cx - (size || 14) / 2), Math.round(cy - (size || 14) / 2));
+  }
+  function arText(g2, txt, x, y, shade, size) {
+    g2.fillStyle = AR_G[shade == null ? 0 : shade];
+    g2.font = (size || 8) + "px 'Jersey 25', 'VT323', monospace";
+    g2.fillText(txt, x, y);
+  }
+
+  /* ---- the 12 mechanics. each: init(s,p) / tick(s,p,inp) / draw(s,p,g2)
+     s.win / s.lose end the round; s.t counts frames (60/s). ---- */
+  const AR_TPLS = {
+    timing: {
+      init(s, p) { s.round = 0; s.x = 10; s.dir = 1; s.flash = 0; },
+      tick(s, p, inp) {
+        const v = 1.1 + p.speed * 0.55;
+        s.x += s.dir * v; if (s.x > AR_W - 10 || s.x < 10) s.dir *= -1;
+        if (s.flash > 0) s.flash--;
+        if (inp.a) {
+          if (Math.abs(s.x - AR_W / 2) < (p.zone || 14) / 2 + 3) { s.round++; s.flash = 12; playTone(880 + s.round * 120, 'square', 0.08, 0, 0.04); if (s.round >= (p.rounds || 3)) s.win = true; }
+          else s.lose = true;
+        }
+      },
+      draw(s, p, g2) {
+        g2.strokeStyle = AR_G[1]; g2.lineWidth = 2;
+        g2.strokeRect(AR_W / 2 - (p.zone || 14) / 2, 34, (p.zone || 14), 28);
+        if (s.flash) { g2.fillStyle = AR_G[2]; g2.fillRect(AR_W / 2 - (p.zone || 14) / 2, 34, (p.zone || 14), 28); }
+        arDrawGlyph(g2, p.glyph, s.x, 48, 16);
+        arText(g2, (s.round) + '/' + (p.rounds || 3), 143, 10);
+      }
+    },
+    catch: {
+      init(s, p) { s.px = AR_W / 2; s.items = []; s.got = 0; s.spawn = 0; },
+      tick(s, p, inp) {
+        if (inp.left) s.px = Math.max(10, s.px - 2.4);
+        if (inp.right) s.px = Math.min(AR_W - 10, s.px + 2.4);
+        if (--s.spawn <= 0) { s.spawn = Math.max(26, 52 - p.speed * 8); s.items.push({ x: 12 + Math.random() * (AR_W - 24), y: -8, bad: Math.random() < (p.badRatio || 0.3) }); }
+        s.items.forEach((it) => { it.y += 0.8 + p.speed * 0.5; });
+        s.items = s.items.filter((it) => {
+          if (it.y > 70 && Math.abs(it.x - s.px) < 11) {
+            if (it.bad) { s.lose = true; } else { s.got++; playTone(980 + s.got * 60, 'square', 0.06, 0, 0.03); if (s.got >= p.need) s.win = true; }
+            return false;
+          }
+          return it.y < AR_H + 8;
+        });
+        if (s.t > 60 * 18) s.lose = true;
+      },
+      draw(s, p, g2) {
+        g2.fillStyle = AR_G[1]; g2.fillRect(Math.round(s.px - 10), 76, 20, 5);
+        s.items.forEach((it) => arDrawGlyph(g2, it.bad ? p.bad : p.good, it.x, it.y, 13));
+        arText(g2, s.got + '/' + p.need, 143, 10);
+      }
+    },
+    dodge: {
+      init(s, p) { s.px = AR_W / 2; s.items = []; s.spawn = 0; s.lastX = AR_W / 2; },
+      tick(s, p, inp) {
+        if (inp.left) s.px = Math.max(8, s.px - 2.6);
+        if (inp.right) s.px = Math.min(AR_W - 8, s.px + 2.6);
+        if (--s.spawn <= 0) {
+          s.spawn = Math.max(24, 44 - p.speed * 7);
+          // consecutive drops keep ≥44px of daylight — no pincer walls, ever
+          let nx = 8 + Math.random() * (AR_W - 16);
+          if (Math.abs(nx - s.lastX) < 44) nx = s.lastX + (nx >= s.lastX ? 44 : -44);
+          nx = Math.max(8, Math.min(AR_W - 8, nx));
+          s.lastX = nx;
+          s.items.push({ x: nx, y: -8 });
+        }
+        s.items.forEach((it) => { it.y += 0.7 + p.speed * 0.4; });
+        s.items = s.items.filter((it) => it.y < AR_H + 8);
+        if (s.items.some((it) => it.y > 66 && it.y < 84 && Math.abs(it.x - s.px) < 9)) s.lose = true;
+        if (s.t >= p.secs * 60) s.win = true;
+      },
+      draw(s, p, g2) {
+        arDrawGlyph(g2, '🟢', s.px, 76, 13);
+        s.items.forEach((it) => arDrawGlyph(g2, p.hazard, it.x, it.y, 13));
+        arText(g2, Math.max(0, Math.ceil(p.secs - s.t / 60)) + 's', 143, 10);
+      }
+    },
+    flappy: {
+      init(s, p) { s.y = 44; s.vy = 0; s.gates = []; s.passed = 0; let gx = 170; let prev = 30; for (let i = 0; i < p.gates; i++) { const lo = Math.max(14, prev - 24), hi = Math.min(AR_H - 26 - (p.gap || 32), prev + 24); const gy = lo + Math.random() * Math.max(4, hi - lo); s.gates.push({ x: gx, gy }); prev = gy; gx += 62; } },
+      tick(s, p, inp) {
+        if (inp.a) { s.vy = -2.1; playTone(760, 'square', 0.04, 0, 0.02); } // rise ≈13.8px — always fits the tightest gap
+        s.vy += 0.16; s.y += s.vy;
+        const v = 0.8 + p.speed * 0.4;
+        s.gates.forEach((g) => { g.x -= v; });
+        s.gates = s.gates.filter((g) => { if (g.x < 14) { s.passed++; playTone(1040, 'square', 0.05, 0, 0.03); return false; } return true; });
+        const hit = s.gates.some((g) => g.x > 12 && g.x < 28 && (s.y < g.gy || s.y > g.gy + (p.gap || 32)));
+        if (hit || s.y < 2 || s.y > AR_H - 2) s.lose = true;
+        if (s.passed >= p.gates) s.win = true;
+      },
+      draw(s, p, g2) {
+        s.gates.forEach((g) => { g2.fillStyle = AR_G[1]; g2.fillRect(Math.round(g.x), 0, 8, Math.round(g.gy)); g2.fillRect(Math.round(g.x), Math.round(g.gy + (p.gap || 32)), 8, AR_H); });
+        arDrawGlyph(g2, p.player, 20, s.y, 13);
+        arText(g2, s.passed + '/' + p.gates, 143, 10);
+      }
+    },
+    mash: {
+      init(s, p) { s.n = 0; },
+      tick(s, p, inp) {
+        if (inp.a) { s.n += Math.min(4, inp.a); playTone(600 + s.n * 22, 'square', 0.03, 0, 0.02); if (s.n >= p.taps) s.win = true; }
+        if (s.t > p.secs * 60) s.lose = true;
+      },
+      draw(s, p, g2) {
+        const frac = s.n / p.taps;
+        g2.strokeStyle = AR_G[0]; g2.strokeRect(30, 70, 100, 10);
+        g2.fillStyle = AR_G[1]; g2.fillRect(31, 71, Math.round(98 * frac), 8);
+        arDrawGlyph(g2, p.riser, 80, 58 - frac * 34, 18);
+        arText(g2, Math.max(0, (p.secs - s.t / 60)).toFixed(1) + 's', 138, 10);
+      }
+    },
+    memory: {
+      init(s, p) { const K = ['L', 'R', 'A']; s.seq = Array.from({ length: p.len || 4 }, () => K[Math.floor(Math.random() * 3)]); s.show = 0; s.at = 0; s.phase = 'show'; },
+      tick(s, p, inp) {
+        if (s.phase === 'show') {
+          if (s.t % 40 === 38) { s.show++; if (s.show >= s.seq.length) s.phase = 'input'; }
+          return;
+        }
+        const press = inp.a ? 'A' : (inp.leftEdge ? 'L' : (inp.rightEdge ? 'R' : null));
+        if (!press) return;
+        if (press === s.seq[s.at]) { s.at++; playTone(880 + s.at * 100, 'square', 0.05, 0, 0.03); if (s.at >= s.seq.length) s.win = true; }
+        else s.lose = true;
+      },
+      draw(s, p, g2) {
+        const GL = { L: '◄', R: '►', A: 'A' };
+        if (s.phase === 'show') {
+          arText(g2, trT('watch…', 'regarde…'), 12, 30, 1);
+          const cur = Math.min(s.show, s.seq.length - 1);
+          if (s.t % 40 < 30) arText(g2, GL[s.seq[cur]], 74, 58, 0, 22);
+          arText(g2, (cur + 1) + '/' + s.seq.length, 140, 10);
+        } else {
+          arText(g2, trT('repeat!!', 'répète !!'), 12, 30, 1);
+          for (let i = 0; i < s.seq.length; i++) arText(g2, i < s.at ? GL[s.seq[i]] : '·', 40 + i * 16, 58, i < s.at ? 0 : 1, 14);
+        }
+      }
+    },
+    whack: {
+      init(s, p) { s.hits = 0; s.pop = null; s.next = 30; },
+      tick(s, p, inp) {
+        if (!s.pop) { if (--s.next <= 0) s.pop = { lane: Math.floor(Math.random() * 3), decoy: p.decoy ? Math.random() < 0.3 : false, ttl: Math.round((p.upMs || 800) / 16.7) }; }
+        else if (--s.pop.ttl <= 0) { s.pop = null; s.next = 20 + Math.random() * 30; }
+        const press = inp.leftEdge ? 0 : (inp.a ? 1 : (inp.rightEdge ? 2 : null));
+        if (press == null || !s.pop) { if (press != null) playTone(160, 'square', 0.05, 0, 0.03); return; }
+        if (press === s.pop.lane) {
+          if (s.pop.decoy) { s.lose = true; return; }
+          s.hits++; playTone(980, 'square', 0.06, 0, 0.03);
+          s.pop = null; s.next = 18 + Math.random() * 26;
+          if (s.hits >= p.hits) s.win = true;
+        }
+        if (s.t > 60 * 20) s.lose = true;
+      },
+      draw(s, p, g2) {
+        const lanes = [34, 80, 126];
+        lanes.forEach((lx, i) => {
+          g2.fillStyle = AR_G[1]; g2.fillRect(lx - 12, 66, 24, 6);
+          if (s.pop && s.pop.lane === i) arDrawGlyph(g2, s.pop.decoy ? p.decoy : p.mole, lx, 56, 16);
+          arText(g2, i === 0 ? '◄' : i === 1 ? 'A' : '►', lx - 3, 84, 1);
+        });
+        arText(g2, s.hits + '/' + p.hits, 143, 10);
+      }
+    },
+    snipe: {
+      init(s, p) { s.cx = 40; s.cy = 40; s.tx = 110; s.ty = 50; s.hits = 0; s.miss = 0; },
+      tick(s, p, inp) {
+        const v = 0.9 + p.speed * 0.4;
+        s.cx = AR_W / 2 + Math.sin(s.t * 0.031 * v) * 62;
+        s.cy = 48 + Math.cos(s.t * 0.047 * v) * 30;
+        if (s.t % 90 === 0) { s.tx = 20 + Math.random() * 120; s.ty = 20 + Math.random() * 60; }
+        if (inp.a) {
+          if (Math.hypot(s.cx - s.tx, s.cy - s.ty) < 11) { s.hits++; playTone(1100, 'square', 0.06, 0, 0.03); s.tx = 20 + Math.random() * 120; s.ty = 20 + Math.random() * 60; if (s.hits >= p.hits) s.win = true; }
+          else { s.miss++; playTone(180, 'square', 0.06, 0, 0.04); if (s.miss >= 3) s.lose = true; }
+        }
+      },
+      draw(s, p, g2) {
+        arDrawGlyph(g2, p.target, s.tx, s.ty, 14);
+        g2.strokeStyle = AR_G[0]; g2.lineWidth = 1;
+        g2.strokeRect(Math.round(s.cx - 7), Math.round(s.cy - 7), 14, 14);
+        g2.fillRect(Math.round(s.cx - 1), Math.round(s.cy - 10), 2, 6);
+        g2.fillRect(Math.round(s.cx - 1), Math.round(s.cy + 4), 2, 6);
+        arText(g2, s.hits + '/' + p.hits + '  ✕' + (3 - s.miss), 118, 10);
+      }
+    },
+    redlight: {
+      init(s, p) { s.px = 8; s.green = true; s.flip = 90 + Math.random() * 60; s.warn = 0; },
+      tick(s, p, inp) {
+        if (--s.flip <= 0) {
+          s.green = !s.green;
+          s.flip = s.green ? 70 + Math.random() * 80 : 45 + Math.random() * 40;
+          s.warn = s.green ? 0 : 0; // the turn is instant; the tell is the sound
+          playTone(s.green ? 700 : 240, 'square', 0.1, 0, 0.05);
+        }
+        if (inp.aHeld) {
+          if (s.green) s.px += 0.55 + (p.dist ? 0 : 0);
+          else { s.lose = true; return; }
+        }
+        if (s.px >= AR_W - 16) s.win = true;
+      },
+      draw(s, p, g2) {
+        g2.fillStyle = AR_G[1]; g2.fillRect(AR_W - 14, 30, 3, 40);
+        arDrawGlyph(g2, '🚩', AR_W - 10, 34, 12);
+        arDrawGlyph(g2, p.watcher, AR_W - 12, 60, 14);
+        if (!s.green) { g2.fillStyle = AR_G[0]; g2.fillRect(AR_W - 24, 46, 24, 3); }
+        arDrawGlyph(g2, '🟢', s.px, 76, 13);
+        arText(g2, s.green ? trT('GO (hold A)', 'FONCE (tiens A)') : trT('...FREEZE!!', '...GRRR !!'), 10, 12, s.green ? 1 : 0);
+      }
+    },
+    pong: {
+      init(s, p) { s.px = AR_W / 2; s.bx = AR_W / 2; s.by = 30; s.vx = 1.1 + p.speed * 0.3; s.vy = 1.2; s.n = 0; },
+      tick(s, p, inp) {
+        if (inp.left) s.px = Math.max(14, s.px - 2.6);
+        if (inp.right) s.px = Math.min(AR_W - 14, s.px + 2.6);
+        s.bx += s.vx; s.by += s.vy;
+        if (s.bx < 6 || s.bx > AR_W - 6) s.vx *= -1;
+        if (s.by < 6) s.vy = Math.abs(s.vy);
+        if (s.by > 72 && s.by < 80 && Math.abs(s.bx - s.px) < 14 && s.vy > 0) {
+          s.vy = -Math.abs(s.vy) * 1.04; s.vx += (s.bx - s.px) * 0.06; s.n++;
+          playTone(880 + s.n * 60, 'square', 0.05, 0, 0.03);
+          if (s.n >= p.bounces) s.win = true;
+        }
+        if (s.by > AR_H + 6) s.lose = true;
+      },
+      draw(s, p, g2) {
+        g2.fillStyle = AR_G[1]; g2.fillRect(Math.round(s.px - 12), 78, 24, 4);
+        arDrawGlyph(g2, p.ball, s.bx, s.by, 12);
+        arText(g2, s.n + '/' + p.bounces, 143, 10);
+      }
+    },
+    defuse: {
+      init(s, p) { s.round = 0; s.timer = 3.0; s.live = true; },
+      tick(s, p, inp) {
+        if (!s.live) { if (--s.wait <= 0) { s.timer = 3.0 + Math.random() * 0.8; s.live = true; } return; }
+        s.timer -= 1 / 60;
+        if (s.timer < -(p.window || 0.28)) { s.lose = true; return; }
+        if (inp.a) {
+          if (Math.abs(s.timer) <= (p.window || 0.28)) {
+            s.round++; playTone(1174, 'square', 0.08, 0, 0.04);
+            if (s.round >= (p.rounds || 3)) { s.win = true; return; }
+            s.live = false; s.wait = 40;
+          } else s.lose = true;
+        }
+      },
+      draw(s, p, g2) {
+        arDrawGlyph(g2, p.bomb, 80, 34, 20);
+        arText(g2, s.live ? Math.max(0, s.timer).toFixed(2) : trT('…breathe…', '…respire…'), 66, 64, 0, 14);
+        arText(g2, s.round + '/' + (p.rounds || 3), 143, 10);
+      }
+    },
+    race: {
+      init(s, p) { s.y = 0; s.vy = 0; s.obs = []; s.passed = 0; let ox = 170; /* ≥70px spacing: landing always beats the next tuft */ for (let i = 0; i < p.obstacles; i++) { s.obs.push({ x: ox }); ox += 70 + Math.random() * 30; } },
+      tick(s, p, inp) {
+        if (inp.a && s.y === 0) { s.vy = 3.4; playTone(760, 'square', 0.05, 0, 0.03); }
+        s.y += s.vy; if (s.y > 0) s.vy -= 0.22; if (s.y <= 0) { s.y = 0; s.vy = 0; }
+        const v = 1.1 + p.speed * 0.5;
+        s.obs.forEach((o) => { o.x -= v; });
+        s.obs = s.obs.filter((o) => { if (o.x < 8) { s.passed++; return false; } return true; });
+        if (s.obs.some((o) => o.x > 12 && o.x < 26 && s.y < 10)) s.lose = true;
+        if (s.passed >= p.obstacles) s.win = true;
+      },
+      draw(s, p, g2) {
+        g2.fillStyle = AR_G[1]; g2.fillRect(0, 82, AR_W, 2);
+        arDrawGlyph(g2, p.runner, 20, 74 - s.y, 14);
+        s.obs.forEach((o) => arDrawGlyph(g2, p.obstacle, o.x, 75, 13));
+        arText(g2, s.passed + '/' + p.obstacles, 143, 10);
+      }
+    }
+  };
+
+  // the cartridge shelf: 35 microgames, authored one batch at a time
+  var DL_GB_GAMES = [
+    { id: "cart_slot_ritual", tpl: "timing", name: ["CART SLOT HERO", "CLIC PARFAIT"], prompt: ["press A when the cart meets the slot", "appuie sur A quand la cartouche s'aligne"], win: ["click. it boots first try. no blowing needed ♡", "clic. ça démarre du premier coup, sans souffler ♡"], lose: ["no boot. blow on it and try again (tradition)", "rien. souffle dessus et réessaie (tradition)"], params: {"rounds": 3, "speed": 2, "zone": 16, "glyph": "📼"} },
+    { id: "aa_battery_harvest", tpl: "catch", name: ["AA HARVEST", "RÉCOLTE DE PILES"], prompt: ["catch fresh AAs, dodge the dead ones", "attrape les piles neuves, évite les mortes"], win: ["fully charged: two whole hours of playtime ♡", "chargé à bloc : deux heures entières de jeu ♡"], lose: ["the screen fades mid-save... so 1989 of it", "l'écran s'éteint en pleine sauvegarde... très 1989"], params: {"need": 7, "speed": 2, "good": "🔋", "bad": "🪫", "badRatio": 0.35} },
+    { id: "dot_matrix_drizzle", tpl: "dodge", name: ["GHOST DRIZZLE", "BRUINE FANTÔME"], prompt: ["sidestep the dot-matrix ghosts", "esquive les fantômes à matrice de points"], win: ["dry and 0% haunted. the ghosts clap politely", "sec et 0% hanté. les fantômes applaudissent"], lose: ["lightly haunted. it wears off by tuesday", "légèrement hanté. ça part avant mardi"], params: {"secs": 11, "speed": 2, "hazard": "👻"} },
+    { id: "link_cable_courier", tpl: "flappy", name: ["LINK CABLE ACE", "AS DU CÂBLE LINK"], prompt: ["flap the plug over to player two", "fais voler la prise jusqu'au joueur 2"], win: ["connected! the trade of the century begins ♡", "connecté ! l'échange du siècle commence ♡"], lose: ["cable snagged. player two waits forever", "câble coincé. le joueur 2 attend toujours"], params: {"gates": 4, "gap": 34, "speed": 2, "player": "🔌"} },
+    { id: "blow_on_it", tpl: "mash", name: ["BLOW ON IT", "SOUFFLE DESSUS"], prompt: ["mash A to blow the dust off the cart", "matraque A pour dépoussiérer la cartouche"], win: ["it boots! science still can't explain this", "ça démarre ! la science n'explique toujours pas"], lose: ["still dusty. do not lick it (you licked it)", "encore poussiéreuse. ne la lèche pas (tu l'as fait)"], params: {"taps": 20, "secs": 6, "riser": "💨"} },
+    { id: "konami_kindergarten", tpl: "memory", name: ["KONAMI PRESCHOOL", "MATERNELLE KONAMI"], prompt: ["watch the sacred code, then recite it", "regarde le code sacré, puis récite-le"], win: ["30 lives! the slime pockets two for later ♡", "30 vies ! le slime en garde deux pour plus tard ♡"], lose: ["close! the code keeper pretends not to see", "presque ! le gardien du code fait semblant de rien"], params: {"len": 4} },
+    { id: "tall_grass_etiquette", tpl: "whack", name: ["TALL GRASS PANIC", "HAUTES HERBES"], prompt: ["bop the wild ones, never the sleepers", "tape les sauvages, jamais les dormeurs"], win: ["caught! it already loves you (probably)", "capturé ! il t'aime déjà (probablement)"], lose: ["you woke a sleeper. it forgives you (slowly)", "tu as réveillé un dormeur. il te pardonne (lentement)"], params: {"hits": 6, "upMs": 800, "mole": "🐭", "decoy": "💤"} },
+    { id: "boo_laroid", tpl: "snipe", name: ["BOO-LAROID", "FANTOMATON"], prompt: ["photograph the ghost. it drifts. so do you", "photographie le fantôme. il dérive. toi aussi"], win: ["printed on thermal paper. the ghost asked for copies ♡", "imprimé en 1-bit. le fantôme veut des doubles ♡"], lose: ["every photo came out as static. classic ghosts", "toutes les photos sont floues. classique fantôme"], params: {"hits": 4, "speed": 2, "target": "👻"} },
+    { id: "bedtime_stealth", tpl: "redlight", name: ["PAST BEDTIME", "RADAR MAMAN"], prompt: ["hold A to creep. release when mom looks", "tiens A pour ramper. lâche si maman regarde"], win: ["made it. twelve more levels under the blanket", "réussi. douze niveaux de plus sous la couette"], lose: ["confiscated 'til saturday. mom plays it at 2am", "confisquée jusqu'à samedi. maman y joue à 2h"], params: {"dist": 4, "watcher": "👀"} },
+    { id: "slime_tennis", tpl: "pong", name: ["SLIME TENNIS", "TENNIS DE SLIME"], prompt: ["the slime wants to bounce. be the floor", "le slime veut rebondir. sois le sol"], win: ["the slime rates you five stars out of one slime", "le slime te met cinq étoiles sur un slime"], lose: ["the slime forgives you instantly. slimes are like that", "le slime te pardonne direct. les slimes sont comme ça"], params: {"bounces": 6, "speed": 2, "ball": "🟢"} },
+    { id: "save_at_zero", tpl: "defuse", name: ["SAVE OR CRY", "SAUVE OU PLEURE"], prompt: ["batteries dying. save at exactly 0.0", "piles à plat. sauvegarde à 0.0 pile"], win: ["saved with 0.4 seconds of battery left. show-off", "sauvé avec 0.4 seconde de pile. frimeur va"], lose: ["it autosaved. (this console has never autosaved)", "ça a sauvegardé tout seul. (non. jamais. courage)"], params: {"rounds": 3, "window": 0.3, "bomb": "💾"} },
+    { id: "tall_grass_gp", tpl: "race", name: ["TALL GRASS DASH", "HAUTES HERBES GP"], prompt: ["no repel. jump every single grass tuft", "pas de repousse. saute chaque touffe d'herbe"], win: ["zero wild encounters. the grass is filing a complaint", "zéro rencontre sauvage. l'herbe porte plainte"], lose: ["a wild something appeared. say hi, it's been waiting", "un truc sauvage apparaît. dis bonjour au moins"], params: {"obstacles": 6, "speed": 2, "runner": "🏃", "obstacle": "🌿"} },
+    { id: "link_cable_hero", tpl: "timing", name: ["LINK CABLE HERO", "HÉROS DU CÂBLE"], prompt: ["press A when the plug crosses the port", "appuie sur A quand la fiche croise le port"], win: ["link established. your friend got the better trade", "connexion établie. ton ami a fait la meilleure affaire"], lose: ["cable wiggled loose. friendship still saved though", "le câble a glissé. l'amitié est sauvegardée, elle"], params: {"rounds": 3, "speed": 2, "zone": 16, "glyph": "🔌"} },
+    { id: "aa_forecast", tpl: "catch", name: ["AA FORECAST", "MÉTÉO DES PILES"], prompt: ["catch fresh AAs. dodge the dead ones", "attrape les piles neuves. évite les mortes"], win: ["four hours of playtime secured. spend them wisely", "quatre heures de jeu assurées. dépense-les bien"], lose: ["all dead cells. the tv remote is crying too", "que des piles mortes. la télécommande pleure aussi"], params: {"need": 7, "speed": 2, "good": "🔋", "bad": "💀", "badRatio": 0.35} },
+    { id: "leaky_aa_rain", tpl: "dodge", name: ["BATTERY LEAK", "FUITE DE PILES"], prompt: ["the batteries are leaking! don't corrode", "les piles fuient ! évite la corrosion"], win: ["dry as the manual nobody ever read ♡", "sec comme le manuel que personne n'a lu ♡"], lose: ["corroded. rub it with an eraser and retry", "corrodé. frotte avec une gomme et réessaie"], params: {"secs": 10, "speed": 2, "hazard": "🔋"} },
+    { id: "ghost_in_the_rom", tpl: "flappy", name: ["GHOST DATA", "DATA FANTÔME"], prompt: ["flap the deleted ghost past the save slots", "fais planer le fantôme entre les sauvegardes"], win: ["the ghost reached slot 3 and saved itself", "le fantôme a atteint le slot 3 et s'est sauvé"], lose: ["deleted again. it's honestly used to it", "effacé encore. il a l'habitude, promis"], params: {"gates": 4, "gap": 34, "speed": 2, "player": "👻"} },
+    { id: "konami_junior", tpl: "memory", name: ["KONAMI JUNIOR", "KONAMI JUNIOR"], prompt: ["memorize the cheat code, then enter it", "mémorise le code de triche, puis tape-le"], win: ["30 lives! (valid in dreams only)", "30 vies ! (valable en rêve uniquement)"], lose: ["code rejected. even cheating takes practice", "code refusé. même tricher demande du travail"], params: {"len": 4} },
+    { id: "tall_grass_bonk", tpl: "whack", name: ["TALL GRASS", "HAUTES HERBES"], prompt: ["bonk the wild mice, never the sleeping pet", "tape les souris, jamais la bestiole qui dort"], win: ["grass cleared. the pet slept through it ♡", "herbe calmée. la bestiole n'a rien entendu ♡"], lose: ["you woke the pet. it forgives you, slowly", "bestiole réveillée. elle te pardonne, lentement"], params: {"hits": 7, "upMs": 800, "mole": "🐭", "decoy": "😴"} },
+    { id: "slime_paparazzi", tpl: "snipe", name: ["SLIME PAPARAZZI", "PAPARAZZI SLIME"], prompt: ["the crosshair drifts. snap the rare slime", "le viseur dérive. photographie le slime rare"], win: ["front page of slime weekly! it totally posed", "en une du slime hebdo ! il posait, en vrai"], lose: ["all blur. the slime admires your effort ♡", "tout flou. le slime salue l'effort quand même ♡"], params: {"hits": 4, "speed": 2, "target": "🫠"} },
+    { id: "past_bedtime_creep", tpl: "redlight", name: ["PAST BEDTIME", "COUVRE-FEU 8-BIT"], prompt: ["hold A to sneak. freeze when the door creaks", "avance avec A. fige-toi si la porte grince"], win: ["one more level. mom heard nothing ♡", "encore un niveau. maman n'a rien entendu ♡"], lose: ["caught! lights out. your save file understands", "repéré ! extinction des feux. ta sauvegarde comprend"], params: {"dist": 4, "watcher": "🔦"} },
+    { id: "save_file_volley", tpl: "pong", name: ["SAVE FILE VOLLEY", "VOLLEY SAUVEGARDE"], prompt: ["don't drop the save file", "ne laisse pas tomber la sauvegarde"], win: ["saved! your 40 hours are safe forever ♡", "sauvé ! tes 40 heures sont en sécurité ♡"], lose: ["save corrupted. the slime remembers it all for you ♡", "sauvegarde perdue. le slime se souvient pour toi ♡"], params: {"bounces": 6, "speed": 2, "ball": "💾"} },
+    { id: "aa_hot_swap", tpl: "defuse", name: ["AA HOT SWAP", "PILE À L'HEURE"], prompt: ["swap the AAs at exactly 0.0", "change les piles pile à 0.0"], win: ["swapped in one blink. the game never noticed", "changées en un clin d'œil. le jeu n'a rien vu"], lose: ["the screen faded... hold it up to a lamp, quick", "l'écran s'éteint... mets-le sous une lampe, vite"], params: {"rounds": 3, "window": 0.28, "bomb": "🔋"} },
+    { id: "nap_hurdles", tpl: "race", name: ["NAP HURDLES", "SAUTE-SIESTE"], prompt: ["jump the sleeping pets, wake no one", "saute les dodos, ne réveille personne"], win: ["zero pets woken. you are basically a cloud", "aucun dodo dérangé. tu es pratiquement un nuage"], lose: ["you stepped on a tail. apologize immediately", "tu as marché sur une queue. excuse-toi tout de suite"], params: {"obstacles": 5, "speed": 2, "runner": "🏃", "obstacle": "😴"} },
+    { id: "plug_and_pray", tpl: "timing", name: ["PLUG & PRAY", "BRANCHE-MOI"], prompt: ["press A when the plug meets the port", "appuie sur A quand la fiche touche le port"], win: ["connected. 8 bits of pure friendship flowing", "connecté. 8 bits d'amitié pure en circulation"], lose: ["loose connection. wiggle it and believe harder", "faux contact. remue le fil et crois-y très fort"], params: {"rounds": 3, "speed": 2, "zone": 16, "glyph": "🔌"} },
+    { id: "bootleg_bouncer", tpl: "catch", name: ["BOOTLEG BOUNCER", "VIDEUR 8-BIT"], prompt: ["catch real carts, bounce the CDs", "attrape les cartouches, refoule les CD"], win: ["door held. not one CD got past you tonight", "porte tenue. pas un seul CD n'est entré ce soir"], lose: ["a CD got in. buddy, you don't even fit the slot", "un CD est passé. mon gars, tu ne rentres même pas"], params: {"need": 7, "speed": 2, "good": "📼", "bad": "💿", "badRatio": 0.35} },
+    { id: "dead_pixel_drizzle", tpl: "dodge", name: ["DEAD PIXEL RAIN", "PLUIE DE PIXELS"], prompt: ["dodge the dead pixels, stay lit", "esquive les pixels morts, reste allumé"], win: ["screen intact. four shades of green, forever", "écran intact. quatre nuances de vert, pour toujours"], lose: ["a dead pixel hugged you. it was just lonely", "un pixel mort t'a serré fort. il se sentait seul"], params: {"secs": 9, "speed": 3, "hazard": "⬛"} },
+    { id: "shy_ghost_commute", tpl: "flappy", name: ["SHY GHOST", "FANTÔME TIMIDE"], prompt: ["flap the shy ghost through the gaps", "fais voleter le fantôme entre les murs"], win: ["the ghost made it! haunting license: granted", "il est passé ! permis de hanter : accordé"], lose: ["bonk. this ghost can't phase through walls yet", "boum. ce fantôme ne sait pas encore traverser"], params: {"gates": 4, "gap": 34, "speed": 1, "player": "👻"} },
+    { id: "aa_battery_cpr", tpl: "mash", name: ["AA BATTERY CPR", "RCP PILES AA"], prompt: ["mash A to shake life into the dying AAs", "martèle A pour ranimer les piles AA"], win: ["full bars! the red light apologizes", "pleine charge ! le voyant rouge s'excuse"], lose: ["the AAs chose rest. try the freezer trick, maybe", "les piles ont choisi le repos. essaie le congélo ?"], params: {"taps": 20, "secs": 6, "riser": "🔋"} },
+    { id: "konami_amnesia", tpl: "memory", name: ["KONAMI AMNESIA", "AMNÉSIE KONAMI"], prompt: ["the cheat code changed. learn the new one", "le code a changé. mémorise le nouveau"], win: ["30 extra lives. spend them on naps", "30 vies bonus. dépense-les en siestes"], lose: ["code rejected. up up down down... something", "code refusé. haut haut bas bas... un truc"], params: {"len": 4} },
+    { id: "dead_pixel_duel", tpl: "snipe", name: ["DEAD PIXEL DUEL", "DUEL PIXEL MORT"], prompt: ["drift the crosshair, tap A on the dead pixel", "vise le pixel mort et appuie sur A"], win: ["pixel rebooted. the screen glows greener", "pixel ranimé. l'écran verdit de joie"], lose: ["the pixel stays dark. call it a beauty mark", "le pixel reste noir. c'est un grain de beauté"], params: {"hits": 4, "speed": 2, "target": "◼"} },
+    { id: "bedtime_ninja", tpl: "redlight", name: ["BEDTIME NINJA", "NINJA DU DODO"], prompt: ["hold A to sneak, freeze when mom looks", "avance avec A, fige quand maman regarde"], win: ["level 2 reached under the blanket. legend", "niveau 2 atteint sous la couette. légende"], lose: ["busted. mom saw the glow. she says hi ♡", "grillé. maman a vu la lueur. elle te dit coucou ♡"], params: {"dist": 4, "watcher": "👀"} },
+    { id: "pocket_egg_rally", tpl: "pong", name: ["EGG SITTER", "GARDE-ŒUF"], prompt: ["keep the pocket-pet egg off the floor", "l'œuf de poche ne doit pas toucher le sol"], win: ["it hatched! it thinks the paddle is its mom", "il a éclos ! la raquette est sa maman maintenant"], lose: ["the egg bounced. dream eggs are sturdy, promise", "l'œuf a rebondi. les œufs de rêve sont solides"], params: {"bounces": 6, "speed": 2, "ball": "🥚"} },
+    { id: "slime_cable_dash", tpl: "race", name: ["CABLE HURDLES", "SAUTE-CÂBLES"], prompt: ["slime runs, tap A to jump the link cables", "le slime court, saute les câbles avec A"], win: ["flawless run. the cables link in applause", "sans faute. les câbles s'applaudissent en série"], lose: ["tripped. connection lost, dignity intact", "trébuché. connexion perdue, dignité intacte"], params: {"obstacles": 5, "speed": 2, "runner": "🟢", "obstacle": "🔌"} },
+    { id: "dust_bunny_patrol", tpl: "whack", name: ["DUST BUNNIES", "LAPINS POUSSIÈRE"], prompt: ["bop dust bunnies. NEVER the save file", "tape les moutons. JAMAIS la sauvegarde"], win: ["spotless!! the save file slept through it ♡", "impeccable !! la sauvegarde n'a rien senti ♡"], lose: ["you bopped the save. 40 hours. gone. hug?", "tu as tapé la sauvegarde. 40 heures. envolées. câlin ?"], params: {"hits": 6, "upMs": 760, "mole": "🐇", "decoy": "💾"} },
+    { id: "rental_at_zero", tpl: "defuse", name: ["RENTAL PANIC", "PANIQUE VIDÉOCLUB"], prompt: ["return the rental at EXACTLY 0.0 late fees", "rends la cassette à EXACTEMENT 0.0 de frais"], win: ["0.0 owed. the clerk salutes you, slowly", "0.0 dû. le vendeur te salue, au ralenti"], lose: ["late fee: one (1) allowance. be kind, rewind", "frais de retard : un (1) argent de poche. sois sympa, rembobine"], params: {"rounds": 3, "window": 0.28, "bomb": "📼"} }
+  ];
+  var arSession = null; // { raf, keydown } — one arcade at a time
+
+  function dlGbArcadeMount(host) {
+    if (arSession) dlGbArcadeStop();
+    const shelfWins = store.get('yos-gb-arcade', {});
+    const pool = DL_GB_GAMES.length ? DL_GB_GAMES : null;
+    if (!pool) return false;
+    host.classList.add('dl-gb-arcade');
+    host.innerHTML = '';
+    const marq = document.createElement('div');
+    marq.className = 'dl-gb-ar-head';
+    host.appendChild(marq);
+    const cv = document.createElement('canvas');
+    cv.width = AR_W * 2; cv.height = AR_H * 2;
+    cv.className = 'dl-gb-ar-screen';
+    host.appendChild(cv);
+    const pads = document.createElement('div');
+    pads.className = 'dl-gb-ar-pads';
+    pads.innerHTML = '<button type="button" class="dl-gb-pad" data-k="left" aria-label="left">◄</button>'
+      + '<button type="button" class="dl-gb-a dl-gb-ar-a" data-k="a" aria-label="A">A</button>'
+      + '<button type="button" class="dl-gb-pad" data-k="right" aria-label="right">►</button>';
+    host.appendChild(pads);
+    const g2 = cv.getContext('2d');
+    g2.imageSmoothingEnabled = false;
+    g2.setTransform(2, 0, 0, 2, 0, 0);
+
+    const held = { a: 0, left: 0, right: 0 };
+    const edges = { a: 0, left: 0, right: 0 };
+    const press = (k, on) => { if (on && !held[k]) edges[k]++; held[k] = on ? 1 : 0; };
+    pads.querySelectorAll('button').forEach((b) => {
+      const k = b.dataset.k;
+      ['pointerdown'].forEach((ev) => b.addEventListener(ev, (e) => { e.preventDefault(); press(k, true); }));
+      ['pointerup', 'pointerleave', 'pointercancel'].forEach((ev) => b.addEventListener(ev, () => press(k, false)));
+    });
+    cv.addEventListener('pointerdown', () => press('a', true));
+    cv.addEventListener('pointerup', () => press('a', false));
+    const keymap = (code) => code === 'Space' || code === 'Enter' || code === 'KeyA' ? 'a' : code === 'ArrowLeft' ? 'left' : code === 'ArrowRight' ? 'right' : null;
+    const onKey = (e) => {
+      const w = document.getElementById('win-dreamlog');
+      if (!w || w.classList.contains('window-closed')) return;
+      const k = keymap(e.code);
+      if (!k) return;
+      e.preventDefault();
+      press(k, e.type === 'keydown');
+    };
+    window.addEventListener('keydown', onKey);
+    window.addEventListener('keyup', onKey);
+
+    let game = pool[Math.floor(Math.random() * pool.length)];
+    let mode = 'title', mT = 0, s = null;
+    try { window.__yosARC = { state: () => ({ mode, id: game.id, t: s && s.t, n: s && s.n, win: s && s.win, lose: s && s.lose }) }; } catch (e) { /* no toys */ }
+    const bootGame = (g) => { game = g; mode = 'title'; mT = 0; s = null; playTone(523, 'square', 0.07, 0, 0.04); playTone(784, 'square', 0.07, 0.09, 0.04); syncHead(); };
+    const syncHead = () => {
+      const wins = store.get('yos-gb-arcade', {});
+      marq.textContent = '🎮 ' + trT(game.name[0], game.name[1]) + ' · ' + trT('shelf', 'étagère') + ' ' + Object.keys(wins).length + '/' + pool.length;
+    };
+    syncHead();
+
+    let lastT = 0;
+    const frame = (now) => {
+      if (!document.body.contains(cv)) { dlGbArcadeStop(); return; }
+      // wall-clock catch-up: throttled tabs still serve honest seconds
+      const steps = lastT ? Math.max(1, Math.min(4, Math.round((now - lastT) / 16.7))) : 1;
+      lastT = now;
+      // field
+      g2.fillStyle = AR_G[3]; g2.fillRect(0, 0, AR_W, AR_H);
+      g2.fillStyle = AR_G[2];
+      for (let y = 0; y < AR_H; y += 8) g2.fillRect(0, y, AR_W, 1); // faint scanlines
+      const inp = { a: edges.a, leftEdge: edges.left, rightEdge: edges.right, left: held.left, right: held.right, aHeld: held.a };
+      edges.a = edges.left = edges.right = 0;
+      if (mode === 'title') {
+        arText(g2, trT(game.name[0], game.name[1]), 12, 34, 0, 12);
+        arText(g2, trT(game.prompt[0], game.prompt[1]), 12, 52, 1, 8);
+        arText(g2, trT('[A] boot · [►] browse the shelf', '[A] jouer · [►] parcourir'), 12, 76, 0, 8);
+        if (inp.a) { mode = 'ready'; mT = 0; }
+        else if (inp.rightEdge) bootGame(pool[Math.floor(Math.random() * pool.length)]); // window shopping ♡
+      } else if (mode === 'ready') {
+        mT += steps;
+        arText(g2, String(Math.max(1, 3 - Math.floor(mT / 30))), 76, 56, 0, 24);
+        if (mT >= 90) { mode = 'play'; s = { t: 0 }; AR_TPLS[game.tpl].init(s, game.params); }
+      } else if (mode === 'play') {
+        const quiet = { a: 0, leftEdge: 0, rightEdge: 0, left: held.left, right: held.right, aHeld: held.a };
+        for (let k = 0; k < steps && !s.win && !s.lose; k++) {
+          s.t++;
+          AR_TPLS[game.tpl].tick(s, game.params, k === 0 ? inp : quiet);
+        }
+        AR_TPLS[game.tpl].draw(s, game.params, g2);
+        if (s.t > 60 * 25 && !s.win) s.lose = true; // the cartridge fell asleep waiting
+        if (s.win) {
+          mode = 'won'; mT = 0;
+          const wins = store.get('yos-gb-arcade', {});
+          if (!wins[game.id]) { wins[game.id] = 1; store.set('yos-gb-arcade', wins); }
+          if (Object.keys(wins).length >= pool.length) { try { achvUnlock('gbchampion'); } catch (e) { /* crown later */ } }
+          playFanfare();
+          syncHead();
+        } else if (s.lose) { mode = 'lost'; mT = 0; playTone(220, 'square', 0.14, 0, 0.06); playTone(160, 'square', 0.16, 0.15, 0.06); }
+      } else { // won / lost
+        mT++;
+        arText(g2, mode === 'won' ? trT('YOU WIN!!', 'GAGNÉ !!') : trT('GAME OVER', 'GAME OVER'), 48, 30, 0, 14);
+        const line = mode === 'won' ? game.win : game.lose;
+        arText(g2, trT(line[0], line[1]), 8, 50, 1, 7);
+        arText(g2, trT('[A] again · [►] next cartridge', '[A] encore · [►] cartouche suivante'), 12, 78, 0, 8);
+        if (inp.a) { mode = 'ready'; mT = 0; }
+        else if (inp.rightEdge) bootGame(pool[Math.floor(Math.random() * pool.length)]);
+      }
+      arSession.raf = requestAnimationFrame(frame);
+    };
+    arSession = { raf: requestAnimationFrame(frame), onKey };
+    return true;
+  }
+  function dlGbArcadeStop() {
+    if (!arSession) return;
+    cancelAnimationFrame(arSession.raf);
+    window.removeEventListener('keydown', arSession.onKey);
+    window.removeEventListener('keyup', arSession.onKey);
+    arSession = null;
+  }
+
   function dreamlogRender() {
+    // a LIVE bonus cartridge survives the 13s refresh drip untouched —
+    // but only while we are STILL in the gameboy dream (a channel switch
+    // must repaint the journal for the new world)
+    if (arSession && dreamWorld && dreamWorld.id === 'gameboy'
+        && document.querySelector('#win-dreamlog .dl-gb-arcade')
+        && !document.getElementById('win-dreamlog').classList.contains('window-closed')) return;
     const body = document.getElementById('dreamlog-body');
     if (!body) return;
     if (!dreamWorld) {
@@ -10304,13 +10780,32 @@ document.addEventListener('DOMContentLoaded', () => {
       if (firstAvail) {
         stage.innerHTML = '<div class="dl-gb-ring"></div><span class="dl-gb-sprite">' + firstAvail.e + '</span>';
         gbSprite = { m: firstAvail, el: stage.querySelector('.dl-gb-sprite'), ring: stage.querySelector('.dl-gb-ring') };
+      } else if (n >= cat.length) {
+        // v104: dex complete → the tall grass grows an ARCADE. a random
+        // BONUS CARTRIDGE boots on every visit ([►] shuffles the shelf)
+        if (dlGbArcadeMount(stage)) {
+          body.appendChild(stage);
+          const list0 = document.createElement('div');
+          list0.className = 'dl-list';
+          body.appendChild(list0);
+          cat.forEach((m) => {
+            const row = document.createElement('div');
+            row.className = 'dl-row dl-got';
+            row.innerHTML = '<span class="dl-e">' + m.e + '</span><span class="dl-t">' + trT(m.t[0], m.t[1]) + '</span>';
+            list0.appendChild(row);
+          });
+          return; // the arcade owns the window now
+        }
+        stage.innerHTML = '<span class="dl-gb-empty">' + trT('the grass is quiet. dex complete ♡', 'les herbes sont calmes. dex complet ♡') + '</span>';
       } else {
-        stage.innerHTML = '<span class="dl-gb-empty">' + trT(n >= cat.length ? 'the grass is quiet. dex complete ♡' : '…the tall grass rustles…', n >= cat.length ? 'les herbes sont calmes. dex complet ♡' : '…les hautes herbes bruissent…') + '</span>';
+        stage.innerHTML = '<span class="dl-gb-empty">' + trT('…the tall grass rustles…', '…les hautes herbes bruissent…') + '</span>';
       }
+      const arcadeLive = stage.classList.contains('dl-gb-arcade');
       const aBtn = document.createElement('button');
       aBtn.type = 'button';
       aBtn.className = 'dl-gb-a';
       aBtn.textContent = 'A';
+      if (arcadeLive) aBtn.style.display = 'none';
       aBtn.addEventListener('click', () => {
         if (!gbSprite) { playTone(150, 'square', 0.08, 0, 0.04); return; }
         const s = gbSprite.el.getBoundingClientRect();
