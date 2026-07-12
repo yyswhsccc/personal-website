@@ -12650,6 +12650,56 @@ document.addEventListener('DOMContentLoaded', () => {
     dT(() => dwcClose(), 5600);
   }
 
+  /* ---- v111: the dealers are ALIVE 🎭 ----
+     real sprites at the table with real (and really fake) feelings.
+     each opponent has a personality: pik West is jumpy and mostly
+     honest, the slime is a trained actor (half its tells are theater),
+     pik East is a stone that only moves when it means it. tells fire
+     on hand strength, on void dumps, on eaten points — but a tell is
+     only a PROBABILITY of the truth. read them at your own risk ♡ */
+  const DWC_CAST = {
+    1: { kind: 'pik', hue: 210, bluff: 0.2, fidget: 4200, stone: false },
+    2: { kind: 'slime', bluff: 0.5, fidget: 7000, stone: false },
+    3: { kind: 'pik', hue: 30, bluff: 0.1, fidget: 0, stone: true }
+  };
+  function dwcMood(pi, mood, ms) {
+    const st = dwcState;
+    if (!st || st.game !== 'hearts') return;
+    st.moods = st.moods || {};
+    st.moods[pi] = { cls: 'dwcm-' + mood, until: Date.now() + (ms || 2200) };
+    const ava = st.felt.querySelector('.dwc-h-seat[data-pi="' + pi + '"] .dwc-h-ava');
+    if (ava) {
+      ava.className = 'dwc-h-ava ' + st.moods[pi].cls;
+      setTimeout(() => {
+        const cur = st.moods && st.moods[pi];
+        if (!dwcState || dwcState !== st || !cur || Date.now() < cur.until - 40) return;
+        const a2 = st.felt.querySelector('.dwc-h-seat[data-pi="' + pi + '"] .dwc-h-ava');
+        if (a2) a2.className = 'dwc-h-ava';
+        st.moods[pi] = null;
+      }, (ms || 2200) + 60);
+    }
+  }
+  // a tell: honest mood, or its theatrical opposite, per personality
+  function dwcTell(pi, honest, fake, ms) {
+    const cast = DWC_CAST[pi];
+    if (!cast) return;
+    if (cast.stone && Math.random() < 0.6) return; // the stone declines to emote
+    dwcMood(pi, Math.random() < cast.bluff ? fake : honest, ms);
+  }
+  function dwcHandDanger(hand) {
+    return hand.reduce((n, c) => n
+      + (c.s === 0 && c.r === 12 ? 8 : 0)
+      + (c.s === 0 && (c.r === 13 || c.r === 1) ? 3 : 0)
+      + (c.s === 1 && c.r >= 10 ? 1 : 0), 0);
+  }
+  function dwcDealerMood(mood, ms) { // the solitaire/freecell (and mine) dealer img
+    const st = dwcState;
+    const d = st && st.winEl && st.winEl.querySelector('.dwc-dealer');
+    if (!d) return;
+    d.className = 'dwc-dealer dwcm-' + mood;
+    setTimeout(() => { if (d.isConnected) d.className = 'dwc-dealer'; }, ms || 2000);
+  }
+
   /* ---------------- HEARTS — MS SLIME NETWORK -----------------------
      one authentic hand: you (S) vs pikmin (W), the slime (N), pikmin (E).
      pass 3 left → 2♣ leads → 13 tricks → hearts 1pt, Q♠ 13, moon = 26
@@ -12663,7 +12713,14 @@ document.addEventListener('DOMContentLoaded', () => {
     hands.forEach((h) => h.sort((a, b) => (a.s * 13 + a.r) - (b.s * 13 + b.r)));
     Object.assign(dwcState, {
       hands, taken: [[], [], [], []], phase: 'pass', picked: [],
-      trick: [null, null, null, null], leader: 0, turn: 0, broken: false, trickNo: 0
+      trick: [null, null, null, null], leader: 0, turn: 0, broken: false, trickNo: 0, moods: {}
+    });
+    const stRef = dwcState;
+    [1, 2].forEach((pi) => {
+      const iv = setInterval(() => {
+        if (dwcState !== stRef) { clearInterval(iv); return; }
+        if (stRef.phase === 'play' && Math.random() < 0.5 && !(stRef.moods && stRef.moods[pi])) dwcMood(pi, 'fidget', 900);
+      }, DWC_CAST[pi].fidget);
     });
     dwcHeartsRender();
   }
@@ -12738,7 +12795,20 @@ document.addEventListener('DOMContentLoaded', () => {
   function dwcHAuto() {
     const st = dwcState;
     if (!st || st.game !== 'hearts' || st.phase !== 'play' || st.turn === 0) return;
-    dwcHPlay(st.turn, dwcHAiPlay(st.turn));
+    const pi = st.turn;
+    const card = dwcHAiPlay(pi);
+    const lead = st.trick[st.leader];
+    const dumping = lead && card.s !== lead.s && (card.s === 1 || (card.s === 0 && card.r === 12));
+    const eatingRisk = lead && card.s === lead.s && dwcHPts(st.trick.filter(Boolean)) > 0;
+    if (dumping) {
+      // the wind-up: fake sympathy (or naked glee) before the hammer falls
+      dwcTell(pi, 'sly', 'worry', 1400);
+      setTimeout(() => { if (dwcState === st && st.turn === pi && st.phase === 'play') dwcHPlay(pi, card); }, 780);
+      return;
+    }
+    if (eatingRisk) dwcTell(pi, 'worry', 'idlefake', 1200);
+    else if (!lead && Math.random() < 0.3) dwcMood(pi, 'think', 900);
+    dwcHPlay(pi, card);
   }
   function dwcHTrickEnd() {
     const st = dwcState;
@@ -12754,6 +12824,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const pts = dwcHPts(st.trick);
     if (pts && win === 0) dwcSay(st.trick.some((c) => c.s === 0 && c.r === 12) ? 'qsGiven' : 'idle');
     if (win === 2 && st.trick.some((c) => c.s === 0 && c.r === 12)) dwcSay('qsTaken');
+    // faces, honest and otherwise
+    if (win !== 0) {
+      if (pts) dwcMood(win, st.trick.some((c) => c.s === 0 && c.r === 12) ? 'grief' : 'worry', 2600);
+      else dwcMood(win, 'happy', 1600);
+    } else if (pts) {
+      // YOU ate points: sympathy all around… and then the slime's mask slips
+      [1, 3].forEach((pi) => dwcTell(pi, 'worry', 'smug', 1800));
+      dwcMood(2, 'worry', 1400);
+      setTimeout(() => { if (dwcState === st && Math.random() < 0.65) dwcMood(2, 'smug', 1100); }, 1500);
+    }
+    [1, 2, 3].forEach((pi) => { if (pi !== win && !pts && Math.random() < 0.2) dwcMood(pi, 'relief', 1200); });
     st.trick = [null, null, null, null];
     st.leader = win; st.turn = win;
     st.trickNo++;
@@ -12784,9 +12865,21 @@ document.addEventListener('DOMContentLoaded', () => {
     [1, 2, 3].forEach((pi) => {
       const seat = document.createElement('div');
       seat.className = 'dwc-h-seat';
+      seat.dataset.pi = pi;
       const ava = document.createElement('span');
-      ava.className = 'dwc-h-ava';
-      ava.textContent = pi === 2 ? '🍮' : '🌸';
+      const mood = st.moods && st.moods[pi] && Date.now() < st.moods[pi].until ? ' ' + st.moods[pi].cls : '';
+      ava.className = 'dwc-h-ava' + mood;
+      const cast = DWC_CAST[pi];
+      const im = document.createElement('img');
+      im.alt = '';
+      im.className = 'dwc-h-sprite';
+      let spriteOk = true;
+      try {
+        im.src = cast.kind === 'slime'
+          ? ((OUTFIT_FRAMES && typeof OUTFIT_FRAMES.base === 'string' && OUTFIT_FRAMES.base) || 'assets/slime_pet_cutout.png')
+          : pikSprite(hueColor(cast.hue), 2, null);
+      } catch (e) { spriteOk = false; ava.textContent = pi === 2 ? '🍮' : '🌸'; }
+      if (spriteOk) ava.appendChild(im);
       const label = document.createElement('small');
       label.textContent = DWC_SEATS[pi] + ' · ' + st.hands[pi].length;
       const pts = dwcHPts(st.taken[pi]);
@@ -12852,6 +12945,13 @@ document.addEventListener('DOMContentLoaded', () => {
         st.hands.forEach((h) => h.sort((a, b) => (a.s * 13 + a.r) - (b.s * 13 + b.r)));
         st.picked = [];
         st.phase = 'play';
+        // everyone reads their new hand — some reactions are even true
+        [1, 2, 3].forEach((pi) => dT(() => {
+          const danger = dwcHandDanger(st.hands[pi]);
+          if (danger >= 8) dwcTell(pi, 'worry', 'smug', 2600);
+          else if (danger <= 1) dwcTell(pi, 'smug', 'worry', 2400);
+          else dwcTell(pi, 'think', 'idlefake', 2000);
+        }, 600 + pi * 420));
         // whoever holds the 2♣ leads
         st.leader = st.hands.findIndex((h) => h.some((c) => c.s === 3 && c.r === 2));
         st.turn = st.leader;
@@ -13012,7 +13112,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!st.stock.length) stock.textContent = '↻';
     stock.addEventListener('click', () => {
       if (st.stock.length) { const c = st.stock.pop(); c.up = true; st.waste.push(c); playTone(700, 'square', 0.03, 0, 0.02); }
-      else if (st.waste.length) { st.stock = st.waste.reverse().map((c) => (c.up = false, c)); st.waste = []; playTone(400, 'square', 0.05, 0, 0.03); }
+      else if (st.waste.length) { st.stock = st.waste.reverse().map((c) => (c.up = false, c)); st.waste = []; playTone(400, 'square', 0.05, 0, 0.03); dwcDealerMood('grief', 1300); }
       dwcSolRender();
     });
     top.appendChild(stock);
@@ -13071,6 +13171,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const st = dwcState;
     st.tab.forEach((p) => { const t = p[p.length - 1]; if (t && !t.up) { t.up = true; } });
     playTone(880, 'triangle', 0.05, 0, 0.03);
+    const fnd = st.found.reduce((n, f) => n + f.length, 0);
+    if (fnd > (st._lastFnd || 0)) dwcDealerMood('happy', 1400);
+    st._lastFnd = fnd;
     if (st.moves % 6 === 0 && Math.random() < 0.5) dwcSay('goodmove');
     if (st.found.every((f) => f.length === 13)) { dwcWon('sol'); return; }
     dwcSolRender();
