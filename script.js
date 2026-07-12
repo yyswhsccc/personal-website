@@ -16147,6 +16147,227 @@ document.addEventListener('DOMContentLoaded', () => {
     { top: ['free cursor pack!!', 'curseurs gratuits !!'], bot: ['no thank you', 'non merci'], good: 'bot' },
     { top: ['make IE default', 'IE par défaut'], bot: ['it already is', 'il l\'est déjà'], good: 'bot' }
   ];
+  /* ==== v118: the STAGE DIRECTOR — every stage owns a repertoire ====
+     eight shared act primitives, skinned per stage: each stage's
+     signature mechanic keeps running, and every ~4s the director
+     pulls one more act from that stage's pool (never the same twice
+     in a row). acts live in st.acts — fully isolated from the
+     signature mechanics' st.items. ==== */
+  function gActSpawn(st, a) {
+    const A = { act: a.type, g: a.g, col: a.col, soft: !!a.soft, good: !!a.good, coin: a.coin || 2, t: 0 };
+    if (a.type === 'fall') {
+      for (let i = 0; i < (a.n || 4); i++) st.acts.push(Object.assign({}, A, { x: G_W + 20 + i * 42, y: -8 - (i % 3) * 14, vy: 1.1 + Math.random() * 0.9, done: false }));
+      return;
+    }
+    if (a.type === 'sweep') { st.acts.push(Object.assign(A, { x: G_W + 16, y: a.y || (G_GROUND - 52), vx: 3.6 + Math.random(), done: false })); return; }
+    if (a.type === 'pad') { st.acts.push(Object.assign(A, { x: G_W + 30, life: 60 * 7, done: false })); return; }
+    if (a.type === 'prize') { st.acts.push(Object.assign(A, { x: G_W + 40, y: G_GROUND - 78, done: false })); return; }
+    if (a.type === 'slam') { st.acts.push(Object.assign(A, { x: G_W + 50, warn: 62, slamT: 0, done: false })); return; }
+    if (a.type === 'coinarc') {
+      for (let i = 0; i < 5; i++) { const p = i / 4; st.acts.push(Object.assign({}, A, { x: G_W + 30 + i * 24, y: G_GROUND - 22 - Math.sin(p * Math.PI) * 58, done: false })); }
+      return;
+    }
+    if (a.type === 'wall') { st.acts.push(Object.assign(A, { x: G_W + 40, gapTop: Math.random() < 0.5, done: false })); return; }
+    if (a.type === 'buddy') { st.acts.push(Object.assign(A, { x: 0, life: 60 * 6, chompAt: 0, done: false })); return; }
+  }
+  function gStageDirector(st, sb) {
+    const pool = G_STAGE_ACTS[st.kind];
+    if (!pool || !pool.length) return;
+    if (st.t % 240 === 120) {
+      let ix = Math.floor(Math.random() * pool.length);
+      if (ix === st.data.lastAct && pool.length > 1) ix = (ix + 1) % pool.length;
+      st.data.lastAct = ix;
+      gActSpawn(st, pool[ix]);
+      if (pool[ix].line && Math.random() < 0.7) gToast(pool[ix].line, 120);
+    }
+    // ---- act physics + collisions (isolated from st.items) ----
+    st.acts.forEach((it) => {
+      const cx = sb.x + sb.w / 2, cy = sb.y + sb.h / 2;
+      if (it.act === 'fall') { it.x -= gSpeed() * 0.7; it.y += it.vy; }
+      else if (it.act === 'sweep') { it.x -= it.vx; it.y += Math.sin((GAME.frame + it.x) * 0.05) * 0.8; }
+      else if (it.act === 'slam') {
+        it.x -= gSpeed();
+        if (it.warn > 0) { it.warn--; if (!it.warn) { it.slamT = 24; playTone(110, 'square', 0.1, 0, 0.06); } }
+        else if (it.slamT > 0) it.slamT--;
+      }
+      else if (it.act === 'buddy') { it.x = sb.x - 26; it.life--; }
+      else it.x -= gSpeed();
+      if (it.done) return;
+      const hit = Math.abs(it.x - cx) < 18 && (it.y === undefined || Math.abs(it.y - cy) < 20);
+      if (it.act === 'fall' || it.act === 'sweep' || it.act === 'coinarc' || it.act === 'prize') {
+        if (hit) {
+          it.done = true;
+          if (it.good) { st.score += it.coin; fxCoins(it.coin); playSparkleSound(); }
+          else if (it.soft) { GAME.vy = 9 + Math.random() * 2; GAME.y = Math.max(GAME.y, 1); playTone(880, 'triangle', 0.06, 0, 0.04); }
+          else if (GAME.frame >= GAME.invUntil) { gHit({ w: 0 }); }
+        }
+      } else if (it.act === 'pad') {
+        it.life--;
+        if (Math.abs(it.x - cx) < 20 && GAME.y < 6 && !it.rode) { it.rode = 1; GAME.vy = 11; GAME.y = 1; st.score += 3; fxCoins(2); playTone(700, 'triangle', 0.09, 0, 0.05); playTone(1046, 'triangle', 0.09, 0.09, 0.05); }
+      } else if (it.act === 'slam') {
+        if (it.slamT > 0 && GAME.frame >= GAME.invUntil && GAME.y < 32 && Math.abs(it.x - cx) < 20) {
+          if (it.soft) { GAME.vy = 9.5; GAME.y = Math.max(GAME.y, 1); it.slamT = 0; playTone(880, 'triangle', 0.07, 0, 0.04); }
+          else { gHit({ w: 0 }); it.slamT = 0; }
+        }
+      } else if (it.act === 'wall') {
+        if (!it.judged && it.x + 8 < sb.x) {
+          it.judged = true;
+          const inGap = it.gapTop ? GAME.y > 34 : GAME.y <= 34;
+          if (inGap) { st.score += 4; playSparkleSound(); } else { fxScore(-10); playTone(170, 'square', 0.08, 0, 0.05); }
+        }
+      } else if (it.act === 'buddy') {
+        if (it.life > 0 && GAME.frame >= (it.chompAt || 0)) {
+          const ahead = GAME.obs.find((o) => o.x > sb.x + 20 && o.x < sb.x + 240);
+          if (ahead) { GAME.obs.splice(GAME.obs.indexOf(ahead), 1); it.chompAt = GAME.frame + 110; st.score += 2; playTone(520, 'square', 0.06, 0, 0.04); }
+        }
+      }
+    });
+    st.acts = st.acts.filter((it) => it.x > -50 && (it.y === undefined || it.y < G_H + 16) && (it.life === undefined || it.life > 0));
+  }
+  function gDrawActs(g2, st) {
+    st.acts.forEach((it) => {
+      if (it.done) return;
+      const col = it.col || (it.good ? '#ffe98a' : '#ffe6f4');
+      if (it.act === 'wall') {
+        g2.fillStyle = it.col || 'rgba(255, 230, 244, 0.85)';
+        if (it.gapTop) g2.fillRect(it.x - 6, G_GROUND - 46, 12, 46);
+        else g2.fillRect(it.x - 6, 10, 12, G_GROUND - 66);
+        return;
+      }
+      if (it.act === 'slam') {
+        if (it.warn > 0 && (it.warn >> 3) % 2) { g2.fillStyle = col; g2.font = "11px 'Jersey 25', 'VT323', monospace"; g2.fillText('!', it.x - 2, G_GROUND - 8); }
+        if (it.slamT > 0) { g2.fillStyle = col; g2.fillRect(it.x - 12, 8, 24, G_GROUND - 40); }
+        g2.font = "12px sans-serif";
+        g2.fillText(it.g, it.x - 6, 16);
+        return;
+      }
+      if (it.act === 'pad') {
+        g2.fillStyle = col;
+        g2.fillRect(it.x - 16, G_GROUND - 6, 32, 6);
+        g2.font = "10px sans-serif";
+        g2.fillText(it.g, it.x - 5, G_GROUND - 9);
+        return;
+      }
+      g2.font = (it.act === 'prize' ? '15px' : '12px') + ' sans-serif';
+      g2.fillText(it.g, it.x - 6, (it.y || G_GROUND - 12) + 4);
+    });
+  }
+  // ---- the repertoires: ≥6 flavours per stage (signature mechanic + these) ----
+  const G_STAGE_ACTS = {
+    wizard: [
+      { type: 'fall', g: '📎', n: 4, good: true, coin: 2, line: ['📎 clippy confetti!! catch the help', '📎 confettis clippy !! attrape l\'aide'] },
+      { type: 'sweep', g: '⏳', soft: true, line: ['⏳ the hourglass sweeps — it only costs patience', '⏳ le sablier passe — ça ne coûte que la patience'] },
+      { type: 'pad', g: '🖱', col: '#dfdfdf' },
+      { type: 'prize', g: '💾', good: true, coin: 6 },
+      { type: 'coinarc', g: '·', good: true, col: '#ffd400' },
+      { type: 'wall', g: '▯', col: 'rgba(223,223,223,0.9)' }
+    ],
+    blackout: [
+      { type: 'fall', g: '🔦', n: 3, good: true, coin: 3, line: ['🔦 spare flashlights!!', '🔦 lampes de secours !!'] },
+      { type: 'sweep', g: '🚨' },
+      { type: 'prize', g: '🗝', good: true, coin: 6 },
+      { type: 'coinarc', g: '·', good: true, col: '#ffd23f' },
+      { type: 'slam', g: '🛑', col: '#c62828' },
+      { type: 'buddy', g: '🐕‍🦺', line: ['🐕‍🦺 a site guard-dog joins the run', '🐕‍🦺 un chien de garde du site te rejoint'] }
+    ],
+    lobby: [
+      { type: 'coinarc', g: '·', good: true, col: '#3dff7c' },
+      { type: 'wall', g: '▮', col: 'rgba(61,255,124,0.5)' },
+      { type: 'prize', g: '🕶', good: true, coin: 6 },
+      { type: 'pad', g: '📞', col: '#0f7a3a' },
+      { type: 'fall', g: '💊', n: 3, good: true, coin: 3 },
+      { type: 'sweep', g: '🕴' }
+    ],
+    route1: [
+      { type: 'fall', g: '🍬', n: 4, good: true, coin: 2 },
+      { type: 'prize', g: '🏆', good: true, coin: 6 },
+      { type: 'pad', g: '🌱', col: '#9bbc0f' },
+      { type: 'coinarc', g: '·', good: true, col: '#9bbc0f' },
+      { type: 'buddy', g: '🐛', line: ['🐛 the wild bug is BACK on duty', '🐛 le bug sauvage reprend du service'] },
+      { type: 'sweep', g: '🐦' }
+    ],
+    construction: [
+      { type: 'fall', g: '✨', n: 4, good: true, coin: 2 },
+      { type: 'slam', g: '🔨', col: '#ffd23f' },
+      { type: 'pad', g: '🛠', col: '#ff2fae' },
+      { type: 'prize', g: '💿', good: true, coin: 6 },
+      { type: 'coinarc', g: '·', good: true, col: '#41e0ff' },
+      { type: 'wall', g: '🚧', col: 'rgba(255,210,63,0.85)' }
+    ],
+    stairs: [
+      { type: 'fall', g: '✚', n: 4, good: true, coin: 2 },
+      { type: 'sweep', g: '▢' },
+      { type: 'prize', g: '📜', good: true, coin: 6 },
+      { type: 'coinarc', g: '·', good: true, col: '#8ab4ff' },
+      { type: 'pad', g: '🔧', col: '#8ab4ff' },
+      { type: 'slam', g: '⚠', col: '#8ab4ff' }
+    ],
+    assembly: [
+      { type: 'fall', g: '🎫', n: 4, good: true, coin: 2 },
+      { type: 'coinarc', g: '·', good: true, col: '#ffb000' },
+      { type: 'prize', g: '📼', good: true, coin: 6 },
+      { type: 'pad', g: '📠', col: '#ffb000' },
+      { type: 'wall', g: '▤', col: 'rgba(255,176,0,0.7)' },
+      { type: 'buddy', g: '🤖', line: ['🤖 a maintenance daemon tidies the line ahead', '🤖 un démon de maintenance déblaie la chaîne'] }
+    ],
+    tickle: [
+      { type: 'fall', g: '🧡', n: 5, good: true, coin: 2 },
+      { type: 'slam', g: '🫳', soft: true, col: '#ffab40', line: ['🫳 INCOMING TICKLE HAND (it bounces, not bites)', '🫳 MAIN À CHATOUILLES (elle rebondit, ne mord pas)'] },
+      { type: 'pad', g: '🍮', col: '#ffab40' },
+      { type: 'coinarc', g: '·', good: true, col: '#ffab40' },
+      { type: 'prize', g: '🍯', good: true, coin: 6 },
+      { type: 'sweep', g: '🧸', soft: true }
+    ],
+    dontblink: [
+      { type: 'coinarc', g: '·', good: true, col: '#ffd23f' },
+      { type: 'prize', g: '⌚', good: true, coin: 6, line: ['⌚ a pocketwatch — time belongs to the unblinking', '⌚ une montre — le temps appartient à qui ne cligne pas'] },
+      { type: 'fall', g: '🕯', n: 3, good: true, coin: 3 },
+      { type: 'pad', g: '🪨', col: '#b8ab9a' },
+      { type: 'wall', g: '▓', col: 'rgba(184,171,154,0.85)' },
+      { type: 'slam', g: '🚨', col: '#c62828' }
+    ],
+    refinery: [
+      { type: 'fall', g: '⚙', n: 4, good: true, coin: 2 },
+      { type: 'coinarc', g: '·', good: true, col: '#f0d060' },
+      { type: 'prize', g: '💍', good: true, coin: 7, line: ['💍 something went in as a paperclip…', '💍 un trombone est entré là-dedans…'] },
+      { type: 'sweep', g: '🔩' },
+      { type: 'pad', g: '⚙', col: '#c9a227' },
+      { type: 'slam', g: '🗜', col: '#c9a227' }
+    ],
+    antimeme: [
+      { type: 'fall', g: '❓', n: 4, good: true, coin: 2 },
+      { type: 'prize', g: '📓', good: true, coin: 6, line: ['📓 someone\'s field notes!! probably about… something', '📓 des notes de terrain !! sur… quelque chose'] },
+      { type: 'coinarc', g: '·', good: true, col: '#b9aecb' },
+      { type: 'wall', g: '▒', col: 'rgba(185,174,203,0.6)' },
+      { type: 'pad', g: '( )', col: '#b9aecb' },
+      { type: 'sweep', g: '❔' }
+    ],
+    toaster: [
+      { type: 'fall', g: '🧈', n: 4, good: true, coin: 2, line: ['🧈 butter rain. I am seasoned. I am glad', '🧈 pluie de beurre. je suis assaisonné. je suis ravi'] },
+      { type: 'coinarc', g: '·', good: true, col: '#e8c07a' },
+      { type: 'prize', g: '🥐', good: true, coin: 6 },
+      { type: 'pad', g: '🍞', col: '#e8c07a' },
+      { type: 'sweep', g: '🔥', line: ['🔥 a heat wave — I feel SO productive', '🔥 une vague de chaleur — je me sens TELLEMENT productif'] },
+      { type: 'wall', g: '▤', col: 'rgba(232,192,122,0.85)' }
+    ],
+    showroom: [
+      { type: 'fall', g: '🪑', n: 3, soft: true, line: ['🪑 flat-packs falling — they bounce, somehow', '🪑 chute de meubles en kit — ça rebondit, allez savoir'] },
+      { type: 'coinarc', g: '·', good: true, col: '#ffcc00' },
+      { type: 'prize', g: '🥤', good: true, coin: 6, line: ['🥤 lingonberry break!!', '🥤 pause airelles !!'] },
+      { type: 'pad', g: '🛏', col: '#0051ba' },
+      { type: 'wall', g: '📦', col: 'rgba(216,176,120,0.9)' },
+      { type: 'buddy', g: '🧑‍🔧', line: ['🧑‍🔧 STAFF clears the aisle for you (the store is closed)', '🧑‍🔧 le PERSONNEL dégage l\'allée (le magasin est fermé)'] }
+    ],
+    wordless: [
+      { type: 'fall', g: '●', n: 5, good: true, coin: 2 },
+      { type: 'coinarc', g: '●', good: true, col: '#f2f2f2' },
+      { type: 'prize', g: '🍮', good: true, coin: 6 },
+      { type: 'pad', g: '●', col: '#f2f2f2' },
+      { type: 'wall', g: '█', col: 'rgba(20,20,20,0.9)' },
+      { type: 'sweep', g: '〰' }
+    ]
+  };
+
   function gStageTick() {
     if (!gDreamSkin) { GAME.stage = null; return; }
     const st = GAME.stage;
@@ -16167,6 +16388,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     // ---- run phase: 1450 frames of new rules ----
     const k = st.kind;
+    gStageDirector(st, sb); // the repertoire: one extra act every ~4s
     if (k === 'wizard') {
       GAME.spawnIn = Math.max(GAME.spawnIn, 40);
       if (st.t % 265 === 20) {
@@ -16379,7 +16601,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function gStageStart() {
     const kind = gStageKind();
     if (!kind) return;
-    GAME.stage = { kind, t: 0, phase: 'gate', items: [], score: 0, data: { gateIx: 0, batch: 0 } };
+    GAME.stage = { kind, t: 0, phase: 'gate', items: [], acts: [], score: 0, data: { gateIx: 0, batch: 0, lastAct: -1 } };
     if (kind === 'lobby') setMod('speed', 0.55, 26);
     playTone(392, 'triangle', 0.14, 0, 0.05); playTone(523, 'triangle', 0.14, 0.13, 0.05); playTone(659, 'triangle', 0.18, 0.26, 0.06);
   }
@@ -16415,6 +16637,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (st.phase === 'gate') return;
     }
     if (st.phase !== 'run') return;
+    gDrawActs(g2, st);
     const k = st.kind;
     if (k === 'wizard') {
       st.items.forEach((it) => {
