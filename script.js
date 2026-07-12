@@ -4028,6 +4028,7 @@ document.addEventListener('DOMContentLoaded', () => {
     { id: 'nap300', icon: '🌌', m: 'naps', v: 300, n: ['Curator of Dreams', 'Conservateur·rice des Rêves'], d: ['300 naps curated. the dream museum has a you-shaped statue.', '300 siestes organisées. le musée du rêve a une statue à ton effigie.'], t: ['three hundred lullabies.', 'trois cents berceuses.'] },
     { id: 'jump100', icon: '🐇', m: 'jumps', v: 100, n: ['Bunny Apprentice', 'Apprenti·e Lapin'], d: ['100 jumps. the rabbits accepted your application.', '100 sauts. les lapins ont accepté ta candidature.'], t: ['the first hundred hops.', 'les cent premiers bonds.'] },
     { id: 'gbchampion', icon: '🎮', n: ['Dream Boy Champion', 'Champion Dream Boy'], d: ['won all 35 BONUS CARTRIDGE microgames. the dex was only the tutorial.', 'a gagné les 35 microjeux de la CARTOUCHE BONUS. le dex n\'était que le tutoriel.'], t: ['complete the dream dex. then keep pressing A.', 'complète le dex des rêves. puis continue d\'appuyer sur A.'] },
+    { id: 'cardshark', icon: '🃏', n: ['Card Shark of 1995', 'Requin des Cartes de 1995'], d: ['won a REAL hand at the slime\'s card table — solitaire, freecell, or hearts. the cascade was earned.', 'a gagné une VRAIE partie à la table du slime — solitaire, freecell ou hearts. la cascade était méritée.'], t: ['in the beige dream, the slime deals. say `sol`.', 'dans le rêve beige, le slime distribue. dis `sol`.'] },
     { id: 'chameleon', icon: '🦎', n: ['The Impossible Shade', 'La Teinte Impossible'], d: ['plucked the hidden CHAMELEON pikmin — it refuses to pick a colour. mood.', 'a cueilli le pikmin CAMÉLÉON caché — il refuse de choisir une couleur. tellement relatable.'], t: ['1 in 10 sprouts hides a secret.', '1 pousse sur 10 cache un secret.'] },
     { id: 'colorpicker', icon: '🎨', n: ['Color Picker', 'Pipette à Couleurs'], d: ['25% of the hue wheel collected. the eyedropper nods, professionally.', '25 % de la roue chromatique. la pipette hoche la tête, en pro.'], t: ['pluck across the rainbow.', 'cueille à travers l\'arc-en-ciel.'] },
     { id: 'halftone', icon: '🖨️', n: ['Halftone Hero', 'Héros du Demi-Ton'], d: ['half the hue wheel. serious print-shop energy.', 'la moitié de la roue. sérieuse énergie d\'imprimerie.'], t: ['the wheel is half full.', 'la roue est à moitié pleine.'] },
@@ -7066,7 +7067,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // a classic dialog box, dream-flavored. buttons: [label, cb, keepOpen]
   function dreamDlg(opts) {
     if (!dreamWorld) return null;
-    if (!opts.force && document.querySelectorAll('.dream-dlg').length >= 2) return null; // clutter law
+    if (!opts.force && (document.querySelectorAll('.dream-dlg').length >= 2 || document.querySelector('.dwc-win'))) return null; // clutter law (the card table counts as a full house)
     const d = document.createElement('div');
     d.className = 'dream-dlg' + (opts.cls ? ' ' + opts.cls : '');
     d.setAttribute('role', 'dialog');
@@ -8443,7 +8444,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (Math.random() < 0.12) { dwCrossover(); return; } // wrong-dream cameo!!
     if (Math.random() < 0.24) return; // it's a dream, not a metronome
     const id = dreamWorld.id;
-    if (id === 'win95') dwBeatSolitaire();
+    if (id === 'win95') dwBeatCards();
     else if (id === 'scp') dwBeatAnomaly();
     else if (id === 'matrix') dwBeatDejavu();
     else if (id === 'gameboy') dwBeatWildBug();
@@ -8898,7 +8899,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!dreamWorld || REDUCED_MOTION) return;
     if (dreamWorld.__dailyDone) return;
     if (gameActive()) { dT(dwDailyBeat, 30000); return; } // mid-run: the calendar waits politely
-    if (document.querySelector('.dream-dlg')) { dT(dwDailyBeat, 25000); return; } // stage busy — the theater waits
+    if (document.querySelector('.dream-dlg') || document.querySelector('.dwc-win')) { dT(dwDailyBeat, 25000); return; } // stage busy — the theater waits
     let day;
     try { day = dwDayOverride != null ? dwDayOverride : new Date().getDay(); } catch (e) { day = 3; } // wednesday is a safe, froggy default
     const beats = DW_DAILY[dreamWorld.id];
@@ -9572,9 +9573,9 @@ document.addEventListener('DOMContentLoaded', () => {
           } });
           dsL('📎 "it looks like you\'re writing a dream. would you like help?" (there is no No button.)', '📎 « on dirait que tu écris un rêve. besoin d\'aide ? » (il n\'y a pas de bouton Non.)');
         } },
-        sol: { d: ['solitaire victory (nobody knows the rules)', 'victoire au solitaire (personne ne connaît les règles)'], fx() {
-          try { dwBeatSolitaire(); } catch (e) { /* the deck sticks */ }
-          dsL('you win!! the cards cascade. this is the only pension plan of 1995.', 'gagné !! les cartes cascadent. c\'est le seul plan retraite de 1995.', 't-ok');
+        sol: { d: ['the slime deals: solitaire, freecell, or HEARTS (real rules, real cascade)', 'le slime distribue : solitaire, freecell ou HEARTS (vraies règles, vraie cascade)'], fx() {
+          dsL('the slime produces a deck from nowhere. the deck produces a table. sit ♡', 'le slime sort un paquet de nulle part. le paquet sort une table. assieds-toi ♡', 't-ok');
+          try { dwBeatCards(); } catch (e) { /* the deck sticks */ }
         } },
         mine: { d: ['minesweeper, one tile, high stakes', 'démineur, une case, gros enjeux'], fx() {
           dreamDlg({ title: 'MINESWEEPER.EXE', force: true, lines: [trT('one tile. it is either a mine or a flower. history says flower.', 'une case. mine ou fleur. l\'histoire dit fleur.')], buttons: [
@@ -12311,7 +12312,586 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
   ];
-  function dwBeatSolitaire() {
+  /* ==================================================================
+     v109 — THE CARD TABLE 🎴 (win95 dream)
+     the cascade was just an animation; now it's a PRIZE. the slime
+     deals the actual Windows 95 lineup — Solitaire (Klondike),
+     FreeCell, and Hearts on the MS SLIME NETWORK — real rules, real
+     wins, click-to-move (the click finds the best legal move itself).
+     debug: window.__yosCARDS ================================== */
+  var DWC_TALK = {
+    invite: [["*slams a deck on the desktop* it's 1995 and the cards demand a witness. sit. i deal ♡", "*claque un paquet sur le bureau* 1995. les cartes exigent un témoin. assis. je donne ♡"], ["i found a deck behind the recycle bin. it still works. it NEEDS to work. one game ♡", "j'ai trouvé un paquet derrière la corbeille. il marche encore. il DOIT marcher. une partie ♡"], ["the pikmin already cut the deck. with a leaf. it's official now, you have to play", "les pikmin ont déjà coupé le paquet. avec une feuille. c'est officiel, tu dois jouer"], ["no downloads, no dial-up. just 52 cards and a slime with a green felt dream", "pas de téléchargement, pas de modem. juste 52 cartes et un slime qui rêve de tapis vert"], ["solitaire, freecell, or hearts on the MS SLIME NETWORK. all three end in beige glory", "solitaire, freecell ou hearts sur le MS SLIME NETWORK. les trois finissent en gloire beige"]],
+    deal: [["*riffle shuffle* i learned this from a screensaver. it took four years", "*mélange en cascade* j'ai appris ça d'un écran de veille. ça m'a pris quatre ans"], ["shuffling… shuffling… ok one card fell into me. it's part of me now. dealing anyway", "je mélange… je mélange… bon, une carte est tombée en moi. elle fait partie de moi. je donne"], ["cut the deck? no. the deck and i have an understanding. *deals with tiny confidence*", "couper le paquet ? non. le paquet et moi, on se comprend. *donne avec une petite assurance*"], ["each card is dealt at exactly 14.4 kbps. authentic 1995 latency ♡", "chaque carte est distribuée à exactement 14,4 kbps. latence 1995 authentique ♡"], ["the pikmin insisted on dealing one card each. respect the ceremony", "les pikmin ont insisté pour donner une carte chacun. respecte la cérémonie"], ["defragging the deck first… 62%… 63%… ok. clean columns. good omens", "je défragmente le paquet d'abord… 62 %… 63 %… ok. colonnes propres. bons présages"]],
+    goodmove: [["an ace to the foundation!! the dream chimes softly. that was the correct life choice", "un as à la fondation !! le rêve carillonne doucement. c'était le bon choix de vie"], ["you freed a cell. somewhere, a tiny window opens and applauds", "tu as libéré une cellule. quelque part, une petite fenêtre s'ouvre et applaudit"], ["ohh clean dodge. the queen sailed right past you. i felt the breeze", "ohh belle esquive. la dame est passée juste à côté. j'ai senti le courant d'air"], ["that move was so smooth the taskbar did a little bounce. i saw it", "ce coup était si fluide que la barre des tâches a rebondi. je l'ai vu"], ["*quiet dealer nod* the pikmin are taking notes. on a leaf. about you", "*hochement discret de croupier* les pikmin prennent des notes. sur une feuille. sur toi"], ["the deck respects you now. i can tell by how it's lying flatter", "le paquet te respecte maintenant. je le vois à sa façon d'être plus plat"]],
+    stuck: [["no rush. in 1995 we waited nine minutes for one picture of a cat", "pas de panique. en 1995, on attendait neuf minutes pour une seule photo de chat"], ["psst… look at the buried columns. one of them is hiding a whole future", "psst… regarde les colonnes enterrées. l'une d'elles cache tout un avenir"], ["if there's truly no move, blame the deck. we redraw. no shame at this table", "s'il n'y a vraiment aucun coup, c'est la faute du paquet. on repioche. aucune honte ici"], ["take your time ♡ the cascade has waited since 1995. it can wait one more think", "prends ton temps ♡ la cascade attend depuis 1995. elle peut patienter une réflexion de plus"], ["sometimes the move is a little one. a two goes up. empires start like this", "parfois le coup est tout petit. un deux qui monte. les empires commencent comme ça"]],
+    winSol: [["you WON solitaire. for real. by playing. the cascade is EARNED. bounce, little cards", "tu as GAGNÉ au solitaire. pour de vrai. en jouant. la cascade est MÉRITÉE. rebondissez, cartes"], ["an earned cascade hits different. the only pension plan of 1995, fully vested ♡", "une cascade méritée, c'est autre chose. le seul plan retraite de 1995, entièrement acquis ♡"], ["every card bounces because YOU stacked them right. i'm just the slime who witnessed it", "chaque carte rebondit parce que TU les as bien rangées. moi, je suis juste le slime témoin"], ["kings to aces, all four suits, no cheats. the desktop will remember this cascade", "des rois aux as, les quatre couleurs, sans triche. le bureau se souviendra de cette cascade"]],
+    winFree: [["freecell solved!! all four cells empty, like my calendar. beautiful", "freecell résolu !! les quatre cellules vides, comme mon agenda. magnifique"], ["they say every freecell deal is winnable. YOU are the proof. i'm framing this one", "on dit que chaque donne de freecell est gagnable. TU en es la preuve. j'encadre celle-ci"], ["not one card wasted. the pikmin are doing a small ceremonial dance", "pas une carte gâchée. les pikmin font une petite danse cérémonielle"], ["deal #1995 status: solved. the beige gods smile upon your empty cells", "donne n°1995 : résolue. les dieux beiges sourient à tes cellules vides"]],
+    winHearts: [["you win on the MS SLIME NETWORK. the pikmin demand a rematch. i demand a snack. gg ♡", "tu gagnes sur le MS SLIME NETWORK. les pikmin exigent une revanche. moi un goûter. gg ♡"], ["lowest score at the table. the network crowns you. the crown is a bottle cap. it's yours", "le plus petit score de la table. le réseau te couronne. la couronne est une capsule. à toi"], ["you dodged every heart like it was 1995 and hearts were pop-ups. champion", "tu as esquivé chaque cœur comme en 1995, quand les cœurs étaient des pop-ups. bravo"], ["the pikmin lost gracefully. i lost dramatically. you just won. table adjourned ♡", "les pikmin ont perdu avec grâce. moi avec drame. toi, tu as gagné. séance levée ♡"]],
+    loseHearts: [["you ate some hearts. hearts are technically love. you're just very loved this round", "tu as mangé des cœurs. les cœurs, c'est techniquement de l'amour. tu es juste très aimé·e"], ["ouch, points. but the scoreboard is only paint. the table still likes you best", "aïe, des points. mais le score n'est que peinture. la table te préfère quand même"], ["the pikmin ganged up on you. i saw it. i'll speak to them. after this hand", "les pikmin se sont ligués contre toi. je l'ai vu. je vais leur parler. après cette main"], ["in 1995 nobody remembered hearts scores. only who brought snacks. bring snacks", "en 1995, personne ne retenait les scores. juste qui apportait le goûter. apporte-le"], ["points fade at sunrise. that's dream rules. shuffle it off ♡", "les points s'effacent à l'aube. règle du rêve. on remélange et on oublie ♡"]],
+    qsGiven: [["the queen of spades… for you… i'm so sorry… she insisted… *pats your hand gently*", "la dame de pique… pour toi… je suis désolé… elle a insisté… *tapote ta main doucement*"], ["a pikmin slid you the queen, then pretended to be a plant. thirteen points of love", "un pikmin t'a glissé la dame, puis a fait semblant d'être une plante. treize points d'amour"], ["please accept this queen. it's not personal. it's 13 points personal", "accepte cette dame, s'il te plaît. rien de personnel. juste 13 points de personnel"], ["i had to. the rules made me. the rules and my tiny cold dealer heart. sorry ♡", "j'étais obligé. les règles m'ont forcé. les règles et mon petit cœur froid de croupier ♡"]],
+    qsTaken: [["…the queen. she came to ME. *stares into the beige middle distance*", "…la dame. elle est venue à MOI. *fixe un point beige au loin*"], ["thirteen points. straight into the slime. tell my start menu i loved it", "treize points. droit dans le slime. dites à mon menu démarrer que je l'aimais"], ["i caught the queen of spades. i am mostly liquid and entirely grief", "j'ai récupéré la dame de pique. je suis surtout liquide et entièrement chagrin"], ["it's fine. it's FINE. a dealer takes the hit sometimes. *wobbles bravely*", "ça va. ÇA VA. un croupier encaisse, parfois. *tremblote bravement*"]],
+    moon: [["the MOON got shot?! in this beige economy?? 26 to everyone. i need to sit. i AM sat", "la LUNE a été tirée ?! dans cette économie beige ?? 26 pour tout le monde. je dois m'asseoir"], ["every heart AND the queen. the taskbar clock stopped to watch. legendary", "tous les cœurs ET la dame. l'horloge de la barre des tâches s'est arrêtée pour voir ça"], ["the moon has been shot. the pikmin are lying face-down in respect", "la lune a été tirée. les pikmin sont couchés face contre table, par respect"]],
+    idle: [["*straightens the discard pile by 2 pixels* perfect. carry on", "*aligne la défausse de 2 pixels* parfait. continuez"], ["a good table is 80% felt, 20% believing in the felt", "une bonne table, c'est 80 % de feutrine et 20 % de foi en la feutrine"], ["the pikmin keep peeking at my hand. i have no hand. i AM the house", "les pikmin louchent sur mon jeu. je n'ai pas de jeu. la maison, c'est MOI"], ["somewhere a modem is singing. it's rooting for you, probably", "quelque part, un modem chante. il t'encourage, sans doute"], ["house rule #3: the dealer may nap between tricks. *does not nap. almost naps*", "règle maison n°3 : le croupier peut dormir entre les plis. *ne dort pas. presque*"], ["i shuffled these so well earlier. i still think about it", "je les ai si bien mélangées tout à l'heure. j'y pense encore"]],
+    quit: [["table's closed, not gone. the deck sleeps in the drawer, dreaming of you ♡", "la table ferme, elle ne disparaît pas. le paquet dort dans le tiroir et rêve de toi ♡"], ["i'll keep your seat warm. i'm a slime, everything i touch is warm. it's a gift", "je garde ta place au chaud. je suis un slime, tout ce que je touche est chaud. c'est un don"], ["we fold the game like a good napkin. come back for the cascade whenever ♡", "on plie la partie comme une belle serviette. reviens pour la cascade quand tu veux ♡"], ["the cards will still be 52 tomorrow. i counted. twice. see you, champ", "les cartes seront encore 52 demain. j'ai compté. deux fois. à bientôt, champion·ne"]]
+  }; // authored by the table-talk writer
+  try { window.__yosCARDS = { open: (g) => dwcOpen(g || 'sol'), state: () => dwcState && { game: dwcState.game, phase: dwcState.phase, moves: dwcState.moves, trickNo: dwcState.trickNo }, smart: (k, i2) => (dwcState && dwcState.game === 'sol' ? dwcSolSmart(dwcState[k], i2) : dwcFreeSmart(k, i2)) }; } catch (e) { /* no window */ }
+  var dwcState = null; // { game, win, ... } one table at a time
+  function dwcSay(bank, ms) {
+    const t = DWC_TALK[bank];
+    if (!t || !t.length || !dwcState) return;
+    const w = dwcState.winEl;
+    if (!w) return;
+    w.querySelectorAll('.dwc-bubble').forEach((b) => b.remove());
+    const b = document.createElement('div');
+    b.className = 'dwc-bubble';
+    b.textContent = trT(...t[Math.floor(Math.random() * t.length)]);
+    w.appendChild(b);
+    setTimeout(() => { try { b.remove(); } catch (e) { /* folded */ } }, ms || 3400);
+  }
+  const DWC_SUITS = ['♠', '♥', '♦', '♣'];
+  const DWC_RED = { 1: true, 2: true };
+  const DWC_RANKS = ['', 'A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+  function dwcDeck() {
+    const d = [];
+    for (let s = 0; s < 4; s++) for (let r = 1; r <= 13; r++) d.push({ s, r, up: false });
+    for (let i = d.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = d[i]; d[i] = d[j]; d[j] = t; }
+    return d;
+  }
+  function dwcCardEl(c, opts) {
+    const el = document.createElement('button');
+    el.type = 'button';
+    el.className = 'dwc-card' + (c && c.up === false ? ' dwc-back' : (c && DWC_RED[c.s] ? ' dwc-red' : ''));
+    if (c && c.up !== false) {
+      el.innerHTML = '<span class="dwc-corner">' + DWC_RANKS[c.r] + '<br>' + DWC_SUITS[c.s] + '</span><span class="dwc-pip">' + DWC_SUITS[c.s] + '</span>';
+    }
+    if (opts && opts.slot) el.classList.add('dwc-slot');
+    return el;
+  }
+  function dwcShake(el) { el.classList.remove('dwc-no'); void el.offsetWidth; el.classList.add('dwc-no'); playTone(160, 'square', 0.06, 0, 0.04); }
+  function dwcClose(reason) {
+    if (!dwcState) return;
+    const w = dwcState.winEl;
+    dwcState = null;
+    if (w) { try { w.remove(); } catch (e) { /* swept */ } }
+    if (reason === 'quit') dreamSay(DWC_TALK.quit && DWC_TALK.quit.length ? DWC_TALK.quit[Math.floor(Math.random() * DWC_TALK.quit.length)] : ['the deck waits ♡', 'le paquet attend ♡'], 3200);
+  }
+  function dwcOpen(game) {
+    if (!dreamWorld || dreamWorld.id !== 'win95') return;
+    dwcClose();
+    const w = document.createElement('div');
+    w.className = 'dwc-win';
+    w.setAttribute('role', 'dialog');
+    const TITLES = { sol: 'Solitaire', free: 'FreeCell', hearts: 'Hearts — MS SLIME NETWORK' };
+    const bar = document.createElement('div');
+    bar.className = 'dwc-bar';
+    bar.innerHTML = '<span>🎴 ' + TITLES[game] + '</span>';
+    const x = document.createElement('button');
+    x.type = 'button'; x.className = 'dwc-x'; x.textContent = '✕';
+    x.addEventListener('click', () => { playCloseSound(); dwcClose('quit'); });
+    bar.appendChild(x);
+    w.appendChild(bar);
+    const menu = document.createElement('div');
+    menu.className = 'dwc-menu';
+    const nb = document.createElement('button');
+    nb.type = 'button'; nb.textContent = trT('Game ▸ new deal', 'Partie ▸ redonner');
+    nb.addEventListener('click', () => { playClickSound(); dwcOpen(game); });
+    const hb = document.createElement('button');
+    hb.type = 'button'; hb.textContent = trT('Help ▸ trust the click', 'Aide ▸ fais confiance au clic');
+    hb.addEventListener('click', () => dwcSay(game === 'hearts' ? 'idle' : 'stuck'));
+    menu.append(nb, hb);
+    w.appendChild(menu);
+    const felt = document.createElement('div');
+    felt.className = 'dwc-felt dwc-' + game;
+    w.appendChild(felt);
+    // the dealer in the corner, judging warmly
+    const dealer = document.createElement('img');
+    dealer.className = 'dwc-dealer';
+    dealer.alt = '';
+    dealer.src = (OUTFIT_FRAMES && typeof OUTFIT_FRAMES.base === 'string' && OUTFIT_FRAMES.base) || 'assets/slime_pet_cutout.png';
+    w.appendChild(dealer);
+    document.body.appendChild(w);
+    dN(w);
+    dwcState = { game, winEl: w, felt };
+    dwcSay('deal');
+    playTone(523, 'triangle', 0.08, 0, 0.04); playTone(659, 'triangle', 0.08, 0.09, 0.04);
+    if (game === 'sol') dwcSolNew();
+    else if (game === 'free') dwcFreeNew();
+    else dwcHeartsNew();
+  }
+  function dwcWon(game) {
+    playFanfare();
+    gainFollowers(game === 'hearts' ? 4 : 3);
+    achvUnlock('cardshark');
+    try { dreamlogAdd('win95', 'sol'); } catch (e) { /* the log naps */ }
+    dwcSay(game === 'sol' ? 'winSol' : game === 'free' ? 'winFree' : 'winHearts', 5200);
+    // the cascade is EARNED now — a full-desktop victory lap
+    dT(() => { try { dwSolCascade(); } catch (e) { /* deck stuck */ } }, 900);
+    dT(() => dwcClose(), 5600);
+  }
+
+  /* ---------------- HEARTS — MS SLIME NETWORK -----------------------
+     one authentic hand: you (S) vs pikmin (W), the slime (N), pikmin (E).
+     pass 3 left → 2♣ leads → 13 tricks → hearts 1pt, Q♠ 13, moon = 26
+     to everyone else. lowest total wins the table. ------------------- */
+  const DWC_SEATS = ['you', 'pik West', 'the slime', 'pik East'];
+  function dwcHeartsNew() {
+    const d = dwcDeck();
+    d.forEach((c) => { c.up = true; });
+    const hands = [[], [], [], []];
+    d.forEach((c, i) => hands[i % 4].push(c));
+    hands.forEach((h) => h.sort((a, b) => (a.s * 13 + a.r) - (b.s * 13 + b.r)));
+    Object.assign(dwcState, {
+      hands, taken: [[], [], [], []], phase: 'pass', picked: [],
+      trick: [null, null, null, null], leader: 0, turn: 0, broken: false, trickNo: 0
+    });
+    dwcHeartsRender();
+  }
+  function dwcHPts(cards) {
+    return cards.reduce((n, c) => n + (c.s === 1 ? 1 : 0) + (c.s === 0 && c.r === 12 ? 13 : 0), 0);
+  }
+  function dwcHLegal(pi) {
+    const st = dwcState;
+    const hand = st.hands[pi];
+    const lead = st.trick[st.leader];
+    const first = st.trickNo === 0;
+    if (!lead) { // leading
+      if (first) return hand.filter((c) => c.s === 3 && c.r === 2); // 2♣ opens, by law
+      if (!st.broken && hand.some((c) => c.s !== 1)) return hand.filter((c) => c.s !== 1);
+      return hand.slice();
+    }
+    const follow = hand.filter((c) => c.s === lead.s);
+    if (follow.length) return follow;
+    if (first) { // no points on the first trick (unless that's all you have)
+      const clean = hand.filter((c) => !(c.s === 1 || (c.s === 0 && c.r === 12)));
+      if (clean.length) return clean;
+    }
+    return hand.slice();
+  }
+  function dwcHAiPass(hand) { // ship the scariest cargo left
+    const danger = (c) => (c.s === 0 && c.r === 12 ? 99 : c.s === 0 && c.r > 12 ? 60 : c.s === 1 ? 20 + c.r : c.r);
+    return hand.slice().sort((a, b) => danger(b) - danger(a)).slice(0, 3);
+  }
+  function dwcHAiPlay(pi) {
+    const st = dwcState;
+    const legal = dwcHLegal(pi);
+    const lead = st.trick[st.leader];
+    const rank = (c) => c.r === 1 ? 14 : c.r;
+    if (!lead) { // lead low, avoid spades near the queen
+      return legal.slice().sort((a, b) => {
+        const risk = (c) => rank(c) + (c.s === 0 && rank(c) >= 12 ? 20 : 0) + (c.s === 1 ? 4 : 0);
+        return risk(a) - risk(b);
+      })[0];
+    }
+    const inSuit = legal.filter((c) => c.s === lead.s);
+    if (inSuit.length) {
+      const played = st.trick.filter(Boolean).filter((c) => c.s === lead.s);
+      const highest = Math.max.apply(null, played.map(rank));
+      const isLast = st.trick.filter(Boolean).length === 3;
+      const under = inSuit.filter((c) => rank(c) < highest);
+      const trickPts = dwcHPts(st.trick.filter(Boolean));
+      if (under.length) return under.sort((a, b) => rank(b) - rank(a))[0]; // tallest duck
+      if (isLast && trickPts === 0) return inSuit.sort((a, b) => rank(b) - rank(a))[0]; // free ride, dump the tallest
+      return inSuit.sort((a, b) => rank(a) - rank(b))[0]; // forced: smallest overtake
+    }
+    // void: unload the queen, then tall hearts, then tallest anything
+    const qs = legal.find((c) => c.s === 0 && c.r === 12);
+    if (qs) return qs;
+    const hearts = legal.filter((c) => c.s === 1);
+    if (hearts.length) return hearts.sort((a, b) => rank(b) - rank(a))[0];
+    return legal.sort((a, b) => rank(b) - rank(a))[0];
+  }
+  function dwcHPlay(pi, card) {
+    const st = dwcState;
+    const hand = st.hands[pi];
+    hand.splice(hand.indexOf(card), 1);
+    st.trick[pi] = card;
+    if (card.s === 1) st.broken = true;
+    playTone(500 + pi * 90, 'triangle', 0.05, 0, 0.03);
+    if (card.s === 0 && card.r === 12 && pi !== 0) dwcSay('qsGiven');
+    const played = st.trick.filter(Boolean).length;
+    if (played === 4) { dwcHeartsRender(); setTimeout(dwcHTrickEnd, 950); return; }
+    st.turn = (pi + 1) % 4;
+    dwcHeartsRender();
+    if (st.turn !== 0) setTimeout(() => dwcHAuto(), 620);
+  }
+  function dwcHAuto() {
+    const st = dwcState;
+    if (!st || st.game !== 'hearts' || st.phase !== 'play' || st.turn === 0) return;
+    dwcHPlay(st.turn, dwcHAiPlay(st.turn));
+  }
+  function dwcHTrickEnd() {
+    const st = dwcState;
+    if (!st || st.game !== 'hearts') return;
+    const lead = st.trick[st.leader];
+    const rank = (c) => c.r === 1 ? 14 : c.r;
+    let win = st.leader;
+    for (let i = 0; i < 4; i++) {
+      const c = st.trick[i];
+      if (c.s === lead.s && rank(c) > rank(st.trick[win])) win = i;
+    }
+    st.taken[win] = st.taken[win].concat(st.trick.filter(Boolean));
+    const pts = dwcHPts(st.trick);
+    if (pts && win === 0) dwcSay(st.trick.some((c) => c.s === 0 && c.r === 12) ? 'qsGiven' : 'idle');
+    if (win === 2 && st.trick.some((c) => c.s === 0 && c.r === 12)) dwcSay('qsTaken');
+    st.trick = [null, null, null, null];
+    st.leader = win; st.turn = win;
+    st.trickNo++;
+    if (st.trickNo >= 13) { dwcHScore(); return; }
+    dwcHeartsRender();
+    if (win !== 0) setTimeout(dwcHAuto, 700);
+  }
+  function dwcHScore() {
+    const st = dwcState;
+    const raw = st.taken.map(dwcHPts);
+    let scores = raw.slice();
+    const moon = raw.indexOf(26);
+    if (moon >= 0) { scores = raw.map((v, i) => (i === moon ? 0 : 26)); dwcSay('moon', 5200); }
+    st.phase = 'score';
+    st.scores = scores;
+    dwcHeartsRender();
+    const best = Math.min.apply(null, scores);
+    if (scores[0] === best) dT(() => dwcWon('hearts'), 1400);
+    else { dwcSay('loseHearts', 5200); dT(() => dwcClose(), 6400); }
+  }
+  function dwcHeartsRender() {
+    const st = dwcState;
+    if (!st || st.game !== 'hearts') return;
+    st.felt.innerHTML = '';
+    // opponents rail: card backs + tiny avatars
+    const rail = document.createElement('div');
+    rail.className = 'dwc-h-rail';
+    [1, 2, 3].forEach((pi) => {
+      const seat = document.createElement('div');
+      seat.className = 'dwc-h-seat';
+      const ava = document.createElement('span');
+      ava.className = 'dwc-h-ava';
+      ava.textContent = pi === 2 ? '🍮' : '🌸';
+      const label = document.createElement('small');
+      label.textContent = DWC_SEATS[pi] + ' · ' + st.hands[pi].length;
+      const pts = dwcHPts(st.taken[pi]);
+      if (pts) label.textContent += ' · ' + pts + '♥';
+      seat.append(ava, label);
+      if (st.phase === 'play' && st.turn === pi && st.trick.filter(Boolean).length < 4) seat.classList.add('dwc-h-turn');
+      rail.appendChild(seat);
+    });
+    st.felt.appendChild(rail);
+    // the trick table
+    const mid = document.createElement('div');
+    mid.className = 'dwc-h-trick';
+    [1, 2, 3, 0].forEach((pi) => {
+      const c = st.trick[pi];
+      const el = c ? dwcCardEl(c) : dwcCardEl(null, { slot: true });
+      el.classList.add('dwc-h-t' + pi);
+      mid.appendChild(el);
+    });
+    st.felt.appendChild(mid);
+    // status line
+    const status = document.createElement('div');
+    status.className = 'dwc-h-status';
+    if (st.phase === 'pass') status.textContent = trT('pick 3 cards to pass left → ', 'choisis 3 cartes à passer à gauche → ') + st.picked.length + '/3';
+    else if (st.phase === 'score') {
+      status.innerHTML = st.scores.map((s, i) => (i === 0 ? trT('you', 'toi') : DWC_SEATS[i]) + ': <b>' + s + '</b>').join(' · ');
+    } else if (st.turn === 0) status.textContent = trT('your play — click a legal card', 'à toi — clique une carte légale');
+    else status.textContent = DWC_SEATS[st.turn] + trT(' is thinking…', ' réfléchit…');
+    st.felt.appendChild(status);
+    // your hand, fanned
+    const handRow = document.createElement('div');
+    handRow.className = 'dwc-h-hand';
+    const legal = st.phase === 'play' && st.turn === 0 ? dwcHLegal(0) : null;
+    st.hands[0].forEach((c) => {
+      const el = dwcCardEl(c);
+      if (st.phase === 'pass') {
+        if (st.picked.indexOf(c) >= 0) el.classList.add('dwc-picked');
+        el.addEventListener('click', () => {
+          const ix = st.picked.indexOf(c);
+          if (ix >= 0) st.picked.splice(ix, 1);
+          else if (st.picked.length < 3) st.picked.push(c);
+          playTone(700, 'square', 0.03, 0, 0.02);
+          dwcHeartsRender();
+        });
+      } else if (legal && legal.indexOf(c) >= 0) {
+        el.addEventListener('click', () => dwcHPlay(0, c));
+      } else {
+        el.classList.add('dwc-dim');
+        el.addEventListener('click', () => dwcShake(el));
+      }
+      handRow.appendChild(el);
+    });
+    st.felt.appendChild(handRow);
+    if (st.phase === 'pass' && st.picked.length === 3) {
+      const go = document.createElement('button');
+      go.type = 'button';
+      go.className = 'dwc-finish';
+      go.textContent = trT('pass these 3 ♡', 'passer ces 3 ♡');
+      go.addEventListener('click', () => {
+        // everyone passes left simultaneously
+        const passes = [st.picked, dwcHAiPass(st.hands[1]), dwcHAiPass(st.hands[2]), dwcHAiPass(st.hands[3])];
+        passes.forEach((cards, pi) => cards.forEach((c) => st.hands[pi].splice(st.hands[pi].indexOf(c), 1)));
+        passes.forEach((cards, pi) => { const to = (pi + 3) % 4; st.hands[to] = st.hands[to].concat(cards); });
+        st.hands.forEach((h) => h.sort((a, b) => (a.s * 13 + a.r) - (b.s * 13 + b.r)));
+        st.picked = [];
+        st.phase = 'play';
+        // whoever holds the 2♣ leads
+        st.leader = st.hands.findIndex((h) => h.some((c) => c.s === 3 && c.r === 2));
+        st.turn = st.leader;
+        dwcHeartsRender();
+        dwcSay('deal');
+        if (st.turn !== 0) setTimeout(dwcHAuto, 800);
+      });
+      st.felt.appendChild(go);
+    }
+  }
+
+  /* ---------------- FREECELL (with proper supermoves) ---------------- */
+  function dwcFreeNew() {
+    const d = dwcDeck();
+    d.forEach((c) => { c.up = true; });
+    const cas = [[], [], [], [], [], [], [], []];
+    d.forEach((c, i) => cas[i % 8].push(c));
+    Object.assign(dwcState, { free: [null, null, null, null], found: [[], [], [], []], cas, moves: 0 });
+    dwcFreeRender();
+  }
+  function dwcFreeCap(excluding) { // how many cards may move as a unit
+    const st = dwcState;
+    const freeCells = st.free.filter((c) => !c).length;
+    const emptyCas = st.cas.filter((p, i) => !p.length && i !== excluding).length;
+    return (freeCells + 1) * Math.pow(2, emptyCas);
+  }
+  function dwcFreeRun(pile) { // longest movable run at the pile's tail
+    let n = 1;
+    for (let i = pile.length - 1; i > 0; i--) {
+      const above = pile[i - 1], c = pile[i];
+      if (DWC_RED[above.s] !== DWC_RED[c.s] && above.r === c.r + 1) n++;
+      else break;
+    }
+    return n;
+  }
+  function dwcFreeSmart(kind, ix) {
+    const st = dwcState;
+    if (kind === 'free') { // a card parked in a cell
+      const c = st.free[ix];
+      if (!c) return false;
+      for (let f = 0; f < 4; f++) if (dwcSolFits(c, st.found[f])) { st.found[f].push(c); st.free[ix] = null; return true; }
+      for (let t = 0; t < 8; t++) {
+        const top = st.cas[t][st.cas[t].length - 1];
+        if (!top || (DWC_RED[top.s] !== DWC_RED[c.s] && top.r === c.r + 1)) { st.cas[t].push(c); st.free[ix] = null; return true; }
+      }
+      return false;
+    }
+    const pile = st.cas[ix];
+    if (!pile.length) return false;
+    const top = pile[pile.length - 1];
+    // 1) foundation
+    for (let f = 0; f < 4; f++) if (dwcSolFits(top, st.found[f])) { st.found[f].push(pile.pop()); return true; }
+    // 2) run move to another cascade (largest run the supermove cap allows)
+    const runMax = Math.min(dwcFreeRun(pile), dwcFreeCap());
+    for (let take = runMax; take >= 1; take--) {
+      const head = pile[pile.length - take];
+      for (let t = 0; t < 8; t++) {
+        if (t === ix) continue;
+        const dtop = st.cas[t][st.cas[t].length - 1];
+        const cap = st.cas[t].length ? dwcFreeCap() : dwcFreeCap(t); // an empty target doesn't count itself
+        if (take > cap) continue;
+        if (!dtop || (DWC_RED[dtop.s] !== DWC_RED[head.s] && dtop.r === head.r + 1)) {
+          st.cas[t] = st.cas[t].concat(pile.splice(pile.length - take));
+          return true;
+        }
+      }
+    }
+    // 3) free cell
+    for (let c2 = 0; c2 < 4; c2++) if (!st.free[c2]) { st.free[c2] = pile.pop(); return true; }
+    return false;
+  }
+  function dwcFreeRender() {
+    const st = dwcState;
+    if (!st || st.game !== 'free') return;
+    st.felt.innerHTML = '';
+    const top = document.createElement('div');
+    top.className = 'dwc-row';
+    st.free.forEach((c, i) => {
+      const el = dwcCardEl(c || null, { slot: !c });
+      if (c) el.addEventListener('click', () => { if (dwcFreeSmart('free', i)) dwcFreeAfter(); else dwcShake(el); });
+      top.appendChild(el);
+    });
+    const gap = document.createElement('span');
+    gap.className = 'dwc-gap';
+    top.appendChild(gap);
+    st.found.forEach((f) => {
+      const el = dwcCardEl(f[f.length - 1] || null, { slot: !f.length });
+      if (!f.length) el.textContent = 'A';
+      top.appendChild(el);
+    });
+    st.felt.appendChild(top);
+    const row = document.createElement('div');
+    row.className = 'dwc-tabrow';
+    st.cas.forEach((pile, ti) => {
+      const col = document.createElement('div');
+      col.className = 'dwc-col';
+      if (!pile.length) col.appendChild(dwcCardEl(null, { slot: true }));
+      pile.forEach((c, ci) => {
+        const el = dwcCardEl(c);
+        el.style.top = (ci * 15) + 'px';
+        if (ci === pile.length - 1 || ci >= pile.length - dwcFreeRun(pile)) {
+          el.addEventListener('click', () => { if (dwcFreeSmart('cas', ti)) dwcFreeAfter(); else dwcShake(el); });
+        } else el.addEventListener('click', () => dwcShake(el));
+        col.appendChild(el);
+      });
+      row.appendChild(col);
+    });
+    st.felt.appendChild(row);
+  }
+  function dwcFreeAfter() {
+    const st = dwcState;
+    st.moves++;
+    playTone(880, 'triangle', 0.05, 0, 0.03);
+    if (st.moves % 7 === 0 && Math.random() < 0.5) dwcSay('goodmove');
+    if (st.found.every((f) => f.length === 13)) { dwcWon('free'); return; }
+    dwcFreeRender();
+  }
+
+  /* ---------------- KLONDIKE (draw-1, unlimited redeals) ------------- */
+  function dwcSolNew() {
+    const d = dwcDeck();
+    const tab = [];
+    for (let i = 0; i < 7; i++) { tab.push(d.splice(0, i + 1)); tab[i][tab[i].length - 1].up = true; }
+    Object.assign(dwcState, { stock: d, waste: [], found: [[], [], [], []], tab, moves: 0 });
+    dwcSolRender();
+  }
+  function dwcSolFits(c, f) { // foundation fit
+    const top = f[f.length - 1];
+    return top ? (top.s === c.s && c.r === top.r + 1) : c.r === 1;
+  }
+  function dwcSolTabFits(c, pile) {
+    const top = pile[pile.length - 1];
+    if (!top) return c.r === 13;
+    return top.up && (DWC_RED[top.s] !== DWC_RED[c.s]) && c.r === top.r - 1;
+  }
+  function dwcSolSmart(fromPile, ix) {
+    const st = dwcState;
+    const run = fromPile.slice(ix);
+    // single exposed card: foundation first
+    if (run.length === 1) {
+      for (let f = 0; f < 4; f++) if (dwcSolFits(run[0], st.found[f])) { st.found[f].push(fromPile.pop()); return true; }
+    }
+    for (let t = 0; t < 7; t++) {
+      if (st.tab[t] === fromPile) continue;
+      if (dwcSolTabFits(run[0], st.tab[t])) { st.tab[t] = st.tab[t].concat(fromPile.splice(ix)); return true; }
+    }
+    return false;
+  }
+  function dwcSolRender() {
+    const st = dwcState;
+    if (!st || st.game !== 'sol') return;
+    const felt = st.felt;
+    felt.innerHTML = '';
+    const top = document.createElement('div');
+    top.className = 'dwc-row';
+    // stock
+    const stock = dwcCardEl(st.stock.length ? { up: false } : null, { slot: !st.stock.length });
+    if (!st.stock.length) stock.textContent = '↻';
+    stock.addEventListener('click', () => {
+      if (st.stock.length) { const c = st.stock.pop(); c.up = true; st.waste.push(c); playTone(700, 'square', 0.03, 0, 0.02); }
+      else if (st.waste.length) { st.stock = st.waste.reverse().map((c) => (c.up = false, c)); st.waste = []; playTone(400, 'square', 0.05, 0, 0.03); }
+      dwcSolRender();
+    });
+    top.appendChild(stock);
+    // waste
+    const wtop = st.waste[st.waste.length - 1];
+    const waste = dwcCardEl(wtop || null, { slot: !wtop });
+    if (wtop) waste.addEventListener('click', () => {
+      if (dwcSolSmart(st.waste, st.waste.length - 1)) { st.moves++; dwcSolAfter(); } else dwcShake(waste);
+    });
+    top.appendChild(waste);
+    const gap = document.createElement('span');
+    gap.className = 'dwc-gap';
+    top.appendChild(gap);
+    // foundations
+    st.found.forEach((f) => {
+      const el = dwcCardEl(f[f.length - 1] || null, { slot: !f.length });
+      if (!f.length) el.textContent = 'A';
+      top.appendChild(el);
+    });
+    felt.appendChild(top);
+    // tableau
+    const row = document.createElement('div');
+    row.className = 'dwc-tabrow';
+    st.tab.forEach((pile, ti) => {
+      const col = document.createElement('div');
+      col.className = 'dwc-col';
+      if (!pile.length) {
+        const slot = dwcCardEl(null, { slot: true });
+        slot.addEventListener('click', () => dwcShake(slot));
+        col.appendChild(slot);
+      }
+      pile.forEach((c, ci) => {
+        const el = dwcCardEl(c);
+        el.style.top = (ci * 15) + 'px';
+        if (c.up) el.addEventListener('click', () => {
+          if (dwcSolSmart(pile, ci)) { st.moves++; dwcSolAfter(); } else dwcShake(el);
+        });
+        else el.addEventListener('click', () => dwcShake(el));
+        col.appendChild(el);
+      });
+      row.appendChild(col);
+    });
+    felt.appendChild(row);
+    // auto-finish offer: nothing hidden anywhere, stock+waste empty
+    const allUp = st.tab.every((p) => p.every((c) => c.up));
+    if (allUp && !st.stock.length && !st.waste.length && st.found.some((f) => f.length < 13)) {
+      const fin = document.createElement('button');
+      fin.type = 'button';
+      fin.className = 'dwc-finish';
+      fin.textContent = trT('▶ the slime offers to finish it (it knows you won)', '▶ le slime propose de finir (il sait que tu as gagné)');
+      fin.addEventListener('click', () => dwcSolAutofinish());
+      felt.appendChild(fin);
+    }
+  }
+  function dwcSolAfter() {
+    const st = dwcState;
+    st.tab.forEach((p) => { const t = p[p.length - 1]; if (t && !t.up) { t.up = true; } });
+    playTone(880, 'triangle', 0.05, 0, 0.03);
+    if (st.moves % 6 === 0 && Math.random() < 0.5) dwcSay('goodmove');
+    if (st.found.every((f) => f.length === 13)) { dwcWon('sol'); return; }
+    dwcSolRender();
+  }
+  function dwcSolAutofinish() {
+    const st = dwcState;
+    if (!st || st.game !== 'sol') return;
+    const step = () => {
+      if (!dwcState || dwcState !== st) return;
+      let moved = false;
+      for (let t = 0; t < 7 && !moved; t++) {
+        const pile = st.tab[t], c = pile[pile.length - 1];
+        if (!c) continue;
+        for (let f = 0; f < 4; f++) if (dwcSolFits(c, st.found[f])) { st.found[f].push(pile.pop()); moved = true; break; }
+      }
+      if (st.found.every((f) => f.length === 13)) { dwcSolRender(); dwcWon('sol'); return; }
+      if (moved) { playTone(600 + Math.random() * 500, 'triangle', 0.04, 0, 0.02); dwcSolRender(); setTimeout(step, 90); }
+    };
+    step();
+  }
+
+  function dwBeatCards() {
+    // the cascade demoted to a 30% cameo — 70% of the time the slime
+    // slams a deck on the desktop and deals you in for real
+    if (Math.random() < 0.3) { dwSolCascade(); return; }
+    if (dwcState || document.querySelector('.dwc-win')) return; // table already open
+    const inv = (DWC_TALK.invite && DWC_TALK.invite.length)
+      ? DWC_TALK.invite[Math.floor(Math.random() * DWC_TALK.invite.length)]
+      : ['*THWAP* — a deck of cards hits the desktop. the slime is already shuffling.', '*PAF* — un paquet de cartes claque sur le bureau. le slime mélange déjà.'];
+    dreamDlg({
+      title: 'CARDS.EXE', force: true,
+      lines: [trT(...inv)],
+      buttons: [
+        ['🂡 solitaire', (d) => { d.remove(); dwcOpen('sol'); }],
+        ['🃏 freecell', (d) => { d.remove(); dwcOpen('free'); }],
+        ['♥ hearts', (d) => { d.remove(); dwcOpen('hearts'); }],
+        [trT('not now ♡', 'pas maintenant ♡'), (d) => d.remove()]
+      ]
+    });
+    playTone(392, 'square', 0.08, 0, 0.05); playTone(523, 'square', 0.08, 0.1, 0.05);
+  }
+  function dwSolCascade() {
     const suits = [['♠', 'black'], ['♥', 'red'], ['♦', 'red'], ['♣', 'black']];
     for (let i = 0; i < 7; i++) {
       dT(() => {
