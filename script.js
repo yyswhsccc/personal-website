@@ -14511,12 +14511,62 @@ document.addEventListener('DOMContentLoaded', () => {
     bsod: ['bscute', 'bscad', 'bsballoon'],
     amber: ['amcoin', 'amrewind', 'amtrain']
   };
+  // every show has a NAME on the marquee, a GOAL for the encore meter,
+  // and each world keeps one rarer HEADLINER up its sleeve
+  const G_SHOW_NAMES = {
+    w95cards: ['SOLITAIRE VICTORY', 'VICTOIRE SOLITAIRE'], w95hang: ['THE OS HUNG', 'OS FIGÉ'], w95defrag: ['DEFRAG PASS', 'PASSE DÉFRAG'], w95clippy: ['CLIPPY PARADE', 'PARADE CLIPPY'],
+    scpboop: ['CONTAINMENT BREACH', 'BRÈCHE DE CONFINEMENT'], scpredact: ['REDACTION RAIN', 'PLUIE DE CAVIARDAGE'], scpvote: ['THE O5 VOTE', 'LE VOTE O5'], scpescort: ['D-CLASS ESCORT', 'ESCORTE CLASSE-D'],
+    mxbullet: ['BULLET TIME', 'BULLET TIME'], mxagent: ['AGENT CHASE', 'COURSE-POURSUITE'], mxrain: ['CODE-RAIN COINS', 'PLUIE DE CODE'], mxpill: ['THE CHOICE', 'LE CHOIX'],
+    gbbattery: ['LOW BATTERY', 'BATTERIE FAIBLE'], gbwild: ['WILD BUG BUDDY', 'BUG SAUVAGE ALLIÉ'], gbkonami: ['THE OLD CODE', 'LE VIEUX CODE'], gbparade: ['BOSS PARADE', 'PARADE DES BOSS'],
+    geocounter: ['VISITOR №10000', 'VISITEUR N°10000'], georing: ['WEBRING PORTAL', 'PORTAIL WEBRING'], geomidi: ['THE ESCAPED MIDI', 'LE MIDI ÉVADÉ'], geobaby: ['DANCING BABY STAMPEDE', 'RUÉE DU BÉBÉ DANSEUR'],
+    bscute: ['CUTENESS: 100%', 'MIGNONNERIE : 100 %'], bscad: ['CTRL+ALT+DEL', 'CTRL+ALT+SUPPR'], bsballoon: ['SAD BALLOONS', 'BALLONS TRISTES'], bssafe: ['SAFE MODE', 'MODE SANS ÉCHEC'],
+    amcoin: ['PC LOAD COIN', 'PC LOAD COIN'], amrewind: ['TAPE REWIND', 'REMBOBINAGE'], amtrain: ['PUNCH-CARD TRAIN', 'TRAIN PERFORÉ'], amy2k: ['Y2K REHEARSAL (1970)', 'RÉPÉTITION AN 2000 (1970)']
+  };
+  const G_SHOW_GOAL = {
+    w95cards: 4, w95hang: 2, w95defrag: 6, w95clippy: 4,
+    scpboop: 1, scpredact: 3, scpvote: -1, scpescort: 3,
+    mxbullet: 0, mxagent: -1, mxrain: 6, mxpill: 1,
+    gbbattery: 1, gbwild: -1, gbkonami: 6, gbparade: 4,
+    geocounter: 3, georing: 1, geomidi: 5, geobaby: 4,
+    bscute: 4, bscad: 3, bsballoon: 3, bssafe: 5,
+    amcoin: 4, amrewind: 3, amtrain: 6, amy2k: 4
+  };
+  const G_HEADLINERS = { win95: 'w95clippy', scp: 'scpescort', matrix: 'mxpill', gameboy: 'gbparade', geo: 'geobaby', bsod: 'bssafe', amber: 'amy2k' };
+  // the encore meter: land a show's goal and the next curtain pays more
+  function gShowResolve(g) {
+    let ok;
+    if (g.kind === 'scpvote') ok = (g.yes + g.no) > 0 && g.yes >= g.no;
+    else if (g.kind === 'mxagent') ok = !!g.win;
+    else if (g.kind === 'gbwild') ok = g.chomps >= 2;
+    else if (G_SHOW_GOAL[g.kind] === 0) ok = true;
+    else ok = (g.gotCount || 0) >= G_SHOW_GOAL[g.kind];
+    if (ok) {
+      GAME.showStreak = (GAME.showStreak || 0) + 1;
+      gMarkJoy(); // a landed show is a REAL peak (the fairy may ride it)
+      if (GAME.showStreak >= 2) {
+        const b = 30 * GAME.showStreak;
+        fxScore(b);
+        gToast([`🎪 ENCORE ×${GAME.showStreak}!! the crowd demands more (+${b})`, `🎪 RAPPEL ×${GAME.showStreak} !! la foule en redemande (+${b})`], 190);
+        playFanfare();
+      }
+    } else GAME.showStreak = 0;
+  }
+
   function gGimmickStart() {
     const list = G_GIMMICKS[gDreamSkin];
     if (!list) return;
-    let kind = list[Math.floor(Math.random() * list.length)];
-    if (kind === GAME.lastGimmick && list.length > 1) kind = list[(list.indexOf(kind) + 1) % list.length];
+    const hl = G_HEADLINERS[gDreamSkin];
+    let kind;
+    if (hl && GAME.lastGimmick !== hl && Math.random() < 0.25) kind = hl; // the rare big one
+    else {
+      kind = list[Math.floor(Math.random() * list.length)];
+      if (kind === GAME.lastGimmick && list.length > 1) kind = list[(list.indexOf(kind) + 1) % list.length];
+    }
     GAME.lastGimmick = kind;
+    // the MARQUEE: every show opens with its name in lights
+    const nm = G_SHOW_NAMES[kind];
+    if (nm) GAME.showBanner = { txt: (kind === hl ? '★ HEADLINER · ' : '★ NOW SHOWING: ') + trT(...nm) + ' ★', hl: kind === hl, t: 0 };
+    if (kind === hl) { playTone(523, 'triangle', 0.12, 0, 0.05); playTone(784, 'triangle', 0.12, 0.14, 0.05); playTone(1046, 'triangle', 0.16, 0.28, 0.06); }
     const mk = (items, extra) => { GAME.gimmick = Object.assign({ kind, t: 0, items: items || [] }, extra || {}); };
     const spread = (n, fn) => Array.from({ length: n }, (v, i) => fn(i));
     const F = {
@@ -14645,7 +14695,43 @@ document.addEventListener('DOMContentLoaded', () => {
         gToast(['🎫 PUNCH-CARD TRAIN!! punch every hole — complete the batch job!!', '🎫 TRAIN DE CARTES PERFORÉES !! poinçonne-les toutes — finis le batch !!'], 200);
         playTone(300, 'square', 0.07, 0, 0.04); playTone(360, 'square', 0.07, 0.09, 0.04);
       }
+      ,
+      /* -------- HEADLINERS: one big rare show per world -------- */
+      w95clippy() {
+        mk(spread(4, (i) => ({ x: G_W + 30 + i * 64, y: 22 + (i % 2) * 26, vx: -2.3, vy: 0, sway: i, glyph: '📎', got: false })));
+        gToast(['📎 CLIPPY PARADE!! it looks like you\'re about to catch four of them!!', '📎 PARADE CLIPPY !! on dirait que tu vas en attraper quatre !!'], 210);
+      },
+      scpescort() {
+        mk(spread(3, (i) => ({ x: G_W + 40 + i * 90, y: -8, vx: -2.5, vy: 1.4, stickY: 26 + i * 14, glyph: '🪪', got: false })));
+        gToast(['🧍 D-9341 NEEDS OUT!! grab all 3 keycards — open his door!!', '🧍 D-9341 VEUT SORTIR !! attrape les 3 badges — ouvre sa porte !!'], 210);
+      },
+      mxpill() {
+        mk([
+          { x: G_W + 40, y: -6, vx: -2, vy: 1.1, stickY: 34, glyph: '🔴', pill: 'red', got: false },
+          { x: G_W + 96, y: -6, vx: -2, vy: 1.1, stickY: 34, glyph: '🔵', pill: 'blue', got: false }
+        ]);
+        gToast(['💊 THE CHOICE. red = the truth (a gamble). blue = comfy coins. no take-backs', '💊 LE CHOIX. rouge = la vérité (un pari). bleu = pièces douillettes. sans retour'], 230);
+      },
+      gbparade() {
+        mk(spread(4, (i) => ({ x: G_W + 30 + i * 56, y: G_GROUND - 54, vx: -2.4, vy: 0, glyph: ['▣', '👾', '★', '☠'][i], got: false })));
+        gToast(['👾 BOSS PARADE!! four old bosses on tour — boop the entire lineup!!', '👾 PARADE DES BOSS !! quatre anciens boss en tournée — boop tout le casting !!'], 210);
+      },
+      geobaby() {
+        mk(spread(4, (i) => ({ x: G_W + 26 + i * 58, y: G_GROUND - 46, vx: -2.2, vy: 0, sway: i, glyph: '👶', got: false })));
+        gToast(['👶 THE DANCING BABY STAMPEDE (1998). boop them all. you must.', '👶 LA RUÉE DU BÉBÉ DANSEUR (1998). boop-les tous. il le faut.'], 210);
+      },
+      bssafe() {
+        mk(spread(8, (i) => ({ x: G_W + 24 + i * 40, y: 16 + (i % 4) * 16, vx: -1.7, vy: 0.4, glyph: '✚', got: false })), { dim: 1 });
+        setMod('speed', 0.85, 6);
+        gToast(['🛡 SAFE MODE!! everything is slow, soft, and worth double. collect gently', '🛡 MODE SANS ÉCHEC !! tout est lent, doux, et vaut double. ramasse doucement'], 210);
+      },
+      amy2k() {
+        mk(['1', '9', '7', '0'].map((d, i) => ({ x: G_W + 30 + i * 60, y: 14 + (i % 2) * 18, vx: -2.4, vy: 0.8, glyph: d, got: false })));
+        gToast(['🗓 Y2K REHEARSAL (1970 edition)!! catch the year before it rolls over!!', '🗓 RÉPÉTITION AN 2000 (édition 1970) !! attrape l\'année avant le débordement !!'], 210);
+      }
     };
+    void 0;
+// (headliners appended)
     // bsballoon spawns from the floor — patch its y inline (helper keeps the literal tidy)
     function AR_H_UNUSED_GUARD() { return G_H + 6; }
     if (F[kind]) F[kind]();
@@ -14701,6 +14787,7 @@ document.addEventListener('DOMContentLoaded', () => {
         GAME.obs.forEach((o) => { if (!o._agentSeen && o.x + o.w < sb.x) { o._agentSeen = 1; g.clean++; playTone(700 + g.clean * 120, 'square', 0.05, 0, 0.03); } });
         if (g.clean >= 3) {
           gToast(['🐈‍⬛ the agent TRIPPED over a black cat. it was always the cat. +80', '🐈‍⬛ l\'agent a TRÉBUCHÉ sur un chat noir. c\'était toujours le chat. +80'], 210);
+          g.win = 1; gShowResolve(g);
           fxScore(80); playFanfare(); GAME.gimmick = null;
         } else if (g.t > 60 * 12) {
           gToast(['🕴 the agent gave up and expensed the taxi. +20 severance', '🕴 l\'agent abandonne et met le taxi en note de frais. +20'], 180);
@@ -14724,6 +14811,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       if (g.t > 60 * 9) {
         gToast([`🐛 it waves goodbye. bugs eaten: ${g.chomps}. it kept one as a souvenir. +20`, `🐛 il te fait coucou. bugs mangés : ${g.chomps}. il en garde un en souvenir. +20`], 200);
+        gShowResolve(g);
         fxScore(20); GAME.gimmick = null;
         GAME.nextGimmickAt = GAME.frame + 1400 + (gStateHash('gmk' + GAME.frame) % 700);
       }
@@ -14744,6 +14832,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const iw = it.bar ? 34 : it.key ? 30 : it.card ? 22 : 22;
       if (it.x < sb.x + sb.w + 6 && it.x + iw > sb.x - 6 && it.y < sb.y + sb.h + 8 && it.y + 20 > sb.y - 8) {
         it.got = true;
+        g.gotCount = (g.gotCount || 0) + 1; // the encore meter watches
         playSparkleSound();
         if (it.score30) { fxScore(30); }
         else if (it.coin2) { fxCoins(2); }
@@ -14759,6 +14848,21 @@ document.addEventListener('DOMContentLoaded', () => {
         else if (it.note != null) { g.notes++; fxCoins(2); playTone(523 * Math.pow(2, it.note / 6), 'square', 0.12, 0, 0.05); }
         else if (it.key) { g.keys++; fxScore(10); playTone(330 + g.keys * 110, 'square', 0.09, 0, 0.05); }
         else if (it.glyph === ':(') { it.got = true; fxCoins(3); it.glyph = ':)'; it.ghost = 1; it.vy = -2; playTone(880, 'triangle', 0.09, 0, 0.04); }
+        else if (it.pill) {
+          // THE CHOICE: picking one ghosts the other. no take-backs.
+          g.items.forEach((o) => { if (o !== it && !o.got) { o.got = true; o.ghost = 1; o.vy = -2; o.vx = 0; } });
+          if (it.pill === 'red') {
+            if (Math.random() < 0.5) { fxScore(120); playFanfare(); gToast(['🔴 THE TRUTH: gorgeous. +120', '🔴 LA VÉRITÉ : magnifique. +120'], 210); }
+            else { GAME.spawnIn = 1; fxScore(20); gToast(['🔴 the truth bites. here it comes. (+20 for bravery)', '🔴 la vérité mord. la voilà. (+20 pour le courage)'], 210); }
+          } else { fxCoins(12); gToast(['🔵 bliss: +12 comfy coins. the steak is delicious ♡', '🔵 béatitude : +12 pièces douillettes. le steak est délicieux ♡'], 210); }
+          g.t = Math.max(g.t, 430); // curtain soon — the choice IS the show
+        }
+        else if (g.kind === 'w95clippy') { fxCoins(4); gToast(['📎 booped!! it offers help on the way down', '📎 boopé !! il propose son aide en tombant'], 90); }
+        else if (g.kind === 'scpescort') { fxScore(12); if ((g.gotCount || 0) >= 3) { fxScore(48); gainFollowers(2); gToast(['🚪 DOOR OPEN — D-9341 CLOCKED OUT ALIVE. employee of the month ♡', '🚪 PORTE OUVERTE — D-9341 SORT VIVANT. employé du mois ♡'], 230); playFanfare(); } }
+        else if (g.kind === 'gbparade') { fxScore(15); }
+        else if (g.kind === 'geobaby') { fxCoins(4); }
+        else if (g.kind === 'bssafe') { fxCoins(4); }
+        else if (g.kind === 'amy2k') { fxScore(8); }
         else if (g.kind === 'gbkonami') { fxScore(5); g.gotN = (g.gotN || 0) + 1; }
         else if (g.kind === 'w95cards') { fxCoins(3); fxScore(15); }
         else if (g.kind === 'scpboop') { fxCoins(6); fxScore(60); gToast(['🗿 RE-CONTAINED (by boop). the Foundation thanks you ♡', '🗿 RE-CONFINÉE (par boop). la Fondation te remercie ♡'], 170); }
@@ -14777,24 +14881,52 @@ document.addEventListener('DOMContentLoaded', () => {
                 `🗳 vote O5 : ${g.yes}✓–${g.no}✗ — ${passed ? 'motion adoptée : tu es officiellement ADORABLE' : 'motion reportée. le conseil exige une revanche ♡'}`], 220);
         if (passed) fxScore(40);
       } else if (g.kind === 'gbkonami') {
-        if ((g.gotN || 0) >= 6) { fxLife(1); gToast(['🌟 30 LIVES!! (adjusted for inflation: +1 ♥)', '🌟 30 VIES !! (ajusté à l\'inflation : +1 ♥)'], 220); playFanfare(); }
+        if ((g.gotN || 0) >= 6) { fxLife(1); gMarkJoy(); gToast(['🌟 30 LIVES!! (adjusted for inflation: +1 ♥)', '🌟 30 VIES !! (ajusté à l\'inflation : +1 ♥)'], 220); playFanfare(); }
         else gToast(['🌟 the code faded… the old ways demand 6 glyphs', '🌟 le code s\'efface… l\'ancienne méthode exige 6 glyphes'], 170);
       } else if (g.kind === 'geomidi') {
-        if (g.notes >= 5) { fxFever(3); [0, 4, 7, 12, 7, 12].forEach((n, i) => playTone(523 * Math.pow(2, n / 12), 'square', 0.14, i * 0.12, 0.05)); gToast(['🎼 SONG COMPLETE!! the page midi plays at FULL volume, as intended', '🎼 CHANSON FINIE !! le midi de la page joue à PLEIN volume, comme prévu'], 220); }
+        if (g.notes >= 5) { fxFever(3); gMarkJoy(); [0, 4, 7, 12, 7, 12].forEach((n, i) => playTone(523 * Math.pow(2, n / 12), 'square', 0.14, i * 0.12, 0.05)); gToast(['🎼 SONG COMPLETE!! the page midi plays at FULL volume, as intended', '🎼 CHANSON FINIE !! le midi de la page joue à PLEIN volume, comme prévu'], 220); }
       } else if (g.kind === 'bscad') {
-        if (g.keys >= 3) { fxClearBugs(); fxFever(5); gToast(['⌨ TASK MANAGER: bugs.exe → END TASK ♡', '⌨ GESTIONNAIRE : bugs.exe → FIN DE TÂCHE ♡'], 220); playFanfare(); }
+        if (g.keys >= 3) { fxClearBugs(); fxFever(5); gMarkJoy(); gToast(['⌨ TASK MANAGER: bugs.exe → END TASK ♡', '⌨ GESTIONNAIRE : bugs.exe → FIN DE TÂCHE ♡'], 220); playFanfare(); }
         else if (g.keys > 0) gToast(['⌨ two-finger salute… it needs all THREE keys, always has', '⌨ salut à deux doigts… il faut les TROIS touches, depuis toujours'], 180);
       } else if (g.kind === 'w95defrag') {
         gToast(['🧩 defrag complete. your disk feels SO organized ♡', '🧩 défrag terminée. ton disque se sent TELLEMENT rangé ♡'], 180);
       } else if (g.kind === 'amtrain' && g.punched >= 6) {
-        fxScore(60); gToast(['🎫 JOB COMPLETE. output: love. the mainframe hums approvingly', '🎫 JOB TERMINÉ. sortie : de l\'amour. le mainframe ronronne'], 210);
+        fxScore(60); gMarkJoy(); gToast(['🎫 JOB COMPLETE. output: love. the mainframe hums approvingly', '🎫 JOB TERMINÉ. sortie : de l\'amour. le mainframe ronronne'], 210);
       }
     };
-    if (g.until) { if (GAME.frame >= g.until) { fxScore(40); GAME.gimmick = null; } }
-    else if (!alive || g.t > 480) { endShow(); GAME.gimmick = null; }
+    if (g.until) { if (GAME.frame >= g.until) { fxScore(40); gShowResolve(g); GAME.gimmick = null; } }
+    else if (!alive || g.t > 480) { endShow(); gShowResolve(g); GAME.gimmick = null; }
     if (!GAME.gimmick) GAME.nextGimmickAt = GAME.frame + 1400 + (gStateHash('gmk' + GAME.frame) % 700);
   }
+  function gDrawShowBanner(g2) {
+    const b = GAME.showBanner;
+    if (!b) return;
+    b.t++;
+    if (b.t > 175) { GAME.showBanner = null; return; }
+    const slideIn = Math.min(1, b.t / 16);
+    const slideOut = b.t > 155 ? (b.t - 155) / 20 : 0;
+    g2.font = "13px 'Jersey 25', 'VT323', monospace";
+    const tw = g2.measureText(b.txt).width;
+    const x = G_W / 2 + (1 - slideIn) * G_W * 0.55;
+    const y = 30 - slideOut * 44;
+    const chip = b.hl ? gDreamColor('#ffd400') : gLite(gTheme.pink);
+    g2.fillStyle = 'rgba(10, 4, 16, 0.65)';
+    g2.fillRect(x - tw / 2 - 11, y - 14, tw + 22, 22);
+    g2.fillStyle = chip;
+    g2.fillRect(x - tw / 2 - 9, y - 12, tw + 18, 18);
+    g2.fillStyle = gContrastInk(chip);
+    g2.textAlign = 'center';
+    g2.fillText(b.txt, x, y + 2);
+    // encore stars ride the marquee when a streak is alive
+    if ((GAME.showStreak || 0) >= 2) {
+      g2.fillStyle = gDreamColor('#ffd400');
+      g2.font = "10px 'Jersey 25', 'VT323', monospace";
+      g2.fillText('★'.repeat(Math.min(5, GAME.showStreak)) + ' encore', x, y + 20);
+    }
+    g2.textAlign = 'left';
+  }
   function gDrawGimmick(g2) {
+    gDrawShowBanner(g2);
     const g = GAME.gimmick;
     if (!g) return;
     if (g.alarm && (g.t >> 4) % 2) {
@@ -15003,7 +15135,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function gReset() {
-    GAME.gimmick = null; GAME.nextGimmickAt = 0; GAME.lastGimmick = null; GAME.msHit = null; // fresh run, fresh show
+    GAME.gimmick = null; GAME.nextGimmickAt = 0; GAME.lastGimmick = null; GAME.msHit = null; GAME.showBanner = null; GAME.showStreak = 0; // fresh run, fresh show
     GAME.obs = [];
     GAME.speed = 3.4;
     GAME.score = 0;
@@ -15735,6 +15867,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ---- BOSS WAVE: a 404 kaiju + a heart-wand power-up ----
     if (gLive()) {
+      if (GAME.lives < (GAME._prevLives || 0)) GAME.hurtAt = GAME.frame; // sour-moment stamp
+      GAME._prevLives = GAME.lives;
       gGimmickTick(); // the world's own set-pieces run between bosses
       if (GAME.frame % 30 === 0) gMilestoneTick(); // and it comments on your form
       if (!GAME.boss && !GAME.nm && GAME.score >= GAME.nextBossAt) {
@@ -17932,45 +18066,45 @@ document.addEventListener('DOMContentLoaded', () => {
      same revive, completely different capitalism. */
   const AD_SKITS_DREAM = {
     win95: [
-      { brand: 'DOWNLOAD MORE RAM™', tint: '#dfdfdf', accent: '#000080', prop: 'phone',
+      { brand: 'DOWNLOAD MORE RAM™', tint: '#dfdfdf', accent: '#000080', prop: 'phone', card: '#ffffff',
         lines: [["free RAM!! shipped on a floppy!!", "de la RAM gratuite !! livrée sur disquette !!"], ["(the floppy holds 1.44MB of RAM. it's the thought.)", "(la disquette contient 1,44 Mo de RAM. c'est l'intention.)"]] },
-      { brand: 'Slippy Life Coaching', tint: '#ffffcc', accent: '#f0b429', prop: 'tv',
+      { brand: 'Slippy Life Coaching', tint: '#ffffcc', accent: '#f0b429', prop: 'tv', card: '#ffffff',
         lines: [["it looks like you're trying to LIVE.", "on dirait que tu essaies de VIVRE."], ["would you like help with that? (say yes) ♡", "veux-tu de l'aide pour ça ? (dis oui) ♡"]] }
     ],
     scp: [
-      { brand: '[REDACTED] COLA', tint: '#16171c', accent: '#ffd23f', prop: 'cup', ink: '#ffd23f', sub: '#9aa3ad',
+      { brand: '[REDACTED] COLA', tint: '#16171c', accent: '#ffd23f', prop: 'cup', ink: '#ffd23f', sub: '#b8c0ca', card: '#1f2029',
         lines: [["tastes like ████ and hugs", "goût de ████ et de câlins"], ["side effects: [DATA EXPUNGED] (it's giggling)", "effets secondaires : [DONNÉES SUPPRIMÉES] (ça glousse)"]] },
-      { brand: 'O5 INSURANCE', tint: '#101014', accent: '#c62828', prop: 'tv', ink: '#e8eaee', sub: '#9aa3ad',
+      { brand: 'O5 INSURANCE', tint: '#101014', accent: '#c62828', prop: 'tv', ink: '#e8eaee', sub: '#b8c0ca', card: '#1f2029',
         lines: [["covers containment breaches AND heartbreak", "couvre les brèches de confinement ET les chagrins"], ["premiums payable in [REDACTED]", "primes payables en [CENSURÉ]"]] }
     ],
     matrix: [
-      { brand: 'PILL COMBO MEAL', tint: '#010a04', accent: '#3dff7c', prop: 'cup', ink: '#3dff7c', sub: '#12a350',
+      { brand: 'PILL COMBO MEAL', tint: '#010a04', accent: '#3dff7c', prop: 'cup', ink: '#3dff7c', sub: '#7dffb8', card: '#02240f',
         lines: [["one red, one blue, fries included", "une rouge, une bleue, frites incluses"], ["(the fries are also a simulation)", "(les frites aussi sont une simulation)"]] },
-      { brand: 'KUNG FU DOWNLOADS', tint: '#03130a', accent: '#2bff8f', prop: 'phone', ink: '#2bff8f', sub: '#12a350',
+      { brand: 'KUNG FU DOWNLOADS', tint: '#03130a', accent: '#2bff8f', prop: 'phone', ink: '#2bff8f', sub: '#7dffb8', card: '#02240f',
         lines: [["'I know kung fu' in 10 seconds!!", "« je connais le kung-fu » en 10 secondes !!"], ["CSS module sold separately (it's harder)", "module CSS vendu séparément (c'est plus dur)"]] }
     ],
     gameboy: [
-      { brand: 'PRO CARTRIDGE BLOWING', tint: '#9bbc0f', accent: '#0f380f', prop: 'phone', ink: '#0f380f', sub: '#306230',
+      { brand: 'PRO CARTRIDGE BLOWING', tint: '#9bbc0f', accent: '#0f380f', prop: 'phone', ink: '#0f380f', sub: '#306230', card: '#e8e0c8',
         lines: [["certified technicians. certified lungs.", "techniciens certifiés. poumons certifiés."], ["fixes 60% of everything, every time", "répare 60 % de tout, à chaque fois"]] },
-      { brand: 'AA BATTERY SPA', tint: '#8bac0f', accent: '#306230', prop: 'cup', ink: '#0f380f', sub: '#306230',
+      { brand: 'AA BATTERY SPA', tint: '#8bac0f', accent: '#306230', prop: 'cup', ink: '#0f380f', sub: '#306230', card: '#e8e0c8',
         lines: [["tired batteries deserve rest too", "les piles fatiguées méritent du repos aussi"], ["(rubbing them warm counts as a massage)", "(les frotter pour les réchauffer compte comme un massage)"]] }
     ],
     geo: [
-      { brand: 'PUNCH THE MONKEY', tint: '#05010f', accent: '#ff2fae', prop: 'tv', ink: '#7cfc00', sub: '#c9a7f5',
+      { brand: 'PUNCH THE MONKEY', tint: '#05010f', accent: '#ff2fae', prop: 'tv', ink: '#7cfc00', sub: '#c9a7f5', card: '#1d1140',
         lines: [["WIN a free modem!!! (you won't)", "GAGNE un modem gratuit !!! (tu ne gagneras pas)"], ["100% of winners are the banner itself", "100 % des gagnants sont la bannière elle-même"]] },
-      { brand: 'GUESTBOOK DELUXE', tint: '#140a2e', accent: '#41e0ff', prop: 'phone', ink: '#ffe9ff', sub: '#c9a7f5',
+      { brand: 'GUESTBOOK DELUXE', tint: '#140a2e', accent: '#41e0ff', prop: 'phone', ink: '#ffe9ff', sub: '#c9a7f5', card: '#1d1140',
         lines: [["now with GLITTER TEXT!!", "maintenant avec du TEXTE À PAILLETTES !!"], ["your entry will be cherished for 10,000 years", "ton mot sera chéri pendant 10 000 ans"]] }
     ],
     bsod: [
-      { brand: 'CTRL+ALT+HUG', tint: '#0a23a8', accent: '#8ab4ff', prop: 'tv', ink: '#ffffff', sub: '#c6d2ff',
+      { brand: 'CTRL+ALT+HUG', tint: '#0a23a8', accent: '#8ab4ff', prop: 'tv', ink: '#0a23a8', sub: '#1136c8', card: '#dfe6ff', tintInk: '#ffffff',
         lines: [["the three-finger salute, but affectionate", "le salut à trois doigts, version affectueuse"], ["resolves 0 crashes. resolves ALL feelings.", "résout 0 crash. résout TOUS les sentiments."]] },
-      { brand: 'ERROR REPORT SPA', tint: '#0c28bd', accent: '#ffffff', prop: 'cup', ink: '#ffffff', sub: '#c6d2ff',
+      { brand: 'ERROR REPORT SPA', tint: '#0c28bd', accent: '#ffffff', prop: 'cup', ink: '#0a23a8', sub: '#1136c8', card: '#dfe6ff', tintInk: '#ffffff',
         lines: [["your reports deserve a vacation too", "tes rapports d'erreur méritent aussi des vacances"], ["they are read by nobody, lovingly", "ils sont lus par personne, avec amour"]] }
     ],
     amber: [
-      { brand: 'COBOL BOOTCAMP', tint: '#0d0800', accent: '#ffb000', prop: 'tv', ink: '#ffb000', sub: '#c98a10',
+      { brand: 'COBOL BOOTCAMP', tint: '#0d0800', accent: '#ffb000', prop: 'tv', ink: '#ffb000', sub: '#e0a63a', card: '#221604',
         lines: [["est. 1959. still hiring. FOREVER hiring.", "depuis 1959. recrute encore. recrute POUR TOUJOURS."], ["graduates outlive their employers", "les diplômés survivent à leurs employeurs"]] },
-      { brand: 'PUNCH CARD GYM', tint: '#161006', accent: '#ffd23f', prop: 'phone', ink: '#ffd23f', sub: '#c98a10',
+      { brand: 'PUNCH CARD GYM', tint: '#161006', accent: '#ffd23f', prop: 'phone', ink: '#ffd23f', sub: '#e0a63a', card: '#221604',
         lines: [["80 columns. 80 reps. no folding.", "80 colonnes. 80 répétitions. ne pas plier."], ["(do not staple the trainer)", "(ne pas agrafer le coach)"]] }
     ]
   };
@@ -18067,11 +18201,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const skit = pool[(GAME.adSkit || 0) % pool.length];
     const inkC = skit.ink || '#14020e';
     const subC = skit.sub || '#5a3d6e';
+    const tintInk = skit.tintInk || inkC; // text that sits on the raw tint
     const tLeft = Math.ceil((AD_FRAMES - GAME.adT) / 60);
     const scene = GAME.adT < 300 ? 0 : GAME.adT < 600 ? 1 : 2;
     // the ad covers the whole screen
     g2.fillStyle = skit.tint;
     g2.fillRect(0, 0, G_W, G_H);
+    // v107: the POSTER CARD — a layered panel carries every line of copy,
+    // so no world can wash itself into one flat tint (the green-mush bug:
+    // same-family sub-ink sank straight into the gameboy field)
+    const cardY = loopMode ? 42 : 20;
+    const cardH = 62;
+    const cardX = Math.round(G_W * 0.13), cardW = Math.round(G_W * 0.74);
+    g2.fillStyle = 'rgba(0, 0, 0, 0.3)';
+    g2.fillRect(cardX + 3, cardY + 3, cardW, cardH);
+    g2.fillStyle = skit.card || '#fff7fb';
+    g2.fillRect(cardX, cardY, cardW, cardH);
+    g2.strokeStyle = skit.accent;
+    g2.lineWidth = 2;
+    g2.strokeRect(cardX + 1, cardY + 1, cardW - 2, cardH - 2);
     // marquee AD strip (ink picked by contrast — bsod's accent IS white)
     g2.fillStyle = skit.accent;
     g2.fillRect(0, 0, G_W, 12);
@@ -18082,9 +18230,9 @@ document.addEventListener('DOMContentLoaded', () => {
     for (let x = -shift; x < G_W; x += 46) g2.fillText('AD ♡', x, 10);
     if (!loopMode) {
       g2.textAlign = 'right';
-      g2.fillStyle = inkC; // dream skits bring their own readable ink
+      g2.fillStyle = tintInk; // countdown sits on the raw tint, not the card
       g2.font = "12px 'Jersey 25', 'VT323', monospace";
-      g2.fillText(`⏳ ${tLeft}s`, G_W - 6, 26);
+      g2.fillText(`⏳ ${tLeft}s`, G_W - 6, 15);
     }
     g2.textAlign = 'center';
     if (loopMode) {
@@ -18104,25 +18252,24 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (scene < 2) {
       g2.fillStyle = inkC;
-      g2.font = "22px 'Jersey 25', 'VT323', monospace";
-      // the pause banner rents the top 40px — the headline politely ducks
-      g2.fillText(skit.brand, G_W / 2, loopMode ? 62 : 42);
-      g2.font = "13px 'Jersey 25', 'VT323', monospace";
-      g2.fillStyle = subC;
-      g2.fillText(trT(skit.lines[scene][0], skit.lines[scene][1]), G_W / 2, G_H - 34);
-      gAdProp(g2, skit.prop, G_W / 2 + 66, 78, skit.accent);
-      gAdActor(g2, G_W / 2 - 50, 84, GAME.adT * 0.12);
-    } else {
-      // the grand finale: a very sincere sublet offer
-      g2.fillStyle = inkC;
-      g2.font = "18px 'Jersey 25', 'VT323', monospace";
-      const finale = (gDreamSkin && AD_FINALE_DREAM[gDreamSkin]) || ['♡ this ad slot is for rent ♡', '♡ cet espace pub est à louer ♡'];
-      g2.fillText(trT(finale[0], finale[1]), G_W / 2, loopMode ? 58 : 44);
+      g2.font = "20px 'Jersey 25', 'VT323', monospace";
+      g2.fillText(skit.brand, G_W / 2, cardY + 26);
       g2.font = "12px 'Jersey 25', 'VT323', monospace";
       g2.fillStyle = subC;
-      g2.fillText('yuyongshan573@gmail.com', G_W / 2, loopMode ? 76 : 62);
-      g2.fillText(trT('(serious brands only. payment in boba accepted)', '(marques sérieuses uniquement. paiement en boba accepté)'), G_W / 2, G_H - 34);
-      gAdActor(g2, G_W / 2, 90, GAME.adT * 0.12);
+      g2.fillText(trT(skit.lines[scene][0], skit.lines[scene][1]), G_W / 2, cardY + 48);
+      gAdProp(g2, skit.prop, G_W / 2 + 66, cardY + cardH + 22, skit.accent);
+      gAdActor(g2, G_W / 2 - 50, cardY + cardH + 26, GAME.adT * 0.12);
+    } else {
+      // the grand finale: a very sincere sublet offer, framed like one
+      g2.fillStyle = inkC;
+      g2.font = "16px 'Jersey 25', 'VT323', monospace";
+      const finale = (gDreamSkin && AD_FINALE_DREAM[gDreamSkin]) || ['♡ this ad slot is for rent ♡', '♡ cet espace pub est à louer ♡'];
+      g2.fillText(trT(finale[0], finale[1]), G_W / 2, cardY + 22);
+      g2.font = "12px 'Jersey 25', 'VT323', monospace";
+      g2.fillStyle = subC;
+      g2.fillText('yuyongshan573@gmail.com', G_W / 2, cardY + 40);
+      g2.fillText(trT('(serious brands only. payment in boba accepted)', '(marques sérieuses uniquement. paiement en boba accepté)'), G_W / 2, cardY + 56);
+      gAdActor(g2, G_W / 2, cardY + cardH + 26, GAME.adT * 0.12);
       // pixel confetti (dream-dyed: four shades of the world, still a party)
       for (let i = 0; i < 22; i++) {
         const cxx = (i * 47 + GAME.adT) % G_W;
@@ -18136,8 +18283,8 @@ document.addEventListener('DOMContentLoaded', () => {
     cast.slice(0, 6).forEach((col, i) => gAdPik(g2, G_W / 2 - 60 + i * 22, G_H - 16, col, GAME.adT * 0.16 + i));
     if (!loopMode) {
       g2.font = "9px 'Jersey 25', 'VT323', monospace";
-      g2.globalAlpha = 0.55;
-      g2.fillStyle = inkC; // readable on every dream tint
+      g2.globalAlpha = 0.9; // 0.55 sank into same-family tints (gameboy)
+      g2.fillStyle = tintInk;
       g2.fillText(trT('ESC = give up the revive', 'ÉCHAP = renoncer à la résurrection'), G_W / 2, G_H - 4);
       g2.globalAlpha = 1;
     }
@@ -19643,12 +19790,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // encounters keep a brisk clock: first at ~18-24s, then every 27-41s
       if (!GAME.event && !GAME.boss && !GAME.nm && gPlaySecs() > GAME.nextEventSec) gStartEvent();
-      // the HR fairy strikes while the iron is warm: 45s+ of play AND the
-      // player just got something delicious (joy stamped < 9s ago)
-      if (!GAME.event && !GAME.boss && !gInterviewOffered && gPlaySecs() > 45 &&
-          gPlaySecs() - GAME.joyAt < 9 && Math.random() < 0.005) {
-        gInterviewOffered = true;
-        gStartInterview();
+      // v107: the HR fairy rides the HIGH, never the clutter. she appears
+      // 1.5-7s after a GENUINE earned peak (boss kill, show finale, coin
+      // streak) — and only when the screen has had room to breathe:
+      //   · the peak must be fresh (1.5-7s old: fanfare done, grin still on)
+      //   · the peak must NOT be an encounter's own afterglow (shop fever,
+      //     reward buffs — those stamp joy while/right as a window closes)
+      //   · ≥14s since the last encounter window closed (no window stacking)
+      //   · no show mid-performance, no boss, no recent hit (sour moment)
+      // gates this tight earn a confident hit-rate: when she CAN appear,
+      // she does — so the causality reads ("I did something great → fairy")
+      if (!GAME.event && !GAME.boss && !GAME.nm && !GAME.gimmick && !gInterviewOffered) {
+        const nowS = gPlaySecs();
+        const joyAge = nowS - GAME.joyAt;
+        const evClosed = GAME.lastEventClosedAt != null ? GAME.lastEventClosedAt : -999;
+        if (nowS > 45
+            && joyAge > 1.5 && joyAge < 7
+            && GAME.joyAt > evClosed + 4
+            && nowS - evClosed > 14
+            && GAME.frame - (GAME.hurtAt || -9999) > 300
+            && Math.random() < 0.02) {
+          gInterviewOffered = true;
+          gStartInterview();
+        }
       }
     }
 
@@ -19731,6 +19895,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function gEndEvent(outcomePair, decision) {
+    GAME.lastEventClosedAt = gPlaySecs(); // the fairy keeps her distance from windows
     if (decision) GAME.decisions.push(decision);
     if (outcomePair) gToast(outcomePair, 200);
     GAME.event = null;
