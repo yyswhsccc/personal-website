@@ -12625,11 +12625,13 @@ document.addEventListener('DOMContentLoaded', () => {
     felt.className = 'dwc-felt dwc-' + game;
     w.appendChild(felt);
     // the dealer in the corner, judging warmly
-    const dealer = document.createElement('img');
-    dealer.className = 'dwc-dealer';
-    dealer.alt = '';
-    dealer.src = (OUTFIT_FRAMES && typeof OUTFIT_FRAMES.base === 'string' && OUTFIT_FRAMES.base) || 'assets/slime_pet_cutout.png';
-    w.appendChild(dealer);
+    if (game !== 'hearts') { // in hearts the slime SITS at the table — no double booking
+      const dealer = document.createElement('img');
+      dealer.className = 'dwc-dealer';
+      dealer.alt = '';
+      dealer.src = (OUTFIT_FRAMES && typeof OUTFIT_FRAMES.base === 'string' && OUTFIT_FRAMES.base) || 'assets/slime_pet_cutout.png';
+      w.appendChild(dealer);
+    }
     document.body.appendChild(w);
     dN(w);
     dwcState = { game, winEl: w, felt };
@@ -12648,6 +12650,91 @@ document.addEventListener('DOMContentLoaded', () => {
     // the cascade is EARNED now — a full-desktop victory lap
     dT(() => { try { dwSolCascade(); } catch (e) { /* deck stuck */ } }, 900);
     dT(() => dwcClose(), 5600);
+  }
+
+  // v112: the seats SPEAK — three voices, throttled, render-persistent
+  var DWC_VOICES = {
+    west: {
+      handGood: [["pik!! pik pik!! soft cards!! nobody tell the queen!!", "pik !! pik pik !! cartes douces !! ne dites rien à la dame !!"], ["pik pik… no spiky lady… pik!! *hugs cards*", "pik pik… pas de dame piquante… pik !! *serre ses cartes*"], ["PIK!! good hand!! wait. is it a trap?? pik??", "PIK !! belle main !! attends. c'est un piège ?? pik ??"], ["pik pik pik!! all small!! small is safe!! like me!!", "pik pik pik !! tout petit !! petit c'est sûr !! comme moi !!"], ["*vibrating* pik!! these cards smell like flowers!! pik!!", "*vibre* pik !! ces cartes sentent la fleur !! pik !!"]],
+      handBad: [["PIK?! the queen?! WHY IS SHE HERE?! pik pik pik pik", "PIK ?! la dame ?! POURQUOI ELLE EST LÀ ?! pik pik pik pik"], ["pik… pik… big hearts… very big… *hides under a card*", "pik… pik… gros cœurs… très gros… *se cache sous une carte*"], ["who passed me THIS?! PIK!! i thought we were friends!!", "qui m'a passé ÇA ?! PIK !! je croyais qu'on était amis !!"], ["pik pik pik pik pik pik (translation: oh no)", "pik pik pik pik pik pik (traduction : oh non)"], ["*shaking* the spade lady is looking at me. PIK.", "*tremble* la dame de pique me regarde. PIK."]],
+      lead: [["pik!! my turn!! ok ok ok. small card. small card. PIK!", "pik !! mon tour !! ok ok ok. petite carte. petite carte. PIK !"], ["i lead!! pik!! everyone be nice!! please!!", "je commence !! pik !! soyez gentils !! s'il vous plaît !!"], ["pik pik… this one? this one. no wait. THIS one. pik!!", "pik pik… celle-ci ? celle-ci. non attends. CELLE-là. pik !!"], ["*puts card down very gently* pik… don't wake the queen…", "*pose la carte tout doucement* pik… ne réveillez pas la dame…"], ["PIK! leading! if this goes wrong i was never here!!", "PIK ! je mène ! si ça tourne mal je n'étais pas là !!"]],
+      dumpWind: [["pik pik pik… sorry sorry sorry sorry— PIK!!", "pik pik pik… pardon pardon pardon pardon— PIK !!"], ["*winds up* i'm sorry!! the card wants to GO!! pik!!", "*prend son élan* pardon !! la carte veut PARTIR !! pik !!"], ["don't look don't look don't look… pik!! *throws*", "regarde pas regarde pas regarde pas… pik !! *lance*"], ["pik!! this hurts me more than— no. no it doesn't. PIK!!", "pik !! ça me fait plus mal qu'à— non. non pas du tout. PIK !!"], ["*deep pikmin breath* forgive me. pik. PIK!!!", "*grande inspiration pikmin* pardonne-moi. pik. PIK !!!"]],
+      atePoints: [["pik?! hearts?! in MY pile?! pik pik pik nooo…", "pik ?! des cœurs ?! dans MA pile ?! pik pik pik nooon…"], ["*stares at the hearts* pik… they followed me home…", "*fixe les cœurs* pik… ils m'ont suivi jusqu'ici…"], ["points!! PIK!! why does love COUNT AGAINST YOU?!", "des points !! PIK !! pourquoi l'amour COMPTE CONTRE NOUS ?!"], ["pik pik… it's fine… it's fine… *it is not fine* pik…", "pik pik… ça va… ça va… *ça ne va pas* pik…"]],
+      ateQueen: [["PIK?!?! THE QUEEN?! *faints. gets up. faints again*", "PIK ?!?! LA DAME ?! *s'évanouit. se relève. retombe*"], ["thirteen. pik. thirteen points. pik pik. i need a leaf.", "treize. pik. treize points. pik pik. il me faut une feuille."], ["she's in my pile. SHE'S IN MY PILE. PIK PIK PIK PIK", "elle est dans ma pile. ELLE EST DANS MA PILE. PIK PIK PIK PIK"], ["*tiny sob* pik… i just wanted a quiet trick… pik…", "*petit sanglot* pik… je voulais juste un pli tranquille… pik…"]],
+      cleanTrick: [["pik!! ZERO points!! i won NOTHING!! best day!!", "pik !! ZÉRO point !! j'ai gagné RIEN !! meilleur jour !!"], ["*counts trick twice* no hearts!! pik pik!! *happy wiggle*", "*compte le pli deux fois* pas de cœurs !! pik pik !! *frétille*"], ["a clean trick!! pik!! frame it!! FRAME IT!!", "un pli propre !! pik !! encadrez-le !! ENCADREZ-LE !!"], ["pik pik pik!! safe!! everyone saw that, right?! SAFE!!", "pik pik pik !! sauvé !! tout le monde a vu, hein ?! SAUVÉ !!"]],
+      youAte: [["pik… oh no… oh no… *pats your sleeve with one leaf*", "pik… oh non… oh non… *tapote ta manche avec une feuille*"], ["PIK?! you took points?! *genuinely distressed for you*", "PIK ?! tu as pris des points ?! *sincèrement bouleversé pour toi*"], ["pik pik… want half a berry? it helps. it always helps.", "pik pik… tu veux une demi-baie ? ça aide. ça aide toujours."], ["it's ok!! pik!! numbers are fake!! PROBABLY fake!! pik!!", "ça va !! pik !! les chiffres sont faux !! SANS DOUTE faux !! pik !!"]],
+      maskSlip: [["pik… (…phew not me) …PIK?! i said nothing!! NOTHING!!", "pik… (…ouf pas moi) …PIK ?! j'ai rien dit !! RIEN !!"], ["*relieved wiggle* …you saw the wiggle. pik. i'm sorry.", "*frétille de soulagement* …tu as vu. pik. pardon."], ["pik pik!! so sad for you!! *tiny happy hop* …oh no.", "pik pik !! trop triste pour toi !! *petit saut joyeux* …oh non."]],
+      idle: [["pik pik pik… *rearranges cards for the ninth time*", "pik pik pik… *range ses cartes pour la neuvième fois*"], ["*peeks over own cards* pik? *peeks again* pik.", "*jette un œil par-dessus ses cartes* pik ? *re-regarde* pik."], ["is it my turn?? pik?? no?? ok. ok. *keeps vibrating*", "c'est mon tour ?? pik ?? non ?? ok. ok. *continue de vibrer*"], ["pik… the felt is soft… we live here now… pik…", "pik… la feutrine est douce… on vit ici maintenant… pik…"], ["PIK!! …sorry. thought i saw the queen. it was a 4.", "PIK !! …pardon. j'ai cru voir la dame. c'était un 4."]],
+      win: [["PIK!! I WON?! me?! *checks score five times* PIK!!!", "PIK !! J'AI GAGNÉ ?! moi ?! *vérifie le score cinq fois* PIK !!!"], ["lowest score!! pik pik pik!! *victory lap around the felt*", "plus petit score !! pik pik pik !! *tour d'honneur du tapis*"], ["i win!! don't hate me!! pik!! please still like me!!", "j'ai gagné !! me détestez pas !! pik !! aimez-moi encore !!"], ["pik!! winner!! this never happens!! WRITE IT DOWN!!", "pik !! vainqueur !! ça n'arrive jamais !! NOTEZ-LE !!"]],
+      lose: [["pik… lost… *lies face-down on the felt* wake me in 1996", "pik… perdu… *s'allonge face contre le tapis* réveil en 1996"], ["PIK?! those points are MINE?! all of them?! pik pik pik…", "PIK ?! ces points sont à MOI ?! tous ?! pik pik pik…"], ["i lost but i felt many feelings. pik. that counts. right??", "j'ai perdu mais j'ai eu plein d'émotions. pik. ça compte. non ??"], ["*sniff* pik… rematch… pik… REMATCH!! *leaf fists*", "*snif* pik… revanche… pik… REVANCHE !! *poings en feuilles*"]],
+      moon: [["PIK?!?! THE WHOLE MOON?! *lies down face-first in respect*", "PIK ?!?! TOUTE LA LUNE ?! *se couche face contre table, respect*"], ["pik pik pik pik PIK PIK (translation: HOW. HOW?!)", "pik pik pik pik PIK PIK (traduction : COMMENT. COMMENT ?!)"], ["someone ate ALL the hearts on PURPOSE?! PIK!! legends real!!", "quelqu'un a mangé TOUS les cœurs EXPRÈS ?! PIK !! les légendes existent !!"]]
+    },
+    slime: {
+      handGood: [["mm. a lovely hand. i would never gloat. *gloats in liquid*", "mm. une main charmante. je ne me vanterais jamais. *se vante en liquide*"], ["these cards? oh, terrible. dreadful. *tucks them in like children* ♡", "ces cartes ? oh, terribles. affreuses. *les borde comme des enfants* ♡"], ["the pass has been kind to me. i owe someone at this table a favor ♡", "la passe m'a gâté. je dois une faveur à quelqu'un à cette table ♡"], ["a dealer never smiles at his hand. *the felt itself smiles for me*", "un croupier ne sourit jamais à son jeu. *la feutrine sourit pour moi*"], ["such soft little cards. i could win with these. i intend to ♡", "de si douces petites cartes. je pourrais gagner avec ça. j'y compte ♡"]],
+      handBad: [["ah. the queen has chosen me as her vessel. flattering. terrifying.", "ah. la dame m'a choisi pour vaisseau. flatteur. terrifiant."], ["someone passed me their nightmares. i will remember this kindness", "quelqu'un m'a passé ses cauchemars. je me souviendrai de cette bonté"], ["*looks at hand* *looks at exit* the exit is decorative. so is my hope", "*regarde sa main* *regarde la sortie* la sortie est décorative. l'espoir aussi"], ["these hearts are so tall they have weather. it's raining in my hand", "ces cœurs sont si hauts qu'ils ont leur météo. il pleut dans ma main"], ["a hand like this builds character. i have so much character now ♡", "une main pareille forge le caractère. j'en ai tellement, maintenant ♡"]],
+      lead: [["the table is mine for one card. savor it with me. *leads slowly* ♡", "la table est à moi pour une carte. savourons. *joue avec lenteur* ♡"], ["i lead. the felt holds its breath. it's mostly for the drama", "je mène. la feutrine retient son souffle. c'est surtout pour le drame"], ["watch closely. this card means nothing. or everything. i love this job", "regardez bien. cette carte ne veut rien dire. ou tout. j'adore ce métier"], ["*sets a card down like a tiny stage curtain rising* act one ♡", "*pose une carte comme un petit rideau qui se lève* acte un ♡"], ["i could lead anything. i choose… suspense. and also this card", "je pourrais tout jouer. je choisis… le suspense. et aussi cette carte"]],
+      dumpWind: [["i want you to know this gift comes from the heart. someone's heart ♡", "sache que ce cadeau vient du cœur. du cœur de quelqu'un ♡"], ["*polishes a card slowly* i've been saving this one. for a friend", "*astique une carte lentement* je la gardais. pour un ami"], ["the rules force my hand. the rules, and a small delicious impulse", "les règles me forcent la main. les règles, et une petite impulsion exquise"], ["close your eyes. this will feel like a compliment at first ♡", "ferme les yeux. au début, ça ressemblera à un compliment ♡"], ["in 1995 we called this 'sharing'. *winds up theatrically*", "en 1995 on appelait ça « partager ». *prend un élan théâtral*"]],
+      atePoints: [["hearts, for me? oh you shouldn't have. truly. you should NOT have", "des cœurs, pour moi ? il ne fallait pas. vraiment. il ne FALLAIT pas"], ["i absorb the points as i absorb all things: gracefully, and forever", "j'absorbe les points comme j'absorbe tout : avec grâce, et pour toujours"], ["a few hearts in the slime. they'll dissolve by morning. the shame won't", "quelques cœurs dans le slime. ils fondront d'ici l'aube. pas la honte"], ["i meant to do that. write it down. the dealer meant to do that", "je l'ai fait exprès. notez-le. le croupier l'a fait exprès"]],
+      ateQueen: [["she's inside me now. we're going to have such conversations", "elle est en moi maintenant. on va avoir de ces conversations"], ["thirteen points. deal on. the show must wobble on ♡", "treize points. continuez. le spectacle doit trembloter ♡"], ["a professional absorbs the queen without flinching. *flinches beautifully*", "un pro absorbe la dame sans broncher. *bronche magnifiquement*"], ["i've taken heavier losses. i can't name one right now. give me time", "j'ai connu de pires pertes. aucune ne me revient. laissez-moi du temps"]],
+      cleanTrick: [["a trick with zero points. small, perfect, mine. like a canapé ♡", "un pli à zéro point. petit, parfait, à moi. comme un canapé ♡"], ["no hearts, no queen, no consequences. the dealer's favorite dish", "pas de cœurs, pas de dame, pas de conséquences. le plat préféré du croupier"], ["*sweeps the trick in with one smooth gesture* housekeeping ♡", "*ramasse le pli d'un geste fluide* entretien ménager ♡"], ["i win nothing and it is everything. hearts is a beautiful game", "je gagne rien et c'est tout. hearts est un jeu magnifique"]],
+      youAte: [["oh no. oh no ♡ my deepest sympathies, arranged alphabetically", "oh non. oh non ♡ mes condoléances, classées par ordre alphabétique"], ["you poor thing. the table weeps for you. i dusted it myself", "mon pauvre chou. la table te pleure. je l'ai époussetée moi-même"], ["points look good on you. very few can wear thirteen— sorry, i mean. hugs", "les points te vont bien. peu savent porter treize— pardon. câlins"], ["there there. the scoreboard is only paint, and paint fades ♡", "là, là. le score n'est que peinture, et la peinture s'efface ♡"], ["a tragedy. a proper one. *dabs where an eye would be*", "une tragédie. une vraie. *tamponne là où serait un œil*"]],
+      maskSlip: [["…what smile. that was grief. grief with excellent posture ♡", "…quel sourire ? c'était du chagrin. du chagrin qui se tient droit ♡"], ["you saw nothing. the ♡ you saw was structural. load-bearing, even", "tu n'as rien vu. le ♡ que tu as vu était structurel. porteur, même"], ["a dealer's sympathy is real. the timing of my joy is coincidence", "la compassion d'un croupier est réelle. ma joie ? une coïncidence"], ["ok. i was slightly pleased. artistically pleased. it's different", "bon. j'étais un peu ravi. ravi artistiquement. c'est différent"]],
+      idle: [["*fans himself with the trick pile* ah. the sweet breeze of stakes", "*s'évente avec la pile de plis* ah. la douce brise des enjeux"], ["the pikmin keep signaling each other. i taught them that. regret", "les pikmin se font des signes. je leur ai appris ça. regrets"], ["somewhere a modem sings. it knows who holds the queen. it won't say", "quelque part un modem chante. il sait qui a la dame. il ne dira rien"], ["i deal, therefore i am. mostly i am felt-adjacent", "je donne, donc je suis. surtout, je suis adjacent à la feutrine"], ["house rule #7: no reading the dealer's face. i don't have one. still", "règle n°7 : ne pas lire le visage du croupier. je n'en ai pas. quand même"], ["*shuffles nothing, just to stay warm*", "*mélange du vide, juste pour rester chaud*"]],
+      win: [["lowest score. the house wins with humility. *bows in every direction*", "plus petit score. la maison gagne avec humilité. *salue partout*"], ["i'd thank the cards, but we planned this together ♡", "je remercierais les cartes, mais on avait tout prévu ensemble ♡"], ["victory suits a slime. everything suits a slime. but especially this", "la victoire va bien au slime. tout lui va. mais surtout ça"], ["i won. stay for the encore. there is no encore. stay anyway ♡", "j'ai gagné. restez pour le rappel. il n'y a pas de rappel. restez ♡"]],
+      lose: [["the dealer loses. the felt is shocked. i felt it shudder", "le croupier perd. la feutrine est sous le choc. je l'ai sentie frémir"], ["i lost with such style that history may record it as a win", "j'ai perdu avec tant de style que l'histoire y verra une victoire"], ["i lost. the felt still loves me. we've spoken. we're fine ♡", "j'ai perdu. la feutrine m'aime encore. on s'est parlé. ça va ♡"], ["*applauds the winner slowly, wetly* well played. WELL played", "*applaudit le vainqueur lentement, humidement* bien joué. TRÈS bien joué"]],
+      moon: [["the MOON, shot, at MY table?? i must sit down. i am always sat. still", "la LUNE, tirée, à MA table ?? je dois m'asseoir. je suis déjà assis. bon"], ["every heart and the lady. the recycle bin bowed. i saw it bow", "tous les cœurs et la dame. la corbeille s'est inclinée. je l'ai vue"], ["26 to everyone. a masterpiece. i hate it. i'm framing it ♡", "26 pour tout le monde. un chef-d'œuvre. je déteste. je l'encadre ♡"]]
+    },
+    east: {
+      handGood: [["pik.", "pik."], ["acceptable.", "acceptable."], ["the cards behave.", "les cartes obéissent."], ["no queen. yet.", "pas de dame. encore."], ["calm. before.", "le calme. d'avant."]],
+      handBad: [["she is here.", "elle est là."], ["the queen comes.", "la dame arrive."], ["heavy hand.", "main lourde."], ["pik. pik.", "pik. pik."], ["thirteen waits.", "treize attend."]],
+      lead: [["watch.", "regarde."], ["i begin.", "je commence."], ["the stone moves.", "la pierre bouge."], ["pik. follow.", "pik. suivez."]],
+      dumpWind: [["for you.", "pour toi."], ["catch.", "attrape."], ["it is time.", "c'est l'heure."], ["gravity decides.", "la gravité décide."], ["sorry. no.", "pardon. non."]],
+      atePoints: [["points. mine.", "des points. à moi."], ["so be it.", "ainsi soit-il."], ["the pile grows.", "la pile grandit."], ["pik.", "pik."]],
+      ateQueen: [["she chose me.", "elle m'a choisi."], ["thirteen.", "treize."], ["stone carries stone.", "la pierre porte la pierre."], ["it is done.", "c'est fait."]],
+      cleanTrick: [["zero. good.", "zéro. bien."], ["clean.", "propre."], ["nothing gained. everything.", "rien gagné. tout."], ["the dust settles.", "la poussière retombe."]],
+      youAte: [["you ate.", "tu as mangé."], ["it happens. always.", "ça arrive. toujours."], ["pik. condolences.", "pik. condoléances."], ["scores remember.", "les scores se souviennent."]],
+      maskSlip: [["…pik.", "…pik."], ["i felt nothing. almost.", "je n'ai rien senti. presque."], ["the stone smiled. once.", "la pierre a souri. une fois."]],
+      idle: [["pik.", "pik."], ["the felt listens.", "la feutrine écoute."], ["cards do not forget.", "les cartes n'oublient rien."], ["night is long.", "la nuit est longue."], ["shuffle. repeat. shuffle.", "mélange. répète. mélange."]],
+      win: [["lowest. as foreseen.", "le plus bas. prévu."], ["i win. pik.", "je gagne. pik."], ["stone endures.", "la pierre endure."], ["expected.", "prévu."]],
+      lose: [["i lost. noted.", "perdu. noté."], ["the sun also sets.", "le soleil se couche aussi."], ["pik. next hand.", "pik. prochaine main."], ["numbers pass.", "les chiffres passent."]],
+      moon: [["the moon fell.", "la lune est tombée."], ["all hearts. one hand.", "tous les cœurs. une main."], ["twenty-six. everyone.", "vingt-six. tout le monde."]]
+    }
+  }; // three voices, 167 lines, authored
+  const DWC_SEATKEY = { 1: 'west', 2: 'slime', 3: 'east' };
+  function dwcSeatSay(pi, event, ms) {
+    const st = dwcState;
+    if (!st || st.game !== 'hearts') return;
+    const bank = DWC_VOICES[DWC_SEATKEY[pi]] && DWC_VOICES[DWC_SEATKEY[pi]][event];
+    if (!bank || !bank.length) return;
+    st.bubbles = st.bubbles || {};
+    const now = Date.now();
+    if (st.bubbles[pi] && now < st.bubbles[pi].until - 400) return; // one thought at a time
+    if (st._lastSpoke && now - st._lastSpoke < 900) return;         // the table takes turns
+    st._lastSpoke = now;
+    // no immediate repeats within a seat's bank
+    let ix = Math.floor(Math.random() * bank.length);
+    const lastIx = (st._lastLine = st._lastLine || {})[pi + event];
+    if (bank.length > 1 && ix === lastIx) ix = (ix + 1) % bank.length;
+    st._lastLine[pi + event] = ix;
+    st.bubbles[pi] = { text: trT(...bank[ix]), until: now + (ms || 3000) };
+    dwcSeatBubbleApply(pi);
+    setTimeout(() => {
+      const b = st.bubbles && st.bubbles[pi];
+      if (dwcState === st && b && Date.now() >= b.until - 60) { st.bubbles[pi] = null; dwcSeatBubbleApply(pi); }
+    }, (ms || 3000) + 80);
+  }
+  function dwcSeatBubbleApply(pi) {
+    const st = dwcState;
+    if (!st || !st.felt) return;
+    const seat = st.felt.querySelector('.dwc-h-seat[data-pi="' + pi + '"]');
+    if (!seat) return;
+    seat.querySelectorAll('.dwc-seat-bub').forEach((b) => b.remove());
+    const b = st.bubbles && st.bubbles[pi];
+    if (!b || Date.now() >= b.until) return;
+    const el = document.createElement('div');
+    el.className = 'dwc-seat-bub';
+    el.textContent = b.text;
+    seat.appendChild(el);
   }
 
   /* ---- v111: the dealers are ALIVE 🎭 ----
@@ -12719,7 +12806,7 @@ document.addEventListener('DOMContentLoaded', () => {
     [1, 2].forEach((pi) => {
       const iv = setInterval(() => {
         if (dwcState !== stRef) { clearInterval(iv); return; }
-        if (stRef.phase === 'play' && Math.random() < 0.5 && !(stRef.moods && stRef.moods[pi])) dwcMood(pi, 'fidget', 900);
+        if (stRef.phase === 'play' && Math.random() < 0.5 && !(stRef.moods && stRef.moods[pi])) { dwcMood(pi, 'fidget', 900); if (Math.random() < 0.22) dwcSeatSay(pi, 'idle', 2400); }
       }, DWC_CAST[pi].fidget);
     });
     dwcHeartsRender();
@@ -12803,11 +12890,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (dumping) {
       // the wind-up: fake sympathy (or naked glee) before the hammer falls
       dwcTell(pi, 'sly', 'worry', 1400);
+      if (Math.random() < 0.6) dwcSeatSay(pi, 'dumpWind', 2200);
       setTimeout(() => { if (dwcState === st && st.turn === pi && st.phase === 'play') dwcHPlay(pi, card); }, 780);
       return;
     }
     if (eatingRisk) dwcTell(pi, 'worry', 'idlefake', 1200);
-    else if (!lead && Math.random() < 0.3) dwcMood(pi, 'think', 900);
+    else if (!lead && Math.random() < 0.3) { dwcMood(pi, 'think', 900); if (Math.random() < 0.3) dwcSeatSay(pi, 'lead', 2200); }
     dwcHPlay(pi, card);
   }
   function dwcHTrickEnd() {
@@ -12826,18 +12914,21 @@ document.addEventListener('DOMContentLoaded', () => {
     if (win === 2 && st.trick.some((c) => c.s === 0 && c.r === 12)) dwcSay('qsTaken');
     // faces, honest and otherwise
     if (win !== 0) {
-      if (pts) dwcMood(win, st.trick.some((c) => c.s === 0 && c.r === 12) ? 'grief' : 'worry', 2600);
-      else dwcMood(win, 'happy', 1600);
+      const gotQ = st.trick.some((c) => c.s === 0 && c.r === 12);
+      if (pts) { dwcMood(win, gotQ ? 'grief' : 'worry', 2600); dwcSeatSay(win, gotQ ? 'ateQueen' : 'atePoints', 3200); }
+      else { dwcMood(win, 'happy', 1600); if (Math.random() < 0.4) dwcSeatSay(win, 'cleanTrick', 2400); }
     } else if (pts) {
       // YOU ate points: sympathy all around… and then the slime's mask slips
       [1, 3].forEach((pi) => dwcTell(pi, 'worry', 'smug', 1800));
       dwcMood(2, 'worry', 1400);
-      setTimeout(() => { if (dwcState === st && Math.random() < 0.65) dwcMood(2, 'smug', 1100); }, 1500);
+      dwcSeatSay([1, 2, 3][Math.floor(Math.random() * 3)], 'youAte', 2800);
+      setTimeout(() => { if (dwcState === st && Math.random() < 0.65) { dwcMood(2, 'smug', 1100); if (Math.random() < 0.5) dwcSeatSay(2, 'maskSlip', 2400); } }, 1500);
     }
     [1, 2, 3].forEach((pi) => { if (pi !== win && !pts && Math.random() < 0.2) dwcMood(pi, 'relief', 1200); });
     st.trick = [null, null, null, null];
     st.leader = win; st.turn = win;
     st.trickNo++;
+    if (Math.random() < 0.12) dwcSeatSay(3, 'idle', 2200);
     if (st.trickNo >= 13) { dwcHScore(); return; }
     dwcHeartsRender();
     if (win !== 0) setTimeout(dwcHAuto, 700);
@@ -12851,6 +12942,9 @@ document.addEventListener('DOMContentLoaded', () => {
     st.phase = 'score';
     st.scores = scores;
     dwcHeartsRender();
+    const bestPi = scores.indexOf(Math.min.apply(null, scores));
+    if (moon >= 0) [1, 2, 3].forEach((pi) => dT(() => dwcSeatSay(pi, 'moon', 3200), pi * 700));
+    else [1, 2, 3].forEach((pi, k) => dT(() => dwcSeatSay(pi, pi === bestPi ? 'win' : 'lose', 3200), 500 + k * 900));
     const best = Math.min.apply(null, scores);
     if (scores[0] === best) dT(() => dwcWon('hearts'), 1400);
     else { dwcSay('loseHearts', 5200); dT(() => dwcClose(), 6400); }
@@ -12887,6 +12981,7 @@ document.addEventListener('DOMContentLoaded', () => {
       seat.append(ava, label);
       if (st.phase === 'play' && st.turn === pi && st.trick.filter(Boolean).length < 4) seat.classList.add('dwc-h-turn');
       rail.appendChild(seat);
+      dwcSeatBubbleApply(pi);
     });
     st.felt.appendChild(rail);
     // the trick table
@@ -12948,8 +13043,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // everyone reads their new hand — some reactions are even true
         [1, 2, 3].forEach((pi) => dT(() => {
           const danger = dwcHandDanger(st.hands[pi]);
-          if (danger >= 8) dwcTell(pi, 'worry', 'smug', 2600);
-          else if (danger <= 1) dwcTell(pi, 'smug', 'worry', 2400);
+          if (danger >= 8) { dwcTell(pi, 'worry', 'smug', 2600); dwcSeatSay(pi, Math.random() < DWC_CAST[pi].bluff ? 'handGood' : 'handBad'); }
+          else if (danger <= 1) { dwcTell(pi, 'smug', 'worry', 2400); dwcSeatSay(pi, Math.random() < DWC_CAST[pi].bluff ? 'handBad' : 'handGood'); }
           else dwcTell(pi, 'think', 'idlefake', 2000);
         }, 600 + pi * 420));
         // whoever holds the 2♣ leads

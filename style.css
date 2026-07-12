@@ -11749,3 +11749,34 @@ html[data-theme="dark"].dream-amber .console-btn-eject .console-btn-icon { color
 @media (prefers-reduced-motion: reduce) {
   .dwc-h-ava, .dwc-dealer { animation: none !important; }
 }
+
+/* seat speech bubbles — one thought per pikmin, table takes turns */
+.dwc-h-seat { position: relative; }
+.dwc-seat-bub {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 170px;
+  width: max-content;
+  background: #fff;
+  color: #14020e;
+  border: 2px solid #14020e;
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.5);
+  font-family: var(--font-pixel);
+  font-size: 0.64rem;
+  line-height: 1.35;
+  padding: 4px 7px;
+  z-index: 5;
+  animation: dream-dlg-pop 0.22s ease;
+  pointer-events: none;
+}
+.dwc-seat-bub::after {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  margin-left: -4px;
+  border: 4px solid transparent;
+  border-bottom-color: #14020e;
+}
