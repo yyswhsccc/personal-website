@@ -14444,57 +14444,194 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
 
-  /* ==== v103: WORLD SET-PIECES — each dream's signature moment ====
-     every ~30-40s of clean running (no event, no boss, no nightmare)
-     the world itself performs: bouncing solitaire payouts, bullet time,
-     low-battery rescues… short, loud, and generous. the point is that
-     a first-time visitor trips over ONE of these inside the first
-     minute and texts a friend. */
+  /* ==== v106: WORLD SET-PIECES, VOLUME II — three shows per world ====
+     every ~25-35s of clean running the world takes the stage: 21 distinct
+     set-pieces across 7 worlds, never the same one twice in a row. all of
+     them are GIFTS (rewards, spectacle, tiny harmless pranks) — the point
+     is that a first-timer trips over one inside the first minute and
+     texts a friend. debug: window.__yosGMK.force() */
   function gSlimeBox() {
     return { x: GAME.nm ? GAME.nmPx : G_SLIME_X, y: G_GROUND - G_SLIME_S - GAME.y, w: G_SLIME_S, h: G_SLIME_S };
   }
+  const G_GIMMICKS = {
+    win95: ['w95cards', 'w95hang', 'w95defrag'],
+    scp: ['scpboop', 'scpredact', 'scpvote'],
+    matrix: ['mxbullet', 'mxagent', 'mxrain'],
+    gameboy: ['gbbattery', 'gbwild', 'gbkonami'],
+    geo: ['geocounter', 'georing', 'geomidi'],
+    bsod: ['bscute', 'bscad', 'bsballoon'],
+    amber: ['amcoin', 'amrewind', 'amtrain']
+  };
   function gGimmickStart() {
-    const k = gDreamSkin;
-    const mk = (items, extra) => { GAME.gimmick = Object.assign({ kind: k, t: 0, items }, extra || {}); };
+    const list = G_GIMMICKS[gDreamSkin];
+    if (!list) return;
+    let kind = list[Math.floor(Math.random() * list.length)];
+    if (kind === GAME.lastGimmick && list.length > 1) kind = list[(list.indexOf(kind) + 1) % list.length];
+    GAME.lastGimmick = kind;
+    const mk = (items, extra) => { GAME.gimmick = Object.assign({ kind, t: 0, items: items || [] }, extra || {}); };
     const spread = (n, fn) => Array.from({ length: n }, (v, i) => fn(i));
-    if (k === 'win95') {
-      // SOLITAIRE PAYDAY: the winning cascade bounces through — touch cards for coins
-      mk(spread(6, (i) => ({ x: G_W + 30 + i * 46, y: 24 + (i % 3) * 18, vx: -(2.6 + (i % 3) * 0.5), vy: 1.2, glyph: '♥♦♣♠'[i % 4], got: false })));
-      gToast(['🃏 SOLITAIRE VICTORY!! the cards are bouncing — catch them!!', '🃏 VICTOIRE AU SOLITAIRE !! les cartes rebondissent — attrape-les !!'], 200);
-      playFanfare();
-    } else if (k === 'scp') {
-      // CONTAINMENT BREACH: an anomaly sprints through — boop it for coins
-      mk([{ x: G_W + 24, y: G_GROUND - 34, vx: -4.4, vy: 0, glyph: '🗿', got: false }], { alarm: 1 });
-      gToast(['🚨 CONTAINMENT BREACH!! boop the anomaly to re-contain it ♡', '🚨 BRÈCHE DE CONFINEMENT !! boop l\'anomalie pour la re-confiner ♡'], 200);
-      playTone(392, 'sawtooth', 0.2, 0, 0.06); playTone(311, 'sawtooth', 0.2, 0.22, 0.06);
-    } else if (k === 'matrix') {
-      // BULLET TIME: the world slows; you look incredible
-      mk([], { until: GAME.frame + 190 });
-      setMod('speed', 0.42, 3.2);
-      gToast(['🕶 BULLET TIME. dodge like nobody is rendering you', '🕶 BULLET TIME. esquive comme si personne ne te calculait'], 190);
-      playTone(90, 'sine', 0.5, 0, 0.08);
-    } else if (k === 'gameboy') {
-      // LOW BATTERY: the screen dims — grab the AA to relight it
-      mk([{ x: G_W + 30, y: G_GROUND - 58, vx: -2.4, vy: 0, glyph: '🔋', got: false }], { dim: 1 });
-      gToast(['🔋 LOW BATTERY!! grab the spare AA before the screen fades!!', '🔋 BATTERIE FAIBLE !! attrape la pile AA avant que l\'écran s\'éteigne !!'], 200);
-      playTone(220, 'square', 0.12, 0, 0.05); playTone(180, 'square', 0.14, 0.14, 0.05);
-    } else if (k === 'geo') {
-      // HIT COUNTER ROLLOVER: visitor 10000 — golden digits rain
-      mk(spread(5, (i) => ({ x: G_W + 20 + i * 52, y: 12 + (i % 3) * 14, vx: -(2.1 + (i % 2) * 0.6), vy: 0.9, glyph: String((i * 3) % 10), got: false })));
-      gToast(['🎉 VISITOR №10000!! the hit counter is raining digits!!', '🎉 VISITEUR N°10000 !! le compteur pleut des chiffres !!'], 200);
-      playSparkleSound();
-    } else if (k === 'bsod') {
-      // CUTENESS GATHERING: catch the white ✚ — fill the % that always lied
-      mk(spread(6, (i) => ({ x: G_W + 26 + i * 44, y: 18 + (i % 3) * 16, vx: -(2.2 + (i % 3) * 0.4), vy: 0.8, glyph: '✚', got: false })), { got: 0 });
-      gToast(['💙 collecting cuteness: 0% … help it actually reach 100%!!', '💙 collecte de mignonnerie : 0 % … aide-la à VRAIMENT atteindre 100 % !!'], 200);
-      playTone(523, 'triangle', 0.1, 0, 0.04);
-    } else if (k === 'amber') {
-      // PC LOAD COIN: the printer prints a coin trail right onto the track
-      mk(spread(6, (i) => ({ x: G_W + 30 + i * 34, y: G_GROUND - 22, vx: -3, vy: 0, glyph: '⛁', got: false })), { paper: 1 });
-      gToast(['📠 PC LOAD COIN — the mainframe is printing your paycheck!!', '📠 PC LOAD COIN — le mainframe imprime ta paie !!'], 200);
-      playTone(300, 'square', 0.06, 0, 0.04); playTone(300, 'square', 0.06, 0.1, 0.04);
-    }
+    const F = {
+      /* -------- win95 -------- */
+      w95cards() {
+        mk(spread(6, (i) => ({ x: G_W + 30 + i * 46, y: 24 + (i % 3) * 18, vx: -(2.6 + (i % 3) * 0.5), vy: 1.2, glyph: '♥♦♣♠'[i % 4], got: false })));
+        gToast(['🃏 SOLITAIRE VICTORY!! the cards are bouncing — catch them!!', '🃏 VICTOIRE AU SOLITAIRE !! les cartes rebondissent — attrape-les !!'], 200);
+        playFanfare();
+      },
+      w95hang() {
+        // the OS hangs: every bug on screen freezes mid-thought — shatter for score
+        const frozen = GAME.obs.map((o) => ({ x: o.x, y: o.fly ? G_GROUND - 58 : G_GROUND - o.h, vx: -2.6, vy: 0, glyph: '💠', got: false, score30: 1 }));
+        GAME.obs = [];
+        GAME.spawnIn = Math.max(GAME.spawnIn, 210); // the spawner is Not Responding
+        mk(frozen.length ? frozen : spread(3, (i) => ({ x: G_W + 40 + i * 60, y: G_GROUND - 30, vx: -2.6, vy: 0, glyph: '💠', got: false, score30: 1 })));
+        gToast(['⏳ THE OS HUNG!! the bugs froze mid-thought — shatter them gently ♡', '⏳ L\'OS S\'EST FIGÉ !! les bugs ont gelé en pleine pensée — brise-les doucement ♡'], 210);
+        playTone(220, 'square', 0.16, 0, 0.06); playTone(180, 'square', 0.2, 0.18, 0.07);
+      },
+      w95defrag() {
+        mk(spread(10, (i) => ({ x: G_W + 20 + i * 26, y: G_GROUND - 6, vx: -2.8, vy: 0, tile: i % 3 === 2 ? 'red' : 'cyan', got: false })));
+        gToast(['🧩 DEFRAG PASS!! run the cyan blocks, skip the red fragments!!', '🧩 DÉFRAG EN COURS !! cours sur les blocs cyan, évite les fragments rouges !!'], 200);
+        playTone(400, 'square', 0.08, 0, 0.04); playTone(520, 'square', 0.08, 0.1, 0.04);
+      },
+      /* -------- scp -------- */
+      scpboop() {
+        mk([{ x: G_W + 24, y: G_GROUND - 34, vx: -4.4, vy: 0, glyph: '🗿', got: false }], { alarm: 1 });
+        gToast(['🚨 CONTAINMENT BREACH!! boop the anomaly to re-contain it ♡', '🚨 BRÈCHE DE CONFINEMENT !! boop l\'anomalie pour la re-confiner ♡'], 200);
+        playTone(392, 'sawtooth', 0.2, 0, 0.06); playTone(311, 'sawtooth', 0.2, 0.22, 0.06);
+      },
+      scpredact() {
+        mk(spread(6, (i) => ({ x: G_W + 20 + i * 44, y: -10 - (i % 3) * 12, vx: -2.6, vy: 1.5, stickY: 18 + Math.random() * 42, bar: 1, got: false })));
+        gToast(['⬛ REDACTION RAIN!! pop the censor bars — DECLASSIFY the sky!!', '⬛ PLUIE DE CAVIARDAGE !! éclate les barres noires — DÉCLASSIFIE le ciel !!'], 200);
+        playTone(180, 'square', 0.1, 0, 0.05);
+      },
+      scpvote() {
+        mk(spread(8, (i) => ({ x: G_W + 24 + i * 38, y: 14 + (i % 4) * 12, vx: -(2 + (i % 2) * 0.7), vy: 0.9, yes: i % 3 !== 2, got: false })), { yes: 0, no: 0 });
+        gToast(['🗳 THE O5 COUNCIL IS VOTING ON YOU!! catch the ✓ ballots!!', '🗳 LE CONSEIL O5 VOTE À TON SUJET !! attrape les bulletins ✓ !!'], 200);
+        playTone(523, 'triangle', 0.1, 0, 0.05);
+      },
+      /* -------- matrix -------- */
+      mxbullet() {
+        mk([], { until: GAME.frame + 190 });
+        setMod('speed', 0.42, 3.2);
+        gToast(['🕶 BULLET TIME. dodge like nobody is rendering you', '🕶 BULLET TIME. esquive comme si personne ne te calculait'], 190);
+        playTone(90, 'sine', 0.5, 0, 0.08);
+      },
+      mxagent() {
+        mk([], { clean: 0, prevLives: GAME.lives, chase: 1 });
+        gToast(['🕴 AN AGENT IS CHASING YOU!! clear 3 bugs cleanly and he trips!!', '🕴 UN AGENT TE POURSUIT !! passe 3 bugs proprement et il trébuche !!'], 210);
+        playTone(140, 'sawtooth', 0.18, 0, 0.06);
+      },
+      mxrain() {
+        mk(spread(10, (i) => ({ x: G_W + 18 + i * 34, y: -8 - (i % 5) * 14, vx: -2.4, vy: 1.7, glyph: (i % 2) ? '1' : '0', got: false, coin2: 1 })));
+        gToast(['💚 THE CODE IS RAINING COINS — the simulation is feeling generous', '💚 LE CODE PLEUT DES PIÈCES — la simulation se sent généreuse'], 190);
+        playGlitchSound();
+      },
+      /* -------- gameboy -------- */
+      gbbattery() {
+        mk([{ x: G_W + 30, y: G_GROUND - 58, vx: -2.4, vy: 0, glyph: '🔋', got: false }], { dim: 1 });
+        gToast(['🔋 LOW BATTERY!! grab the spare AA before the screen fades!!', '🔋 BATTERIE FAIBLE !! attrape la pile AA avant que l\'écran s\'éteigne !!'], 200);
+        playTone(220, 'square', 0.12, 0, 0.05); playTone(180, 'square', 0.14, 0.14, 0.05);
+      },
+      gbwild() {
+        mk([], { buddy: 1, chomps: 0, nextChomp: GAME.frame + 80 });
+        gToast(['🐛 a wild BUG joined you!! it eats the other bugs. no questions.', '🐛 un BUG sauvage te rejoint !! il mange les autres bugs. sans commentaire.'], 210);
+        playTone(660, 'square', 0.08, 0, 0.04); playTone(880, 'square', 0.08, 0.1, 0.04);
+      },
+      gbkonami() {
+        const SEQ = ['↑', '↑', '↓', '↓', '←', '→', '←', '→', 'B', 'A'];
+        mk(SEQ.map((g, i) => ({ x: G_W + 26 + i * 34, y: 24 + Math.sin(i * 0.9) * 12, vx: -2.6, vy: 0, glyph: g, got: false })), { need6: 1 });
+        gToast(['🌟 THE OLD CODE streaks across the sky — collect 6 of 10!!', '🌟 LE VIEUX CODE traverse le ciel — attrape 6 glyphes sur 10 !!'], 200);
+        playSparkleSound();
+      },
+      /* -------- geo -------- */
+      geocounter() {
+        mk(spread(5, (i) => ({ x: G_W + 20 + i * 52, y: 12 + (i % 3) * 14, vx: -(2.1 + (i % 2) * 0.6), vy: 0.9, glyph: String((i * 3) % 10), got: false })));
+        gToast(['🎉 VISITOR №10000!! the hit counter is raining digits!!', '🎉 VISITEUR N°10000 !! le compteur pleut des chiffres !!'], 200);
+        playSparkleSound();
+      },
+      georing() {
+        mk([{ x: G_W + 40, y: G_GROUND - 36, vx: -2.6, vy: 0, glyph: '◎', got: false, ring: 1 }]);
+        gToast(['🔗 A WEBRING PORTAL!! jump through — the next site awaits!!', '🔗 UN PORTAIL WEBRING !! saute dedans — le site suivant t\'attend !!'], 200);
+        playTone(700, 'triangle', 0.12, 0, 0.05); playTone(1040, 'triangle', 0.12, 0.14, 0.05);
+      },
+      geomidi() {
+        mk(spread(5, (i) => ({ x: G_W + 26 + i * 44, y: G_GROUND - 40 - (i % 3) * 16, vx: -2.5, vy: 0, glyph: '♪', got: false, note: i })), { notes: 0 });
+        gToast(['🎼 THE PAGE MIDI ESCAPED!! catch the notes — finish the song!!', '🎼 LE MIDI DE LA PAGE S\'EST ÉCHAPPÉ !! attrape les notes — finis la chanson !!'], 200);
+        playTone(523, 'square', 0.09, 0, 0.04);
+      },
+      /* -------- bsod -------- */
+      bscute() {
+        mk(spread(6, (i) => ({ x: G_W + 26 + i * 44, y: 18 + (i % 3) * 16, vx: -(2.2 + (i % 3) * 0.4), vy: 0.8, glyph: '✚', got: false })), { got: 0 });
+        gToast(['💙 collecting cuteness: 0% … help it actually reach 100%!!', '💙 collecte de mignonnerie : 0 % … aide-la à VRAIMENT atteindre 100 % !!'], 200);
+        playTone(523, 'triangle', 0.1, 0, 0.04);
+      },
+      bscad() {
+        const KEYS = ['CTRL', 'ALT', 'DEL'];
+        mk(KEYS.map((k, i) => ({ x: G_W + 40 + i * 110, y: 16, vx: -2.6, vy: 1.1, stickY: 30 + i * 14, key: k, got: false })), { keys: 0 });
+        gToast(['⌨ THE THREE KEYS ARE FALLING!! press them all — open task manager!!', '⌨ LES TROIS TOUCHES TOMBENT !! attrape-les toutes — ouvre le gestionnaire !!'], 210);
+        playTone(330, 'square', 0.1, 0, 0.05);
+      },
+      bsballoon() {
+        mk(spread(5, (i) => ({ x: G_W * 0.25 + i * (G_W * 0.14), y: AR_H_UNUSED_GUARD(), vx: -1.2, vy: -(0.7 + (i % 3) * 0.25), glyph: ':(', got: false, sway: i })), {});
+        gToast(['🎈 SAD BALLOONS!! boop them — every frown flips at altitude ♡', '🎈 BALLONS TRISTES !! boop-les — chaque moue se retourne en altitude ♡'], 200);
+        playTone(392, 'triangle', 0.12, 0, 0.05);
+      },
+      /* -------- amber -------- */
+      amcoin() {
+        mk(spread(6, (i) => ({ x: G_W + 30 + i * 34, y: G_GROUND - 22, vx: -3, vy: 0, glyph: '⛁', got: false })), { paper: 1 });
+        gToast(['📠 PC LOAD COIN — the mainframe is printing your paycheck!!', '📠 PC LOAD COIN — le mainframe imprime ta paie !!'], 200);
+        playTone(300, 'square', 0.06, 0, 0.04); playTone(300, 'square', 0.06, 0.1, 0.04);
+      },
+      amrewind() {
+        // the reel unspools your mistakes: bugs fly BACKWARD off the tape,
+        // coins condense where they stood
+        const coins = GAME.obs.map((o) => ({ x: o.x, y: G_GROUND - 24, vx: -2.6, vy: 0, glyph: '⛁', got: false }));
+        const ghosts = GAME.obs.map((o) => ({ x: o.x, y: o.fly ? G_GROUND - 58 : G_GROUND - o.h, vx: 6, vy: -0.4, glyph: '▚', got: true, ghost: 1 }));
+        GAME.obs = [];
+        GAME.spawnIn = Math.max(GAME.spawnIn, 190);
+        mk(coins.concat(ghosts).length ? coins.concat(ghosts) : spread(4, (i) => ({ x: G_W + 30 + i * 40, y: G_GROUND - 24, vx: -2.6, vy: 0, glyph: '⛁', got: false })), { reel: 1 });
+        gToast(['⏪ TAPE REWIND!! the mainframe unspools your mistakes into coins', '⏪ REMBOBINAGE !! le mainframe déroule tes erreurs en pièces'], 210);
+        playTone(500, 'sawtooth', 0.28, 0, 0.05); playTone(340, 'sawtooth', 0.22, 0.3, 0.05);
+      },
+      amtrain() {
+        mk(spread(6, (i) => ({ x: G_W + 30 + i * 30, y: G_GROUND - 52, vx: -2.8, vy: 0, card: 1, got: false })), { punched: 0 });
+        gToast(['🎫 PUNCH-CARD TRAIN!! punch every hole — complete the batch job!!', '🎫 TRAIN DE CARTES PERFORÉES !! poinçonne-les toutes — finis le batch !!'], 200);
+        playTone(300, 'square', 0.07, 0, 0.04); playTone(360, 'square', 0.07, 0.09, 0.04);
+      }
+    };
+    // bsballoon spawns from the floor — patch its y inline (helper keeps the literal tidy)
+    function AR_H_UNUSED_GUARD() { return G_H + 6; }
+    if (F[kind]) F[kind]();
   }
+
+  /* v106: the world keeps up a commentary — two milestones per run,
+     voiced by whoever runs the place */
+  const G_MILESTONES = {
+    win95: [[600, ['📎 it looks like you\'re SCORING. would you like help with that?', '📎 on dirait que tu SCORES. veux-tu de l\'aide pour ça ?']],
+            [1600, ['🖥 640K points ought to be enough for anybody. you kept going.', '🖥 640K points devraient suffire à tout le monde. tu as continué.']]],
+    scp: [[600, ['📋 addendum: subject is FAST. recommend more cardio for the guards.', '📋 addendum : le sujet est RAPIDE. plus de cardio pour les gardes.']],
+          [1600, ['🔺 O5 vote, 7-0: reclassified as APOLLYON-CUTE.', '🔺 vote O5, 7-0 : reclassé APOLLYON-MIGNON.']]],
+    matrix: [[600, ['🕶 you\'re beginning to believe.', '🕶 tu commences à y croire.']],
+             [1600, ['🥄 the spoon called. it apologized.', '🥄 la cuillère a appelé. elle s\'excuse.']]],
+    gameboy: [[600, ['🔋 the battery light blinked. in RESPECT.', '🔋 le voyant de pile a clignoté. par RESPECT.']],
+              [1600, ['⏰ mom says five more minutes. mom has said this four times.', '⏰ maman dit encore cinq minutes. pour la quatrième fois.']]],
+    geo: [[600, ['📟 the hit counter rolled over AGAIN. suspicious. wonderful.', '📟 le compteur a encore débordé. suspect. merveilleux.']],
+          [1600, ['🌟 your run won BEST OF THE WEB 1998. in a dream. it counts.', '🌟 ta course a gagné BEST OF THE WEB 1998. en rêve. ça compte.']]],
+    bsod: [[600, ['💙 cuteness collected: 600%. the bar lied UPWARD for once.', '💙 mignonnerie : 600 %. la barre a menti VERS LE HAUT pour une fois.']],
+           [1600, ['🛠 windows found a solution to your problem: you. you are the solution.', '🛠 windows a trouvé la solution à ton problème : toi. c\'est toi la solution.']]],
+    amber: [[600, ['📠 the printer printed your score. three metres of paper. so proud.', '📠 l\'imprimante a imprimé ton score. trois mètres de papier. si fière.']],
+            [1600, ['🧮 COBOL called: it wants you on the team. retirement package included.', '🧮 COBOL a appelé : il te veut dans l\'équipe. retraite incluse.']]]
+  };
+  function gMilestoneTick() {
+    if (!gDreamSkin || !G_MILESTONES[gDreamSkin]) return;
+    if (!GAME.msHit) GAME.msHit = {};
+    G_MILESTONES[gDreamSkin].forEach(([at, line], i) => {
+      if (!GAME.msHit[i] && GAME.score >= at) {
+        GAME.msHit[i] = 1;
+        gToast(line, 230);
+        playTone(880, 'triangle', 0.1, 0, 0.04); playTone(1174, 'triangle', 0.1, 0.12, 0.04);
+      }
+    });
+  }
+
   function gGimmickTick() {
     if (!gDreamSkin) { GAME.gimmick = null; return; }
     if (!GAME.gimmick) {
@@ -14505,51 +14642,182 @@ document.addEventListener('DOMContentLoaded', () => {
     const g = GAME.gimmick;
     g.t++;
     const sb = gSlimeBox();
+
+    /* stateful shows without item fields */
+    if (g.chase) { // mxagent: he runs, you dodge, a cat intervenes
+      if (GAME.lives < g.prevLives) {
+        gToast(['🕴 he caught up… and filed PAPERWORK. -20 score. so much paperwork.', '🕴 il t\'a rattrapé… et a rempli DES FORMULAIRES. -20 points.'], 190);
+        fxScore(-20); GAME.gimmick = null;
+      } else {
+        GAME.obs.forEach((o) => { if (!o._agentSeen && o.x + o.w < sb.x) { o._agentSeen = 1; g.clean++; playTone(700 + g.clean * 120, 'square', 0.05, 0, 0.03); } });
+        if (g.clean >= 3) {
+          gToast(['🐈‍⬛ the agent TRIPPED over a black cat. it was always the cat. +80', '🐈‍⬛ l\'agent a TRÉBUCHÉ sur un chat noir. c\'était toujours le chat. +80'], 210);
+          fxScore(80); playFanfare(); GAME.gimmick = null;
+        } else if (g.t > 60 * 12) {
+          gToast(['🕴 the agent gave up and expensed the taxi. +20 severance', '🕴 l\'agent abandonne et met le taxi en note de frais. +20'], 180);
+          fxScore(20); GAME.gimmick = null;
+        }
+      }
+      if (!GAME.gimmick) GAME.nextGimmickAt = GAME.frame + 1400 + (gStateHash('gmk' + GAME.frame) % 700);
+      return;
+    }
+    if (g.buddy) { // gbwild: the bug that eats bugs
+      if (GAME.frame >= g.nextChomp) {
+        const ahead = GAME.obs.filter((o) => o.x > sb.x + 20 && o.x < sb.x + 280);
+        if (ahead.length) {
+          const o = ahead[0];
+          GAME.obs.splice(GAME.obs.indexOf(o), 1);
+          g.chomps++;
+          for (let i = 0; i < 5; i++) GAME.sparks.push({ x: o.x + 6, y: G_GROUND - 12, vx: (Math.random() - 0.4) * 3, vy: -Math.random() * 3, life: 18 });
+          playTone(520 - g.chomps * 30, 'square', 0.07, 0, 0.05);
+          g.nextChomp = GAME.frame + 95;
+        } else g.nextChomp = GAME.frame + 30;
+      }
+      if (g.t > 60 * 9) {
+        gToast([`🐛 it waves goodbye. bugs eaten: ${g.chomps}. it kept one as a souvenir. +20`, `🐛 il te fait coucou. bugs mangés : ${g.chomps}. il en garde un en souvenir. +20`], 200);
+        fxScore(20); GAME.gimmick = null;
+        GAME.nextGimmickAt = GAME.frame + 1400 + (gStateHash('gmk' + GAME.frame) % 700);
+      }
+      return;
+    }
+
+    /* item shows */
     let alive = false;
     g.items.forEach((it) => {
-      if (it.got) return;
-      it.x += it.vx * (gDreamSkin === 'matrix' ? 1 : modVal('speed'));
-      it.y += it.vy;
-      if (it.vy && it.y > G_GROUND - 26) { it.y = G_GROUND - 26; it.vy = -Math.abs(it.vy) * 0.8; } // cards bounce
-      else if (it.vy) it.vy += 0.06;
-      if (it.x > -30) alive = true;
-      // generous pickup box — set-pieces are gifts, not exams
-      if (it.x < sb.x + sb.w + 6 && it.x + 22 > sb.x - 6 && it.y < sb.y + sb.h + 8 && it.y + 22 > sb.y - 8) {
+      if (it.got) { if (it.ghost && it.x < G_W + 40) { it.x += it.vx; it.y += it.vy; alive = true; } return; }
+      it.x += it.vx * (gDreamSkin === 'matrix' && g.until ? 1 : modVal('speed'));
+      if (it.stickY != null && it.y >= it.stickY) { it.vy = 0; it.y = it.stickY; }
+      else it.y += it.vy;
+      if (it.sway != null) it.x += Math.sin((g.t + it.sway * 20) * 0.06) * 0.5;
+      if (it.vy && !it.stickY && it.y > G_GROUND - 26 && it.glyph && '♥♦♣♠'.indexOf(it.glyph) >= 0) { it.y = G_GROUND - 26; it.vy = -Math.abs(it.vy) * 0.8; }
+      else if (it.vy > 0 && !it.stickY) it.vy += 0.05;
+      if (it.x > -30 && it.y > -20 && it.y < G_H + 20) alive = true;
+      const iw = it.bar ? 34 : it.key ? 30 : it.card ? 22 : 22;
+      if (it.x < sb.x + sb.w + 6 && it.x + iw > sb.x - 6 && it.y < sb.y + sb.h + 8 && it.y + 20 > sb.y - 8) {
         it.got = true;
         playSparkleSound();
-        if (g.kind === 'win95') { fxCoins(3); fxScore(15); }
-        else if (g.kind === 'scp') { fxCoins(6); fxScore(60); gToast(['🗿 RE-CONTAINED (by boop). the Foundation thanks you ♡', '🗿 RE-CONFINÉE (par boop). la Fondation te remercie ♡'], 170); }
-        else if (g.kind === 'gameboy') { fxCoins(8); fxScore(40); g.dim = 0; gToast(['🔋 +1 AA!! the backlight LIVES (there was never a backlight)', '🔋 +1 pile AA !! le rétroéclairage VIT (il n\'y en a jamais eu)'], 180); }
-        else if (g.kind === 'geo') { fxCoins(2); fxScore(20); }
-        else if (g.kind === 'bsod') { fxCoins(2); g.got++; if (g.got >= 4) { fxFever(5); gToast(['💙 cuteness: 100% — for once it did NOT lie ♡', '💙 mignonnerie : 100 % — pour une fois ça ne mentait pas ♡'], 200); g.got = -99; } }
-        else if (g.kind === 'amber') { fxCoins(2); playTone(300 + g.t, 'square', 0.04, 0, 0.03); }
+        if (it.score30) { fxScore(30); }
+        else if (it.coin2) { fxCoins(2); }
+        else if (it.tile) { if (it.tile === 'cyan') fxCoins(2); else { setMod('speed', 0.75, 0.8); playTone(160, 'square', 0.08, 0, 0.05); } }
+        else if (it.bar) { fxScore(15); gToast(['⬛→📄 DECLASSIFIED!!', '⬛→📄 DÉCLASSIFIÉ !!'], 90); }
+        else if (g.kind === 'scpvote') { if (it.yes) { g.yes++; fxCoins(3); } else { g.no++; fxScore(-10); playTone(180, 'square', 0.07, 0, 0.04); } }
+        else if (it.ring) {
+          GAME.obs = [];
+          fxInvincible(2);
+          for (let i = 0; i < 14; i++) GAME.sparks.push({ x: sb.x + 10, y: sb.y + 10, vx: (Math.random() - 0.5) * 5, vy: (Math.random() - 0.7) * 4, life: 26 });
+          gToast(['🔗 WEBRING JUMP!! welcome to the next site — it is ALSO about slimes ♡', '🔗 SAUT DE WEBRING !! bienvenue sur le site suivant — il parle AUSSI de slimes ♡'], 220);
+        }
+        else if (it.note != null) { g.notes++; fxCoins(2); playTone(523 * Math.pow(2, it.note / 6), 'square', 0.12, 0, 0.05); }
+        else if (it.key) { g.keys++; fxScore(10); playTone(330 + g.keys * 110, 'square', 0.09, 0, 0.05); }
+        else if (it.glyph === ':(') { it.got = true; fxCoins(3); it.glyph = ':)'; it.ghost = 1; it.vy = -2; playTone(880, 'triangle', 0.09, 0, 0.04); }
+        else if (g.kind === 'gbkonami') { fxScore(5); g.gotN = (g.gotN || 0) + 1; }
+        else if (g.kind === 'w95cards') { fxCoins(3); fxScore(15); }
+        else if (g.kind === 'scpboop') { fxCoins(6); fxScore(60); gToast(['🗿 RE-CONTAINED (by boop). the Foundation thanks you ♡', '🗿 RE-CONFINÉE (par boop). la Fondation te remercie ♡'], 170); }
+        else if (g.kind === 'gbbattery') { fxCoins(8); fxScore(40); g.dim = 0; gToast(['🔋 +1 AA!! the backlight LIVES (there was never a backlight)', '🔋 +1 pile AA !! le rétroéclairage VIT (il n\'y en a jamais eu)'], 180); }
+        else if (g.kind === 'geocounter') { fxCoins(2); fxScore(20); }
+        else if (g.kind === 'bscute') { fxCoins(2); g.got++; if (g.got >= 4) { fxFever(5); gToast(['💙 cuteness: 100% — for once it did NOT lie ♡', '💙 mignonnerie : 100 % — pour une fois ça ne mentait pas ♡'], 200); g.got = -99; } }
+        else if (g.kind === 'amcoin' || g.kind === 'amrewind') { fxCoins(2); playTone(300 + g.t, 'square', 0.04, 0, 0.03); }
+        else if (it.card) { g.punched++; fxCoins(2); playTone(260 + g.punched * 40, 'square', 0.06, 0, 0.04); }
       }
     });
+    /* endings with a bow on top */
+    const endShow = () => {
+      if (g.kind === 'scpvote' && (g.yes || g.no)) {
+        const passed = g.yes >= g.no;
+        gToast([`🗳 O5 vote: ${g.yes}✓–${g.no}✗ — ${passed ? 'motion passes: you are officially ADORABLE' : 'motion tabled. the council demands a re-run ♡'}`,
+                `🗳 vote O5 : ${g.yes}✓–${g.no}✗ — ${passed ? 'motion adoptée : tu es officiellement ADORABLE' : 'motion reportée. le conseil exige une revanche ♡'}`], 220);
+        if (passed) fxScore(40);
+      } else if (g.kind === 'gbkonami') {
+        if ((g.gotN || 0) >= 6) { fxLife(1); gToast(['🌟 30 LIVES!! (adjusted for inflation: +1 ♥)', '🌟 30 VIES !! (ajusté à l\'inflation : +1 ♥)'], 220); playFanfare(); }
+        else gToast(['🌟 the code faded… the old ways demand 6 glyphs', '🌟 le code s\'efface… l\'ancienne méthode exige 6 glyphes'], 170);
+      } else if (g.kind === 'geomidi') {
+        if (g.notes >= 5) { fxFever(3); [0, 4, 7, 12, 7, 12].forEach((n, i) => playTone(523 * Math.pow(2, n / 12), 'square', 0.14, i * 0.12, 0.05)); gToast(['🎼 SONG COMPLETE!! the page midi plays at FULL volume, as intended', '🎼 CHANSON FINIE !! le midi de la page joue à PLEIN volume, comme prévu'], 220); }
+      } else if (g.kind === 'bscad') {
+        if (g.keys >= 3) { fxClearBugs(); fxFever(5); gToast(['⌨ TASK MANAGER: bugs.exe → END TASK ♡', '⌨ GESTIONNAIRE : bugs.exe → FIN DE TÂCHE ♡'], 220); playFanfare(); }
+        else if (g.keys > 0) gToast(['⌨ two-finger salute… it needs all THREE keys, always has', '⌨ salut à deux doigts… il faut les TROIS touches, depuis toujours'], 180);
+      } else if (g.kind === 'w95defrag') {
+        gToast(['🧩 defrag complete. your disk feels SO organized ♡', '🧩 défrag terminée. ton disque se sent TELLEMENT rangé ♡'], 180);
+      } else if (g.kind === 'amtrain' && g.punched >= 6) {
+        fxScore(60); gToast(['🎫 JOB COMPLETE. output: love. the mainframe hums approvingly', '🎫 JOB TERMINÉ. sortie : de l\'amour. le mainframe ronronne'], 210);
+      }
+    };
     if (g.until) { if (GAME.frame >= g.until) { fxScore(40); GAME.gimmick = null; } }
-    else if (!alive || g.t > 420) GAME.gimmick = null;
-    if (!GAME.gimmick) GAME.nextGimmickAt = GAME.frame + 1700 + (gStateHash('gmk' + GAME.frame) % 700);
+    else if (!alive || g.t > 480) { endShow(); GAME.gimmick = null; }
+    if (!GAME.gimmick) GAME.nextGimmickAt = GAME.frame + 1400 + (gStateHash('gmk' + GAME.frame) % 700);
   }
   function gDrawGimmick(g2) {
     const g = GAME.gimmick;
     if (!g) return;
-    if (g.alarm && (g.t >> 4) % 2) { // breach: the edges pulse hazard-red
+    if (g.alarm && (g.t >> 4) % 2) {
       g2.fillStyle = 'rgba(198, 40, 40, 0.18)';
       g2.fillRect(0, 0, G_W, 5); g2.fillRect(0, G_H - 5, G_W, 5);
     }
-    if (g.dim) { // low battery: the DMG panel fades toward nap
+    if (g.dim) {
       g2.fillStyle = 'rgba(15, 56, 15, ' + Math.min(0.42, g.t / 400) + ')';
       g2.fillRect(0, 0, G_W, G_H);
     }
-    if (g.kind === 'matrix') { // afterimages while time crawls
+    if (g.kind === 'mxbullet') {
       g2.fillStyle = 'rgba(61, 255, 124, 0.2)';
       const sb = gSlimeBox();
       g2.fillRect(sb.x - 12, sb.y + 4, sb.w, sb.h - 4);
       g2.fillRect(sb.x - 22, sb.y + 8, sb.w, sb.h - 8);
       return;
     }
+    if (g.chase) { // the agent, jogging with intent
+      const sb = gSlimeBox();
+      g2.font = '17px sans-serif';
+      g2.fillText('🕴', sb.x - 34, G_GROUND - 4 - Math.abs(Math.sin(g.t * 0.2)) * 5);
+      g2.font = "8px 'Jersey 25', 'VT323', monospace";
+      g2.fillStyle = gLite(gTheme.pink);
+      g2.fillText('dodged ' + g.clean + '/3', sb.x - 44, G_GROUND - 26);
+      return;
+    }
+    if (g.buddy) { // the wild bug, keeping pace
+      const sb = gSlimeBox();
+      g2.font = '15px sans-serif';
+      g2.fillText('🐛', sb.x - 24, sb.y + sb.h - 2 - Math.abs(Math.sin(g.t * 0.25)) * 4);
+      return;
+    }
+    if (g.reel && g.t < 90) { // the rewind reel spins stage-left
+      g2.font = '20px sans-serif';
+      g2.save();
+      g2.translate(30, 26);
+      g2.rotate(-g.t * 0.2);
+      g2.fillText('☸', -8, 7);
+      g2.restore();
+    }
     g.items.forEach((it) => {
-      if (it.got || it.x < -30) return;
-      if (g.kind === 'win95') { // proper little cards
+      if ((it.got && !it.ghost) || it.x < -30) return;
+      if (it.tile) {
+        g2.fillStyle = it.tile === 'cyan' ? gLite('#41e0ff') : '#d9622b';
+        g2.fillRect(it.x, it.y, 20, 5);
+        return;
+      }
+      if (it.bar) {
+        g2.fillStyle = '#0a0a0d';
+        g2.fillRect(it.x, it.y, 34, 9);
+        g2.fillStyle = '#e8eaee';
+        g2.font = "7px 'Jersey 25', 'VT323', monospace";
+        g2.fillText('████', it.x + 4, it.y + 7);
+        return;
+      }
+      if (it.key) {
+        g2.fillStyle = '#dfe6ff';
+        g2.fillRect(it.x, it.y, 30, 16);
+        g2.strokeStyle = '#8ab4ff'; g2.strokeRect(it.x + 0.5, it.y + 0.5, 29, 15);
+        g2.fillStyle = '#0a23a8';
+        g2.font = "8px 'Jersey 25', 'VT323', monospace";
+        g2.fillText(it.key, it.x + 4, it.y + 11);
+        return;
+      }
+      if (it.card) {
+        g2.fillStyle = '#f4e4bc';
+        g2.fillRect(it.x, it.y, 22, 14);
+        g2.fillStyle = '#0d0800';
+        for (let hx = 0; hx < 3; hx++) g2.fillRect(it.x + 3 + hx * 6, it.y + (it.got ? 3 : 5), 3, it.got ? 8 : 3);
+        return;
+      }
+      if (g.kind === 'w95cards' || g.kind === 'w95hang' ? it.glyph && '♥♦♣♠'.indexOf(it.glyph) >= 0 : false) {
         g2.fillStyle = '#ffffff';
         g2.fillRect(it.x, it.y, 16, 22);
         g2.strokeStyle = gDreamColor('#000080');
@@ -14557,13 +14825,24 @@ document.addEventListener('DOMContentLoaded', () => {
         g2.fillStyle = ('♥♦'.indexOf(it.glyph) >= 0) ? '#d40000' : '#14020e';
         g2.font = "11px 'Jersey 25', 'VT323', monospace";
         g2.fillText(it.glyph, it.x + 4, it.y + 15);
-      } else {
-        g2.font = "16px 'Jersey 25', 'VT323', monospace";
-        g2.fillStyle = g.kind === 'geo' ? '#ffd23f' : g.kind === 'bsod' ? '#ffffff' : g.kind === 'amber' ? '#ffb000' : '#ffe6f4';
-        g2.fillText(it.glyph, it.x, it.y + 14);
+        return;
       }
+      if (g.kind === 'scpvote') {
+        g2.font = "13px 'Jersey 25', 'VT323', monospace";
+        g2.fillStyle = it.yes ? gLite('#57c689') : '#c62828';
+        g2.fillText(it.yes ? '✓' : '✗', it.x, it.y + 12);
+        return;
+      }
+      g2.font = "16px 'Jersey 25', 'VT323', monospace";
+      g2.fillStyle = g.kind === 'geocounter' ? '#ffd23f'
+        : g.kind === 'bscute' || g.kind === 'bsballoon' ? '#ffffff'
+        : g.kind === 'amcoin' || g.kind === 'amrewind' ? '#ffb000'
+        : g.kind === 'mxrain' ? '#3dff7c'
+        : g.kind === 'gbkonami' ? gLite('#9bbc0f')
+        : '#ffe6f4';
+      g2.fillText(it.glyph, it.x, it.y + 14);
     });
-    if (g.kind === 'bsod' && g.got >= 0) { // the honest progress bar
+    if (g.kind === 'bscute' && g.got >= 0) {
       g2.fillStyle = 'rgba(255,255,255,0.8)';
       g2.font = "10px 'Jersey 25', 'VT323', monospace";
       g2.fillText('cuteness: ' + Math.min(100, g.got * 25) + '%', G_W / 2 - 30, 14);
@@ -14675,7 +14954,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function gReset() {
-    GAME.gimmick = null; GAME.nextGimmickAt = 0; // fresh run, fresh set-pieces
+    GAME.gimmick = null; GAME.nextGimmickAt = 0; GAME.lastGimmick = null; GAME.msHit = null; // fresh run, fresh show
     GAME.obs = [];
     GAME.speed = 3.4;
     GAME.score = 0;
@@ -15408,6 +15687,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ---- BOSS WAVE: a 404 kaiju + a heart-wand power-up ----
     if (gLive()) {
       gGimmickTick(); // the world's own set-pieces run between bosses
+      if (GAME.frame % 30 === 0) gMilestoneTick(); // and it comments on your form
       if (!GAME.boss && !GAME.nm && GAME.score >= GAME.nextBossAt) {
         const kinds = [
           { kind: 'kaiju', hp: 5, name: ['!! 404 KAIJU !!  grab the wand ♥', '!! KAIJU 404 !!  prends la baguette ♥'] },
@@ -15462,14 +15742,25 @@ document.addEventListener('DOMContentLoaded', () => {
         const bossTarget = GAME.boss && !GAME.boss.leaving;
         const bugTarget = GAME.obs.some((o) => o.x > G_SLIME_X && o.x < G_SLIME_X + 240);
         if (bossTarget || bugTarget) {
-          GAME.shots.push({ x: G_SLIME_X + G_SLIME_S - 4, y: G_GROUND - G_SLIME_S - GAME.y + 8 });
-          playTone(modActive('uwu') ? 1760 : 1046, 'triangle', 0.06, 0, 0.04);
+          const sx = G_SLIME_X + G_SLIME_S - 4, sy = G_GROUND - G_SLIME_S - GAME.y + 8;
+          // v106: dream weapons have SCHOOLS — the badge's silhouette decides
+          // how it shoots. blasters twin-fire, wands weave, blades punch through.
+          const pk = GAME.weapon.pixKind;
+          const school = !pk ? null
+            : (pk === 'blaster' || pk === 'cannon' || pk === 'straw') ? 'twin'
+            : (pk === 'wand' || pk === 'staff' || pk === 'pickaxe') ? 'arc' : 'pierce';
+          if (school === 'twin') { GAME.shots.push({ x: sx, y: sy - 7 }); GAME.shots.push({ x: sx, y: sy + 7 }); }
+          else if (school === 'arc') GAME.shots.push({ x: sx, y: sy, arc: GAME.frame });
+          else if (school === 'pierce') GAME.shots.push({ x: sx, y: sy, pierce: 2 });
+          else GAME.shots.push({ x: sx, y: sy });
+          playTone(modActive('uwu') ? 1760 : (school === 'pierce' ? 740 : 1046), 'triangle', 0.06, 0, 0.04);
         }
       }
 
       GAME.shots.forEach((sh) => {
-        sh.x += 6.5;
+        sh.x += sh.pierce ? 5.2 : 6.5; // heavy rounds travel with intent
         if (GAME.boss) sh.y += ((GAME.boss.y + 15) - sh.y) * 0.09;
+        else if (sh.arc != null) sh.y += Math.sin((GAME.frame - sh.arc) * 0.24) * 1.9;
       });
 
       // shots also squash regular bugs (+5 each)
@@ -15478,10 +15769,12 @@ document.addEventListener('DOMContentLoaded', () => {
           const o = GAME.obs[oi];
           const oy = o.fly ? G_GROUND - 58 : G_GROUND - o.h - (o.jy || 0);
           const oh = o.fly ? 16 : o.h;
-          if (sh.x > o.x && sh.x < o.x + o.w && sh.y > oy - 4 && sh.y < oy + oh + 4) {
+          const pad = sh.pierce ? 7 : 4; // heavy rounds have presence
+          if (sh.x > o.x - (pad - 4) && sh.x < o.x + o.w + (pad - 4) && sh.y > oy - pad && sh.y < oy + oh + pad) {
             GAME.obs.splice(oi, 1);
             GAME.score += 5;
             for (let i = 0; i < 4; i++) GAME.sparks.push({ x: sh.x, y: sh.y, vx: (Math.random() - 0.3) * 3, vy: (Math.random() - 0.6) * 3, life: 16 });
+            if (sh.pierce && --sh.pierce > 0) { oi--; continue; } // straight through, next victim
             return false;
           }
         }
@@ -17268,7 +17561,7 @@ document.addEventListener('DOMContentLoaded', () => {
         { icon: "🧱", price: 8, name: ["3D maze screensaver", "écran de veille labyrinthe 3D"], out: { t: ["8s untouchable: the bugs get lost in the maze looking for you", "8 s intouchable : les bugs se perdent dans le labyrinthe en te cherchant"], fx: () => fxInvincible(8) } },
         { icon: "🃏", price: 9, name: ["solitaire victory cannon", "canon solitaire victorieux"], out: { t: ["equipped! every defeated bug does the winning-card cascade", "équipé ! chaque bug vaincu fait la cascade de cartes gagnante"], fx: () => gGiveWeapon("retro_solitaire_cannon", false) } },
         { icon: "🖱️", price: 11, name: ["✨ 10,000 FREE CURSORS ✨", "✨ 10 000 CURSEURS GRATUITS ✨"], trap: true, out: { t: ["they all self-install. you are now 30% toolbar by weight. +10 style", "tout s'installe tout seul. tu es maintenant 30 % barre d'outils. +10 style"], fx: () => { setMod('size', 1.3, 12); fxScore(10); } } }
-    ] },
+    ], limited: { icon: '💾', price: 999, name: ["THE UNIVERSE SOURCE CODE (47 floppies)", "LE CODE SOURCE DE L'UNIVERS (47 disquettes)"], out: { t: ["disk 23 is missing but it RUNS. reality: patched. (fever 10s, shield 8s, +100)", "la disquette 23 manque mais ÇA TOURNE. réalité : patchée. (fièvre 10 s, bouclier 8 s, +100)"], fx: () => { fxFever(10); fxInvincible(8); fxScore(100); } } } },
     bosses: { kaiju: { name: ["the Blue Screen Behemoth", "le Béhémoth Écran Bleu"], belly: "FATAL 0E" }, conflict: { name: ["OK vs Cancel", "OK contre Annuler"], shout: "ABORT RETRY FAIL" }, cookie: { name: ["the Shareware Nag (day 847 of 30)", "le Nagware (jour 847 sur 30)"], text: "TRIAL EXPIRED!", button: "BUY" } }
   },
   "scp": {
@@ -17294,7 +17587,7 @@ document.addEventListener('DOMContentLoaded', () => {
         { icon: "🫀", price: 14, name: ["spare heart (donor: [REDACTED])", "cœur de rechange (donneur : [CENSURÉ])"], out: { t: ["+1 ♥. don't ask questions. it can't either", "+1 ♥. pose pas de questions. lui non plus"], fx: () => fxLife(1) } },
         { icon: "🖍️", price: 9, name: ["redaction marker ██ (surplus)", "marqueur ██ (surplus)"], out: { t: ["equipped! bugs are now a clerical error", "équipé ! les bugs sont désormais une erreur administrative"], fx: () => gGiveWeapon("scp_redaction_marker", false) } },
         { icon: "☢️", price: 11, name: ["✨ AUTHENTIC KETER CORE ✨", "✨ NOYAU KETER AUTHENTIQUE ✨"], trap: true, out: { t: ["it's a fire alarm. the bugs heard it. they run faster now. toward you", "c'est une alarme incendie. les bugs l'ont entendue. ils accélèrent. vers toi"], fx: () => setMod('speed', 1.22, 12) } }
-    ] },
+    ], limited: { icon: '🪪', price: 999, name: ["O5 CLEARANCE BADGE (laminated, warm)", "BADGE O5 (plastifié, encore chaud)"], out: { t: ["doors you didn't know existed apologize and open. (+1 ♥, bugs cleared, luck ×1.6)", "des portes inconnues s'excusent et s'ouvrent. (+1 ♥, bugs purgés, chance ×1,6)"], fx: () => { fxLife(1); fxClearBugs(); setMod('luck', 1.6, 45); } } } },
     bosses: { kaiju: { name: ["SCP-682, the hard-to-jog-past reptile", "SCP-682, le reptile difficile à dépasser"], belly: "SCP-682" }, conflict: { name: ["[REDACTED] vs [DATA EXPUNGED]", "[CENSURÉ] contre [DONNÉES SUPPRIMÉES]"], shout: "[DATA EXPUNGED]" }, cookie: { name: ["the mandatory amnestic banner", "la bannière d'amnésiques obligatoire"], text: "💊 AMNESTICS?", button: "GULP" } }
   },
   "matrix": {
@@ -17320,7 +17613,7 @@ document.addEventListener('DOMContentLoaded', () => {
         { icon: "☎️", price: 14, name: ["hardline call (1 exit)", "ligne fixe (1 sortie)"], out: { t: ["+1 ♥. the operator found you an exit. the phone rang JUST in time", "+1 ♥. l'opérateur t'a trouvé une sortie. le téléphone a sonné JUSTE à temps"], fx: () => fxLife(1) } },
         { icon: "🐈‍⬛", price: 9, name: ["a black cat (again?)", "un chat noir (encore ?)"], out: { t: ["equipped! you've bought this exact cat before. you will again", "équipé ! tu as déjà acheté ce chat exact. et tu le rachèteras"], fx: () => gGiveWeapon("slimetrix_deja_vu_cat", false) } },
         { icon: "🥋", price: 10, name: ["KUNG FU (INSTANT DOWNLOAD)", "KUNG-FU (TÉLÉCHARGEMENT INSTANTANÉ)"], trap: true, out: { t: ["download complete!! wrong port. the BUGS know kung fu now. oops", "téléchargement terminé !! mauvais port. les BUGS connaissent le kung-fu. oups"], fx: () => setMod('speed', 1.22, 12) } }
-    ] },
+    ], limited: { icon: '🥄', price: 999, name: ["THE SPOON (there is one after all)", "LA CUILLÈRE (il y en avait une, finalement)"], out: { t: ["everything you were told was a lie, pleasantly. (jump ×1.5 40s, +200)", "tout ce qu'on t'a dit était faux, agréablement. (saut ×1,5 40 s, +200)"], fx: () => { setMod('jump', 1.5, 40); fxScore(200); } } } },
     bosses: { kaiju: { name: ["squiddy.exe, sentinel of the deep code", "squiddy.exe, sentinelle du code profond"], belly: "WAKE UP" }, conflict: { name: ["neo & smith: merge denied", "neo & smith : fusion refusée"], shout: "MR. ANDERSON!!" }, cookie: { name: ["the oracle's consent banner", "la bannière cookie de l'oracle"], text: "oracle cookie?", button: "EAT" } }
   },
   "gameboy": {
@@ -17346,7 +17639,7 @@ document.addEventListener('DOMContentLoaded', () => {
         { icon: "🌈", price: 9, name: ["rainbow fever (4 shades)", "fièvre arc-en-ciel (4 nuances)"], out: { t: ["8s of fever in 4 glorious greens. the rainbow is implied", "8 s de fièvre en 4 verts glorieux. l'arc-en-ciel est sous-entendu"], fx: () => fxFever(8) } },
         { icon: "💨", price: 7, name: ["cartridge blower", "souffle-cartouche"], out: { t: ["equipped! one firm, disappointed puff per bug", "équipé ! un souffle ferme et déçu par bug"], fx: () => gGiveWeapon("dmg_cart_blower", false) } },
         { icon: "🎮", price: 12, name: ["★128-IN-1 MEGA CART★", "★MÉGA CARTOUCHE 128-EN-1★"], trap: true, out: { t: ["126 games are the same golf. the other 2? also golf. +1 coin found in the box", "126 jeux sont le même golf. les 2 autres ? golf aussi. +1 pièce trouvée dans la boîte"], fx: () => fxCoins(1) } }
-    ] },
+    ], limited: { icon: '🏆', price: 999, name: ["GOLD CARTRIDGE (factory sealed*)", "CARTOUCHE DORÉE (sous blister*)"], out: { t: ["*was. the seal died for this moment. (+1 ♥, fever 10s)", "*était. le blister est mort pour ce moment. (+1 ♥, fièvre 10 s)"], fx: () => { fxLife(1); fxFever(10); } } } },
     bosses: { kaiju: { name: ["Cartzilla, the unblown", "Cartzilla, jamais soufflée"], belly: "BLOW HERE" }, conflict: { name: ["version green & version green", "version verte & version verte"], shout: "NEED LINK CABLE" }, cookie: { name: ["the eternal saving screen", "l'écran de sauvegarde éternel"], text: "DON'T TURN OFF", button: "OFF" } }
   },
   "geo": {
@@ -17372,7 +17665,7 @@ document.addEventListener('DOMContentLoaded', () => {
         { icon: "🏆", price: 4, name: ["cool site of the day award", "prix du site cool du jour"], out: { t: ["+80 score. self-nominated, self-judged, 100% official", "+80 points. auto-nominé, auto-jugé, 100 % officiel"], fx: () => fxScore(80) } },
         { icon: "🧮", price: 9, name: ["hit counter cannon", "canon compteur de visites"], out: { t: ["equipped!! every hit is a visitor. your stats never looked better", "équipé !! chaque coup est un visiteur. tes stats n'ont jamais été aussi belles"], fx: () => gGiveWeapon("geo_counter_cannon", false) } },
         { icon: "🎊", price: 11, name: ["🎉 1,000,000th VISITOR PRIZE!!", "🎉 PRIX DU 1 000 000e VISITEUR !!"], trap: true, out: { t: ["the banner was a gif. your prize: 1 coin, shipping included ♡", "la bannière était un gif. ton prix : 1 pièce, port compris ♡"], fx: () => fxCoins(1) } }
-    ] },
+    ], limited: { icon: '🖼', price: 999, name: ["'BEST OF THE WEB 1998' BANNER (animated)", "BANNIÈRE « BEST OF THE WEB 1998 » (animée)"], out: { t: ["it blinks. it sparkles. it is LOAD-BEARING. (+3 fans, +250, luck ×1.4)", "elle clignote. elle scintille. elle est PORTEUSE. (+3 fans, +250, chance ×1,4)"], fx: () => { gainFollowers(3); fxScore(250); setMod('luck', 1.4, 45); } } } },
     bosses: { kaiju: { name: ["GIFZILLA (still loading)", "GIFZILLA (chargement…)"], belly: "▓▓▓░ 87%" }, conflict: { name: ["the Frameset that Never Aligned", "le Frameset Jamais Aligné"], shout: "NOFRAMES!!" }, cookie: { name: ["the Punch-the-Monkey Banner", "la Bannière Frappe-le-Singe"], text: "PUNCH THE 🐒!", button: "WIN!" } }
   },
   "bsod": {
@@ -17398,7 +17691,7 @@ document.addEventListener('DOMContentLoaded', () => {
         { icon: "💙", price: 14, name: ["heart recovered from the dump", "cœur récupéré du minidump"], out: { t: ["+1 ♥. found intact in the minidump. beats in blue now", "+1 ♥. retrouvé intact dans le minidump. il bat en bleu désormais"], fx: () => fxLife(1) } },
         { icon: "🪄", price: 9, name: [":( wand (display unit)", "baguette :( (modèle d'expo)"], out: { t: ["equipped! bugs will now run into a problem", "équipée ! les bugs vont maintenant rencontrer un problème"], fx: () => gGiveWeapon("bsod_sad_wand", false) } },
         { icon: "💾", price: 11, name: ["2TB FREE RAM (DOWNLOAD NOW!!)", "2 To de RAM GRATUITE (TÉLÉCHARGE !!)"], trap: true, out: { t: ["the RAM downloads directly into you. CHONK +30%. so much memory", "la RAM se télécharge directement dans toi. CHONK +30 %. tant de mémoire"], fx: () => { setMod('size', 1.3, 12); fxScore(10); } } }
-    ] },
+    ], limited: { icon: '📜', price: 999, name: ["A SIGNED DRIVER (it just works)", "UN PILOTE SIGNÉ (il marche, c'est tout)"], out: { t: ["certified, notarized, MIRACULOUS. (shield 12s, bugs cleared, +80)", "certifié, notarié, MIRACULEUX. (bouclier 12 s, bugs purgés, +80)"], fx: () => { fxInvincible(12); fxClearBugs(); fxScore(80); } } } },
     bosses: { kaiju: { name: ["!! BLUESCREEN KAIJU !!  grab the wand ♥", "!! KAIJU ÉCRAN BLEU !!  prends la baguette ♥"], belly: "0x0000FEEL" }, conflict: { name: ["!! NOT-RESPONDING TWINS !!  end task ♥", "!! JUMEAUX SANS RÉPONSE !!  fin de tâche ♥"], shout: "NOT RESPONDING" }, cookie: { name: ["!! LYING PROGRESS BAR !!  refuse to wait ♥", "!! BARRE DE PROGRÈS MENTEUSE !!  refuse d'attendre ♥"], text: "99% COMPLETE", button: "WAIT" } }
   },
   "amber": {
@@ -17424,7 +17717,7 @@ document.addEventListener('DOMContentLoaded', () => {
         { icon: "🎴", price: 8, name: ["punch card dealer (gov surplus)", "distributeur de cartes perforées (surplus d'État)"], out: { t: ["equipped! do not fold, spindle, or mutilate", "équipé ! ne pas plier, perforer ni mutiler"], fx: () => gGiveWeapon("s370_punch_dealer", false) } },
         { icon: "💖", price: 14, name: ["hot-spare heart (failover ready)", "cœur de secours (failover prêt)"], out: { t: ["+1 ♥. swaps in with zero downtime. five nines of love", "+1 ♥. bascule sans interruption. cinq neufs d'amour"], fx: () => fxLife(1) } },
         { icon: "🍩", price: 12, name: ["INFINITE MEMORY UPGRADE (a whole 64 KB)", "EXTENSION MÉMOIRE INFINIE (64 Ko entiers)"], trap: true, out: { t: ["it's a crate of ferrite donuts. CHONK +30% — core memory is HEAVY", "c'est une caisse de tores en ferrite. CHONK +30 % — la mémoire à tores, ça PÈSE"], fx: () => { setMod('size', 1.3, 12); fxScore(10); } } }
-    ] },
+    ], limited: { icon: '📏', price: 999, name: ["ONE NANOSECOND (Hopper's own wire)", "UNE NANOSECONDE (le fil de Hopper)"], out: { t: ["30cm of pure 'this is how far light gets'. (speed ×1.3 + jump ×1.2, 45s, +150)", "30 cm de « voilà où va la lumière ». (vitesse ×1,3 + saut ×1,2, 45 s, +150)"], fx: () => { setMod('speed', 1.3, 45); setMod('jump', 1.2, 45); fxScore(150); } } } },
     bosses: { kaiju: { name: ["Big Iron (it heard you say 'cloud')", "Big Iron (il t'a entendu dire « cloud »)"], belly: "ABEND S0C4" }, conflict: { name: ["the dropped deck: cards 1–40 vs 41–80", "le paquet tombé : cartes 1–40 vs 41–80"], shout: "OUT OF SEQUENCE!" }, cookie: { name: ["the dot-matrix jam banner", "la bannière du bourrage matriciel"], text: "PC LOAD LETTER", button: "WHAT" } }
   }
   };
@@ -19366,7 +19659,9 @@ document.addEventListener('DOMContentLoaded', () => {
       let limited = null;
       if (GAME.coins >= 12 && gStateHash('ltd') % 100 < 30) {
         limited = 2;
-        items[2] = LIMITED_OFFERS[gStateHash('ltdpick') % LIMITED_OFFERS.length];
+        items[2] = (packShop && packShop.limited)
+          ? packShop.limited // the world's own legendary — costs everything, worth it
+          : LIMITED_OFFERS[gStateHash('ltdpick') % LIMITED_OFFERS.length];
       }
       let surge = false;
       const prices = items.map((it, ix) => {

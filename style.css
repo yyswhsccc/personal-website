@@ -11475,3 +11475,29 @@ html[data-theme="dark"].dreaming .console-btn-eject .console-btn-label {
   color: var(--cream);
   text-shadow: 1px 1px 0 var(--shadow);
 }
+/* ==== v106.1: QUIT must read from orbit, in every world. the generic
+   cream-on-hot pairing drowned in same-hue gradients (dark-blue text
+   sinking into a blue pill in bsod, light-on-light in gameboy). each
+   world pins an explicit hardware-button pair — gradient + ink chosen
+   for contrast FIRST, lore second (win95 gets its canon silver). ==== */
+html[data-theme="dark"].dream-win95 .console-btn-eject { background: linear-gradient(#dfdfdf, #b8b8b8); }
+html[data-theme="dark"].dream-win95 .console-btn-eject .console-btn-label,
+html[data-theme="dark"].dream-win95 .console-btn-eject .console-btn-icon { color: #000080; text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.6); }
+html[data-theme="dark"].dream-scp .console-btn-eject { background: linear-gradient(#ffd23f, #e0a800); }
+html[data-theme="dark"].dream-scp .console-btn-eject .console-btn-label,
+html[data-theme="dark"].dream-scp .console-btn-eject .console-btn-icon { color: #141414; text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.35); }
+html[data-theme="dark"].dream-matrix .console-btn-eject { background: linear-gradient(#7dffb8, #2bff8f); }
+html[data-theme="dark"].dream-matrix .console-btn-eject .console-btn-label,
+html[data-theme="dark"].dream-matrix .console-btn-eject .console-btn-icon { color: #012414; text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.3); }
+html[data-theme="dark"].dream-gameboy .console-btn-eject { background: linear-gradient(#9bbc0f, #8bac0f); }
+html[data-theme="dark"].dream-gameboy .console-btn-eject .console-btn-label,
+html[data-theme="dark"].dream-gameboy .console-btn-eject .console-btn-icon { color: #0f380f; text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.25); }
+html[data-theme="dark"].dream-geo .console-btn-eject { background: linear-gradient(#ff2fae, #d4147f); }
+html[data-theme="dark"].dream-geo .console-btn-eject .console-btn-label,
+html[data-theme="dark"].dream-geo .console-btn-eject .console-btn-icon { color: #ffffff; text-shadow: 1px 1px 0 #6b0a40; }
+html[data-theme="dark"].dream-bsod .console-btn-eject { background: linear-gradient(#a9c6ff, #8ab4ff); }
+html[data-theme="dark"].dream-bsod .console-btn-eject .console-btn-label,
+html[data-theme="dark"].dream-bsod .console-btn-eject .console-btn-icon { color: #0a23a8; text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.4); }
+html[data-theme="dark"].dream-amber .console-btn-eject { background: linear-gradient(#ffb000, #d68d00); }
+html[data-theme="dark"].dream-amber .console-btn-eject .console-btn-label,
+html[data-theme="dark"].dream-amber .console-btn-eject .console-btn-icon { color: #1a0e00; text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.3); }
