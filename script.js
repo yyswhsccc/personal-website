@@ -16152,7 +16152,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const st = GAME.stage;
     const sb = gSlimeBox();
     if (!st) {
-      if (!GAME.stageAt) GAME.stageAt = GAME.frame + 60 * 34 + (gStateHash('stg') % 600);
+      if (!GAME.stageAt) GAME.stageAt = GAME.frame + 60 * 10 + (gStateHash('stg') % 240); // ~10s in — the house wants the show EARLY
       if (GAME.frame >= GAME.stageAt && !GAME.event && !GAME.boss && !GAME.nm && !GAME.gimmick) gStageStart();
       return;
     }
@@ -16162,7 +16162,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     if (st.phase === 'clear') {
-      if (st.t > 130) { GAME.stage = null; GAME.stageAt = GAME.frame + 60 * 92 + (gStateHash('stg2') % 900); }
+      if (st.t > 130) { GAME.stage = null; GAME.stageAt = GAME.frame + 60 * 10 + (gStateHash('stg2') % 300); } // ~10-15s of normal road, then the next act
       return;
     }
     // ---- run phase: 1450 frames of new rules ----
