@@ -3180,7 +3180,16 @@ document.addEventListener('DOMContentLoaded', () => {
       termLine(trT('Kernel:   window-manager 1.0 + 8-bit synth', 'Noyau :   window-manager 1.0 + synthé 8-bit'));
       termLine('Shell:    slime_sh');
       termLine(`${trT('Theme:   ', 'Thème :  ')} ${resolvedTheme()}`);
-      termLine(trT('Pet:      1 slime (9 sprite frames, 2 outfits)', 'Familier : 1 slime (9 frames, 2 tenues)'));
+      { // the wardrobe line counts ITSELF — no more '2 outfits' from 2019
+        let fits = 0, dreamFits = 0;
+        try { fits = LIGHT_OUTFITS.length + DARK_OUTFITS.length; } catch (e) { /* racks offstage */ }
+        try { Object.keys(DREAM_OUTFITS).forEach((w) => { dreamFits += DREAM_OUTFITS[w].length; }); } catch (e) { /* dreams uncounted */ }
+        const wearing = (typeof currentOutfit === 'object' && currentOutfit && currentOutfit.n) ? trT(currentOutfit.n[0], currentOutfit.n[1]) : null;
+        termLine(trT(
+          `Pet:      1 slime (9 sprite frames · ${fits} fits + ${dreamFits} dream fits${wearing ? ' · today: ' + wearing : ''})`,
+          `Familier : 1 slime (9 frames · ${fits} tenues + ${dreamFits} tenues de rêve${wearing ? ' · auj. : ' + wearing : ''})`
+        ));
+      }
       termLine(`Fans:     ${pet.followers} ★ · ${trT('site likes', 'likes du site')} ${likeTotal()}`);
       termLine(trT('Uptime:   coding since 2019, agents since 2025', 'Uptime :  code depuis 2019, agents depuis 2025'));
       const neoEgg = (DEVICE_EGGS[YOS_DEVICE.browser] || {}).neo || (OS_EGGS[YOS_DEVICE.os] || {}).neo || '';
