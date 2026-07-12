@@ -6761,6 +6761,10 @@ document.addEventListener('DOMContentLoaded', () => {
      the 6:59 curfew and then dream; returning visitors are walked into
      a random deep dream at the 2-minute mark, no paperwork. */
   var swForceGame = false;   // one-shot: the next walk aims at the arcade, dice waived
+  // v113: deep dreams keep their distance — after ANY dream world visit,
+  // AUTO entries wait a full ACTIVE hour (parked tabs don't serve time;
+  // the `dream <name>` command remains a free door — explicit wish wins)
+  var dreamAcdLeft = store.get('yos-dream-acd', 0);
   var swExpressDive = false; // the express dive auto-presses START on landing
   var nightDarkMs = 0;       // ACTIVE ms spent in the dark (parked tabs don't count)
   var nightStayMs = 0;       // ACTIVE ms this visit, any theme
@@ -6786,6 +6790,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (document.body.classList.contains('terminal-only')) return;
     if (typeof swVisitorEngaged === 'function' && !swVisitorEngaged()) return;
     nightStayMs += 5000;
+    if (dreamAcdLeft > 0 && !dreamWorld) { dreamAcdLeft = Math.max(0, dreamAcdLeft - 5000); store.set('yos-dream-acd', dreamAcdLeft); }
     if (resolvedTheme() !== 'dark') return;
     nightDarkMs += 5000;
     // the express: 15 active dark seconds, once, for dark-arcade first-timers
@@ -6794,7 +6799,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // first-timers only board if no curfew is running (the curfew pipeline
     // delivers their dream with ceremony instead)
     if (nightStayMs >= 120000 && !nightDreamDone && !dreamWorld && !sleepwalkActive
-        && !gameActive() && window.innerWidth >= 560) {
+        && dreamAcdLeft <= 0 && !gameActive() && window.innerWidth >= 560) {
       if (swCurfewOn()) {
         if (!NIGHT_RETURNING) return; // let the curfew flow deliver it
         swCurfewLeft = 0; swLiftDone = true; // regulars ride past the checkpoint, quietly
@@ -7012,6 +7017,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function dreamWorldEligible() {
     return !dreamWorld
+      && dreamAcdLeft <= 0                                  // one ACTIVE hour between dream worlds
       && resolvedTheme() === 'dark'
       && !document.body.classList.contains('terminal-only') // the door is sacred
       && !swCurfewOn()                                      // curfew = quiet dreams, promised
@@ -12606,10 +12612,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const bar = document.createElement('div');
     bar.className = 'dwc-bar';
     bar.innerHTML = '<span>🎴 ' + TITLES[game] + '</span>';
+    const mx = document.createElement('button');
+    mx.type = 'button'; mx.className = 'dwc-x'; mx.textContent = '⛶';
+    mx.title = trT('bigger table', 'table plus grande');
+    mx.addEventListener('click', () => { playClickSound(); w.classList.toggle('dwc-max'); });
     const x = document.createElement('button');
     x.type = 'button'; x.className = 'dwc-x'; x.textContent = '✕';
     x.addEventListener('click', () => { playCloseSound(); dwcClose('quit'); });
-    bar.appendChild(x);
+    bar.append(mx, x);
     w.appendChild(bar);
     const menu = document.createElement('div');
     menu.className = 'dwc-menu';
@@ -13146,7 +13156,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!pile.length) col.appendChild(dwcCardEl(null, { slot: true }));
       pile.forEach((c, ci) => {
         const el = dwcCardEl(c);
-        el.style.top = (ci * 15) + 'px';
+        el.style.top = 'calc(' + ci + ' * var(--dwc-step, 15px))';
         if (ci === pile.length - 1 || ci >= pile.length - dwcFreeRun(pile)) {
           el.addEventListener('click', () => { if (dwcFreeSmart('cas', ti)) dwcFreeAfter(); else dwcShake(el); });
         } else el.addEventListener('click', () => dwcShake(el));
@@ -13241,7 +13251,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       pile.forEach((c, ci) => {
         const el = dwcCardEl(c);
-        el.style.top = (ci * 15) + 'px';
+        el.style.top = 'calc(' + ci + ' * var(--dwc-step, 15px))';
         if (c.up) el.addEventListener('click', () => {
           if (dwcSolSmart(pile, ci)) { st.moves++; dwcSolAfter(); } else dwcShake(el);
         });
@@ -14200,6 +14210,7 @@ document.addEventListener('DOMContentLoaded', () => {
       showToast(trT('☀ the dream evaporated', '☀ le rêve s\'est évaporé'));
     }
     dreamEnding = false;
+    dreamArmCooldown(); // the next dream world earns its slot in active time
     // gremlin hour resumes its parade the moment the stage is clear
     if (swTricksterOn() && resolvedTheme() === 'dark') {
       if (sleepwalkTimer) clearTimeout(sleepwalkTimer);
@@ -14207,6 +14218,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  function dreamArmCooldown() {
+    dreamAcdLeft = 3600 * 1000; // one hour, ACTIVE time only
+    store.set('yos-dream-acd', dreamAcdLeft);
+  }
   function dreamResume() {
     if (dreamWorld) return;
     const saved = store.get('yos-dream', null);
@@ -19317,28 +19332,31 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function gAdActor(g2, cx, cy, bounce) {
-    // chibi slime spokesperson (method actor: becomes the world's colors)
+    // chibi slime spokesperson — TRUE PINK in every world (house law:
+    // dreams dress the slime, they never dye it)
     const y = cy + Math.sin(bounce) * 5;
-    g2.fillStyle = gDreamColor('#c9a7f5');
+    g2.fillStyle = '#c9a7f5';
     g2.fillRect(cx - 21, y - 14, 42, 30);
-    g2.fillStyle = gDreamColor('#ff9fd0');
+    g2.fillStyle = '#ff9fd0';
     g2.fillRect(cx - 19, y - 12, 38, 26);
-    g2.fillStyle = gDreamColor('#ffc9e4');
+    g2.fillStyle = '#ffc9e4';
     g2.fillRect(cx - 15, y - 9, 9, 6);
-    g2.fillStyle = gDreamColor('#14020e');
+    g2.fillStyle = '#14020e';
     g2.fillRect(cx - 9, y - 2, 4, 4); g2.fillRect(cx + 6, y - 2, 4, 4);
-    g2.fillStyle = gDreamColor('#ff6fae');
+    g2.fillStyle = '#ff6fae';
     g2.fillRect(cx - 3, y + 5, 7, 3);
-    g2.fillStyle = gDreamColor('#ffb3dd');
+    g2.fillStyle = '#ffb3dd';
     g2.fillRect(cx - 15, y + 3, 4, 3); g2.fillRect(cx + 12, y + 3, 4, 3);
   }
 
   function gAdPik(g2, cx, cy, color, dance) {
+    // the pikmin cast dances in its REAL hues — a colorful crew against
+    // the world tint is the whole charm of the commercial break
     const y = cy - Math.abs(Math.sin(dance)) * 6;
-    g2.fillStyle = gDreamColor('#57c689'); g2.fillRect(cx + 3, y - 5, 2, 4);
-    g2.fillStyle = gDreamColor('#ffffff'); g2.fillRect(cx + 1, y - 8, 2, 2); g2.fillRect(cx + 5, y - 8, 2, 2); g2.fillRect(cx + 3, y - 9, 2, 2);
-    g2.fillStyle = gDreamColor(color); g2.fillRect(cx, y, 9, 8);
-    g2.fillStyle = gDreamColor('#14020e'); g2.fillRect(cx + 2, y + 2, 2, 2); g2.fillRect(cx + 6, y + 2, 2, 2);
+    g2.fillStyle = '#57c689'; g2.fillRect(cx + 3, y - 5, 2, 4);
+    g2.fillStyle = '#ffffff'; g2.fillRect(cx + 1, y - 8, 2, 2); g2.fillRect(cx + 5, y - 8, 2, 2); g2.fillRect(cx + 3, y - 9, 2, 2);
+    g2.fillStyle = color; g2.fillRect(cx, y, 9, 8);
+    g2.fillStyle = '#14020e'; g2.fillRect(cx + 2, y + 2, 2, 2); g2.fillRect(cx + 6, y + 2, 2, 2);
   }
 
   function gAdProp(g2, kind, cx, cy, accent) {
@@ -21550,7 +21568,7 @@ document.addEventListener('DOMContentLoaded', () => {
         g2.save();
         g2.fillStyle = '#c3aee0';
         g2.font = "9px 'Jersey 25', 'VT323', monospace";
-        g2.fillText('“' + L(shopPack.keeperLine) + '”', 20, 110);
+        g2.fillText('“' + L(shopPack.keeperLine) + '”', 20, 132); // below the leave button — they used to overlap
         g2.restore();
       }
       for (let i = 0; i < 3; i++) {
@@ -21583,14 +21601,14 @@ document.addEventListener('DOMContentLoaded', () => {
       g2.fillStyle = '#ffc2e2';
       if (ev.limited != null && !ev.sold[ev.limited]) {
         g2.fillStyle = '#ffe98a';
-        g2.fillText(L(['⏳ LIMITED OFFER: costs literally everything you have. worth it (source: the cat)', '⏳ OFFRE LIMITÉE : coûte littéralement tout ce que tu as. rentable (source : le chat)']), 20, 126);
+        g2.fillText(L(['⏳ LIMITED OFFER: costs literally everything you have. worth it (source: the cat)', '⏳ OFFRE LIMITÉE : coûte littéralement tout ce que tu as. rentable (source : le chat)']), 20, 143);
         g2.fillStyle = '#ffc2e2';
       }
       if (ev.surge) {
-        g2.fillText(L(['🚑 cardiac surge pricing: you look like you NEED that heart ♡', '🚑 tarif urgence cardiaque : tu as l\'air d\'en avoir BESOIN ♡']), 20, ev.limited != null ? 114 : 126);
+        g2.fillText(L(['🚑 cardiac surge pricing: you look like you NEED that heart ♡', '🚑 tarif urgence cardiaque : tu as l\'air d\'en avoir BESOIN ♡']), 20, ev.limited != null ? 152 : 143);
       }
       if (ev.mark && ev.mark > 1) {
-        g2.fillText(L([`📈 wealth tax ×${ev.mark} + ⛁1 paw fee: the cat saw your wallet. crooked prices, honest signage ♡`, `📈 taxe fortune ×${ev.mark} + ⛁1 de frais de patte : prix tordus, affichage honnête ♡`]), 20, 138);
+        g2.fillText(L([`📈 wealth tax ×${ev.mark} + ⛁1 paw fee: the cat saw your wallet. crooked prices, honest signage ♡`, `📈 taxe fortune ×${ev.mark} + ⛁1 de frais de patte : prix tordus, affichage honnête ♡`]), 20, (ev.limited != null && ev.surge) ? -20 : (ev.limited != null || ev.surge) ? 152 : 143);
       }
     }
   }

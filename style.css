@@ -11780,3 +11780,134 @@ html[data-theme="dark"].dream-amber .console-btn-eject .console-btn-icon { color
   border: 4px solid transparent;
   border-bottom-color: #14020e;
 }
+
+/* ==== v113: readability + true-color decrees ==== */
+/* quest rank chips: in dreams the chip bg vars go DARK (win95 navy) and
+   the deep-plum ink drowned — pin the world's light accent + dark ink */
+html[data-theme="dark"].dreaming .quest-rank {
+  background: var(--lite, #ffd23f);
+  color: #191227;
+  text-shadow: none;
+}
+/* DREAM BOY decree: pikmin appear in their TRUE colors — no green wash.
+   (the rest of the stage furniture keeps its DMG grade) */
+html[data-theme="dark"].dream-gameboy .live-stage > .pik-sprout,
+html[data-theme="dark"].dream-gameboy .live-stage > .pik-buddy,
+html[data-theme="dark"].dream-gameboy #desk-pik-layer,
+html[data-theme="dark"].dream-gameboy .pik-parade,
+html[data-theme="dark"].dream-gameboy .cham-burst {
+  filter: none !important;
+}
+/* the card table learns to stretch: ⛶ toggles a roomy layout (cards and
+   tableau steps ride --dwc-step / explicit sizes) */
+.dwc-win.dwc-max { width: min(880px, calc(100vw - 16px)); }
+.dwc-win.dwc-max .dwc-felt { min-height: 420px; }
+.dwc-win.dwc-max .dwc-card { width: 58px; height: 80px; }
+.dwc-win.dwc-max .dwc-corner { font-size: 0.8rem; }
+.dwc-win.dwc-max .dwc-pip { font-size: 1.5rem; }
+.dwc-win.dwc-max .dwc-col { min-height: 320px; }
+.dwc-win.dwc-max .dwc-h-hand .dwc-card { margin-left: -20px; }
+.dwc-win.dwc-max .dwc-h-trick { width: 240px; height: 150px; }
+.dwc-win.dwc-max .dwc-h-t0 { left: 91px; top: 70px; }
+.dwc-win.dwc-max .dwc-h-t1 { left: 10px; top: 35px; }
+.dwc-win.dwc-max .dwc-h-t2 { left: 91px; top: 0; }
+.dwc-win.dwc-max .dwc-h-t3 { left: 172px; top: 35px; }
+.dwc-win { --dwc-step: 15px; }
+.dwc-win.dwc-max { --dwc-step: 21px; }
+
+/* ==== v113: the fan wall dreams along — every world reshapes the fans ====
+   (bsod already prints them as kaomoji; the other six get their own
+   forms, each with a little life in it) */
+/* win95: every fan is a tiny window — navy title bar, blinking hourglass */
+html.dream-win95 .fan-avatar { background: #dfdfdf; border-color: #8a8a8a; overflow: hidden; position: relative; }
+html.dream-win95 .fan-avatar::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 5px;
+  background: linear-gradient(90deg, #000080, #1084d0);
+  z-index: 1;
+}
+html.dream-win95 .fan-avatar::after {
+  content: '⌛';
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  font-size: 8px;
+  animation: dfw-hourglass 2.4s steps(2, end) infinite;
+  z-index: 1;
+}
+@keyframes dfw-hourglass { 50% { opacity: 0.25; transform: rotate(180deg); } }
+html.dream-win95 .fan-avatar canvas { filter: saturate(0.55) contrast(1.1); transform: translateY(2px); }
+/* scp: personnel files — grayscale mugshots, eyes redacted, stamped */
+html.dream-scp .fan-avatar { background: #16171c; border-color: #ffd23f; position: relative; overflow: hidden; }
+html.dream-scp .fan-avatar canvas { filter: grayscale(1) contrast(1.25) brightness(0.9); }
+html.dream-scp .fan-avatar::after {
+  content: '';
+  position: absolute;
+  left: 8%; right: 8%;
+  top: 38%;
+  height: 22%;
+  background: #050507;
+  z-index: 1;
+  animation: dfw-redact 7s steps(1, end) infinite;
+}
+@keyframes dfw-redact { 0%, 92% { opacity: 1; } 94%, 97% { opacity: 0; } 98%, 100% { opacity: 1; } }
+/* matrix: the fans are code — phosphor rain running over each face */
+html.dream-matrix .fan-avatar { background: #010a04; border-color: #0f7a3a; position: relative; overflow: hidden; }
+html.dream-matrix .fan-avatar canvas { filter: grayscale(1) brightness(0.9) sepia(1) saturate(3) hue-rotate(100deg); }
+html.dream-matrix .fan-avatar::after {
+  content: '1 0 1\A0 1 0\A1 1 0';
+  white-space: pre;
+  position: absolute;
+  inset: 0;
+  color: rgba(61, 255, 124, 0.5);
+  font-family: var(--font-pixel);
+  font-size: 6px;
+  line-height: 1.6;
+  text-align: center;
+  animation: dfw-rain 1.8s linear infinite;
+  z-index: 1;
+  pointer-events: none;
+}
+@keyframes dfw-rain { from { transform: translateY(-55%); } to { transform: translateY(55%); } }
+/* gameboy: TRUE-hue fans (the pikmin decree extends to the wall) on a
+   DMG cartridge tile — with the classic 2-frame idle bounce */
+html.dream-gameboy .fan-avatar { background: #9bbc0f; border-color: #0f380f; overflow: hidden; }
+html.dream-gameboy .fan-avatar canvas { animation: dfw-dmg-bounce 1.2s steps(2, end) infinite; }
+@keyframes dfw-dmg-bounce { 50% { transform: translateY(-2px); } }
+/* geo: glitter avatars, obviously. 1998 demands sparkles */
+html.dream-geo .fan-avatar { background: #140a2e; border-color: #ff2fae; position: relative; overflow: hidden; }
+html.dream-geo .fan-avatar canvas { filter: saturate(1.5); }
+html.dream-geo .fan-avatar::after {
+  content: '✦';
+  position: absolute;
+  top: 1px;
+  left: 2px;
+  color: #ffe98a;
+  font-size: 8px;
+  text-shadow: 0 0 4px #ff2fae;
+  animation: dfw-glitter 1.6s steps(3, end) infinite;
+  z-index: 1;
+}
+@keyframes dfw-glitter {
+  0% { transform: translate(0, 0) scale(1); color: #ffe98a; }
+  33% { transform: translate(9px, 7px) scale(0.7); color: #41e0ff; }
+  66% { transform: translate(3px, 12px) scale(1.15); color: #ff62c5; }
+}
+/* amber: phosphor terminal portraits with a scanline sweep */
+html.dream-amber .fan-avatar { background: #0d0800; border-color: #7a5200; position: relative; overflow: hidden; }
+html.dream-amber .fan-avatar canvas { filter: grayscale(1) brightness(0.95) sepia(1) saturate(3.4) hue-rotate(-18deg); }
+html.dream-amber .fan-avatar::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0;
+  height: 4px;
+  background: rgba(255, 176, 0, 0.28);
+  animation: dfw-scan 2.6s linear infinite;
+  z-index: 1;
+}
+@keyframes dfw-scan { from { top: -10%; } to { top: 110%; } }
+@media (prefers-reduced-motion: reduce) {
+  html.dreaming .fan-avatar::before, html.dreaming .fan-avatar::after, html.dreaming .fan-avatar canvas { animation: none !important; }
+}
