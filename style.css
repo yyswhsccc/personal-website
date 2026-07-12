@@ -906,6 +906,14 @@ input {
   animation: fans-bump 0.4s steps(2, end);
 }
 
+/* v107.1: in dreams the HUD row must survive EVERY palette — gameboy's
+   --pink-deep is its darkest green and win95's is mid-navy, both of
+   which sank into the dark hud panel (black hearts, invisible fans) */
+html[data-theme="dark"].dreaming .slime-hearts { color: var(--lite, var(--pink-deep)); text-shadow: 1.5px 1.5px 0 rgba(0, 0, 0, 0.45); }
+html[data-theme="dark"].dreaming .slime-hearts span.heart-empty { color: var(--lite, var(--purple)); opacity: 0.32; }
+html[data-theme="dark"].dreaming .slime-followers { color: var(--lite, var(--purple-dark)); }
+html[data-theme="dark"].dreaming .follower-star { color: var(--lite, var(--yellow)); text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.45); }
+
 @keyframes fans-bump {
   50% { transform: scale(1.2); color: var(--pink-deep); }
 }
@@ -8884,6 +8892,7 @@ html[data-theme="dark"].dream-win95 {
   --dither-pink: conic-gradient(rgba(0, 0, 0, 0.05) 25%, transparent 0 50%, rgba(0, 0, 0, 0.05) 0 75%, transparent 0);
   --dither-purple: conic-gradient(rgba(0, 0, 0, 0.05) 25%, transparent 0 50%, rgba(0, 0, 0, 0.05) 0 75%, transparent 0);
   /* the world's one true sprite grade — a '95 bitmap is just a bit dusty */
+  --lite: #dfdfdf; /* guaranteed-readable accent on dark panels */
   --dream-grade: saturate(0.7) contrast(1.05);
   /* the venue sky the stage & habitat wear while dreaming here */
   --dream-venue-bg: linear-gradient(180deg, #007a7a 0%, #007a7a 22%, #008080 22%, #008080 46%, #0b8a8a 46%, #0b8a8a 72%, #128f8f 72%, #128f8f 100%);
@@ -8979,6 +8988,7 @@ html[data-theme="dark"].dream-scp {
   --dither-pink: conic-gradient(rgba(198, 40, 40, 0.08) 25%, transparent 0 50%, rgba(198, 40, 40, 0.08) 0 75%, transparent 0);
   --dither-purple: conic-gradient(rgba(255, 210, 63, 0.05) 25%, transparent 0 50%, rgba(255, 210, 63, 0.05) 0 75%, transparent 0);
   /* washed surveillance footage — colors survive, but nobody's proud of them */
+  --lite: #ffd23f; /* guaranteed-readable accent on dark panels */
   --dream-grade: grayscale(0.35) contrast(1.08);
   /* the venue sky the stage & habitat wear while dreaming here */
   --dream-venue-bg: linear-gradient(180deg, #08080b 0%, #08080b 30%, #0a0a0d 30%, #0a0a0d 58%, #101014 58%, #101014 82%, #16171c 82%, #16171c 100%);
@@ -9121,6 +9131,7 @@ html[data-theme="dark"].dream-matrix {
   --dither-purple: conic-gradient(rgba(57, 211, 83, 0.08) 25%, transparent 0 50%, rgba(57, 211, 83, 0.08) 0 75%, transparent 0);
   /* collapse-then-tint: greyscale FIRST so every sprite lands on phosphor
      green (a naked hue-rotate would just respin the rainbow — v10 bug) */
+  --lite: #7dffb8; /* guaranteed-readable accent on dark panels */
   --dream-grade: grayscale(1) brightness(0.85) sepia(1) saturate(2.8) hue-rotate(100deg) brightness(0.95);
   /* the venue sky the stage & habitat wear while dreaming here */
   --dream-venue-bg: linear-gradient(180deg, #010a04 0%, #010a04 34%, #02120a 34%, #02120a 62%, #03170c 62%, #03170c 84%, #041c0c 84%, #041c0c 100%);
@@ -9166,6 +9177,7 @@ html[data-theme="dark"].dream-gameboy {
   --dither-pink: conic-gradient(rgba(15, 56, 15, 0.10) 25%, transparent 0 50%, rgba(15, 56, 15, 0.10) 0 75%, transparent 0);
   --dither-purple: conic-gradient(rgba(15, 56, 15, 0.10) 25%, transparent 0 50%, rgba(15, 56, 15, 0.10) 0 75%, transparent 0);
   /* the DMG chain — same recipe as the site-wide img/canvas rule below */
+  --lite: #9bbc0f; /* guaranteed-readable accent on dark panels */
   --dream-grade: grayscale(1) sepia(1) hue-rotate(52deg) saturate(2) brightness(0.92) contrast(1.05);
   /* the venue sky the stage & habitat wear while dreaming here */
   --dream-venue-bg: linear-gradient(180deg, #9bbc0f 0%, #9bbc0f 30%, #8bac0f 30%, #8bac0f 64%, #7f9f0d 64%, #7f9f0d 100%);
@@ -9292,6 +9304,7 @@ html[data-theme="dark"].dream-geo {
   --panel: #140a2e; --panel-pink: #1d0f3d; --panel-purple: #190d38; --panel-blue: #101433;
   --shadow: rgba(0, 0, 0, 0.8);
   /* 1998 never met a saturation slider it didn't max out */
+  --lite: #ffd23f; /* guaranteed-readable accent on dark panels */
   --dream-grade: saturate(1.3) contrast(1.1);
   /* the venue sky the stage & habitat wear while dreaming here */
   --dream-venue-bg: linear-gradient(180deg, #05010f 0%, #05010f 28%, #0a0418 28%, #0a0418 52%, #0d0620 52%, #0d0620 76%, #140a2e 76%, #140a2e 100%);
@@ -9370,6 +9383,7 @@ html[data-theme="dark"].dream-bsod {
   --dither-purple: conic-gradient(rgba(255, 255, 255, 0.06) 25%, transparent 0 50%, rgba(255, 255, 255, 0.06) 0 75%, transparent 0);
   /* collapse-then-tint: every sprite becomes a bluescreen citizen
      (measured: the whole 50-hue pik wheel lands on hue 209-223 ♡) */
+  --lite: #ffffff; /* guaranteed-readable accent on dark panels */
   --dream-grade: grayscale(1) brightness(0.88) sepia(1) saturate(3.2) hue-rotate(185deg) brightness(1.06);
   --dream-venue-bg: linear-gradient(180deg, #0a23a8 0%, #0a23a8 36%, #0c28bd 36%, #0c28bd 66%, #1136c8 66%, #1136c8 100%);
 }
@@ -9789,6 +9803,7 @@ html[data-theme="dark"].dream-amber {
   --dither-pink: conic-gradient(rgba(255, 176, 0, 0.07) 25%, transparent 0 50%, rgba(255, 176, 0, 0.07) 0 75%, transparent 0);
   --dither-purple: conic-gradient(rgba(255, 176, 0, 0.07) 25%, transparent 0 50%, rgba(255, 176, 0, 0.07) 0 75%, transparent 0);
   /* sepia-first — the 1970 phosphor tube only ever knew one color */
+  --lite: #ffd23f; /* guaranteed-readable accent on dark panels */
   --dream-grade: sepia(1) saturate(1.6) hue-rotate(-18deg) brightness(0.92);
   --dream-venue-bg: linear-gradient(180deg, #0d0800 0%, #0d0800 40%, #120b02 40%, #120b02 70%, #160e02 70%, #160e02 100%);
 }
@@ -11402,6 +11417,10 @@ html[data-theme="dark"].dream-geo .window-game.window-game-big.game-console {
   gap: 6px;
   padding: 8px 6px;
   height: auto;
+  /* the stage is a flex ITEM of the shell — without this it gets
+     squeezed to ~70px and the whole cartridge screen clips off */
+  flex: 0 0 auto;
+  min-height: fit-content;
 }
 .dl-gb-ar-head {
   font-family: var(--font-pixel);
