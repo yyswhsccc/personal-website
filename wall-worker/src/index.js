@@ -39,6 +39,40 @@ function statKeyOk(key) {
   return STAT_KEY_RE.test(key) && STAT_PREFIXES.some((p) => key === p || key.startsWith(p));
 }
 
+/* ---- v116: the free tier gives 1000 list()/day and we were spending
+   them like water (/stats listed s:* on every 5s cache miss, PER COLO).
+   both hot endpoints now read ONE index blob instead; the only list()
+   left in the building runs once per blob, ever, as migration. ---- */
+async function getStatsBlob(env) {
+  let blob = await env.WALL.get('idx:stats', { type: 'json' });
+  if (!blob || typeof blob !== 'object') {
+    blob = {};
+    try { // one-time migration from the legacy s:* keys
+      const l = await env.WALL.list({ prefix: 's:', limit: 1000 });
+      l.keys.forEach((k) => { blob[k.name.slice(2)] = (k.metadata && typeof k.metadata.v === 'number') ? k.metadata.v : 0; });
+    } catch (e) { /* fresh namespace */ }
+    await env.WALL.put('idx:stats', JSON.stringify(blob));
+  }
+  return blob;
+}
+async function getPhotoIndex(env) {
+  let idx = await env.WALL.get('idx:photos', { type: 'json' });
+  if (!Array.isArray(idx)) {
+    idx = [];
+    try { // one-time migration: walk the p:* keys once, newest data wins
+      let cursor;
+      do {
+        const l = await env.WALL.list({ prefix: 'p:', limit: 1000, cursor });
+        l.keys.forEach((k) => idx.push({ id: k.name.slice(2), t: (k.metadata && k.metadata.t) || null }));
+        cursor = l.list_complete ? null : l.cursor;
+      } while (cursor);
+      idx.sort((a, b) => String(b.t || '').localeCompare(String(a.t || '')));
+    } catch (e) { /* empty wall */ }
+    await env.WALL.put('idx:photos', JSON.stringify(idx));
+  }
+  return idx;
+}
+
 function corsHeaders(req) {
   const origin = req.headers.get('Origin') || '';
   const ok = ALLOW_ORIGINS.includes(origin);
@@ -495,15 +529,12 @@ export default {
         Object.entries(corsHeaders(req)).forEach(([k, v]) => res.headers.set(k, v));
         return res;
       }
-      const cursor = url.searchParams.get('cursor') || undefined;
-      const list = await env.WALL.list({ prefix: 'p:', limit: PAGE_SIZE, cursor });
-      const photos = list.keys.map((k) => ({
-        id: k.name.slice(2),
-        t: (k.metadata && k.metadata.t) || null
-      }));
-      const body = { photos, cursor: list.list_complete ? null : list.cursor };
+      const off = Math.max(0, parseInt(url.searchParams.get('cursor') || '0', 10) || 0);
+      const idx = await getPhotoIndex(env);
+      const photos = idx.slice(off, off + PAGE_SIZE);
+      const body = { photos, cursor: off + PAGE_SIZE < idx.length ? String(off + PAGE_SIZE) : null };
       const res = json(req, 200, body);
-      res.headers.set('Cache-Control', 'public, s-maxage=30');
+      res.headers.set('Cache-Control', 'public, s-maxage=120');
       ctx.waitUntil(caches.default.put(cacheKey, res.clone()));
       return res;
     }
@@ -552,6 +583,9 @@ export default {
       const id = newId();
       const t = new Date().toISOString().slice(0, 16).replace('T', ' ');
       await env.WALL.put('p:' + id, bytes.buffer, { metadata: { t } });
+      const idx = await getPhotoIndex(env);
+      idx.unshift({ id, t });
+      await env.WALL.put('idx:photos', JSON.stringify(idx.slice(0, WALL_CAP)));
       await env.WALL.put(rlKey, String(used + 1), { expirationTtl: 3600 });
       await env.WALL.put('cfg:count', String(count + 1));
       return json(req, 200, { ok: true, id, n: count + 1 });
@@ -566,6 +600,8 @@ export default {
       const existed = await env.WALL.get('p:' + id);
       if (existed === null) return json(req, 404, { error: 'no such photo (nothing removed, count untouched)' });
       await env.WALL.delete('p:' + id);
+      const idx = (await getPhotoIndex(env)).filter((e) => e.id !== id);
+      await env.WALL.put('idx:photos', JSON.stringify(idx));
       const count = parseInt(await env.WALL.get('cfg:count') || '1', 10);
       await env.WALL.put('cfg:count', String(Math.max(0, count - 1)));
       return json(req, 200, { ok: true });
@@ -587,11 +623,9 @@ export default {
         Object.entries(corsHeaders(req)).forEach(([k, v]) => res.headers.set(k, v));
         return res;
       }
-      const list = await env.WALL.list({ prefix: 's:', limit: 1000 });
-      const stats = {};
-      list.keys.forEach((k) => { stats[k.name.slice(2)] = (k.metadata && typeof k.metadata.v === 'number') ? k.metadata.v : 0; });
+      const stats = await getStatsBlob(env);
       const res = json(req, 200, { ok: true, stats });
-      res.headers.set('Cache-Control', 'public, s-maxage=5');
+      res.headers.set('Cache-Control', 'public, s-maxage=30');
       ctx.waitUntil(caches.default.put(cacheKey, res.clone()));
       return res;
     }
@@ -612,9 +646,11 @@ export default {
       const rlKey = 'rlb:' + who;
       const used = parseInt(await env.WALL.get(rlKey) || '0', 10);
       if (used >= STAT_RATE_MAX) return json(req, 429, { error: 'the counters need a breather ♡' });
-      const cur = parseInt(await env.WALL.get('s:' + key) || '0', 10);
-      const next = Math.max(0, cur + n);
-      await env.WALL.put('s:' + key, String(next), { metadata: { v: next } });
+      const blob = await getStatsBlob(env);
+      if (!(key in blob) && Object.keys(blob).length >= 800) return json(req, 400, { error: 'the counter shelf is full' });
+      const next = Math.max(0, (parseInt(blob[key], 10) || 0) + n);
+      blob[key] = next;
+      await env.WALL.put('idx:stats', JSON.stringify(blob));
       ctx.waitUntil(env.WALL.put(rlKey, String(used + 1), { expirationTtl: 3600 }));
       return json(req, 200, { ok: true, key, value: next });
     }
@@ -668,7 +704,9 @@ export default {
       const key = String((payload && payload.key) || '');
       if (!STAT_KEY_RE.test(key)) return json(req, 400, { error: 'bad key' });
       const v = Math.max(0, Math.round(Number(payload && payload.value) || 0));
-      await env.WALL.put('s:' + key, String(v), { metadata: { v } });
+      const blob = await getStatsBlob(env);
+      blob[key] = v;
+      await env.WALL.put('idx:stats', JSON.stringify(blob));
       return json(req, 200, { ok: true, key, value: v });
     }
 
