@@ -22268,7 +22268,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  function lbEsc(str) { return String(str).replace(/[^A-Za-z0-9♡]/g, '').slice(0, 3).toUpperCase() || 'YOU'; }
+  function lbEsc(str) {
+    // v117: names are worldwide now — keep letters in EVERY script (永善
+    // used to come back as '???'), digits, and the house glyphs
+    const clean = Array.from(String(str)).filter((ch) => /[\p{L}\p{N}♡★]/u.test(ch)).slice(0, 3).join('');
+    return (clean.toUpperCase() || 'YOU');
+  }
   function lbPendingGet() {
     const raw = store.get('yos-lb-pending', 0);
     // a pending top-10 score may be signed for 30 minutes: long enough to
@@ -22392,9 +22397,14 @@ document.addEventListener('DOMContentLoaded', () => {
               .then((r) => (r.ok ? r.json() : null))
               .then((resp) => {
                 if (resp && resp.made) showToast(trT('🌍 you are on the WORLDWIDE top-10!!', '🌍 tu es dans le TOP 10 MONDIAL !!'), { scroll: true });
-                renderLeaderboard();
+                // the POST response IS the fresh board — rendering it directly
+                // beats refetching into the 10s edge cache (which still shows
+                // the pre-signature list and made the signing look broken)
+                if (resp && Array.isArray(resp.hall)) lbRenderHall(resp.hall);
+                else renderLeaderboard();
+                if (resp && resp.error) showToast(trT('🌍 worldwide board: ' + resp.error, '🌍 panthéon mondial : ' + resp.error), { scroll: true });
               })
-              .catch(() => { /* the signature stays local until the net returns */ });
+              .catch(() => showToast(trT('🌍 offline — your signature is safe locally and will shine when the net returns ♡', '🌍 hors ligne — ta signature est en sécurité en local ♡'), { scroll: true }));
           }
           renderLeaderboard();
         };

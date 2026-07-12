@@ -682,7 +682,10 @@ export default {
       if (used >= 10) return json(req, 429, { error: 'the hall admires the enthusiasm (10 signatures/hour)' });
       let payload;
       try { payload = await req.json(); } catch (e) { return json(req, 400, { error: 'json only' }); }
-      const n = String((payload && payload.n) || '').toUpperCase().replace(/[^A-Z0-9♡★]/g, '').slice(0, 3) || '???';
+      // v117: worldwide names keep their letters in every script — the old
+      // latin-only soap turned 永善 into '???' and ate emoji signatures
+      const n = Array.from(String((payload && payload.n) || '').toUpperCase())
+        .filter((ch) => /[\p{L}\p{N}♡★]/u.test(ch)).slice(0, 3).join('') || '???';
       const s = Math.round(Number(payload && payload.s) || 0);
       if (!(s > 0 && s <= 131000)) return json(req, 400, { error: 'that score belongs to another universe' });
       let hall = [];
