@@ -1783,12 +1783,54 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // --- double-click trick ---
+  /* v106.2: the MOVES dream too — each world choreographs the slime's
+     tricks (dblclick) and its on-stage flourishes. lines were already
+     world-voiced (DREAM_ACTIONS); this is the body language. */
+  const DREAM_TRICKS = {
+    win95: [
+      () => { burstAtSlime(['⏳', '💾'], 5); moveSlime({ action: 'hop', mood: 'defrag', phrase: trT('defragmenting myself… files 3% happier', 'je me défragmente… fichiers 3 % plus heureux'), duration: 480, distance: 1.5, scheduleNext: false }); setTimeout(() => moveSlime({ action: 'hop', mood: 'defrag', duration: 480, distance: 1.5 }), 520); },
+      () => { moveSlime({ action: 'alert', mood: '(Not Responding)', phrase: trT('(Not Responding)… jk ♡', '(Ne répond pas)… nan, je rigole ♡'), duration: 1300, scheduleNext: false }); burstAtSlime(['⌛'], 3); setTimeout(() => { burstAtSlime(['✨'], 4); moveSlime({ action: 'happy', mood: 'responsive again', duration: 700 }); }, 1400); }
+    ],
+    scp: [
+      () => { moveSlime({ action: 'nap', mood: 'statue drill', phrase: trT('*statue mode* do not blink', '*mode statue* ne cligne pas'), duration: 900, scheduleNext: false }); setTimeout(() => { burstAtSlime(['🔒', '🗿'], 5); moveSlime({ action: 'happy', mood: 'drill complete', phrase: trT('SECURE. CONTAIN. PET. drill complete ♡', 'SÉCURISER. CONFINER. CARESSER. exercice terminé ♡'), duration: 800 }); }, 1000); },
+      () => { burstAtSlime(['⬛'], 4); moveSlime({ action: 'flip', mood: '[EXPUNGED]', phrase: trT('[MOVEMENT EXPUNGED]', '[MOUVEMENT SUPPRIMÉ]'), duration: 800 }); }
+    ],
+    matrix: [
+      () => { moveSlime({ action: 'alert', mood: 'bullet time', phrase: trT('dodged: everything. in slow motion.', 'esquivé : tout. au ralenti.'), duration: 1600, scheduleNext: false }); [0, 260, 520].forEach((d) => setTimeout(() => burstAtSlime(['💨'], 2), d)); playTone(90, 'sine', 0.4, 0, 0.06); },
+      () => { burstAtSlime(['🥄', '✨'], 5); moveSlime({ action: 'hop', mood: 'no spoon', phrase: trT('there is no spoon. there IS a slime.', 'il n\'y a pas de cuillère. il y a un slime.'), duration: 520, distance: 1.3, scheduleNext: false }); setTimeout(() => moveSlime({ action: 'hop', mood: 'no spoon', duration: 520, distance: 1.3 }), 560); }
+    ],
+    gameboy: [
+      () => { [0, 4, 7, 12].forEach((n, i) => playTone(523 * Math.pow(2, n / 12), 'square', 0.12, i * 0.14, 0.05)); burstAtSlime(['♪', '♫'], 5); moveSlime({ action: 'hop', mood: 'LEVEL UP', phrase: trT('LEVEL UP!! (all 4 shades of joy)', 'NIVEAU SUP !! (les 4 nuances de joie)'), duration: 460, distance: 1.2, scheduleNext: false }); [480, 960, 1440].forEach((d) => setTimeout(() => moveSlime({ action: 'hop', mood: 'LEVEL UP', duration: 440, distance: 1.2 }), d)); },
+      () => { moveSlime({ action: 'alert', mood: 'dusty', duration: 700, scheduleNext: false }); setTimeout(() => { burstAtSlime(['💨'], 4); playSparkleSound(); moveSlime({ action: 'happy', mood: 'fixed', phrase: trT('*blows on own cartridge* fixed ♡', '*souffle sur sa propre cartouche* réparé ♡'), duration: 800 }); }, 750); }
+    ],
+    geo: [
+      () => { burstAtSlime(['✨', '⭐'], 5); moveSlime({ action: 'hop', mood: 'marquee', phrase: trT('⟨marquee⟩ strutting ⟨/marquee⟩', '⟨marquee⟩ défilé ⟨/marquee⟩'), duration: 520, distance: 1.8, scheduleNext: false }); setTimeout(() => moveSlime({ action: 'hop', mood: 'marquee', duration: 520, distance: 1.8 }), 560); },
+      () => { cheatFall(['1', '0', '0', '0', '0', '0', '0'], 8); moveSlime({ action: 'flip', mood: 'millionth', phrase: trT('visitor №1,000,000: me. congrats to me!!', 'visiteur n°1 000 000 : moi. bravo à moi !!'), duration: 800 }); playFanfare(); }
+    ],
+    bsod: [
+      () => { burstAtSlime([':('], 3); moveSlime({ action: 'flip', mood: 'frown flip', phrase: trT('flipped my frown. literally.', 'j\'ai retourné ma moue. littéralement.'), duration: 800, scheduleNext: false }); setTimeout(() => burstAtSlime(['♡'], 5), 850); },
+      () => { moveSlime({ action: 'hop', mood: 'loading', phrase: trT('loading cuteness… 99%… 100%!!', 'chargement de mignonnerie… 99 %… 100 % !!'), duration: 480, distance: 1.2, scheduleNext: false }); [500, 1000].forEach((d) => setTimeout(() => moveSlime({ action: 'hop', mood: 'loading', duration: 480, distance: 1.2 }), d)); setTimeout(() => burstAtSlime(['✚', '♡'], 5), 1550); }
+    ],
+    amber: [
+      () => { moveSlime({ action: 'nap', mood: 'batch job', phrase: trT('job queued… running…', 'job en file… en cours…'), duration: 1100, scheduleNext: false }); setTimeout(() => { burstAtSlime(['📠'], 3); moveSlime({ action: 'happy', mood: 'job complete', phrase: trT('nap.exe COMPLETE. output: rest ♡', 'sieste.exe TERMINÉ. sortie : du repos ♡'), duration: 800 }); }, 1200); },
+      () => { burstAtSlime(['▚', '▞'], 4); moveSlime({ action: 'hop', mood: '80 columns', phrase: trT('fits in 80 columns. barely.', 'tient sur 80 colonnes. tout juste.'), duration: 460, distance: 0.9, scheduleNext: false }); setTimeout(() => moveSlime({ action: 'hop', mood: '80 columns', duration: 460, distance: 0.9 }), 500); }
+    ]
+  };
+  function dreamTrickAct() {
+    if (typeof dreamWorld === 'undefined' || !dreamWorld || dreamWorld.id === 'scp') return false; // scp: the entity holds the stage
+    const bank = DREAM_TRICKS[dreamWorld.id];
+    if (!bank) return false;
+    try { bank[Math.floor(Math.random() * bank.length)](); } catch (e) { /* the move was too avant-garde */ }
+    return true;
+  }
+
   function slimeTrick() {
     { const dl = dreamActLine('trick'); if (dl) setTimeout(() => showBubble(dl, 2600), 900); }
     if (pet.busy || pet.sleeping || isGrabbing) return;
     playSparkleSound();
     gainFollowers(3);
     burstAtSlime(['★', '✦', '♥'], 6);
+    if (dreamTrickAct()) return; // in a dream, the WORLD choreographs the trick
     moveSlime({ action: 'flip', mood: 'show-off', phrase: trT('FRONTEND FLIP!!', 'SALTO FRONTEND !!'), duration: 800 });
   }
 
@@ -8384,6 +8426,13 @@ document.addEventListener('DOMContentLoaded', () => {
     dT(dreamSpawnSouvenir, 55000 + Math.random() * 50000);
     // v85: the dream journal refreshes its drip while open
     dI(dreamlogTick, 13000);
+    // v106.2: the on-stage performer improvises in-world every so often
+    dI(() => {
+      if (!dreamWorld || dreamWorld.id === 'scp') return;
+      if (typeof liveOpen === 'undefined' || !liveOpen || pet.busy || pet.sleeping) return;
+      if (typeof ghostHidden === 'function' && ghostHidden()) return;
+      if (Math.random() < 0.55) dreamTrickAct();
+    }, 42000);
     dT(() => dreamEnd('timer'), dur);
   }
 
