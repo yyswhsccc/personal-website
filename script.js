@@ -15956,7 +15956,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!gDreamSkin) { GAME.gimmick = null; return; }
     if (!GAME.gimmick) {
       if (!GAME.nextGimmickAt) GAME.nextGimmickAt = GAME.frame + 900 + (gStateHash('gmk') % 500);
-      if (GAME.frame >= GAME.nextGimmickAt && !GAME.event && !GAME.boss && !GAME.nm) gGimmickStart();
+      if (GAME.frame >= GAME.nextGimmickAt && !GAME.event && !GAME.boss && !GAME.nm && !GAME.stage) gGimmickStart();
       return;
     }
     const g = GAME.gimmick;
@@ -16110,6 +16110,282 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     g2.textAlign = 'left';
   }
+  /* ==== v114: DREAM STAGES — the world's most iconic thing becomes a
+     LEVEL, and the verb of play changes with it. once per ~90s of
+     dream running a stage gate rolls in: 25 seconds of new rules,
+     then a CLEAR plate with the tally. debug: window.__yosSTG ==== */
+  const G_STAGES = { win95: 'wizard', scp: 'blackout', matrix: 'lobby', gameboy: 'route1', geo: 'construction', bsod: 'stairs', amber: 'assembly' };
+  const G_STAGE_META = {
+    wizard: { n: ['THE SETUP WIZARD', 'L\'ASSISTANT D\'INSTALLATION'], sub: ['choose your lane at every dialog — Cancel is usually love', 'choisis ta voie à chaque boîte — Annuler, c\'est souvent l\'amour'] },
+    blackout: { n: ['CONTAINMENT BLACKOUT', 'PANNE DE CONFINEMENT'], sub: ['the lights are a rumor. run by flashlight', 'la lumière est une rumeur. cours à la lampe torche'] },
+    lobby: { n: ['THE LOBBY', 'LE HALL'], sub: ['bullet time is ON. weave, beautifully', 'le bullet time est LÀ. ondule, avec style'] },
+    route1: { n: ['ROUTE 1 — TALL GRASS', 'ROUTE 1 — HAUTES HERBES'], sub: ['you know what lives in there. it pops out LATE', 'tu sais ce qui vit dedans. ça surgit TARD'] },
+    construction: { n: ['UNDER CONSTRUCTION', 'EN CONSTRUCTION'], sub: ['the road is unfinished since 1998. mind the gaps', 'la route est inachevée depuis 1998. gare aux trous'] },
+    stairs: { n: ['THE ERROR STAIRCASE', 'L\'ESCALIER D\'ERREURS'], sub: ['every step is a window. climb the crash', 'chaque marche est une fenêtre. escalade le crash'] },
+    assembly: { n: ['THE BATCH LINE', 'LA CHAÎNE DE TRAITEMENT'], sub: ['speed bands + stampers on a rhythm. be the good punch card', 'bandes de vitesse + poinçons en rythme. sois la bonne carte'] }
+  };
+  const G_WIZ_GATES = [
+    { top: ['install 47 toolbars', '47 barres d\'outils'], bot: ['skip ♡', 'passer ♡'], good: 'bot' },
+    { top: ['read the EULA', 'lire le CLUF'], bot: ['agree to §666', 'accepter §666'], good: 'top' },
+    { top: ['restart NOW', 'redémarrer LÀ'], bot: ['later ♡', 'plus tard ♡'], good: 'bot' },
+    { top: ['free cursor pack!!', 'curseurs gratuits !!'], bot: ['no thank you', 'non merci'], good: 'bot' },
+    { top: ['make IE default', 'IE par défaut'], bot: ['it already is', 'il l\'est déjà'], good: 'bot' }
+  ];
+  function gStageTick() {
+    if (!gDreamSkin) { GAME.stage = null; return; }
+    const st = GAME.stage;
+    const sb = gSlimeBox();
+    if (!st) {
+      if (!GAME.stageAt) GAME.stageAt = GAME.frame + 60 * 34 + (gStateHash('stg') % 600);
+      if (GAME.frame >= GAME.stageAt && !GAME.event && !GAME.boss && !GAME.nm && !GAME.gimmick) gStageStart();
+      return;
+    }
+    st.t++;
+    if (st.phase === 'gate') {
+      if (st.t > 110) { st.phase = 'run'; st.t = 0; }
+      return;
+    }
+    if (st.phase === 'clear') {
+      if (st.t > 130) { GAME.stage = null; GAME.stageAt = GAME.frame + 60 * 92 + (gStateHash('stg2') % 900); }
+      return;
+    }
+    // ---- run phase: 1450 frames of new rules ----
+    const k = st.kind;
+    if (k === 'wizard') {
+      GAME.spawnIn = Math.max(GAME.spawnIn, 40);
+      if (st.t % 265 === 20) {
+        const g = G_WIZ_GATES[st.data.gateIx++ % G_WIZ_GATES.length];
+        st.items.push({ x: G_W + 40, gate: g, judged: false });
+      }
+      st.items.forEach((it) => {
+        it.x -= gSpeed();
+        if (!it.judged && it.x + 30 < sb.x) {
+          it.judged = true;
+          const lane = GAME.y > 34 ? 'top' : 'bot';
+          if (lane === it.gate.good) { st.score += 6; fxCoins(6); playSparkleSound(); gToast(['✅ correct choice!! the wizard nods. +6', '✅ bon choix !! l\'assistant approuve. +6'], 110); }
+          else { fxScore(-15); playTone(180, 'square', 0.09, 0, 0.05); gToast(['❌ 47 toolbars installed themselves. -15', '❌ 47 barres d\'outils se sont installées. -15'], 130); }
+        }
+      });
+      st.items = st.items.filter((it) => it.x > -80);
+    } else if (k === 'blackout') {
+      // normal spawner runs — you just can't SEE far (drawn in gDrawStage)
+      if (st.t % 90 === 0) playTone(70, 'sine', 0.2, 0, 0.03);
+    } else if (k === 'lobby') {
+      GAME.spawnIn = Math.max(GAME.spawnIn, 40);
+      if (st.t % 52 === 8) st.items.push({ x: G_W + 16, y: 44 + Math.random() * (G_GROUND - 70), vx: 3.1 + Math.random() * 1.2, bullet: 1 });
+      st.items.forEach((it) => {
+        it.x -= it.vx; // bullets ignore the slow-mo — that's the POINT
+        if (!it.hit && Math.abs(it.x - (sb.x + sb.w / 2)) < 14 && Math.abs(it.y - (sb.y + sb.h / 2)) < 16) {
+          it.hit = 1;
+          if (GAME.frame >= GAME.invUntil) gHit({ w: 0 });
+        } else if (!it.dodged && it.x < sb.x - 8) { it.dodged = 1; st.score += 4; }
+      });
+      st.items = st.items.filter((it) => it.x > -30);
+    } else if (k === 'route1') {
+      // normal spawner ON — but everything hides in the grass til the last moment
+      GAME.obs.forEach((o) => {
+        if (o._grass === undefined) { o._grass = 1; o.hidden = 1; }
+        if (o.hidden && o.x < sb.x + 185) { o.hidden = 0; o._pop = 14; playTone(980, 'square', 0.05, 0, 0.03); }
+        if (o._pop) o._pop--;
+      });
+    } else if (k === 'construction') {
+      GAME.spawnIn = Math.max(GAME.spawnIn, 130);
+      if (st.t % 290 === 30) st.items.push({ x: G_W + 30, w: 62, gap: 1, plank: Math.random() < 0.4, fell: false });
+      st.items.forEach((it) => {
+        it.x -= gSpeed();
+        const cx = sb.x + sb.w / 2;
+        if (it.gap && !it.plank && !it.fell && GAME.y <= 2 && cx > it.x + 8 && cx < it.x + it.w - 8) {
+          it.fell = true;
+          fxCoins(-3);
+          GAME.vy = 8.4; GAME.y = 1; // the mercy trampoline
+          playTone(140, 'square', 0.1, 0, 0.06); playTone(500, 'triangle', 0.1, 0.12, 0.05);
+          if (!st.data.caught) { st.data.caught = 1; gToast(['🕳→🛟 the webmaster caught you. -3 coins, +1 story ♡', '🕳→🛟 le webmestre t\'a rattrapé. -3 pièces, +1 anecdote ♡'], 170); }
+        }
+      });
+      st.items = st.items.filter((it) => it.x > -90);
+    } else if (k === 'stairs') {
+      GAME.spawnIn = Math.max(GAME.spawnIn, 40);
+      if (st.t % 300 === 24) {
+        const up = st.data.batch++ % 2 === 0;
+        const hs = up ? [16, 32, 48] : [48, 32, 16];
+        hs.forEach((h, i) => GAME.obs.push({ x: G_W + 40 + i * 46, w: 30, h, fly: false }));
+        st.items.push({ x: G_W + 40 + 46, y: G_GROUND - 66, coin: 1, got: false }); // the crest prize
+      }
+      st.items.forEach((it) => {
+        it.x -= gSpeed();
+        if (!it.got && Math.abs(it.x - (sb.x + sb.w / 2)) < 20 && sb.y < it.y + 16) { it.got = true; st.score += 5; fxCoins(3); playSparkleSound(); }
+      });
+      st.items = st.items.filter((it) => it.x > -30);
+    } else if (k === 'assembly') {
+      GAME.spawnIn = Math.max(GAME.spawnIn, 40);
+      if (st.t % 250 === 0) {
+        const fast = (st.data.band = !st.data.band);
+        setMod('speed', fast ? 1.28 : 0.78, 4.3);
+        gToast(fast ? ['⏩ BATCH SPEED-UP', '⏩ ACCÉLÉRATION DU LOT'] : ['⏪ throttled — the mainframe breathes', '⏪ ralenti — le mainframe respire'], 90);
+      }
+      if (st.t % 205 === 15) st.items.push({ x: G_W + 46, warn: 64, slam: 0, piston: 1 });
+      st.items.forEach((it) => {
+        it.x -= gSpeed();
+        if (it.warn > 0) { it.warn--; if (it.warn === 0) { it.slam = 26; playTone(90, 'square', 0.14, 0, 0.07); } }
+        else if (it.slam > 0) {
+          it.slam--;
+          const cx = sb.x + sb.w / 2;
+          if (GAME.frame >= GAME.invUntil && GAME.y < 30 && cx > it.x - 20 && cx < it.x + 20) gHit({ w: 0 });
+        }
+      });
+      st.items = st.items.filter((it) => it.x > -40);
+    }
+    if (st.t > 1450) {
+      st.phase = 'clear'; st.t = 0;
+      const bonus = 25 + (st.score || 0);
+      fxScore(bonus);
+      st.data.bonus = bonus;
+      playFanfare();
+      gMarkJoy();
+    }
+  }
+  function gStageStart() {
+    const kind = G_STAGES[gDreamSkin];
+    if (!kind) return;
+    GAME.stage = { kind, t: 0, phase: 'gate', items: [], score: 0, data: { gateIx: 0, batch: 0 } };
+    if (kind === 'lobby') setMod('speed', 0.55, 26);
+    playTone(392, 'triangle', 0.14, 0, 0.05); playTone(523, 'triangle', 0.14, 0.13, 0.05); playTone(659, 'triangle', 0.18, 0.26, 0.06);
+  }
+  try { window.__yosSTG = { force() { if (GAME.state === 'run' && gDreamSkin && !GAME.stage) { gStageStart(); return true; } return false; }, state: () => GAME.stage && { kind: GAME.stage.kind, phase: GAME.stage.phase, t: GAME.stage.t, score: GAME.stage.score } }; } catch (e) { /* no window */ }
+  function gDrawStage(g2) {
+    const st = GAME.stage;
+    if (!st) return;
+    const meta = G_STAGE_META[st.kind];
+    const sb = gSlimeBox();
+    if (st.phase === 'gate' || st.phase === 'clear') {
+      // the STAGE PLATE — a full-width band in world colors
+      const y0 = G_H / 2 - 26;
+      g2.fillStyle = 'rgba(8, 3, 14, 0.78)';
+      g2.fillRect(0, y0, G_W, 52);
+      g2.fillStyle = gLite(gTheme.pink);
+      g2.fillRect(0, y0, G_W, 3);
+      g2.fillRect(0, y0 + 49, G_W, 3);
+      g2.textAlign = 'center';
+      g2.fillStyle = gLite(gTheme.pink);
+      g2.font = "15px 'Jersey 25', 'VT323', monospace";
+      if (st.phase === 'gate') {
+        g2.fillText('▶ ' + L(meta.n), G_W / 2, y0 + 22);
+        g2.fillStyle = '#ffe6f4';
+        g2.font = "10px 'Jersey 25', 'VT323', monospace";
+        g2.fillText(L(meta.sub), G_W / 2, y0 + 40);
+      } else {
+        g2.fillText(trT('STAGE CLEAR ♡ +', 'NIVEAU FINI ♡ +') + (st.data.bonus || 25), G_W / 2, y0 + 22);
+        g2.fillStyle = '#ffe6f4';
+        g2.font = "10px 'Jersey 25', 'VT323', monospace";
+        g2.fillText(L(meta.n), G_W / 2, y0 + 40);
+      }
+      g2.textAlign = 'left';
+      if (st.phase === 'gate') return;
+    }
+    if (st.phase !== 'run') return;
+    const k = st.kind;
+    if (k === 'wizard') {
+      st.items.forEach((it) => {
+        // two stacked dialog plates with a runway between
+        const drawPlate = (y, h, txt, hot) => {
+          g2.fillStyle = '#dfdfdf';
+          g2.fillRect(it.x, y, 118, h);
+          g2.fillStyle = '#000080';
+          g2.fillRect(it.x, y, 118, 6);
+          g2.strokeStyle = '#14020e';
+          g2.strokeRect(it.x + 0.5, y + 0.5, 117, h - 1);
+          g2.fillStyle = '#14020e';
+          g2.font = "9px 'Jersey 25', 'VT323', monospace";
+          g2.fillText(L(txt).slice(0, 24), it.x + 5, y + h / 2 + 5);
+        };
+        drawPlate(14, 44, it.gate.top);
+        drawPlate(G_GROUND - 46, 40, it.gate.bot);
+      });
+    } else if (k === 'blackout') {
+      // darkness with a flashlight cone riding ahead of the slime
+      const cx = sb.x + sb.w + 46, cy = sb.y + sb.h / 2;
+      const grad = g2.createRadialGradient(cx, cy, 30, cx, cy, 150);
+      grad.addColorStop(0, 'rgba(3, 4, 10, 0)');
+      grad.addColorStop(0.72, 'rgba(3, 4, 10, 0.55)');
+      grad.addColorStop(1, 'rgba(3, 4, 10, 0.92)');
+      g2.fillStyle = grad;
+      g2.fillRect(0, 0, G_W, G_H);
+      if ((st.t >> 5) % 2) { // keter strip
+        g2.fillStyle = 'rgba(198, 40, 40, 0.5)';
+        g2.fillRect(0, 0, G_W, 4);
+      }
+    } else if (k === 'lobby') {
+      st.items.forEach((it) => {
+        g2.fillStyle = 'rgba(61, 255, 124, 0.25)';
+        g2.fillRect(it.x, it.y - 1, 26, 2); // the trail
+        g2.fillStyle = '#eaffea';
+        g2.fillRect(it.x - 3, it.y - 3, 6, 6);
+        g2.fillStyle = gDreamColor('#3dff7c');
+        g2.fillRect(it.x - 1, it.y - 1, 2, 2);
+      });
+    } else if (k === 'route1') {
+      // the grass band over the floor line
+      for (let gx = -(GAME.frame * 2 % 18); gx < G_W; gx += 18) {
+        g2.fillStyle = (gx / 18) % 2 ? gLite('#57c689') : gDreamColor('#306230');
+        g2.fillRect(gx, G_GROUND - 8, 4, 8);
+        g2.fillRect(gx + 7, G_GROUND - 12, 3, 12);
+      }
+      GAME.obs.forEach((o) => {
+        if (o._pop > 0) {
+          g2.fillStyle = '#ffffff';
+          g2.font = "13px 'Jersey 25', 'VT323', monospace";
+          g2.fillText('!', o.x + o.w / 2 - 2, G_GROUND - o.h - 8 - o._pop / 3);
+        }
+      });
+    } else if (k === 'construction') {
+      st.items.forEach((it) => {
+        g2.fillStyle = '#05010f';
+        g2.fillRect(it.x, G_GROUND, it.w, G_H - G_GROUND);
+        for (let i = 0; i < 3; i++) { // hazard stripes on both lips
+          g2.fillStyle = i % 2 ? '#ffd23f' : '#141414';
+          g2.fillRect(it.x - 4, G_GROUND - 3 + 0, 4, 3);
+          g2.fillRect(it.x + it.w, G_GROUND - 3, 4, 3);
+        }
+        if (it.plank) {
+          g2.fillStyle = '#8a5a2e';
+          g2.fillRect(it.x - 4, G_GROUND - 3, it.w + 8, 5);
+          g2.fillStyle = '#a8743e';
+          g2.fillRect(it.x - 4, G_GROUND - 3, it.w + 8, 2);
+        }
+      });
+      if ((st.t >> 4) % 3 === 0) {
+        g2.font = "10px sans-serif";
+        g2.fillText('🚧', 8, 24);
+        g2.fillText('🚧', G_W - 22, 24);
+      }
+    } else if (k === 'stairs') {
+      st.items.forEach((it) => {
+        if (it.got) return;
+        g2.fillStyle = '#ffe98a';
+        g2.font = "11px 'Jersey 25', 'VT323', monospace";
+        g2.fillText('⛁', it.x - 4, it.y + 4 + Math.sin(st.t * 0.1) * 2);
+      });
+    } else if (k === 'assembly') {
+      // conveyor floor stripes ride the current speed
+      for (let gx = -(GAME.frame * (modActive('speed') && modVal('speed') > 1 ? 3.4 : 1.6) % 24); gx < G_W; gx += 24) {
+        g2.fillStyle = 'rgba(255, 176, 0, 0.22)';
+        g2.fillRect(gx, G_GROUND + 3, 12, 3);
+      }
+      st.items.forEach((it) => {
+        const headY = it.slam > 0 ? G_GROUND - 44 : 6;
+        g2.fillStyle = '#5a3d10';
+        g2.fillRect(it.x - 4, 0, 8, it.slam > 0 ? G_GROUND - 44 : 10); // the pole
+        g2.fillStyle = it.warn > 0 && (it.warn >> 3) % 2 ? '#ffd23f' : '#c9a227';
+        g2.fillRect(it.x - 18, headY, 36, 14); // the stamper head
+        if (it.warn > 0) {
+          g2.fillStyle = (it.warn >> 3) % 2 ? '#ffd23f' : 'rgba(255, 210, 63, 0.4)';
+          g2.font = "11px 'Jersey 25', 'VT323', monospace";
+          g2.fillText('!', it.x - 2, G_GROUND - 6);
+        }
+      });
+    }
+  }
+
   function gDrawGimmick(g2) {
     gDrawShowBanner(g2);
     const g = GAME.gimmick;
@@ -16320,7 +16596,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function gReset() {
-    GAME.gimmick = null; GAME.nextGimmickAt = 0; GAME.lastGimmick = null; GAME.msHit = null; GAME.showBanner = null; GAME.showStreak = 0; // fresh run, fresh show
+    GAME.gimmick = null; GAME.nextGimmickAt = 0; GAME.lastGimmick = null; GAME.msHit = null; GAME.showBanner = null; GAME.showStreak = 0; GAME.stage = null; GAME.stageAt = 0; // fresh run, fresh show
     GAME.obs = [];
     GAME.speed = 3.4;
     GAME.score = 0;
@@ -16675,6 +16951,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const G_FLY_LABELS = { win95: '✕!', scp: 'SCP', matrix: '010', gameboy: '404', geo: 'GIF', bsod: ':(', amber: 'JCL' };
 
   function gDrawObstacle(g2, o) {
+    if (o.hidden) { // route 1: it's in the tall grass. you'll know soon.
+      g2.fillStyle = gLite('#57c689');
+      const bx = o.x + (o.w || 20) / 2;
+      g2.fillRect(bx - 4, G_GROUND - 10 + Math.sin((GAME.frame + o.x) * 0.2) * 2, 3, 10);
+      g2.fillRect(bx + 2, G_GROUND - 13, 3, 13);
+      return;
+    }
     const yTop = o.fly ? G_GROUND - 58 : G_GROUND - o.h - (o.jy || 0);
     const skin = gDreamSkin;
     if (o.fly) {
@@ -17055,6 +17338,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (GAME.lives < (GAME._prevLives || 0)) GAME.hurtAt = GAME.frame; // sour-moment stamp
       GAME._prevLives = GAME.lives;
       gGimmickTick(); // the world's own set-pieces run between bosses
+      gStageTick(); // and every ~90s the world's ICON becomes the level
       if (GAME.frame % 30 === 0) gMilestoneTick(); // and it comments on your form
       if (!GAME.boss && !GAME.nm && GAME.score >= GAME.nextBossAt) {
         const kinds = [
@@ -17187,6 +17471,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     GAME.obs.forEach((o) => gDrawObstacle(g2, o));
     gDrawGimmick(g2);
+    gDrawStage(g2);
 
     if (GAME.pickup) gDrawMat(g2, G_MATS.wand, GAME.pickup.x, G_GROUND + G_SLIME_S - 4 - 18, 2);
     GAME.shots.forEach((sh) => {
