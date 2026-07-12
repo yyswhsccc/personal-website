@@ -16115,6 +16115,15 @@ document.addEventListener('DOMContentLoaded', () => {
      dream running a stage gate rolls in: 25 seconds of new rules,
      then a CLEAR plate with the tally. debug: window.__yosSTG ==== */
   const G_STAGES = { win95: 'wizard', scp: 'blackout', matrix: 'lobby', gameboy: 'route1', geo: 'construction', bsod: 'stairs', amber: 'assembly' };
+  // scp splits by TONIGHT'S ENTITY — seven possessions, seven level designs
+  const G_SCP_STAGES = { '999': 'tickle', '173': 'dontblink', '914': 'refinery', '055': 'antimeme', '426': 'toaster', '3008': 'showroom', '2521': 'wordless' };
+  function gStageKind() {
+    if (gDreamSkin === 'scp') {
+      const ent = (typeof dreamWorld !== 'undefined' && dreamWorld && dreamWorld.flags && dreamWorld.flags.ent) ? dreamWorld.flags.ent.id : null;
+      return (ent && G_SCP_STAGES[ent]) || 'blackout';
+    }
+    return G_STAGES[gDreamSkin];
+  }
   const G_STAGE_META = {
     wizard: { n: ['THE SETUP WIZARD', 'L\'ASSISTANT D\'INSTALLATION'], sub: ['choose your lane at every dialog — Cancel is usually love', 'choisis ta voie à chaque boîte — Annuler, c\'est souvent l\'amour'] },
     blackout: { n: ['CONTAINMENT BLACKOUT', 'PANNE DE CONFINEMENT'], sub: ['the lights are a rumor. run by flashlight', 'la lumière est une rumeur. cours à la lampe torche'] },
@@ -16122,7 +16131,14 @@ document.addEventListener('DOMContentLoaded', () => {
     route1: { n: ['ROUTE 1 — TALL GRASS', 'ROUTE 1 — HAUTES HERBES'], sub: ['you know what lives in there. it pops out LATE', 'tu sais ce qui vit dedans. ça surgit TARD'] },
     construction: { n: ['UNDER CONSTRUCTION', 'EN CONSTRUCTION'], sub: ['the road is unfinished since 1998. mind the gaps', 'la route est inachevée depuis 1998. gare aux trous'] },
     stairs: { n: ['THE ERROR STAIRCASE', 'L\'ESCALIER D\'ERREURS'], sub: ['every step is a window. climb the crash', 'chaque marche est une fenêtre. escalade le crash'] },
-    assembly: { n: ['THE BATCH LINE', 'LA CHAÎNE DE TRAITEMENT'], sub: ['speed bands + stampers on a rhythm. be the good punch card', 'bandes de vitesse + poinçons en rythme. sois la bonne carte'] }
+    assembly: { n: ['THE BATCH LINE', 'LA CHAÎNE DE TRAITEMENT'], sub: ['speed bands + stampers on a rhythm. be the good punch card', 'bandes de vitesse + poinçons en rythme. sois la bonne carte'] },
+    tickle: { n: ['THE TICKLE GAUNTLET', 'LE COULOIR À CHATOUILLES'], sub: ['orange goo bounces you sky-high — catch the hearts mid-air ♡', 'la gelée orange te catapulte — attrape les cœurs en vol ♡'] },
+    dontblink: { n: ["DON'T BLINK", 'NE CLIGNE PAS'], sub: ['the statues only move when the site blinks. it blinks.', 'les statues ne bougent que quand le site cligne. il cligne.'] },
+    refinery: { n: ['THE REFINEMENT LINE', 'LA CHAÎNE DE RAFFINAGE'], sub: ['every chamber changes WHAT YOU ARE. choose your lane', 'chaque chambre change CE QUE TU ES. choisis ta voie'] },
+    antimeme: { n: ['[DESCRIPTION MISSING]', '[DESCRIPTION MANQUANTE]'], sub: ['hazards vanish as you approach. jump from MEMORY', 'les dangers disparaissent en approchant. saute de MÉMOIRE'] },
+    toaster: { n: ['I AM THE FLOOR', 'JE SUIS LE SOL'], sub: ['toast pops from below. land ON one and I am helping ♡', 'les toasts jaillissent du sol. atterris DESSUS et je rends service ♡'] },
+    showroom: { n: ['THE INFINITE SHOWROOM', 'LE SHOWROOM INFINI'], sub: ['find 3 allen keys → assemble the EXIT. it is real. probably', 'trouve 3 clés allen → monte la SORTIE. elle existe. sans doute'] },
+    wordless: { n: ['●● ─ ●●●', '●● ─ ●●●'], sub: ['words are falling. it EATS the ones that touch you', 'des mots tombent. il MANGE ceux qui te touchent'] }
   };
   const G_WIZ_GATES = [
     { top: ['install 47 toolbars', '47 barres d\'outils'], bot: ['skip ♡', 'passer ♡'], good: 'bot' },
@@ -16235,6 +16251,122 @@ document.addEventListener('DOMContentLoaded', () => {
       });
       st.items = st.items.filter((it) => it.x > -40);
     }
+    else if (k === 'tickle') {
+      GAME.spawnIn = Math.max(GAME.spawnIn, 60);
+      if (st.t % 150 === 20) st.items.push({ x: G_W + 24, blob: 1, r: 14 });
+      if (st.t % 95 === 40) st.items.push({ x: G_W + 20, y: 26 + Math.random() * 50, heart: 1, got: false });
+      st.items.forEach((it) => {
+        it.x -= gSpeed() * (it.blob ? 1.15 : 0.9);
+        const cx = sb.x + sb.w / 2;
+        if (it.blob && !it.boinged && Math.abs(it.x - cx) < 20 && GAME.y < 22) {
+          it.boinged = 1;
+          GAME.vy = 9.5 + Math.random() * 2.5; GAME.y = Math.max(GAME.y, 1); // TICKLED SKYWARD
+          playTone(880, 'triangle', 0.07, 0, 0.04); playTone(1174, 'triangle', 0.08, 0.08, 0.04);
+        }
+        if (it.heart && !it.got && Math.abs(it.x - cx) < 18 && Math.abs(it.y - (sb.y + 10)) < 20) {
+          it.got = true; st.score += 3; fxCoins(2); playSparkleSound();
+        }
+      });
+      st.items = st.items.filter((it) => it.x > -30);
+    } else if (k === 'dontblink') {
+      GAME.spawnIn = Math.max(GAME.spawnIn, 40);
+      const cycle = st.t % 300;
+      st.data.blinking = cycle >= 260; // 40 frames of blink at each cycle end
+      if (st.t % 210 === 20) st.items.push({ x: G_W + 30, statue: 1 });
+      st.items.forEach((it) => {
+        it.x -= gSpeed() * 0.35; // statues barely drift… while seen
+        if (st.data.blinking) it.x -= 2.6; // …and LUNGE while the site blinks
+        if (cycle === 260) playTone(90, 'sawtooth', 0.08, 0, 0.05);
+        const cx = sb.x + sb.w / 2;
+        if (GAME.frame >= GAME.invUntil && Math.abs(it.x - cx) < 16 && GAME.y < 34) { gHit({ w: 0 }); it.x = cx - 60; }
+      });
+      st.items = st.items.filter((it) => it.x > -40);
+    } else if (k === 'refinery') {
+      GAME.spawnIn = Math.max(GAME.spawnIn, 40);
+      if (st.t % 280 === 20) {
+        const R = [
+          { lab: ['VERY FINE: smol', 'TRÈS FIN : mini'], fx: () => { setMod('size', 0.72, 7); gToast(['⚙ refined SMALLER. the hitbox agrees ♡', '⚙ raffiné PLUS PETIT. la hitbox approuve ♡'], 130); } },
+          { lab: ['FINE: zoom', 'FIN : zoom'], fx: () => { setMod('speed', 1.22, 6); gToast(['⚙ refined FASTER. very fine indeed', '⚙ raffiné PLUS VITE. très fin, en effet'], 120); } },
+          { lab: ['ROUGH: chonk +⛁8', 'BRUT : chonk +⛁8'], fx: () => { setMod('size', 1.28, 6); fxCoins(8); gToast(['⚙ refined ROUGH: chonkier, but paid', '⚙ raffiné BRUT : plus rond, mais payé'], 130); } },
+          { lab: ['1:1 (nothing) +20', '1:1 (rien) +20'], fx: () => { fxScore(20); gToast(['⚙ 1:1 — you exit exactly yourself. +20 for bravery', '⚙ 1:1 — tu ressors toi-même. +20 pour le courage'], 140); } }
+        ];
+        const a = R[st.data.gateIx % R.length], b = R[(st.data.gateIx + 1 + (st.data.gateIx % 2)) % R.length];
+        st.data.gateIx += 2;
+        st.items.push({ x: G_W + 40, chamber: 1, top: a, bot: b, judged: false });
+      }
+      st.items.forEach((it) => {
+        it.x -= gSpeed();
+        if (it.chamber && !it.judged && it.x + 30 < sb.x) {
+          it.judged = true;
+          try { (GAME.y > 34 ? it.top : it.bot).fx(); } catch (e) { /* refinement escaped */ }
+          st.score += 4;
+          playTone(300, 'square', 0.05, 0, 0.03); playTone(420, 'square', 0.05, 0.07, 0.03);
+        }
+      });
+      st.items = st.items.filter((it) => it.x > -80);
+    } else if (k === 'antimeme') {
+      // normal spawner ON — hazards fade OUT as they get close. remember them.
+      GAME.obs.forEach((o) => { o._am = 1; });
+    } else if (k === 'toaster') {
+      GAME.spawnIn = Math.max(GAME.spawnIn, 60);
+      if (st.t % 190 === 30) st.items.push({ x: G_W * (0.35 + Math.random() * 0.5), slot: 1, warn: 55, pop: 0, worldX: null });
+      st.items.forEach((it) => {
+        if (it.worldX === null) it.worldX = it.x + GAME.frame * 0; // slots are screen-fixed: the floor is the toaster
+        if (it.warn > 0) { it.warn--; if (it.warn === 0) { it.pop = 46; playTone(220, 'square', 0.08, 0, 0.05); playTone(440, 'square', 0.06, 0.08, 0.04); } }
+        else if (it.pop > 0) {
+          it.pop--;
+          const h = it.pop > 30 ? (46 - it.pop) * 3.4 : it.pop * 1.8; // rise fast, sink slow
+          it.h = h;
+          const cx = sb.x + sb.w / 2;
+          if (Math.abs(it.x - cx) < 20 && h > 8) {
+            const slimeBottom = G_GROUND - GAME.y;
+            const toastTop = G_GROUND - h;
+            if (GAME.vy <= 0 && GAME.y > 4 && slimeBottom <= toastTop + 12) {
+              // landed ON the toast: I am ridden. I am helping.
+              GAME.vy = 10; st.score += 4; fxCoins(3); playSparkleSound();
+              if (!st.data.rode) { st.data.rode = 1; gToast(['🍞 I am ridden. I am helping. I am so glad', '🍞 on me chevauche. je rends service. quel bonheur'], 160); }
+              it.pop = Math.min(it.pop, 8);
+            } else if (GAME.frame >= GAME.invUntil && GAME.y < h - 6) { gHit({ w: 0 }); it.pop = 0; }
+          }
+        }
+      });
+      st.items = st.items.filter((it) => it.warn > 0 || it.pop > 0 || it.slot === undefined);
+    } else if (k === 'showroom') {
+      GAME.spawnIn = Math.max(GAME.spawnIn, 90);
+      if ((st.data.keysSpawned || 0) < 3 && st.t % 240 === 40) { st.data.keysSpawned = (st.data.keysSpawned || 0) + 1; st.items.push({ x: G_W + 30, y: G_GROUND - 52 - Math.random() * 30, key: 1, got: false }); }
+      if ((st.data.keys || 0) >= 3 && !st.data.exitOut) { st.data.exitOut = 1; st.items.push({ x: G_W + 60, exit: 1 }); gToast(['🚪 the EXIT assembled itself!! it looks… real??', '🚪 la SORTIE s\'est montée toute seule !! elle a l\'air… vraie ??'], 170); }
+      st.items.forEach((it) => {
+        it.x -= gSpeed();
+        const cx = sb.x + sb.w / 2;
+        if (it.key && !it.got && Math.abs(it.x - cx) < 18 && sb.y < it.y + 18) {
+          it.got = true; st.data.keys = (st.data.keys || 0) + 1; st.score += 5;
+          playTone(600 + st.data.keys * 150, 'triangle', 0.09, 0, 0.04);
+          gToast([`🔧 allen key ${st.data.keys}/3`, `🔧 clé allen ${st.data.keys}/3`], 90);
+        }
+        if (it.exit && Math.abs(it.x - cx) < 22) {
+          st.score += 20; st.t = 1451; // early clear — you FOUND the way out
+          playFanfare();
+        }
+      });
+      st.items = st.items.filter((it) => it.x > -60);
+    } else if (k === 'wordless') {
+      GAME.spawnIn = Math.max(GAME.spawnIn, 40);
+      if (st.t % 85 === 12) {
+        const WORDS = ['WORD', 'NOUN', 'VERB', 'NAME', 'HELP', 'THIS', 'IDEA'];
+        st.items.push({ x: G_W + 10, y: -8, word: WORDS[st.data.gateIx++ % WORDS.length], vy: 0.9 + Math.random() * 0.8, got: false });
+      }
+      st.items.forEach((it) => {
+        it.x -= gSpeed() * 0.8;
+        it.y += it.vy;
+        const cx = sb.x + sb.w / 2;
+        if (!it.got && Math.abs(it.x - cx) < 22 && Math.abs(it.y - (sb.y + 12)) < 22) {
+          it.got = true; fxScore(-12);
+          playTone(70, 'sine', 0.2, 0, 0.05);
+          if (!st.data.ate) { st.data.ate = 1; gToast(['●● ate the word off your back. -12', '●● a mangé le mot sur ton dos. -12'], 140); }
+        } else if (!it.dodged && !it.got && it.x < sb.x - 10) { it.dodged = 1; st.score += 2; }
+      });
+      st.items = st.items.filter((it) => it.x > -40 && it.y < G_H + 10 && !it.got);
+    }
     if (st.t > 1450) {
       st.phase = 'clear'; st.t = 0;
       const bonus = 25 + (st.score || 0);
@@ -16245,7 +16377,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
   function gStageStart() {
-    const kind = G_STAGES[gDreamSkin];
+    const kind = gStageKind();
     if (!kind) return;
     GAME.stage = { kind, t: 0, phase: 'gate', items: [], score: 0, data: { gateIx: 0, batch: 0 } };
     if (kind === 'lobby') setMod('speed', 0.55, 26);
@@ -16365,6 +16497,105 @@ document.addEventListener('DOMContentLoaded', () => {
         g2.font = "11px 'Jersey 25', 'VT323', monospace";
         g2.fillText('⛁', it.x - 4, it.y + 4 + Math.sin(st.t * 0.1) * 2);
       });
+    } else if (k === 'tickle') {
+      st.items.forEach((it) => {
+        if (it.blob) {
+          g2.fillStyle = '#ffab40';
+          g2.fillRect(it.x - 13, G_GROUND - 18, 26, 18);
+          g2.fillStyle = '#ffe0b2';
+          g2.fillRect(it.x - 9, G_GROUND - 14, 6, 4);
+          g2.fillStyle = '#5d2e00';
+          g2.fillRect(it.x - 6, G_GROUND - 11, 3, 3); g2.fillRect(it.x + 3, G_GROUND - 11, 3, 3);
+        } else if (it.heart && !it.got) {
+          g2.fillStyle = '#ff8a5c';
+          g2.font = "13px sans-serif";
+          g2.fillText('🧡', it.x - 6, it.y + Math.sin((st.t + it.x) * 0.08) * 3);
+        }
+      });
+    } else if (k === 'dontblink') {
+      st.items.forEach((it) => {
+        g2.font = "22px sans-serif";
+        g2.fillText('🗿', it.x - 11, G_GROUND - 4);
+      });
+      const cycle = st.t % 300;
+      if (cycle >= 240) { // the eyelids close in — then the BLINK
+        const closing = Math.min(1, (cycle - 240) / 20);
+        const dark = cycle >= 260 ? 0.88 : closing * 0.4;
+        g2.fillStyle = 'rgba(5, 4, 10, ' + dark + ')';
+        const lid = (cycle >= 260 ? 1 : closing) * (G_H / 2);
+        g2.fillRect(0, 0, G_W, lid);
+        g2.fillRect(0, G_H - lid, G_W, lid);
+      }
+    } else if (k === 'refinery') {
+      st.items.forEach((it) => {
+        if (!it.chamber) return;
+        const plate = (y, h, r) => {
+          g2.fillStyle = '#c9a227';
+          g2.fillRect(it.x, y, 112, h);
+          g2.fillStyle = '#8a6d1f';
+          g2.fillRect(it.x, y, 112, 5);
+          g2.fillStyle = '#141414';
+          g2.font = "9px 'Jersey 25', 'VT323', monospace";
+          g2.fillText(L(r.lab).slice(0, 22), it.x + 5, y + h / 2 + 4);
+        };
+        plate(14, 42, it.top);
+        plate(G_GROUND - 46, 40, it.bot);
+      });
+    } else if (k === 'antimeme') {
+      // handled in gDrawObstacle (they fade); a floating reminder that forgets itself
+      if ((st.t >> 5) % 4 === 0) {
+        g2.fillStyle = 'rgba(185, 174, 203, 0.5)';
+        g2.font = "11px 'Jersey 25', 'VT323', monospace";
+        g2.fillText('?', G_W * 0.45 + (st.t % 60), 30);
+      }
+    } else if (k === 'toaster') {
+      st.items.forEach((it) => {
+        // the slot in the floor
+        g2.fillStyle = '#2b3140';
+        g2.fillRect(it.x - 18, G_GROUND - 2, 36, 4);
+        if (it.warn > 0 && (it.warn >> 3) % 2) {
+          g2.fillStyle = '#e0a63a';
+          g2.fillRect(it.x - 4, G_GROUND - 8, 2, 2); g2.fillRect(it.x + 2, G_GROUND - 10, 2, 2); // crumbs
+        }
+        if (it.pop > 0 && it.h > 2) {
+          g2.fillStyle = '#e8c07a';
+          g2.fillRect(it.x - 14, G_GROUND - it.h, 28, it.h);
+          g2.fillStyle = '#c89a52';
+          g2.fillRect(it.x - 14, G_GROUND - it.h, 28, 5);
+        }
+      });
+    } else if (k === 'showroom') {
+      st.items.forEach((it) => {
+        if (it.key && !it.got) {
+          g2.font = "13px sans-serif";
+          g2.fillText('🔧', it.x - 6, it.y + Math.sin((st.t + it.x) * 0.09) * 3);
+        } else if (it.exit) {
+          g2.fillStyle = '#0051ba';
+          g2.fillRect(it.x - 16, G_GROUND - 58, 32, 58);
+          g2.fillStyle = '#ffcc00';
+          g2.fillRect(it.x - 12, G_GROUND - 54, 24, 12);
+          g2.fillStyle = '#141414';
+          g2.font = "8px 'Jersey 25', 'VT323', monospace";
+          g2.fillText('EXIT', it.x - 9, G_GROUND - 45);
+        }
+      });
+      g2.fillStyle = 'rgba(255, 204, 0, 0.85)';
+      g2.font = "10px 'Jersey 25', 'VT323', monospace";
+      g2.fillText('🔧 ' + ((st.data.keys || 0)) + '/3', G_W - 52, 14);
+    } else if (k === 'wordless') {
+      st.items.forEach((it) => {
+        if (it.word) {
+          g2.fillStyle = '#f2f2f2';
+          g2.font = "12px 'Jersey 25', 'VT323', monospace";
+          g2.fillText(it.word, it.x - 14, it.y);
+          g2.fillStyle = 'rgba(20, 20, 20, 0.8)';
+          g2.fillRect(it.x - 16, it.y + 2, it.word.length * 8 + 4, 2); // the shadow under language
+        }
+      });
+      // the corner speaks only in dots during this stage
+      g2.fillStyle = '#f2f2f2';
+      g2.font = "10px 'Jersey 25', 'VT323', monospace";
+      g2.fillText('●● ' + '●'.repeat(Math.min(6, Math.floor((st.score || 0) / 4))), 10, 14);
     } else if (k === 'assembly') {
       // conveyor floor stripes ride the current speed
       for (let gx = -(GAME.frame * (modActive('speed') && modVal('speed') > 1 ? 3.4 : 1.6) % 24); gx < G_W; gx += 24) {
@@ -16951,6 +17182,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const G_FLY_LABELS = { win95: '✕!', scp: 'SCP', matrix: '010', gameboy: '404', geo: 'GIF', bsod: ':(', amber: 'JCL' };
 
   function gDrawObstacle(g2, o) {
+    if (o._am) { // [DESCRIPTION MISSING]: it fades as you approach. remember it.
+      const d = o.x - (G_SLIME_X + G_SLIME_S);
+      const a = d > 200 ? 1 : d < 110 ? 0 : (d - 110) / 90;
+      if (a <= 0.02) return; // fully forgotten — commit to the jump
+      g2.save();
+      g2.globalAlpha = a;
+      o._am = 0; gDrawObstacle(g2, o); o._am = 1; // draw the real thing, faded
+      g2.restore();
+      return;
+    }
     if (o.hidden) { // route 1: it's in the tall grass. you'll know soon.
       g2.fillStyle = gLite('#57c689');
       const bx = o.x + (o.w || 20) / 2;
