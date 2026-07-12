@@ -11638,3 +11638,86 @@ html[data-theme="dark"].dream-amber .console-btn-eject .console-btn-icon { color
   .dwc-h-hand .dwc-card { margin-left: -18px; }
   .dwc-col { min-height: 190px; }
 }
+
+/* ==== v110: MINESWEEPER.EXE — the real board ==== */
+.dwm-win { width: min(380px, calc(100vw - 20px)); }
+.dwm-hud {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #c0c0c0;
+  border-bottom: 2px solid #8a8a8a;
+  padding: 5px 10px;
+}
+.dwm-lcd {
+  font-family: var(--font-pixel);
+  background: #000;
+  color: #ff0000;
+  font-size: 1rem;
+  padding: 2px 7px;
+  letter-spacing: 2px;
+  border: 2px inset #8a8a8a;
+}
+.dwm-face, .dwm-flagmode {
+  font-size: 1.15rem;
+  line-height: 1;
+  background: #c0c0c0;
+  border: 3px outset #dfdfdf;
+  padding: 3px 7px;
+  cursor: var(--cursor-heart, pointer);
+}
+.dwm-face:active, .dwm-flagmode:active { border-style: inset; }
+.dwm-flagmode.dwm-on { border-style: inset; background: #ffd400; }
+.dwm-grid {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 0;
+  padding: 8px;
+  background: #c0c0c0;
+}
+.dwm-cell {
+  aspect-ratio: 1;
+  min-height: 34px;
+  background: #c0c0c0;
+  border: 3px outset #dfdfdf;
+  font-family: var(--font-pixel);
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0;
+  cursor: var(--cursor-heart, pointer);
+}
+.dwm-cell.dwm-open {
+  border: 1px solid #8a8a8a;
+  background: #d8d8d8;
+  animation: dwm-pop 0.16s steps(2, end);
+}
+@keyframes dwm-pop { from { transform: scale(0.85); } }
+.dwm-cell.dwm-flower { background: #e8ffe8; animation: dwm-bloom 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); }
+@keyframes dwm-bloom { from { transform: scale(0.2) rotate(-30deg); } }
+.dwm-cell.dwm-boom { background: #ff8a8a; animation: dwm-boomf 0.4s steps(3, end); }
+@keyframes dwm-boomf { 33% { background: #ffd400; } 66% { background: #ff5f5f; } }
+.dwm-flagged { color: #c62828; }
+.dwm-shake { animation: dwm-shakef 0.5s steps(6, end); }
+@keyframes dwm-shakef { 20% { transform: translate(-50%, -50%) rotate(-1deg); } 40% { transform: translate(calc(-50% + 5px), -50%); } 60% { transform: translate(calc(-50% - 5px), calc(-50% + 3px)); } 80% { transform: translate(-50%, -50%) rotate(0.8deg); } }
+.dwm-bsod {
+  position: absolute;
+  inset: 8px;
+  background: #0a23a8;
+  color: #fff;
+  font-family: var(--font-pixel);
+  font-size: 0.72rem;
+  line-height: 1.5;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  animation: dream-dlg-pop 0.3s ease;
+  z-index: 3;
+}
+.dwm-bsod b { font-size: 1.6rem; }
+@media (prefers-reduced-motion: reduce) {
+  .dwm-shake, .dwm-cell.dwm-open, .dwm-cell.dwm-flower { animation: none; }
+}

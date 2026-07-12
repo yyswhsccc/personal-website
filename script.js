@@ -7067,7 +7067,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // a classic dialog box, dream-flavored. buttons: [label, cb, keepOpen]
   function dreamDlg(opts) {
     if (!dreamWorld) return null;
-    if (!opts.force && (document.querySelectorAll('.dream-dlg').length >= 2 || document.querySelector('.dwc-win'))) return null; // clutter law (the card table counts as a full house)
+    if (!opts.force && (document.querySelectorAll('.dream-dlg').length >= 2 || document.querySelector('.dwc-win') || document.querySelector('.dwm-win'))) return null; // clutter law (the card table counts as a full house)
     const d = document.createElement('div');
     d.className = 'dream-dlg' + (opts.cls ? ' ' + opts.cls : '');
     d.setAttribute('role', 'dialog');
@@ -8516,31 +8516,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (typeof gameActive === 'function' && gameActive()) return; // the arcade has the floor
     if (!dreamWorld || REDUCED_MOTION || document.querySelector('.dream-dlg')) return;
     const id = dreamWorld.id;
-    if (id === 'win95') { // minesweeper.exe: one click, trust your heart
-      const cells = ['🌸', '🌸', '🌸', '🌸', '🌸', '💣', '🌸', '🌸', '🌸'].sort(() => Math.random() - 0.5);
-      const d = dreamDlg({
-        title: 'minesweeper.exe', force: true,
-        lines: [trT('one click. trust your heart.', 'un clic. écoute ton cœur.')],
-        buttons: []
-      });
-      if (!d) return;
-      const grid = document.createElement('div');
-      grid.className = 'dream-mine-grid';
-      cells.forEach((c) => {
-        const b = document.createElement('button');
-        b.type = 'button';
-        b.textContent = '▒';
-        b.addEventListener('click', () => {
-          if (grid.dataset.done) return;
-          grid.dataset.done = '1';
-          b.textContent = c;
-          if (c === '💣') { playGlitchSound(); cheatFall(['💥', '🌸'], 12); showToast(trT('BOOM. it was confetti. you win anyway (house rules)', 'BOUM. c\'était des confettis. tu gagnes quand même (règle maison)')); }
-          else { playSparkleSound(); gainFollowers(1); showToast(trT('a flower!! minesweeper certified: pure of heart ♡', 'une fleur !! certifié démineur : cœur pur ♡')); }
-          setTimeout(() => { try { d.remove(); } catch (e) { /* swept */ } }, 1500);
-        }, { once: true });
-        grid.appendChild(b);
-      });
-      d.querySelector('.dream-dlg-body').appendChild(grid);
+    if (id === 'win95') { // minesweeper.exe: the real board (v110)
+      try { dwmOpen(); } catch (e) { /* the meadow is closed */ }
+      return;
     } else if (id === 'scp') { // Class-D orientation, question 1 of 1
       dreamDlg({
         title: trT('CLASS-D ORIENTATION QUIZ', 'QUIZ D\'ORIENTATION CLASSE-D'), force: true,
@@ -8899,7 +8877,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!dreamWorld || REDUCED_MOTION) return;
     if (dreamWorld.__dailyDone) return;
     if (gameActive()) { dT(dwDailyBeat, 30000); return; } // mid-run: the calendar waits politely
-    if (document.querySelector('.dream-dlg') || document.querySelector('.dwc-win')) { dT(dwDailyBeat, 25000); return; } // stage busy — the theater waits
+    if (document.querySelector('.dream-dlg') || document.querySelector('.dwc-win') || document.querySelector('.dwm-win')) { dT(dwDailyBeat, 25000); return; } // stage busy — the theater waits
     let day;
     try { day = dwDayOverride != null ? dwDayOverride : new Date().getDay(); } catch (e) { day = 3; } // wednesday is a safe, froggy default
     const beats = DW_DAILY[dreamWorld.id];
@@ -9577,13 +9555,9 @@ document.addEventListener('DOMContentLoaded', () => {
           dsL('the slime produces a deck from nowhere. the deck produces a table. sit ♡', 'le slime sort un paquet de nulle part. le paquet sort une table. assieds-toi ♡', 't-ok');
           try { dwBeatCards(); } catch (e) { /* the deck sticks */ }
         } },
-        mine: { d: ['minesweeper, one tile, high stakes', 'démineur, une case, gros enjeux'], fx() {
-          dreamDlg({ title: 'MINESWEEPER.EXE', force: true, lines: [trT('one tile. it is either a mine or a flower. history says flower.', 'une case. mine ou fleur. l\'histoire dit fleur.')], buttons: [
-            ['🟦', (d) => {
-              playSparkleSound(); gainFollowers(1);
-              dsL('🌼 it was a flower. it usually is. (the 40 mines were feelings.)', '🌼 c\'était une fleur. comme souvent. (les 40 mines étaient des sentiments.)', 't-ok');
-            }]
-          ] });
+        mine: { d: ['minesweeper — the REAL board (flowers included)', 'démineur — la VRAIE grille (fleurs incluses)'], fx() {
+          dsL('deploying the meadow… 56 tiles, 9 maybe-mines, 1 face button that feels everything.', 'déploiement de la prairie… 56 cases, 9 peut-être-mines, 1 bouton-visage à fleur de peau.', 't-ok');
+          try { dwmOpen(); } catch (e) { /* the meadow is closed */ }
         } },
         dialup: { d: ['dial the internet (the song of our people)', 'appeler internet (le chant de notre peuple)'], fx() {
           [400, 800, 1200, 2400, 1800, 2600].forEach((f, i) => playTone(f, i % 2 ? 'square' : 'sawtooth', 0.14, i * 0.16, 0.05));
@@ -12312,6 +12286,253 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
   ];
+  /* ==================================================================
+     v110 — MINESWEEPER.EXE, for real 💣🌸 (win95 dream)
+     the old one was a single tile that vanished. now it's a real
+     8×7 board: first click always safe, zero-cells flood open in a
+     ripple, numbers wear their canon win95 colors, the FACE BUTTON
+     emotes, flags work (right-click / long-press / flag mode), and
+     every outcome is its own little show — some mines are flowers
+     (history says flower), real mines crash into a tiny wrong-dream
+     bluescreen INSIDE the window. the slime commentates everything. */
+  var dwmState = null;
+  const DWM_W = 8, DWM_H = 7, DWM_MINES = 9;
+  const DWM_NUMC = ['', '#0000ff', '#008000', '#ff0000', '#000080', '#800000', '#008080', '#141414', '#8a8a8a'];
+  const DWM_TALK = {
+    open: [
+      ['minesweeper rules: numbers are neighbors, mines are drama, and in dreams… some mines are flowers ♡', 'règles du démineur : les chiffres sont des voisins, les mines du drame, et en rêve… certaines mines sont des fleurs ♡'],
+      ['I flagged one for you once. it was a flower. I have no regrets', 'j\'en ai marqué une pour toi un jour. c\'était une fleur. aucun regret'],
+      ['click gently. the board is 60% math, 40% faith', 'clique doucement. la grille, c\'est 60 % de maths, 40 % de foi']
+    ],
+    zero: [
+      ['ooh, a WHOLE MEADOW opened up. zero neighbors, zero worries', 'oooh, toute une CLAIRIÈRE s\'est ouverte. zéro voisin, zéro souci'],
+      ['the ripple!! the best feeling of 1995, scientifically', 'la vague !! la meilleure sensation de 1995, scientifiquement'],
+      ['that flood-fill? I felt it in my whole gelatinous being', 'ce remplissage en cascade ? je l\'ai senti dans tout mon être gélatineux']
+    ],
+    num: [
+      ['a 3?! okay. okay. we breathe. we count. we trust the math', 'un 3 ?! ok. ok. on respire. on compte. on croit aux maths'],
+      ['numbers are just mines describing themselves from a distance', 'les chiffres, c\'est juste des mines qui se décrivent de loin'],
+      ['careful now… the neighbors are getting chatty', 'prudence… les voisins deviennent bavards']
+    ],
+    flower: [
+      ['it BLOOMED!! I told you. history says flower ♡', 'elle a FLEURI !! je te l\'avais dit. l\'histoire dit fleur ♡'],
+      ['that was a mine in 1995. it\'s been doing inner work since', 'c\'était une mine en 1995. elle a fait un travail sur elle depuis'],
+      ['a flower. the board loves you specifically', 'une fleur. la grille t\'aime, toi précisément']
+    ],
+    boom: [
+      ['…that one had NOT done inner work. wrong dream incoming—', '…celle-là n\'avait PAS fait de travail sur elle. mauvais rêve imminent—'],
+      ['BOOM. it\'s fine. in dreams, explosions are just confetti with opinions', 'BOUM. ça va. en rêve, les explosions sont des confettis avec des opinions'],
+      ['the mine sends its regards. the face button saw everything', 'la mine te passe le bonjour. le bouton-visage a tout vu']
+    ],
+    flag: [
+      ['flagged!! now it knows that YOU know. the psychology of 1995', 'marquée !! maintenant elle sait que TU sais. la psychologie de 1995'],
+      ['a tiny flag. the mine feels seen. maybe that\'s all it wanted', 'un petit drapeau. la mine se sent vue. c\'était peut-être tout ce qu\'elle voulait']
+    ],
+    win: [
+      ['CLEARED!! every flower found, every mine respected. 1995 salutes you', 'NETTOYÉ !! chaque fleur trouvée, chaque mine respectée. 1995 te salue'],
+      ['a perfect sweep. the board retires happy. the flowers are yours ♡', 'un balayage parfait. la grille prend une retraite heureuse. les fleurs sont à toi ♡']
+    ]
+  };
+  function dwmSay(bank, ms) {
+    const t = DWM_TALK[bank];
+    if (!t || !dwmState || !dwmState.winEl) return;
+    dwmState.winEl.querySelectorAll('.dwc-bubble').forEach((b) => b.remove());
+    const b = document.createElement('div');
+    b.className = 'dwc-bubble';
+    b.textContent = trT(...t[Math.floor(Math.random() * t.length)]);
+    dwmState.winEl.appendChild(b);
+    setTimeout(() => { try { b.remove(); } catch (e) { /* swept */ } }, ms || 3600);
+  }
+  function dwmClose() {
+    if (!dwmState) return;
+    const w = dwmState.winEl;
+    dwmState = null;
+    if (w) { try { w.remove(); } catch (e) { /* gone */ } }
+  }
+  function dwmOpen() {
+    if (!dreamWorld || dreamWorld.id !== 'win95') return;
+    dwmClose();
+    const w = document.createElement('div');
+    w.className = 'dwc-win dwm-win';
+    w.setAttribute('role', 'dialog');
+    const bar = document.createElement('div');
+    bar.className = 'dwc-bar';
+    bar.innerHTML = '<span>💣 Minesweeper</span>';
+    const x = document.createElement('button');
+    x.type = 'button'; x.className = 'dwc-x'; x.textContent = '✕';
+    x.addEventListener('click', () => { playCloseSound(); dwmClose(); });
+    bar.appendChild(x);
+    w.appendChild(bar);
+    const hud = document.createElement('div');
+    hud.className = 'dwm-hud';
+    const mines = document.createElement('span');
+    mines.className = 'dwm-lcd';
+    const face = document.createElement('button');
+    face.type = 'button'; face.className = 'dwm-face'; face.textContent = '🙂';
+    face.addEventListener('click', () => { playClickSound(); dwmOpen(); });
+    const flagBtn = document.createElement('button');
+    flagBtn.type = 'button'; flagBtn.className = 'dwm-flagmode'; flagBtn.textContent = '🚩';
+    flagBtn.title = trT('flag mode (or right-click cells)', 'mode drapeau (ou clic droit)');
+    hud.append(mines, face, flagBtn);
+    w.appendChild(hud);
+    const grid = document.createElement('div');
+    grid.className = 'dwm-grid';
+    w.appendChild(grid);
+    const dealer = document.createElement('img');
+    dealer.className = 'dwc-dealer';
+    dealer.alt = '';
+    dealer.src = (OUTFIT_FRAMES && typeof OUTFIT_FRAMES.base === 'string' && OUTFIT_FRAMES.base) || 'assets/slime_pet_cutout.png';
+    w.appendChild(dealer);
+    document.body.appendChild(w);
+    dN(w);
+    const cells = [];
+    for (let i = 0; i < DWM_W * DWM_H; i++) {
+      const c = document.createElement('button');
+      c.type = 'button';
+      c.className = 'dwm-cell';
+      c.addEventListener('click', () => dwmClick(i));
+      c.addEventListener('contextmenu', (e) => { e.preventDefault(); e.stopPropagation(); dwmFlag(i); });
+      let pressT = null;
+      c.addEventListener('pointerdown', () => { pressT = setTimeout(() => { pressT = null; dwmFlag(i); }, 520); });
+      c.addEventListener('pointerup', () => { if (pressT) clearTimeout(pressT); });
+      grid.appendChild(c);
+      cells.push({ el: c, mine: false, open: false, flag: false, n: 0 });
+    }
+    dwmState = { winEl: w, grid, cells, face, minesEl: mines, flagBtn, flagMode: false, armed: false, over: false, flags: 0 };
+    flagBtn.addEventListener('click', () => { dwmState.flagMode = !dwmState.flagMode; flagBtn.classList.toggle('dwm-on', dwmState.flagMode); playClickSound(); });
+    dwmHud();
+    dwmSay('open', 4200);
+    playTone(523, 'triangle', 0.08, 0, 0.04);
+  }
+  function dwmHud() {
+    const st = dwmState;
+    st.minesEl.textContent = String(Math.max(0, DWM_MINES - st.flags)).padStart(3, '0');
+  }
+  function dwmNeighbors(i) {
+    const xx = i % DWM_W, yy = Math.floor(i / DWM_W), out = [];
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+      if (!dx && !dy) continue;
+      const nx = xx + dx, ny = yy + dy;
+      if (nx >= 0 && nx < DWM_W && ny >= 0 && ny < DWM_H) out.push(ny * DWM_W + nx);
+    }
+    return out;
+  }
+  function dwmArm(safeIx) { // mines land AFTER the first click, never under it
+    const st = dwmState;
+    const banned = [safeIx].concat(dwmNeighbors(safeIx));
+    let laid = 0;
+    while (laid < DWM_MINES) {
+      const i = Math.floor(Math.random() * st.cells.length);
+      if (st.cells[i].mine || banned.indexOf(i) >= 0) continue;
+      st.cells[i].mine = true; laid++;
+    }
+    st.cells.forEach((c, i) => { c.n = dwmNeighbors(i).filter((j) => st.cells[j].mine).length; });
+    st.armed = true;
+  }
+  function dwmFlag(i) {
+    const st = dwmState;
+    if (!st || st.over) return;
+    const c = st.cells[i];
+    if (c.open) return;
+    c.flag = !c.flag;
+    st.flags += c.flag ? 1 : -1;
+    c.el.textContent = c.flag ? '🚩' : '';
+    c.el.classList.toggle('dwm-flagged', c.flag);
+    playTone(c.flag ? 880 : 520, 'square', 0.04, 0, 0.03);
+    if (c.flag && Math.random() < 0.35) dwmSay('flag');
+    dwmHud();
+  }
+  function dwmReveal(i, depth) {
+    const st = dwmState;
+    const c = st.cells[i];
+    if (c.open || c.flag) return;
+    c.open = true;
+    const show = () => {
+      if (!dwmState || dwmState !== st) return;
+      c.el.classList.add('dwm-open');
+      if (c.n) {
+        c.el.textContent = String(c.n);
+        c.el.style.color = DWM_NUMC[c.n];
+      }
+      playTone(660 + Math.min(depth, 8) * 40, 'square', 0.025, 0, 0.02);
+    };
+    if (depth) setTimeout(show, depth * 46); else show();
+    if (c.n === 0) dwmNeighbors(i).forEach((j) => dwmReveal(j, depth + 1));
+  }
+  function dwmClick(i) {
+    const st = dwmState;
+    if (!st || st.over) return;
+    if (st.flagMode) { dwmFlag(i); return; }
+    const c = st.cells[i];
+    if (c.open || c.flag) return;
+    st.face.textContent = '😮';
+    setTimeout(() => { if (dwmState === st && !st.over) st.face.textContent = '🙂'; }, 350);
+    if (!st.armed) dwmArm(i);
+    if (c.mine) {
+      if (Math.random() < 0.4) { // the dream's mercy: some mines did inner work
+        c.mine = false;
+        c.open = true;
+        c.el.classList.add('dwm-open', 'dwm-flower');
+        c.el.textContent = '🌸';
+        st.cells.forEach((cc, j) => { cc.n = dwmNeighbors(j).filter((k) => st.cells[k].mine).length; });
+        st.cells.forEach((cc) => { if (cc.open && cc.n && !cc.mine && cc.el.textContent !== '🌸') { cc.el.textContent = String(cc.n); cc.el.style.color = DWM_NUMC[cc.n]; } else if (cc.open && !cc.n && cc.el.textContent && cc.el.textContent !== '🌸') { cc.el.textContent = ''; } });
+        playSparkleSound();
+        gainFollowers(1);
+        swSparkleAt && st.winEl && (() => { const r = c.el.getBoundingClientRect(); try { swSparkleAt(r.left + 10, r.top + 10, 4); } catch (e) { /* petals */ } })();
+        dwmSay('flower');
+        dwmWinCheck();
+        return;
+      }
+      // BOOM — the whole 1995 experience, miniaturized
+      st.over = true;
+      st.face.textContent = '😵';
+      c.el.classList.add('dwm-open', 'dwm-boom');
+      c.el.textContent = '💥';
+      st.cells.forEach((cc) => { if (cc.mine && cc !== c) { cc.el.classList.add('dwm-open'); cc.el.textContent = '💣'; } });
+      st.winEl.classList.add('dwm-shake');
+      playTone(90, 'sawtooth', 0.3, 0, 0.09); playTone(60, 'square', 0.4, 0.1, 0.08);
+      dwmSay('boom', 4600);
+      // the wrong-dream flash: a tiny bluescreen INSIDE the window
+      dT(() => {
+        if (!dwmState || dwmState !== st) return;
+        const bs = document.createElement('div');
+        bs.className = 'dwm-bsod';
+        bs.innerHTML = '<b>:(</b><br>' + trT('MINE_HIT_IN_NONPAGED_MEADOW<br>collecting petals… 0% complete<br><small>(wrong dream, actually — press any tile)</small>', 'MINE_TOUCHÉE_EN_PRAIRIE_NON_PAGINÉE<br>collecte de pétales… 0 %<br><small>(mauvais rêve, en fait — pressez une case)</small>');
+        st.grid.appendChild(bs);
+        playGlitchSound();
+        const again = document.createElement('button');
+        again.type = 'button';
+        again.className = 'dwc-finish';
+        again.textContent = trT('↻ again (the meadow forgives)', '↻ encore (la prairie pardonne)');
+        again.addEventListener('click', () => dwmOpen());
+        bs.appendChild(again);
+      }, 1300);
+      return;
+    }
+    const before = st.cells.filter((cc) => cc.open).length;
+    dwmReveal(i, 0);
+    const opened = st.cells.filter((cc) => cc.open).length - before;
+    if (opened >= 8) dwmSay('zero');
+    else if (c.n >= 3 && Math.random() < 0.6) dwmSay('num');
+    dwmWinCheck();
+  }
+  function dwmWinCheck() {
+    const st = dwmState;
+    if (!st || st.over) return;
+    if (st.cells.every((c) => c.open || c.mine)) {
+      st.over = true;
+      st.face.textContent = '😎';
+      st.cells.forEach((c) => { if (c.mine && !c.flag) { c.el.textContent = '🌷'; c.el.classList.add('dwm-flower'); } });
+      playFanfare();
+      gainFollowers(2);
+      try { cheatFall(['🌸', '💮', '✿', '🌷'], 14); } catch (e) { /* petals jam */ }
+      try { const dmap = DREAMLOG_CMDMAP.win95; if (dmap && dmap.mine) dreamlogAdd('win95', dmap.mine); } catch (e) { /* the log naps */ }
+      achvUnlock('cardshark');
+      dwmSay('win', 5200);
+      dT(() => dwmClose(), 6200);
+    }
+  }
+
   /* ==================================================================
      v109 — THE CARD TABLE 🎴 (win95 dream)
      the cascade was just an animation; now it's a PRIZE. the slime
