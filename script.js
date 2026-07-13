@@ -14746,14 +14746,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // midnight starfield (stars + pixel moon + occasional shooting star)
   function buildNightSky() {
+    // owner decree v121: dark mode keeps its twinkling STARS — the moon and
+    // the 7-second shooting-star spawner were evicted with the sticker layer
     if (nightSkyBuilt) return;
     nightSkyBuilt = true;
     const sky = document.getElementById('night-sky');
     if (!sky) return;
-
-    const moon = document.createElement('div');
-    moon.className = 'ns-moon';
-    sky.appendChild(moon);
 
     for (let i = 0; i < 26; i++) {
       const star = document.createElement('span');
@@ -14766,31 +14764,9 @@ document.addEventListener('DOMContentLoaded', () => {
       star.style.animationDelay = `${Math.random() * 3}s`;
       sky.appendChild(star);
     }
-
-    nsShootStart();
   }
-
-  // shooting stars only tick while it's actually night — light mode
-  // clears the interval instead of idling forever
-  var nsShootTimer = null;
-  function nsShootStart() {
-    if (nsShootTimer || REDUCED_MOTION) return;
-    const sky = document.getElementById('night-sky');
-    if (!sky) return;
-    nsShootTimer = setInterval(() => {
-      if (document.documentElement.getAttribute('data-theme') !== 'dark') return;
-      if (Math.random() < 0.45) return;
-      const shoot = document.createElement('span');
-      shoot.className = 'ns-shoot';
-      shoot.style.left = `${40 + Math.random() * 55}%`;
-      shoot.style.top = `${5 + Math.random() * 40}%`;
-      sky.appendChild(shoot);
-      shoot.addEventListener('animationend', () => shoot.remove());
-    }, 7000);
-  }
-  function nsShootStop() {
-    if (nsShootTimer) { clearInterval(nsShootTimer); nsShootTimer = null; }
-  }
+  function nsShootStart() { /* retired with the moon (owner decree v121) */ }
+  function nsShootStop() { /* retired with the moon (owner decree v121) */ }
 
   /* =====================================================
      v3.0 — REAL BROWSER NAVIGATION (back / forward / reload
