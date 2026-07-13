@@ -14824,8 +14824,13 @@ document.addEventListener('DOMContentLoaded', () => {
     playTone(330, 'square', 0.14, 0.16, 0.05);
     const startX = parseFloat(par.style.left) || (window.innerWidth - W0 + 20);
     const targetX = Math.max(-100, (f.bsodStragglerX || 100) - W0 + 70);
-    const t0 = Date.now(), BACK = 3600;
-    const iv = dI(() => {
+    // pacing decree, part two: the HEADCOUNT line is read STANDING STILL —
+    // it used to fire mid-march and nobody could follow a walking bubble.
+    // two full seconds parked, THEN the search party moves out.
+    dT(() => {
+      if (!dreamWorld) return;
+      const t0 = Date.now(), BACK = 3600;
+      const iv = dI(() => {
       const p = Math.min(1, (Date.now() - t0) / BACK);
       par.style.left = (startX + (targetX - startX) * p) + 'px';
       if (p < 1) return;
@@ -14858,7 +14863,8 @@ document.addEventListener('DOMContentLoaded', () => {
           }, 40);
         }, 2000);
       }, 1000);
-    }, 40);
+      }, 40);
+    }, 2000);
   }
   function dwBsodParadeBow(par, f) {
     try { par.remove(); } catch (e) { /* marched offstage */ }
