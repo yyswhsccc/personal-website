@@ -5969,6 +5969,11 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       // the fan wall's dream paperwork is also [data-i18n]-clobbered
       if (dreamWorld) fwDreamDress(dreamWorld.id);
+      // dream dialogs BAKE their language at spawn (23 call sites, all
+      // pre-resolved trT strings) — a stale-language popup squatting the
+      // desktop is worse than a dismissed one. they all live on beat
+      // loops and will re-summon themselves in the new language.
+      document.querySelectorAll('.dream-dlg').forEach((dlg) => { try { dlg.remove(); } catch (e2) { /* gone */ } });
     } catch (e) { /* pre-boot */ }
     // the cam button label is stateful — the blanket pass wrote the OFF
     // label over a camera that is visibly still streaming
@@ -8019,7 +8024,10 @@ document.addEventListener('DOMContentLoaded', () => {
       const head = document.createElement('div');
       head.className = 'dream-bsod-head';
       head.innerHTML = '<div class="dream-bsod-face">:(</div><div class="dream-bsod-text"></div>';
-      document.body.appendChild(head);
+      // the crash IS the desktop — so it lives IN the desktop layer, under
+      // the surviving windows. body-level z put its text on top of the
+      // arcade's shop cards (v124 fix: everything overlapped in there)
+      (document.querySelector('.desktop-area') || document.body).appendChild(head);
       dN(head);
       // v98: the face runs a little mood engine now — it drifts through
       // feelings on its own and clicking always comforts it one tier

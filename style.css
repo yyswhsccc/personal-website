@@ -3580,6 +3580,9 @@ html[data-theme="dark"] .search-go {
   overflow: hidden;
 }
 html[data-theme="dark"] .night-sky { display: block; }
+/* owner decree v124: dreams paint their OWN skies — the starfield (stars
+   AND shooting spawns) stands down inside every dream world */
+html.dreaming .night-sky { display: none; }
 .ns-star {
   position: absolute;
   font-size: 10px;
@@ -9371,12 +9374,14 @@ html[data-theme="dark"].dream-bsod ::selection { background: #fff; color: #0a23a
 .dream-bsod-head {
   /* v98: the crash IS the desktop now, so the head sits centre stage
      (inset+margin centring, not transform — the entry animation owns
-     transform). pointer-events stays off; only the face glyph is hot. */
+     transform). pointer-events stays off; only the face glyph is hot.
+     v124: rehomed into .desktop-area at z-60 — desktop furniture yields
+     to the surviving windows (its text used to bleed over the arcade). */
   position: fixed;
   inset: 0;
   margin: auto;
   height: fit-content;
-  z-index: 2555;
+  z-index: 60;
   width: min(560px, 92vw);
   color: #fff;
   font-family: var(--font-pixel);
@@ -11770,6 +11775,14 @@ html[data-theme="dark"].dreaming .quest-rank {
   color: #191227;
   text-shadow: none;
 }
+/* the timeline NODES had the same disease: --pink-deep glyph on --yellow
+   collapses to mush in mono worlds (matrix: pale mint star on lime) */
+html[data-theme="dark"].dreaming .node-main,
+html[data-theme="dark"].dreaming .node-side,
+html[data-theme="dark"].dreaming .node-research {
+  color: #14020e;
+  background: var(--lite, #ffd23f);
+}
 /* ALL-DREAMS decree (v122, was DREAM BOY-only): pikmin appear in their
    TRUE colors in EVERY dream world — matrix phosphor, DMG green, amber,
    all of it. pikmin are characters, same rule as the slime: the world may
@@ -11837,23 +11850,55 @@ html.dream-scp .fan-avatar::after {
 }
 @keyframes dfw-redact { 0%, 92% { opacity: 1; } 94%, 97% { opacity: 0; } 98%, 100% { opacity: 1; } }
 /* matrix: the fans are code — phosphor rain running over each face */
-html.dream-matrix .fan-avatar { background: #010a04; border-color: #0f7a3a; position: relative; overflow: hidden; }
-html.dream-matrix .fan-avatar canvas { filter: grayscale(1) brightness(0.9) sepia(1) saturate(3) hue-rotate(100deg); }
-html.dream-matrix .fan-avatar::after {
-  content: '1 0 1\A0 1 0\A1 1 0';
-  white-space: pre;
+/* matrix (v124 rework): the old flat-cyan wash drowned the rain. now the
+   faces are DIM phosphor portraits, the rain is the bright layer riding
+   over them, every tile bobs and breathes on its own phase — alive, and
+   all of it transform/opacity (no strobing, compositor-cheap) */
+html.dream-matrix .fan-avatar {
+  background: #000502;
+  border-color: #17b862;
+  position: relative;
+  overflow: hidden;
+  animation: dfw-bob 5.6s ease-in-out infinite;
+}
+html.dream-matrix .fan-avatar:nth-child(2n) { animation-delay: -1.4s; }
+html.dream-matrix .fan-avatar:nth-child(3n) { animation-delay: -2.8s; }
+html.dream-matrix .fan-avatar:nth-child(5n) { animation-delay: -4.2s; }
+@keyframes dfw-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-1.5px); } }
+html.dream-matrix .fan-avatar canvas {
+  filter: grayscale(1) sepia(1) saturate(2.8) hue-rotate(86deg) brightness(0.58) contrast(1.45);
+}
+/* a phosphor glow that BREATHES over the face… */
+html.dream-matrix .fan-avatar::before {
+  content: '';
   position: absolute;
   inset: 0;
-  color: rgba(61, 255, 124, 0.5);
-  font-family: var(--font-pixel);
-  font-size: 6px;
-  line-height: 1.6;
-  text-align: center;
-  animation: dfw-rain 1.8s linear infinite;
+  background: radial-gradient(circle at 50% 30%, rgba(61, 255, 124, 0.30), transparent 72%);
+  animation: dfw-breathe 4.4s ease-in-out infinite;
   z-index: 1;
   pointer-events: none;
 }
-@keyframes dfw-rain { from { transform: translateY(-55%); } to { transform: translateY(55%); } }
+html.dream-matrix .fan-avatar:nth-child(2n)::before { animation-delay: -2.2s; }
+/* …and the rain is the SHOW now: bright glyphs, three desynced sheets */
+html.dream-matrix .fan-avatar::after {
+  content: '1 ｱ 0\A0 1 ﾈ\Aｸ 0 1\A1 0 ﾎ';
+  white-space: pre;
+  position: absolute;
+  inset: -40% 0;
+  color: rgba(140, 255, 180, 0.95);
+  text-shadow: 0 0 4px rgba(61, 255, 124, 0.9);
+  font-family: var(--font-pixel);
+  font-size: 7px;
+  line-height: 1.5;
+  text-align: center;
+  animation: dfw-rain 1.35s linear infinite;
+  z-index: 2;
+  pointer-events: none;
+}
+html.dream-matrix .fan-avatar:nth-child(2n)::after { animation-delay: -0.45s; content: '0 ﾂ 1\A1 0 ｱ\A0 ﾈ 0\Aﾎ 1 0'; }
+html.dream-matrix .fan-avatar:nth-child(3n)::after { animation-delay: -0.9s; animation-duration: 1.7s; }
+@keyframes dfw-rain { from { transform: translateY(-32%); } to { transform: translateY(32%); } }
+@keyframes dfw-breathe { 0%, 100% { opacity: 0.25; } 50% { opacity: 0.9; } }
 /* v122 matrix wall extras — one avatar at a time briefly DEREZZES
    (gentle: a single 40px tile, ~3 slow slices, once per 8s)… */
 html.dream-matrix .fan-avatar canvas.fa-derez { animation: fw-derez 1.2s ease-in-out; }
