@@ -5990,6 +5990,12 @@ document.addEventListener('DOMContentLoaded', () => {
       document.querySelectorAll('.dream-amber-slip').forEach((slip) => {
         try { if (slip.__rebuild) slip.__rebuild(); } catch (e2) { /* flew off */ }
       });
+      // v127.1: generic hook — any dream furniture wearing .dream-reink
+      // re-inks itself the instant the language flips (bsod crash screen
+      // was the first tenant: its QR caption never followed the switch)
+      document.querySelectorAll('.dream-reink').forEach((el) => {
+        try { if (el.__reink) el.__reink(); } catch (e2) { /* stays in old ink */ }
+      });
     } catch (e) { /* pre-boot */ }
     // the cam button label is stateful — the blanket pass wrote the OFF
     // label over a camera that is visibly still streaming
@@ -8112,6 +8118,14 @@ document.addEventListener('DOMContentLoaded', () => {
       cap.textContent = trT('scan for more info (it\'s just my face)', 'scanne pour plus d\'infos (c\'est juste mon visage)');
       qr.appendChild(px); qr.appendChild(cap);
       head.appendChild(qr);
+      // v127.1: the crash screen re-inks itself the INSTANT the language
+      // flips (the 10s progress poll was up to 10s late, and the QR
+      // caption never updated at all) — same decree as the dialogs
+      head.classList.add('dream-reink');
+      head.__reink = () => {
+        draw();
+        cap.textContent = trT('scan for more info (it\'s just my face)', 'scanne pour plus d\'infos (c\'est juste mon visage)');
+      };
       const errBox = document.createElement('div');
       errBox.className = 'dream-bsod-errs';
       head.appendChild(errBox);
