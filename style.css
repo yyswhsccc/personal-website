@@ -11948,19 +11948,48 @@ html.dream-geo .fan-avatar::after {
   33% { transform: translate(9px, 7px) scale(0.7); color: #41e0ff; }
   66% { transform: translate(3px, 12px) scale(1.15); color: #ff62c5; }
 }
-/* amber: phosphor terminal portraits with a scanline sweep */
-html.dream-amber .fan-avatar { background: #0d0800; border-color: #7a5200; position: relative; overflow: hidden; }
-html.dream-amber .fan-avatar canvas { filter: grayscale(1) brightness(0.95) sepia(1) saturate(3.4) hue-rotate(-18deg); }
+/* amber (v126 rework): phosphor terminal portraits — the old 4px ghost
+   band read as "nothing happening". now: a BRIGHT double scanline sweep,
+   a phosphor glow that breathes, and every tile bobs on its own phase.
+   transform/opacity only — CRT warmth, zero strobe. */
+html.dream-amber .fan-avatar {
+  background: #0d0800;
+  border-color: #a06b00;
+  position: relative;
+  overflow: hidden;
+  box-shadow: inset 0 0 8px rgba(255, 176, 0, 0.30);
+  animation: dfw-bob 6.2s ease-in-out infinite;
+}
+html.dream-amber .fan-avatar:nth-child(2n) { animation-delay: -1.8s; }
+html.dream-amber .fan-avatar:nth-child(3n) { animation-delay: -3.4s; }
+html.dream-amber .fan-avatar:nth-child(5n) { animation-delay: -5s; }
+html.dream-amber .fan-avatar canvas { filter: grayscale(1) sepia(1) saturate(3.6) hue-rotate(-16deg) brightness(0.72) contrast(1.3); }
+/* the phosphor bed breathes… */
+html.dream-amber .fan-avatar::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 40%, rgba(255, 176, 0, 0.32), transparent 74%);
+  animation: dfw-breathe 5s ease-in-out infinite;
+  z-index: 1;
+  pointer-events: none;
+}
+html.dream-amber .fan-avatar:nth-child(2n)::before { animation-delay: -2.5s; }
+/* …and the refresh beam actually SHOWS: bright head, warm trail */
 html.dream-amber .fan-avatar::after {
   content: '';
   position: absolute;
   left: 0; right: 0;
-  height: 4px;
-  background: rgba(255, 176, 0, 0.28);
-  animation: dfw-scan 2.6s linear infinite;
-  z-index: 1;
+  height: 9px;
+  background: linear-gradient(180deg, rgba(255, 220, 120, 0.9), rgba(255, 176, 0, 0.35) 40%, transparent);
+  box-shadow: 0 0 6px rgba(255, 176, 0, 0.8);
+  animation: dfw-scan 2.1s linear infinite;
+  z-index: 2;
+  pointer-events: none;
 }
-@keyframes dfw-scan { from { top: -10%; } to { top: 110%; } }
+html.dream-amber .fan-avatar:nth-child(2n)::after { animation-delay: -0.7s; }
+html.dream-amber .fan-avatar:nth-child(3n)::after { animation-delay: -1.4s; animation-duration: 2.7s; }
+@keyframes dfw-scan { from { top: -14%; } to { top: 112%; } }
 @media (prefers-reduced-motion: reduce) {
   html.dreaming .fan-avatar::before, html.dreaming .fan-avatar::after, html.dreaming .fan-avatar canvas { animation: none !important; }
 }

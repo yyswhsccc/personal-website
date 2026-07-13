@@ -5969,11 +5969,13 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       // the fan wall's dream paperwork is also [data-i18n]-clobbered
       if (dreamWorld) fwDreamDress(dreamWorld.id);
-      // dream dialogs BAKE their language at spawn (23 call sites, all
-      // pre-resolved trT strings) — a stale-language popup squatting the
-      // desktop is worse than a dismissed one. they all live on beat
-      // loops and will re-summon themselves in the new language.
-      document.querySelectorAll('.dream-dlg').forEach((dlg) => { try { dlg.remove(); } catch (e2) { /* gone */ } });
+      // dream dialogs re-ink themselves IN PLACE on a language toggle
+      // (v126 owner decree: they must follow the switch WITHOUT closing).
+      // a builder re-runs its trT calls; a legacy plain-opts dialog is
+      // stale by construction and steps down instead.
+      document.querySelectorAll('.dream-dlg').forEach((dlg) => {
+        try { if (dlg.__rebuild) dlg.__rebuild(); else dlg.remove(); } catch (e2) { /* gone */ }
+      });
     } catch (e) { /* pre-boot */ }
     // the cam button label is stateful — the blanket pass wrote the OFF
     // label over a camera that is visibly still streaming
@@ -6892,7 +6894,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // v113: deep dreams keep their distance — after ANY dream world visit,
   // AUTO entries wait a full ACTIVE hour (parked tabs don't serve time;
   // the `dream <name>` command remains a free door — explicit wish wins)
-  var dreamAcdLeft = store.get('yos-dream-acd', 0);
+  // v126: fifteen-minute cooldown — clamp any legacy hour-long ledger on
+  // sight AND heal it in storage so returning visitors aren't stuck waiting
+  var dreamAcdLeft = Math.min(store.get('yos-dream-acd', 0), 15 * 60 * 1000);
+  store.set('yos-dream-acd', dreamAcdLeft);
   var swExpressDive = false; // the express dive auto-presses START on landing
   var nightDarkMs = 0;       // ACTIVE ms spent in the dark (parked tabs don't count)
   var nightStayMs = 0;       // ACTIVE ms this visit, any theme
@@ -7199,8 +7204,15 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // a classic dialog box, dream-flavored. buttons: [label, cb, keepOpen]
-  function dreamDlg(opts) {
+  function dreamDlg(optsOrBuild) {
     if (!dreamWorld) return null;
+    // v126: pass a BUILDER (() => ({...opts})) and the dialog becomes
+    // live-translatable — the builder re-runs its trT calls on a language
+    // toggle and the OPEN dialog re-inks itself in place (owner decree:
+    // dream popups follow the language switch WITHOUT closing). plain-opts
+    // callers still work unchanged.
+    const build = typeof optsOrBuild === 'function' ? optsOrBuild : null;
+    const opts = build ? build() : optsOrBuild;
     if (!opts.force && (document.querySelectorAll('.dream-dlg').length >= 2 || document.querySelector('.dwc-win') || document.querySelector('.dwm-win'))) return null; // clutter law (the card table counts as a full house)
     const d = document.createElement('div');
     d.className = 'dream-dlg' + (opts.cls ? ' ' + opts.cls : '');
@@ -7236,6 +7248,18 @@ document.addEventListener('DOMContentLoaded', () => {
         row.appendChild(b);
       });
       d.appendChild(row);
+    }
+    if (build) {
+      d.__rebuild = () => {
+        try {
+          const fresh = build(); // trT re-resolves in the CURRENT language
+          tt.textContent = fresh.title || 'dream.exe';
+          const ps = body.querySelectorAll('p');
+          (fresh.lines || []).forEach((ln, i) => { if (ps[i]) ps[i].textContent = ln; });
+          const bs = d.querySelectorAll('.dream-dlg-row .dream-dlg-btn');
+          (fresh.buttons || []).forEach((btn, i) => { if (bs[i]) bs[i].textContent = btn[0]; });
+        } catch (e) { /* a dialog that can't re-ink keeps its old ink */ }
+      };
     }
     const W = Math.min(300, window.innerWidth - 40);
     const x = opts.x != null ? opts.x : 20 + Math.random() * Math.max(40, window.innerWidth - W - 60);
@@ -7356,7 +7380,7 @@ document.addEventListener('DOMContentLoaded', () => {
     x.addEventListener('click', (e) => {
       e.stopPropagation();
       playCloseSound();
-      dreamDlg({
+      dreamDlg(() => ({
         title: 'slippy.exe',
         force: true,
         lines: [trT('close slippy? I still have 37 unread tips about being cute.', 'fermer slippy ? il me reste 37 conseils non lus sur la mignonnerie.')],
@@ -7369,7 +7393,7 @@ document.addEventListener('DOMContentLoaded', () => {
           }],
           [trT('37 more tips!!', '37 conseils !!'), () => { tip(); playDreamPop(); }]
         ]
-      });
+      }));
     });
     document.body.appendChild(s);
     dN(s);
@@ -7383,7 +7407,7 @@ document.addEventListener('DOMContentLoaded', () => {
       dreamSay(["zzz… error cascade survived… the dream is proud of you…", "zzz… cascade d'erreurs survécue… le rêve est fier de toi…"], 4200);
       return;
     }
-    const spawn = (k, xx, yy) => dreamDlg({
+    const spawn = (k, xx, yy) => dreamDlg(() => ({
       title: trT('dream95.exe — error', 'dream95.exe — erreur'),
       cls: 'dream-dlg-err',
       force: true,
@@ -7391,7 +7415,7 @@ document.addEventListener('DOMContentLoaded', () => {
       lines: [trT('dream95 has performed an illegal operation: excessive cuteness (0x0000CUTE)', 'dream95 a effectué une opération illégale : mignonnerie excessive (0x0000CUTE)')],
       buttons: [[ 'OK', () => { playDreamPop(); dw95Cascade(k + 1, xx + 34, yy + 30); if (k < 4) dw95Cascade(k + 2, xx - 60, yy + 52); }]],
       onX: (d) => { d.remove(); dw95Cascade(k + 1, xx + 34, yy + 30); }
-    });
+    }));
     spawn(n, Math.min(x, window.innerWidth - 330), Math.min(y, window.innerHeight - 220));
     playTone(220, 'square', 0.14, 0, 0.045);
   }
@@ -7419,7 +7443,7 @@ document.addEventListener('DOMContentLoaded', () => {
       dI(() => {
         if (!dreamWorld || Math.random() < 0.4) return;
         const d = DW_95_DIALOGS[Math.floor(Math.random() * DW_95_DIALOGS.length)];
-        dreamDlg({ title: trT(...d.t), lines: [trT(...d.l)], buttons: [['OK', () => playDreamPop()]] });
+        dreamDlg(() => ({ title: trT(...d.t), lines: [trT(...d.l)], buttons: [['OK', () => playDreamPop()]] }));
         playTone(830.61, 'sine', 0.3, 0, 0.04);
       }, 75000);
     }
@@ -7740,7 +7764,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
       }, 85000);
       dT(() => {
-        dreamDlg({
+        dreamDlg(() => ({
           title: trT('a choice appears', 'un choix apparaît'),
           force: true,
           lines: [trT('zzz… the dream offers you two pills…', 'zzz… le rêve te propose deux pilules…')],
@@ -7752,7 +7776,7 @@ document.addEventListener('DOMContentLoaded', () => {
               dreamSay(["zzz… good choice… the dream has you ♡… also free rabbits…", "zzz… bon choix… le rêve te tient ♡… et les lapins sont gratuits…"], 4200);
             }]
           ]
-        });
+        }));
       }, 100000);
     }
   };
@@ -7880,7 +7904,7 @@ document.addEventListener('DOMContentLoaded', () => {
         dN(tape);
       }
       dT(() => {
-        dreamDlg({
+        dreamDlg(() => ({
           title: trT('📖 guestbook.cgi', '📖 livredor.cgi'),
           force: true,
           lines: [trT('sign my guestbook?? pretty please?? everyone cool from 1998 did', 'tu signes mon livre d\'or ?? s\'il te plaîîît ?? tous les gens cool de 1998 l\'ont fait')],
@@ -7895,7 +7919,7 @@ document.addEventListener('DOMContentLoaded', () => {
               showToast(trT('noted in the guestbook anyway: "a mysterious lurker ♡"', 'noté quand même dans le livre d\'or : « un·e rôdeur·se mystérieux·se ♡ »'));
             }]
           ]
-        });
+        }));
       }, resumed ? 30000 : 80000);
       // the sacred geocities cursor trail (mouse only; reduced-motion exempt)
       if (!REDUCED_MOTION && window.matchMedia('(pointer: fine)').matches) {
@@ -8035,7 +8059,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // ~4.5s in: the formal announcement — desktop.exe did not make it
       dT(() => {
         if (!dreamWorld) return;
-        dreamDlg({
+        dreamDlg(() => ({
           title: trT('☠ DESKTOP.EXE — fatal nap', '☠ DESKTOP.EXE — sieste fatale'), force: true, cls: 'dream-dlg-err',
           x: window.innerWidth / 2 - 150, y: Math.max(64, window.innerHeight * 0.14),
           lines: [
@@ -8046,7 +8070,7 @@ document.addEventListener('DOMContentLoaded', () => {
             [trT('open the terminal →', 'ouvrir le terminal →'), () => { try { openWindow('win-terminal'); } catch (e) { /* even safe mode naps */ } }],
             [trT('mourn the icons', 'pleurer les icônes'), () => { playDreamSad(); cheatFall(['🥀', '💙'], 10); showToast(trT('the icons are fine. they are napping in a .dmp file, dreaming of double-clicks ♡', 'les icônes vont bien. elles font la sieste dans un .dmp, rêvant de double-clics ♡'), { scroll: true }); }]
           ]
-        });
+        }));
       }, 4500);
       const txt = head.querySelector('.dream-bsod-text');
       const draw = () => {
@@ -8277,7 +8301,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const slip = document.createElement('div');
     slip.className = 'dream-amber-slip';
     slip.appendChild(amberSlimeCanvas());
-    (Array.isArray(bodyLines) ? bodyLines : [bodyLines]).forEach((ln) => {
+    // v126: a slip may be a flat [en] array (back-compat) OR a bilingual
+    // { en:[…], fr:[…] } — the printed paper now speaks the reader's tongue
+    const lines = (bodyLines && !Array.isArray(bodyLines) && bodyLines.en)
+      ? (yosLang === 'fr' ? bodyLines.fr : bodyLines.en)
+      : (Array.isArray(bodyLines) ? bodyLines : [bodyLines]);
+    lines.forEach((ln) => {
       const el = document.createElement('div');
       el.textContent = ln;
       slip.appendChild(el);
@@ -8296,33 +8325,33 @@ document.addEventListener('DOMContentLoaded', () => {
   var dwPrinterLast = -1, dwPrinterBusy = false;
   const DW_PRINTER_BITS = [
     // 1 — the paycheck for exposure
-    () => { dwAmberReceipt(['★ PAYCHECK ★', 'PAY TO: you ♡', 'AMOUNT: $0.00', 'MEMO: paid in exposure', '(est. 1970, still the joke)']); gainFollowers(1); showToast(trT('🧾 the mainframe cut you a cheque for EXPOSURE. +1 fan (it does spend, here)', '🧾 le mainframe t\'a fait un chèque en VISIBILITÉ. +1 fan (ça s\'échange, ici)'), { scroll: true }); },
+    () => { dwAmberReceipt({ en: ['★ PAYCHECK ★', 'PAY TO: you ♡', 'AMOUNT: $0.00', 'MEMO: paid in exposure', '(est. 1970, still the joke)'], fr: ['★ FICHE DE PAIE ★', 'À L\'ORDRE DE : toi ♡', 'MONTANT : 0,00 $', 'MÉMO : payé en visibilité', '(1970, toujours la blague)'] }); gainFollowers(1); showToast(trT('🧾 the mainframe cut you a cheque for EXPOSURE. +1 fan (it does spend, here)', '🧾 le mainframe t\'a fait un chèque en VISIBILITÉ. +1 fan (ça s\'échange, ici)'), { scroll: true }); },
     // 2 — COBOL horoscope
-    () => { dwAmberReceipt(['♒ COBOL HOROSCOPE', 'today you will', 'DIVIDE BY ZERO', 'and feel NOTHING.', 'lucky register: R7']); showToast(trT('🔮 COBOL horoscope: today you divide by zero and feel nothing. lucky register: R7', '🔮 horoscope COBOL : aujourd\'hui tu divises par zéro et ne ressens rien. registre chance : R7'), { scroll: true }); },
+    () => { dwAmberReceipt({ en: ['♒ COBOL HOROSCOPE', 'today you will', 'DIVIDE BY ZERO', 'and feel NOTHING.', 'lucky register: R7'], fr: ['♒ HOROSCOPE COBOL', 'aujourd\'hui tu vas', 'DIVISER PAR ZÉRO', 'et ne rien ressentir.', 'registre chance : R7'] }); showToast(trT('🔮 COBOL horoscope: today you divide by zero and feel nothing. lucky register: R7', '🔮 horoscope COBOL : aujourd\'hui tu divises par zéro et ne ressens rien. registre chance : R7'), { scroll: true }); },
     // 3 — PC LOAD CAT (the jam)
-    () => { dwAmberReceipt([' /\\_/\\', '( o.o )  MEOW', ' > ^ <', 'PC LOAD CAT', 'error: too much cat']); playTone(300, 'square', 0.1, 0, 0.05); showToast(trT('🐱 PC LOAD CAT — the printer jammed and extruded a cat. this is working as intended', '🐱 PC LOAD CAT — l\'imprimante s\'est bloquée et a extrudé un chat. c\'est le comportement prévu'), { scroll: true }); },
+    () => { dwAmberReceipt({ en: [' /\\_/\\', '( o.o )  MEOW', ' > ^ <', 'PC LOAD CAT', 'error: too much cat'], fr: [' /\\_/\\', '( o.o )  MIAOU', ' > ^ <', 'PC LOAD CHAT', 'erreur : trop de chat'] }); playTone(300, 'square', 0.1, 0, 0.05); showToast(trT('🐱 PC LOAD CAT — the printer jammed and extruded a cat. this is working as intended', '🐱 PC LOAD CHAT — l\'imprimante s\'est bloquée et a extrudé un chat. c\'est le comportement prévu'), { scroll: true }); },
     // 4 — fortune cookie
-    () => { const fs = [['a wise dev commits often, and naps oftener.', 'un dev sage commit souvent, et sieste plus souvent.'], ['the bug you seek is on the line you already read.', 'le bug que tu cherches est sur la ligne déjà lue.'], ['your future holds one (1) green build. cherish it.', 'ton avenir contient un (1) build vert. chéris-le.']]; const f = fs[Math.floor(Math.random() * fs.length)]; dwAmberReceipt(['🥠 FORTUNE', trT(f[0], f[1])]); showToast('🥠 ' + trT(f[0], f[1]), { scroll: true }); },
+    () => { const fs = [['a wise dev commits often, and naps oftener.', 'un dev sage commit souvent, et sieste plus souvent.'], ['the bug you seek is on the line you already read.', 'le bug que tu cherches est sur la ligne déjà lue.'], ['your future holds one (1) green build. cherish it.', 'ton avenir contient un (1) build vert. chéris-le.']]; const f = fs[Math.floor(Math.random() * fs.length)]; dwAmberReceipt({ en: ['🥠 FORTUNE', f[0]], fr: ['🥠 FORTUNE', f[1]] }); showToast('🥠 ' + trT(f[0], f[1]), { scroll: true }); },
     // 5 — boarding pass to 1970
-    () => { dwAmberReceipt(['✈ BOARDING PASS', 'FLIGHT: SLIME 370', 'DEST: 1970', 'GATE: COBOL', 'SEAT: 1A (window)', 'nap during taxi ♡']); showToast(trT('✈ boarding pass printed: destination 1970, gate COBOL, seat 1A. nap during taxi ♡', '✈ carte d\'embarquement : destination 1970, porte COBOL, siège 1A. sieste au roulage ♡'), { scroll: true }); },
+    () => { dwAmberReceipt({ en: ['✈ BOARDING PASS', 'FLIGHT: SLIME 370', 'DEST: 1970', 'GATE: COBOL', 'SEAT: 1A (window)', 'nap during taxi ♡'], fr: ['✈ CARTE D\'EMBARQUEMENT', 'VOL : SLIME 370', 'DEST : 1970', 'PORTE : COBOL', 'SIÈGE : 1A (hublot)', 'sieste au roulage ♡'] }); showToast(trT('✈ boarding pass printed: destination 1970, gate COBOL, seat 1A. nap during taxi ♡', '✈ carte d\'embarquement : destination 1970, porte COBOL, siège 1A. sieste au roulage ♡'), { scroll: true }); },
     // 6 — the itemized bill
-    () => { dwAmberReceipt(['— INVOICE —', '1× warm nap ... $0', '1× existential', '     dread ...... $0', 'TOTAL ....... free ♡', 'thank you, come dream']); showToast(trT('🧾 itemized: 1 warm nap ($0), 1 existential dread ($0). total: free ♡', '🧾 détaillé : 1 sieste ($0), 1 angoisse existentielle ($0). total : gratuit ♡'), { scroll: true }); },
+    () => { dwAmberReceipt({ en: ['— INVOICE —', '1× warm nap ... $0', '1× existential', '     dread ...... $0', 'TOTAL ....... free ♡', 'thank you, come dream'], fr: ['— FACTURE —', '1× sieste ...... 0 $', '1× angoisse', '  existentielle . 0 $', 'TOTAL .... gratuit ♡', 'merci, revenez rêver'] }); showToast(trT('🧾 itemized: 1 warm nap ($0), 1 existential dread ($0). total: free ♡', '🧾 détaillé : 1 sieste ($0), 1 angoisse existentielle ($0). total : gratuit ♡'), { scroll: true }); },
     // 7 — PC LOAD LETTER → love
-    () => { dwAmberReceipt(['⚠ PC LOAD LETTER', '...loading letter...', '...', 'dear you,', 'you are doing great.', '— the mainframe']); playSparkleSound(); cheatFall(['💌', '✦'], 10); showToast(trT('💌 PC LOAD LETTER — it loaded a letter. it says you\'re doing great.', '💌 PC LOAD LETTER — il a chargé une lettre. elle dit que tu assures.'), { scroll: true }); },
+    () => { dwAmberReceipt({ en: ['⚠ PC LOAD LETTER', '...loading letter...', '...', 'dear you,', 'you are doing great.', '— the mainframe'], fr: ['⚠ PC LOAD LETTER', '...chargement lettre...', '...', 'cher·e toi,', 'tu t\'en sors très bien.', '— le mainframe'] }); playSparkleSound(); cheatFall(['💌', '✦'], 10); showToast(trT('💌 PC LOAD LETTER — it loaded a letter. it says you\'re doing great.', '💌 PC LOAD LETTER — il a chargé une lettre. elle dit que tu assures.'), { scroll: true }); },
     // 8 — punch card, huggable
-    () => { dwAmberReceipt(['▚ PUNCH CARD 341 ▞', 'DO NOT FOLD,', 'SPINDLE, OR', 'MUTILATE.', '(hugging is fine)']); showToast(trT('🎫 punch card № 341: do not fold, spindle, or mutilate. (hugging is fine)', '🎫 carte perforée nº 341 : ne pas plier, ni percer, ni mutiler. (les câlins sont permis)'), { scroll: true }); },
+    () => { dwAmberReceipt({ en: ['▚ PUNCH CARD 341 ▞', 'DO NOT FOLD,', 'SPINDLE, OR', 'MUTILATE.', '(hugging is fine)'], fr: ['▚ CARTE PERFORÉE 341 ▞', 'NE PAS PLIER,', 'PERCER, NI', 'MUTILER.', '(les câlins, ok)'] }); showToast(trT('🎫 punch card № 341: do not fold, spindle, or mutilate. (hugging is fine)', '🎫 carte perforée nº 341 : ne pas plier, ni percer, ni mutiler. (les câlins sont permis)'), { scroll: true }); },
     // 9 — dot-matrix weather
-    () => { dwAmberReceipt(['☁ FORECAST', 'today: 100% pixels', 'humidity: 44 boba', 'wind: 3 floppies/s', 'bring a cardigan']); showToast(trT('🌦 dot-matrix forecast: 100% chance of pixels, humidity 44 boba, bring a cardigan', '🌦 météo matricielle : 100% de pixels, humidité 44 boba, prends un gilet'), { scroll: true }); },
+    () => { dwAmberReceipt({ en: ['☁ FORECAST', 'today: 100% pixels', 'humidity: 44 boba', 'wind: 3 floppies/s', 'bring a cardigan'], fr: ['☁ MÉTÉO', 'aujourd\'hui : 100% pixels', 'humidité : 44 boba', 'vent : 3 disquettes/s', 'prends un gilet'] }); showToast(trT('🌦 dot-matrix forecast: 100% chance of pixels, humidity 44 boba, bring a cardigan', '🌦 météo matricielle : 100% de pixels, humidité 44 boba, prends un gilet'), { scroll: true }); },
     // 10 — the endless CVS receipt
-    () => { const s = dwAmberReceipt(['🧾 RECEIPT', 'you bought: nothing', 'you saved: $0.00', 'paper used: 3 metres', 'coupons enclosed: 41']); if (s) s.classList.add('dream-amber-longroll'); showToast(trT('🧾 a receipt for NOTHING, 3 metres long, with 41 coupons you\'ll never use. classic.', '🧾 un reçu pour RIEN, 3 mètres de long, avec 41 coupons jamais utilisés. un classique.'), { scroll: true }); },
+    () => { const s = dwAmberReceipt({ en: ['🧾 RECEIPT', 'you bought: nothing', 'you saved: $0.00', 'paper used: 3 metres', 'coupons enclosed: 41'], fr: ['🧾 REÇU', 'acheté : rien', 'économisé : 0,00 $', 'papier : 3 mètres', 'coupons joints : 41'] }); if (s) s.classList.add('dream-amber-longroll'); showToast(trT('🧾 a receipt for NOTHING, 3 metres long, with 41 coupons you\'ll never use. classic.', '🧾 un reçu pour RIEN, 3 mètres de long, avec 41 coupons jamais utilisés. un classique.'), { scroll: true }); },
     // 11 — the résumé
-    () => { dwAmberReceipt(['— CV: SLIME/370 —', 'uptime: 56 yrs', 'naps taken: 1', 'layoffs survived: ∞', 'references: everyone']); gainFollowers(1); showToast(trT('📄 SLIME/370 résumé: 56 yrs uptime, 1 nap, ∞ layoffs survived, references: everyone', '📄 CV SLIME/370 : 56 ans d\'uptime, 1 sieste, ∞ plans sociaux survécus, références : tout le monde'), { scroll: true }); },
+    () => { dwAmberReceipt({ en: ['— CV: SLIME/370 —', 'uptime: 56 yrs', 'naps taken: 1', 'layoffs survived: ∞', 'references: everyone'], fr: ['— CV : SLIME/370 —', 'uptime : 56 ans', 'siestes : 1', 'plans sociaux vécus : ∞', 'références : tout le monde'] }); gainFollowers(1); showToast(trT('📄 SLIME/370 résumé: 56 yrs uptime, 1 nap, ∞ layoffs survived, references: everyone', '📄 CV SLIME/370 : 56 ans d\'uptime, 1 sieste, ∞ plans sociaux survécus, références : tout le monde'), { scroll: true }); },
     // 12 — segfault haiku
-    () => { dwAmberReceipt(['🌸 SEGFAULT (haiku)', 'the core was dumped —', 'cherry blossoms drift', 'past the stack. try again.']); showToast(trT('🌸 segfault, haiku edition: "the core was dumped / cherry blossoms drift / try again"', '🌸 segfault, version haïku : « le cœur fut vidé / les cerisiers dérivent / réessaie »'), { scroll: true }); },
+    () => { dwAmberReceipt({ en: ['🌸 SEGFAULT (haiku)', 'the core was dumped —', 'cherry blossoms drift', 'past the stack. try again.'], fr: ['🌸 SEGFAULT (haïku)', 'le cœur fut vidé —', 'les cerisiers dérivent', 'au-delà de la pile. réessaie.'] }); showToast(trT('🌸 segfault, haiku edition: "the core was dumped / cherry blossoms drift / try again"', '🌸 segfault, version haïku : « le cœur fut vidé / les cerisiers dérivent / réessaie »'), { scroll: true }); },
     // 13 — the impossible coupon (but you get the gift anyway)
-    () => { dwAmberReceipt(['✂ COUPON ✂', '100% OFF', 'your next BUG', 'expires: never', 'redeemable: also never']); playFanfare(); cheatFall(['🎟', '✨', '♡'], 12); gainFollowers(1); showToast(trT('🎟 coupon: 100% off your next bug (expires never, redeemable never). the slime honoured it anyway ♡', '🎟 coupon : -100% sur ton prochain bug (expire jamais, valable jamais). le slime l\'a honoré quand même ♡'), { scroll: true }); },
+    () => { dwAmberReceipt({ en: ['✂ COUPON ✂', '100% OFF', 'your next BUG', 'expires: never', 'redeemable: also never'], fr: ['✂ COUPON ✂', '-100%', 'sur ton prochain BUG', 'expire : jamais', 'valable : jamais non plus'] }); playFanfare(); cheatFall(['🎟', '✨', '♡'], 12); gainFollowers(1); showToast(trT('🎟 coupon: 100% off your next bug (expires never, redeemable never). the slime honoured it anyway ♡', '🎟 coupon : -100% sur ton prochain bug (expire jamais, valable jamais). le slime l\'a honoré quand même ♡'), { scroll: true }); },
     // 14 — the printer's self-aware pep talk
-    () => { dwAmberReceipt(['📠 A MESSAGE', 'I am a printer', 'from 1970 and even', 'I deploy on FRIDAYS.', 'be brave. — 📠']); playTone(180, 'square', 0.08, 0, 0.06); playTone(90, 'square', 0.1, 0.06, 0.06); showToast(trT('📠 "I am a printer from 1970 and even I deploy on Fridays. be brave." — the printer', '📠 « je suis une imprimante de 1970 et même MOI je déploie le vendredi. sois courageux·se. » — l\'imprimante'), { scroll: true }); }
+    () => { dwAmberReceipt({ en: ['📠 A MESSAGE', 'I am a printer', 'from 1970 and even', 'I deploy on FRIDAYS.', 'be brave. — 📠'], fr: ['📠 UN MESSAGE', 'je suis une imprimante', 'de 1970 et même MOI', 'je déploie le VENDREDI.', 'sois courageux·se. — 📠'] }); playTone(180, 'square', 0.08, 0, 0.06); playTone(90, 'square', 0.1, 0.06, 0.06); showToast(trT('📠 "I am a printer from 1970 and even I deploy on Fridays. be brave." — the printer', '📠 « je suis une imprimante de 1970 et même MOI je déploie le vendredi. sois courageux·se. » — l\'imprimante'), { scroll: true }); }
   ];
   function dwAmberPrinterPoke() {
     if (!dreamWorld || dwPrinterBusy) return;
@@ -8369,7 +8398,7 @@ document.addEventListener('DOMContentLoaded', () => {
         dreamCritter({ emoji: '🎫', cls: 'dream-punchcard', ms: 16000, y: 120 + Math.random() * 120, label: ['punch card № 341 — do not fold', 'carte perforée nº 341 — ne pas plier'] });
       }, 95000);
       dT(() => {
-        dreamDlg({
+        dreamDlg(() => ({
           title: 'MAINFRAME NOTICE',
           lines: [trT('this dream is written in COBOL. it will outlive us all.', 'ce rêve est écrit en COBOL. il nous survivra à tous.')],
           buttons: [[trT('RESPECT', 'RESPECT'), (d) => {
@@ -8377,7 +8406,7 @@ document.addEventListener('DOMContentLoaded', () => {
             swProp(r.left + 40, r.top - 30, '+10 RESPECT');
             playSparkleSound();
           }]]
-        });
+        }));
       }, 90000);
       try { termLine('JCL: //DREAM JOB (CUDDLE),CLASS=A — submitted 1974, still running, still warm', 't-dim'); } catch (e) { /* abend? never heard of her */ }
     }
@@ -8666,7 +8695,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       return;
     } else if (id === 'scp') { // Class-D orientation, question 1 of 1
-      dreamDlg({
+      dreamDlg(() => ({
         title: trT('CLASS-D ORIENTATION QUIZ', 'QUIZ D\'ORIENTATION CLASSE-D'), force: true,
         lines: [trT('SCP-999 approaches. you should:', 'SCP-999 approche. vous devez :')],
         buttons: [
@@ -8674,7 +8703,7 @@ document.addEventListener('DOMContentLoaded', () => {
           [trT('hug FASTER', 'câlin PLUS VITE'), () => { playFanfare(); showToast(trT('EXTREMELY correct ✓✓ promoted to Class-Hug', 'EXTRÊMEMENT correct ✓✓ promu·e Classe-Câlin')); gainFollowers(2); }],
           [trT('document the hug', 'documenter le câlin'), () => { playDreamPop(); showToast(trT('correct ✓ the O5 council loves paperwork', 'correct ✓ le conseil O5 adore la paperasse')); gainFollowers(1); }]
         ]
-      });
+      }));
     } else if (id === 'matrix') { // one charge of bullet time
       if (document.querySelector('.dream-bullet-badge')) return;
       const b = dreamBadge('', 'dream-bullet-badge');
@@ -8694,14 +8723,14 @@ document.addEventListener('DOMContentLoaded', () => {
       b.appendChild(btn);
       setTimeout(() => { if (b.isConnected) b.remove(); }, 30000);
     } else if (id === 'gameboy') { // SAVE GAME? (there is no battery)
-      dreamDlg({
+      dreamDlg(() => ({
         title: 'SAVE GAME?', force: true,
         lines: [trT('saving requires a battery. the battery is a dream.', 'sauvegarder demande une pile. la pile est un rêve.')],
         buttons: [
           [trT('SAVE', 'SAUVER'), () => { playDreamGB(); showToast(trT('saved!! (in our hearts. the only stable storage)', 'sauvegardé !! (dans nos cœurs. le seul stockage stable)')); }],
           [trT('SAVE ANYWAY', 'SAUVER QUAND MÊME'), () => { playFanfare(); gainFollowers(1); showToast(trT('DOUBLE-saved. you absolute legend.', 'DOUBLEMENT sauvegardé. légende absolue.')); }]
         ]
-      });
+      }));
     } else if (id === 'geo') { // the TOP 100 SLIME SITES poll
       if (document.querySelector('.dream-vote-badge')) return;
       const b = dreamBadge('', 'dream-vote-badge');
@@ -8730,7 +8759,7 @@ document.addEventListener('DOMContentLoaded', () => {
       dreamWorld.__deploys++;
       dreamWorld.__lastDeploy = Date.now();
       const second = dreamWorld.__deploys === 2;
-      dreamDlg({
+      dreamDlg(() => ({
         title: 'ASK THE MAINFRAME', force: true,
         lines: [second
           ? trT('"…okay but will it succeed THIS time?" (last question, promise)', '« …ok mais est-ce que ça marchera CETTE fois ? » (dernière question, promis)')
@@ -8743,7 +8772,7 @@ document.addEventListener('DOMContentLoaded', () => {
             ? trT('MAINFRAME: "CORRECT AGAIN. you and I, we just KNOW. ship it ♡"', 'MAINFRAME : « ENCORE CORRECT. toi et moi, on SAIT. livre ♡ »')
             : trT('MAINFRAME: "CORRECT. IT NEVER DOES. SHIP ANYWAY."', 'MAINFRAME : « CORRECT. ÇA NE MARCHE JAMAIS. LIVREZ QUAND MÊME. »')); }]
         ]
-      });
+      }));
     }
   }
 
@@ -9002,7 +9031,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (beat.say) dreamSay(beat.say, 4600);
       return;
     }
-    dreamDlg({
+    dreamDlg(() => ({
       title: trT(...beat.t), force: true, cls: beat.err ? 'dream-dlg-err' : undefined,
       lines: [trT(...beat.l)],
       buttons: (beat.b || []).map((btn) => [trT(...btn[0]), () => {
@@ -9013,7 +9042,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (fx.fans) gainFollowers(fx.fans);
         if (fx.toast) showToast(trT(...fx.toast), { scroll: true });
       }])
-    });
+    }));
     if (beat.say) dreamSay(beat.say, 4600);
   }
   // rehearsal door: ?theater=<0-6> forces the weekday, so all 49 scripts
@@ -9735,7 +9764,7 @@ document.addEventListener('DOMContentLoaded', () => {
           dsL('the toasters migrate. scientists remain baffled. butter futures soar.', 'les grille-pain migrent. les scientifiques restent perplexes. le cours du beurre s\'envole.', 't-ok');
         } },
         ctrlaltdel: { d: ['open the task manager of the soul', 'ouvrir le gestionnaire des tâches de l\'âme'], fx() {
-          dreamDlg({ title: trT('CLOSE PROGRAM', 'FERMER LE PROGRAMME'), force: true, lines: [
+          dreamDlg(() => ({ title: trT('CLOSE PROGRAM', 'FERMER LE PROGRAMME'), force: true, lines: [
             trT('doubt.exe — not responding', 'doute.exe — ne répond pas'),
             trT('imposter_syndrome.dll — not responding', 'syndrome_imposteur.dll — ne répond pas'),
             trT('cozy.sys — running perfectly', 'cozy.sys — fonctionne parfaitement')
@@ -9744,7 +9773,7 @@ document.addEventListener('DOMContentLoaded', () => {
               playSparkleSound(); gainFollowers(2);
               dsL('doubt.exe has stopped responding to YOU now. cozy.sys promoted to foreground.', 'doute.exe ne TE répond plus. cozy.sys promu au premier plan.', 't-ok');
             }]
-          ] });
+          ] }));
         } },
         msdog: { d: ['there is a dog in this operating system', 'il y a un chien dans ce système d\'exploitation'], fx() {
           termLine('   /\\_/\\   __', 't-dim'); termLine('  / o o \\ /  \\', 't-dim'); termLine('  \\_ ^ _/ WOOF', 't-dim'); termLine('   |___|', 't-dim');
@@ -10229,7 +10258,7 @@ document.addEventListener('DOMContentLoaded', () => {
           dsL('♪ "woke up this morning… all my RAM was gone…" — the blue screen, live at Site C:', '♪ « je me suis réveillé ce matin… toute ma RAM était partie… » — l\'écran bleu, en concert au Site C:', 't-ok');
         } },
         qr: { d: ['enlarge the QR code (scan it, coward)', 'agrandir le QR code (scanne-le, sans peur)'], fx() {
-          dreamDlg({ title: 'QR.DMP', force: true, lines: ['█▀▀█ ▄▀▄ █▀▀█', '█ ♡█ ▀█▀ █♡ █', '█▄▄█ ▄█▄ █▄▄█', trT('(every scan resolves to ♡. we tested 4,000 times.)', '(chaque scan mène à ♡. testé 4 000 fois.)')], buttons: [[trT('scanned ♡', 'scanné ♡'), () => { playSparkleSound(); gainFollowers(1); }]] });
+          dreamDlg(() => ({ title: 'QR.DMP', force: true, lines: ['█▀▀█ ▄▀▄ █▀▀█', '█ ♡█ ▀█▀ █♡ █', '█▄▄█ ▄█▄ █▄▄█', trT('(every scan resolves to ♡. we tested 4,000 times.)', '(chaque scan mène à ♡. testé 4 000 fois.)')], buttons: [[trT('scanned ♡', 'scanné ♡'), () => { playSparkleSound(); gainFollowers(1); }]] }));
         } },
         taskkill: { d: ['kill sadness.exe (with prejudice)', 'tuer tristesse.exe (sans sommation)'], fx() {
           dsL('taskkill /f /im sadness.exe', 'taskkill /f /im tristesse.exe', 't-dim');
@@ -12964,7 +12993,7 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.textContent = trT('⚙️ SCP-914: insert a word', '⚙️ SCP-914 : insérer un mot');
         btn.addEventListener('click', () => {
           if (document.querySelector('.dream-dlg')) return;
-          const d = dreamDlg({ title: 'SCP-914 — THE CLOCKWORKS', force: true, lines: [trT('insert item, select refinement:', 'insérez l\'objet, choisissez le raffinage :')], buttons: [] });
+          const d = dreamDlg(() => ({ title: 'SCP-914 — THE CLOCKWORKS', force: true, lines: [trT('insert item, select refinement:', 'insérez l\'objet, choisissez le raffinage :')], buttons: [] }));
           if (!d) return;
           const inp = document.createElement('input');
           inp.type = 'text';
@@ -14089,7 +14118,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const inv = (DWC_TALK.invite && DWC_TALK.invite.length)
       ? DWC_TALK.invite[Math.floor(Math.random() * DWC_TALK.invite.length)]
       : ['*THWAP* — a deck of cards hits the desktop. the slime is already shuffling.', '*PAF* — un paquet de cartes claque sur le bureau. le slime mélange déjà.'];
-    dreamDlg({
+    dreamDlg(() => ({
       title: 'CARDS.EXE', force: true,
       lines: [trT(...inv)],
       buttons: [
@@ -14098,7 +14127,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ['♥ hearts', (d) => { d.remove(); dwcOpen('hearts'); }],
         [trT('not now ♡', 'pas maintenant ♡'), (d) => d.remove()]
       ]
-    });
+    }));
     playTone(392, 'square', 0.08, 0, 0.05); playTone(523, 'square', 0.08, 0.1, 0.05);
   }
   function dwSolCascade() {
@@ -14169,7 +14198,7 @@ document.addEventListener('DOMContentLoaded', () => {
       store.set('yos-gb-bug-pops', { n: (seen.n || 0) + 1, at: Date.now() });
     }
     let hp = 3;
-    const box = dreamDlg({
+    const box = dreamDlg(() => ({
       title: trT('a wild BUG appeared!', 'un BUG sauvage apparaît !'),
       force: true, x: window.innerWidth / 2 - 150, y: 96,
       lines: [trT('BUG lv.404  ♥♥♥', 'BUG niv.404  ♥♥♥'), trT('> it uses INFINITE LOOP…', '> il lance BOUCLE INFINIE…')],
@@ -14190,7 +14219,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // self-remove; without it the dlg closes instantly and eats the text
         [trT('🥎 CATCH', '🥎 CAPTURER'), (d) => { playDreamPop(); gainFollowers(1); const body = d.querySelector('.dream-dlg-body'); if (body && body.children[1]) body.children[1].textContent = trT('> gotcha!! it joins the meadow ♡', '> attrapé !! il rejoint la prairie ♡'); dT(() => { try { d.remove(); } catch (e) {} }, 1600); }, true]
       ]
-    });
+    }));
     if (box) playDreamGB();
     dreamSay(["zzz… a WILD one… quick, pick a button…", "zzz… un BUG sauvage… vite, choisis un bouton…"], 3600);
   }
@@ -14198,7 +14227,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // geo: the 1,000,000th visitor prize (it's you, it's always you)
   function dwBeatMillionth() {
     if (document.querySelector('.dream-dlg')) return;
-    const d = dreamDlg({
+    const d = dreamDlg(() => ({
       title: trT('🎉 CONGRATULATIONS!!!', '🎉 FÉLICITATIONS !!!'),
       cls: 'dream-geo-flashdlg', force: true,
       lines: [trT('you are visitor № 1,000,000!!!', 'tu es le visiteur nº 1 000 000 !!!'), trT('claim your FREE pixel trophy (100% real)', 'réclame ton trophée pixel GRATUIT (100 % réel)')],
@@ -14206,7 +14235,7 @@ document.addEventListener('DOMContentLoaded', () => {
         [trT('CLAIM ✨', 'RÉCLAMER ✨'), () => { cheatFall(['🏆', '✨', '🎊'], 22); playFanfare(); gainFollowers(3); showToast(trT('🏆 trophy claimed!! it is worth exactly 0 coins and infinite joy', '🏆 trophée réclamé !! il vaut exactement 0 pièce et une joie infinie')); }],
         [trT('(suspicious)', '(suspect)'), () => { showToast(trT('smart. it was a banner. but the trophy was real ♡', 'malin. c\'était une bannière. mais le trophée était réel ♡')); gainFollowers(1); }]
       ]
-    });
+    }));
     if (d) playTone(1318, 'square', 0.1, 0, 0.04);
     dreamSay(["zzz… a MILLION visitors… and the millionth is… you… again…", "zzz… un MILLION de visiteurs… et le millionième c'est… toi… encore…"], 4000);
   }
@@ -14230,7 +14259,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // stage 1: the classic reporter — with a progress bar that lies, a
   // button that dodges, and no exit that avoids the avalanche
   function dwBsodCascade() {
-    const d = dreamDlg({
+    const d = dreamDlg(() => ({
       title: trT('slime has stopped working', 'slime a cessé de fonctionner'),
       force: true, cls: 'dream-dlg-err',
       x: window.innerWidth / 2 - 150, y: Math.max(70, window.innerHeight * 0.2),
@@ -14261,7 +14290,7 @@ document.addEventListener('DOMContentLoaded', () => {
           dT(() => dwBsodAvalanche(dlg), 900);
         }, true]
       ]
-    });
+    }));
     if (!d) { dreamWorld.flags.bsodCascade = 0; return; } // clutter law won; try next beat
     playDreamSad();
     dreamSay(["zzz… collecting error info… it's all hearts… still…", "zzz… collecte des erreurs… ce ne sont que des cœurs… toujours…"], 4000);
@@ -14353,7 +14382,7 @@ document.addEventListener('DOMContentLoaded', () => {
           y = 44 + Math.floor(i / 4) * Math.max(60, (window.innerHeight - 300) / 3) + Math.random() * 18 - 9;
         }
         const spec = gen < 3 ? DW_BSOD_ECHOES[gen === 1 ? i : 2 + i] : null;
-        const dlg = dreamDlg({
+        const dlg = dreamDlg(() => ({
           title: spec ? trT(...spec[0]) : trT('error #', 'erreur nº ') + (i + 7),
           lines: [spec ? trT(...spec[1]) : trT(...DW_BSOD_SWARM_LINES[i % DW_BSOD_SWARM_LINES.length])],
           force: true,
@@ -14362,7 +14391,7 @@ document.addEventListener('DOMContentLoaded', () => {
           y: Math.max(40, Math.min(window.innerHeight - 170, y)),
           buttons: [],
           onX: onClose
-        });
+        }));
         if (dlg) { if (gen === 3) dlg.style.transform = 'rotate(' + (Math.random() * 6 - 3).toFixed(1) + 'deg)'; spawned.push(dlg); }
       }, (gen === 3 ? 110 : 320) * i);
     }
@@ -14381,7 +14410,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // stage 3: the merge — one error to hug them all
   function dwBsodFinale() {
     if (!dreamWorld) return;
-    const d = dreamDlg({
+    const d = dreamDlg(() => ({
       title: '0x0000HUG — FATAL AFFECTION', force: true, cls: 'dream-dlg-err',
       x: window.innerWidth / 2 - 150, y: Math.max(90, window.innerHeight * 0.3),
       lines: [trT('all errors have merged into one big feeling.', 'toutes les erreurs ont fusionné en un seul grand sentiment.'), trT('the feeling is: ♡', 'le sentiment est : ♡')],
@@ -14389,7 +14418,7 @@ document.addEventListener('DOMContentLoaded', () => {
         [trT('hug it ♡', 'lui faire un câlin ♡'), () => { playFanfare(); cheatFall(['💙', '♡', '💌'], 22); gainFollowers(2); showToast(trT('all six errors were the same feeling. it has been hugged. case closed ♡ +2 fans', 'les six erreurs étaient le même sentiment. il a eu son câlin. affaire classée ♡ +2 fans'), { scroll: true }); }],
         [trT('CTRL+ALT+DEL', 'CTRL+ALT+SUPPR'), () => { playGlitchSound(); gainFollowers(1); showToast(trT('task manager: everything running is a feeling. nothing was terminated ♡', 'gestionnaire des tâches : tout ce qui tourne est un sentiment. rien n\'a été terminé ♡'), { scroll: true }); }]
       ]
-    });
+    }));
     if (d) playDreamSad();
   }
 
@@ -14490,11 +14519,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (Date.now() - dwBsodDenyAt < 700) return; // one tantrum at a time
     dwBsodDenyAt = Date.now();
     const s = DW_BSOD_DENIES[key] || DW_BSOD_DENIES.generic;
-    const d = dreamDlg({
+    const d = dreamDlg(() => ({
       title: trT(...s.t), force: true, cls: 'dream-dlg-err' + (s.cls ? ' ' + s.cls : ''),
       lines: [trT(...s.l)],
       buttons: [[trT(...s.b), () => {}]]
-    });
+    }));
     if (!d) return;
     if (s.snd) { try { s.snd(); } catch (e) { /* silent grief */ } }
     if (s.fx) { try { s.fx(d); } catch (e) { /* the animation also crashed */ } }
@@ -14517,11 +14546,11 @@ document.addEventListener('DOMContentLoaded', () => {
   };
   function dwBsodExemptShow(winId) {
     const s = DW_BSOD_EXEMPT[winId];
-    const d = dreamDlg({
+    const d = dreamDlg(() => ({
       title: trT(...s.t), force: true, cls: 'dream-dlg-err',
       x: window.innerWidth / 2 - 150, y: Math.max(80, window.innerHeight * 0.24),
       lines: [trT(...s.l1)], buttons: []
-    });
+    }));
     playDreamSad();
     dT(() => {
       if (!d || !document.body.contains(d)) return;
@@ -14608,12 +14637,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const x = fixed ? fixed.x : -W * 0.15 + Math.random() * Math.max(60, window.innerWidth - W * 0.7);
     const y = fixed ? fixed.y : 30 + Math.random() * Math.max(60, window.innerHeight - 140);
     const ln = DW_BSOD_SWARM_LINES[n % DW_BSOD_SWARM_LINES.length];
-    const d = dreamDlg({
+    const d = dreamDlg(() => ({
       // the hydra's sixteen were #7–#22; the flood keeps counting
       title: trT('error #', 'erreur nº ') + (n + 22), force: true, cls: 'dream-dlg-err dream-dlg-mini',
       x: Math.max(-40, x), y: Math.max(30, y),
       lines: [trT(...ln)], buttons: [], onX: dwBsodSwarmClose
-    });
+    }));
     if (d) {
       d.style.width = W + 'px';
       d.style.transform = 'rotate(' + (Math.random() * 6 - 3).toFixed(1) + 'deg)';
@@ -15028,7 +15057,10 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function dreamArmCooldown() {
-    dreamAcdLeft = 3600 * 1000; // one hour, ACTIVE time only
+    // owner decree v126: fifteen minutes of ACTIVE time between dreams
+    // (was a full hour — too long). parked tabs still don't serve time:
+    // the ledger only ticks while the visitor is actually here.
+    dreamAcdLeft = 15 * 60 * 1000;
     store.set('yos-dream-acd', dreamAcdLeft);
   }
   function dreamResume() {
