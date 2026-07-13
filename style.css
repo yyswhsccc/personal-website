@@ -2256,6 +2256,9 @@ html[data-theme="dark"] .ama-feed {
   display: flex;
   animation: window-pop-in 0.18s ease-out;
 }
+/* while the START menu is open, the whole bar rises above the dream layer
+   (printer/dialogs at z 2500-2700) so nothing bleeds over the menu */
+.desktop-taskbar.taskbar-menu-open { z-index: 2800; }
 
 .start-menu-header {
   background: linear-gradient(135deg, var(--pink-hot), var(--purple-dark));
@@ -2298,6 +2301,17 @@ html[data-theme="dark"] .ama-feed {
   color: var(--pink-deep);
   text-decoration: none;
 }
+/* in ANY dream the gradient-wash highlight vanishes against the world
+   palette — a selected item goes SOLID: the world's light accent as a
+   full background bar, hard dark ink on top. unmissable. (owner decree)
+   :focus (not just :focus-visible) so mouse-click selection lights up too. */
+html.dreaming .start-menu-item:hover,
+html.dreaming .start-menu-item:focus {
+  background: var(--lite, #ffd23f);
+  color: #14020e;
+}
+html.dreaming .start-menu-item:hover .item-icon,
+html.dreaming .start-menu-item:focus .item-icon { filter: none; }
 
 /* Active Programs in Taskbar */
 .taskbar-apps {

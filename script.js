@@ -166,8 +166,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const startMenu = document.getElementById('start-menu-popup');
 
   function syncDanmakuSuppression() {
+    const open = startMenu.classList.contains('show');
     const dm = document.getElementById('mini-danmaku');
-    if (dm) dm.classList.toggle('dm-suppressed', startMenu.classList.contains('show'));
+    if (dm) dm.classList.toggle('dm-suppressed', open);
+    // the taskbar is a z:2000 stacking context; dream furniture (printer,
+    // dialogs… z:2500-2700) renders above it, occluding the START menu.
+    // lift the whole bar above the dream layer WHILE the menu is open.
+    const tb = document.querySelector('.desktop-taskbar');
+    if (tb) tb.classList.toggle('taskbar-menu-open', open);
   }
 
   startBtn.addEventListener('click', (e) => {
@@ -180,6 +186,10 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   document.addEventListener('click', (e) => {
+    // the language/theme/mute toolbar buttons must NOT close the menu —
+    // toggling language while the START menu is open should re-ink it in
+    // place, not dismiss it (owner decree: summoned menus stay put)
+    if (e.target instanceof Element && e.target.closest('.tray-btn')) return;
     if (!startMenu.contains(e.target) && e.target !== startBtn) {
       startMenu.classList.remove('show');
       startBtn.setAttribute('aria-expanded', 'false');
@@ -5976,6 +5986,10 @@ document.addEventListener('DOMContentLoaded', () => {
       document.querySelectorAll('.dream-dlg').forEach((dlg) => {
         try { if (dlg.__rebuild) dlg.__rebuild(); else dlg.remove(); } catch (e2) { /* gone */ }
       });
+      // amber printer slips re-ink in place too (same decree, on paper)
+      document.querySelectorAll('.dream-amber-slip').forEach((slip) => {
+        try { if (slip.__rebuild) slip.__rebuild(); } catch (e2) { /* flew off */ }
+      });
     } catch (e) { /* pre-boot */ }
     // the cam button label is stateful — the blanket pass wrote the OFF
     // label over a camera that is visibly still streaming
@@ -8303,14 +8317,25 @@ document.addEventListener('DOMContentLoaded', () => {
     slip.appendChild(amberSlimeCanvas());
     // v126: a slip may be a flat [en] array (back-compat) OR a bilingual
     // { en:[…], fr:[…] } — the printed paper now speaks the reader's tongue
-    const lines = (bodyLines && !Array.isArray(bodyLines) && bodyLines.en)
+    const bilingual = bodyLines && !Array.isArray(bodyLines) && bodyLines.en;
+    const lines = bilingual
       ? (yosLang === 'fr' ? bodyLines.fr : bodyLines.en)
       : (Array.isArray(bodyLines) ? bodyLines : [bodyLines]);
     lines.forEach((ln) => {
       const el = document.createElement('div');
+      el.className = 'dream-amber-slip-line';
       el.textContent = ln;
       slip.appendChild(el);
     });
+    // v127: a visible slip re-inks in place on a language toggle (owner
+    // decree: dream paper follows the switch WITHOUT flying away)
+    if (bilingual) {
+      slip.__rebuild = () => {
+        const fresh = yosLang === 'fr' ? bodyLines.fr : bodyLines.en;
+        const els = slip.querySelectorAll('.dream-amber-slip-line');
+        fresh.forEach((ln, i) => { if (els[i]) els[i].textContent = ln; });
+      };
+    }
     p.appendChild(slip);
     if (extra) { try { extra(slip); } catch (e) { /* the paper jammed, poetically */ } }
     setTimeout(() => slip.classList.add('dream-amber-slip-fly'), 4200);
