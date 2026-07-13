@@ -4078,7 +4078,7 @@ document.addEventListener('DOMContentLoaded', () => {
     { id: 'gift500', icon: '🎆', m: 'gifts', v: 500, n: ['GDP Contributor', 'Contributeur·rice au PIB'], d: ['500 gifts. the stream economy issued you a passport.', '500 cadeaux. l\'économie du stream t\'a délivré un passeport.'], t: ['five hundred parcels.', 'cinq cents colis.'] },
     { id: 'nap300', icon: '🌌', m: 'naps', v: 300, n: ['Curator of Dreams', 'Conservateur·rice des Rêves'], d: ['300 naps curated. the dream museum has a you-shaped statue.', '300 siestes organisées. le musée du rêve a une statue à ton effigie.'], t: ['three hundred lullabies.', 'trois cents berceuses.'] },
     { id: 'jump100', icon: '🐇', m: 'jumps', v: 100, n: ['Bunny Apprentice', 'Apprenti·e Lapin'], d: ['100 jumps. the rabbits accepted your application.', '100 sauts. les lapins ont accepté ta candidature.'], t: ['the first hundred hops.', 'les cent premiers bonds.'] },
-    { id: 'gbchampion', icon: '🎮', n: ['Dream Boy Champion', 'Champion Dream Boy'], d: ['won EVERY BONUS CARTRIDGE microgame — all 45. the dex was only the tutorial.', 'a gagné TOUS les microjeux de la CARTOUCHE BONUS — les 45. le dex n\'était que le tutoriel.'], t: ['complete the dream dex. then keep pressing A.', 'complète le dex des rêves. puis continue d\'appuyer sur A.'] },
+    { id: 'gbchampion', icon: '🎮', n: ['Dream Boy Champion', 'Champion Dream Boy'], d: ['won EVERY BONUS CARTRIDGE microgame on the shelf. the dex was only the tutorial.', 'a gagné TOUS les microjeux de l\'étagère BONUS. le dex n\'était que le tutoriel.'], t: ['complete the dream dex. then keep pressing A.', 'complète le dex des rêves. puis continue d\'appuyer sur A.'] },
     { id: 'cardshark', icon: '🃏', n: ['Card Shark of 1995', 'Requin des Cartes de 1995'], d: ['won a REAL hand at the slime\'s card table — solitaire, freecell, or hearts. the cascade was earned.', 'a gagné une VRAIE partie à la table du slime — solitaire, freecell ou hearts. la cascade était méritée.'], t: ['in the beige dream, the slime deals. say `sol`.', 'dans le rêve beige, le slime distribue. dis `sol`.'] },
     { id: 'chameleon', icon: '🦎', n: ['The Impossible Shade', 'La Teinte Impossible'], d: ['plucked the hidden CHAMELEON pikmin — it refuses to pick a colour. mood.', 'a cueilli le pikmin CAMÉLÉON caché — il refuse de choisir une couleur. tellement relatable.'], t: ['1 in 10 sprouts hides a secret.', '1 pousse sur 10 cache un secret.'] },
     { id: 'colorpicker', icon: '🎨', n: ['Color Picker', 'Pipette à Couleurs'], d: ['25% of the hue wheel collected. the eyedropper nods, professionally.', '25 % de la roue chromatique. la pipette hoche la tête, en pro.'], t: ['pluck across the rainbow.', 'cueille à travers l\'arc-en-ciel.'] },
@@ -10703,7 +10703,14 @@ document.addEventListener('DOMContentLoaded', () => {
     snake: ['[◄] turn left · [►] turn right', '[◄] tourne à gauche · [►] à droite'],
     breakout: ['[◄][►] paddle · [A] serve the ball', '[◄][►] raquette · [A] sers la balle'],
     shooter: ['[◄][►] move · [A] = pew pew', '[◄][►] bouge · [A] = piou piou'],
-    rhythm: ['press the lane as the note hits the line: [◄][A][►]', 'appuie sur la voie quand la note touche la ligne : [◄][A][►]']
+    rhythm: ['press the lane as the note hits the line: [◄][A][►]', 'appuie sur la voie quand la note touche la ligne : [◄][A][►]'],
+    frogger: ['[A] hop forward · [◄][►] sidestep', '[A] saute en avant · [◄][►] pas de côté'],
+    lander: ['HOLD [A] = burn up · [◄][►] tilt · land SOFT on ▼', 'MAINTIENS [A] = poussée · [◄][►] incline · atterris DOUCEMENT sur ▼'],
+    asteroids: ['[◄][►] rotate · HOLD [A] thrust · it fires itself', '[◄][►] pivote · MAINTIENS [A] poussée · ça tire tout seul'],
+    missile: ['[◄][►] aim · [A] pop the interceptor', '[◄][►] vise · [A] déclenche l\'interception'],
+    centipede: ['[◄][►] move · HOLD [A] to spray', '[◄][►] bouge · MAINTIENS [A] pour arroser'],
+    pongvs: ['[◄][►] paddle · first to 3 wins', '[◄][►] raquette · premier à 3 gagne'],
+    tapper: ['send boba down their lane: [◄]=top [A]=mid [►]=low', 'envoie le boba sur leur voie : [◄]=haut [A]=milieu [►]=bas']
   };
 
   /* ---- the 12 mechanics. each: init(s,p) / tick(s,p,inp) / draw(s,p,g2)
@@ -11203,6 +11210,294 @@ document.addEventListener('DOMContentLoaded', () => {
         s.lanes.forEach((lx, i) => arText(g2, i === 0 ? '◄' : i === 1 ? 'A' : '►', lx - 4, 92, 1));
         arText(g2, s.hits + '/' + (p.notes || 10) + ' ✕' + Math.max(0, 4 - s.miss), 118, 12);
       }
+    },
+    /* ==== v125: THE CLASSICS CABINET — seven more arcade legends ==== */
+    frogger: {
+      // three lanes of traffic between you and the far bank.
+      // [A] hop forward · [◄][►] sidestep · repeat until legend
+      init(s, p) {
+        s.lanes = [
+          { y: 58, v: 0.55 + (p.speed || 2) * 0.15, gap: 54 },
+          { y: 44, v: -(0.7 + (p.speed || 2) * 0.18), gap: 60 },
+          { y: 30, v: 0.9 + (p.speed || 2) * 0.2, gap: 66 }
+        ];
+        s.cars = [];
+        s.lanes.forEach((ln, li) => { for (let x = -20; x < AR_W + 40; x += ln.gap) s.cars.push({ li, x: x + li * 17 }); });
+        s.px = 80; s.py = 72; s.cross = 0;
+      },
+      tick(s, p, inp) {
+        if (inp.a && s.py > 14) { s.py -= 14; playTone(880, 'square', 0.04, 0, 0.02); }
+        if (inp.leftEdge) s.px = Math.max(8, s.px - 14);
+        if (inp.rightEdge) s.px = Math.min(AR_W - 8, s.px + 14);
+        s.cars.forEach((c) => {
+          const ln = s.lanes[c.li];
+          c.x += ln.v;
+          if (ln.v > 0 && c.x > AR_W + 24) c.x = -24;
+          if (ln.v < 0 && c.x < -24) c.x = AR_W + 24;
+        });
+        if (s.t > 45 && s.cars.some((c) => Math.abs(s.lanes[c.li].y - s.py) < 6 && Math.abs(c.x - s.px) < 12)) { s.lose = true; return; }
+        if (s.py <= 16) {
+          s.cross++; playTone(1175, 'triangle', 0.1, 0, 0.05);
+          if (s.cross >= (p.cross || 3)) { s.win = true; return; }
+          s.py = 72; s.px = 80;
+        }
+      },
+      draw(s, p, g2) {
+        g2.fillStyle = AR_G[2];
+        s.lanes.forEach((ln) => { g2.fillRect(0, ln.y + 7, AR_W, 1); g2.fillRect(0, ln.y - 7, AR_W, 1); });
+        g2.fillStyle = AR_G[1]; g2.fillRect(0, 12, AR_W, 2); // the far bank
+        s.cars.forEach((c) => { g2.fillStyle = AR_G[c.li % 2 ? 0 : 1]; g2.fillRect(Math.round(c.x - 9), s.lanes[c.li].y - 4, 18, 8); });
+        arDrawGlyph(g2, p.hopper || '🐸', s.px, s.py, 12);
+        arText(g2, s.cross + '/' + (p.cross || 3), 140, 10);
+      }
+    },
+    lander: {
+      // gravity is patient. HOLD [A] to burn, [◄][►] to tilt,
+      // and kiss the pad — don't punch it
+      init(s, p) {
+        s.x = 24; s.y = 16; s.vx = 0.5; s.vy = 0;
+        s.padX = 60 + Math.random() * 70; s.padW = 26; s.done = 0;
+      },
+      tick(s, p, inp) {
+        if (inp.aHeld) { s.vy -= 0.085; if (s.t % 4 === 0) playTone(140, 'sawtooth', 0.03, 0, 0.02); }
+        if (inp.left) s.vx -= 0.045;
+        if (inp.right) s.vx += 0.045;
+        s.vy += 0.038;
+        s.x += s.vx; s.y += s.vy;
+        if (s.x < 6) { s.x = 6; s.vx = Math.abs(s.vx) * 0.4; }
+        if (s.x > AR_W - 6) { s.x = AR_W - 6; s.vx = -Math.abs(s.vx) * 0.4; }
+        if (s.y < 6) { s.y = 6; s.vy = Math.max(0, s.vy); }
+        if (s.y >= 79) {
+          const onPad = Math.abs(s.x - (s.padX + s.padW / 2)) < s.padW / 2;
+          const gentle = s.vy < (p.soft || 1.05) && Math.abs(s.vx) < 0.85;
+          if (onPad && gentle) {
+            s.done++; playTone(1046, 'triangle', 0.12, 0, 0.06);
+            if (s.done >= (p.landings || 1)) { s.win = true; return; }
+            s.x = 24; s.y = 16; s.vx = 0.5; s.vy = 0; s.padX = 40 + Math.random() * 90;
+          } else s.lose = true;
+        }
+      },
+      draw(s, p, g2) {
+        g2.fillStyle = AR_G[1]; g2.fillRect(0, 84, AR_W, 12); // regolith
+        g2.fillStyle = AR_G[0]; g2.fillRect(Math.round(s.padX), 82, s.padW, 3); // THE pad
+        arText(g2, '▼', Math.round(s.padX + s.padW / 2 - 3), 80, 0, 8);
+        g2.fillStyle = AR_G[0];
+        g2.fillRect(Math.round(s.x - 4), Math.round(s.y - 3), 8, 6); // hull
+        g2.fillRect(Math.round(s.x - 6), Math.round(s.y + 3), 3, 3); g2.fillRect(Math.round(s.x + 3), Math.round(s.y + 3), 3, 3); // legs
+        if (s.t % 6 < 3) { /* flame flickers only while burning */ }
+        arText(g2, 'vy ' + s.vy.toFixed(1), 8, 12, s.vy > (p.soft || 1.05) ? 0 : 1, 8);
+        arText(g2, s.done + '/' + (p.landings || 1), 140, 10);
+      }
+    },
+    asteroids: {
+      // [◄][►] rotate · HOLD [A] thrust · the cannon fires itself.
+      // rocks split. space wraps. physics forgives nothing.
+      init(s, p) {
+        s.x = AR_W / 2; s.y = AR_H / 2; s.vx = 0; s.vy = 0; s.ang = -Math.PI / 2;
+        s.shots = []; s.cool = 0; s.kills = 0;
+        s.rocks = [];
+        for (let i = 0; i < 3; i++) {
+          const a = Math.random() * 6.28;
+          s.rocks.push({ x: (AR_W / 2 + Math.cos(a) * 58 + AR_W) % AR_W, y: (AR_H / 2 + Math.sin(a) * 36 + AR_H) % AR_H, vx: (Math.random() - 0.5) * 0.8, vy: (Math.random() - 0.5) * 0.6, r: 9 });
+        }
+      },
+      tick(s, p, inp) {
+        if (inp.left) s.ang -= 0.075;
+        if (inp.right) s.ang += 0.075;
+        if (inp.aHeld) { s.vx += Math.cos(s.ang) * 0.06; s.vy += Math.sin(s.ang) * 0.06; }
+        s.vx *= 0.985; s.vy *= 0.985;
+        s.x = (s.x + s.vx + AR_W) % AR_W; s.y = (s.y + s.vy + AR_H) % AR_H;
+        if (--s.cool <= 0) { s.shots.push({ x: s.x, y: s.y, vx: Math.cos(s.ang) * 2.6, vy: Math.sin(s.ang) * 2.6, ttl: 46 }); s.cool = 22; playTone(1500, 'square', 0.02, 0, 0.015); }
+        s.shots.forEach((sh) => { sh.x = (sh.x + sh.vx + AR_W) % AR_W; sh.y = (sh.y + sh.vy + AR_H) % AR_H; sh.ttl--; });
+        s.shots = s.shots.filter((sh) => sh.ttl > 0);
+        s.rocks.forEach((rk) => { rk.x = (rk.x + rk.vx + AR_W) % AR_W; rk.y = (rk.y + rk.vy + AR_H) % AR_H; });
+        s.shots = s.shots.filter((sh) => {
+          const i = s.rocks.findIndex((rk) => Math.hypot(rk.x - sh.x, rk.y - sh.y) < rk.r + 2);
+          if (i < 0) return true;
+          const rk = s.rocks.splice(i, 1)[0];
+          s.kills++;
+          playTone(300 + Math.random() * 200, 'square', 0.06, 0, 0.04);
+          if (rk.r > 6) for (let k = 0; k < 2; k++) s.rocks.push({ x: rk.x, y: rk.y, vx: (Math.random() - 0.5) * 1.4, vy: (Math.random() - 0.5) * 1.1, r: 5 });
+          return false;
+        });
+        if (!s.rocks.length) { s.win = true; return; }
+        if (s.t > 60 && s.rocks.some((rk) => Math.hypot(rk.x - s.x, rk.y - s.y) < rk.r + 4)) s.lose = true;
+      },
+      draw(s, p, g2) {
+        g2.strokeStyle = AR_G[0]; g2.lineWidth = 1;
+        s.rocks.forEach((rk) => { g2.beginPath(); g2.arc(rk.x, rk.y, rk.r, 0, 6.3); g2.stroke(); });
+        g2.fillStyle = AR_G[0];
+        s.shots.forEach((sh) => g2.fillRect(Math.round(sh.x - 1), Math.round(sh.y - 1), 2, 2));
+        const c = Math.cos(s.ang), n = Math.sin(s.ang);
+        g2.beginPath();
+        g2.moveTo(s.x + c * 6, s.y + n * 6);
+        g2.lineTo(s.x - c * 4 - n * 4, s.y - n * 4 + c * 4);
+        g2.lineTo(s.x - c * 4 + n * 4, s.y - n * 4 - c * 4);
+        g2.closePath(); g2.stroke();
+        arText(g2, s.kills + '/9', 140, 10);
+      }
+    },
+    missile: {
+      // they are falling on the meadow. [◄][►] aim · [A] pop the umbrella
+      init(s, p) {
+        s.cx = AR_W / 2;
+        s.bases = [30, 80, 130].map((x) => ({ x, alive: true }));
+        s.miss = []; s.booms = []; s.down = 0; s.spawn = 60;
+      },
+      tick(s, p, inp) {
+        if (inp.left) s.cx = Math.max(10, s.cx - 2.4);
+        if (inp.right) s.cx = Math.min(AR_W - 10, s.cx + 2.4);
+        if (inp.a) { s.booms.push({ x: s.cx, y: 38, r: 2 }); playTone(220, 'sawtooth', 0.1, 0, 0.05); }
+        if (--s.spawn <= 0) {
+          s.spawn = Math.max(46, 92 - (p.speed || 2) * 12 - s.down * 2);
+          const alive = s.bases.filter((b) => b.alive);
+          if (alive.length) {
+            const tgt = alive[Math.floor(Math.random() * alive.length)];
+            const sx = 10 + Math.random() * (AR_W - 20);
+            s.miss.push({ sx, sy: 0, x: sx, y: 0, tx: tgt.x, ty: 80, v: 0.34 + (p.speed || 2) * 0.1 });
+          }
+        }
+        s.miss.forEach((m) => {
+          const d = Math.hypot(m.tx - m.x, m.ty - m.y) || 1;
+          m.x += (m.tx - m.x) / d * m.v; m.y += (m.ty - m.y) / d * m.v;
+        });
+        s.booms.forEach((b) => { b.r += 0.9; });
+        s.booms = s.booms.filter((b) => b.r < 15);
+        s.miss = s.miss.filter((m) => {
+          if (s.booms.some((b) => Math.hypot(b.x - m.x, b.y - m.y) < b.r + 2)) {
+            s.down++; playTone(980, 'square', 0.05, 0, 0.03);
+            if (s.down >= (p.down || 8)) s.win = true;
+            return false;
+          }
+          if (m.y >= 78) {
+            const base = s.bases.find((bb) => bb.alive && Math.abs(bb.x - m.tx) < 6);
+            if (base) { base.alive = false; playTone(120, 'sawtooth', 0.3, 0, 0.09); if (!s.bases.some((bb) => bb.alive)) s.lose = true; }
+            return false;
+          }
+          return true;
+        });
+      },
+      draw(s, p, g2) {
+        g2.strokeStyle = AR_G[2]; g2.lineWidth = 1;
+        s.miss.forEach((m) => { g2.beginPath(); g2.moveTo(m.sx, m.sy); g2.lineTo(m.x, m.y); g2.stroke(); });
+        g2.fillStyle = AR_G[0];
+        s.miss.forEach((m) => g2.fillRect(Math.round(m.x - 1), Math.round(m.y - 1), 3, 3));
+        g2.strokeStyle = AR_G[0];
+        s.booms.forEach((b) => { g2.beginPath(); g2.arc(b.x, b.y, b.r, 0, 6.3); g2.stroke(); });
+        s.bases.forEach((b) => arDrawGlyph(g2, b.alive ? (p.base || '🌱') : '·', b.x, 84, 12));
+        g2.strokeRect(Math.round(s.cx - 4), 34, 8, 8);
+        g2.fillRect(Math.round(s.cx - 1), 30, 2, 4); g2.fillRect(Math.round(s.cx - 1), 44, 2, 4);
+        arText(g2, s.down + '/' + (p.down || 8), 140, 10);
+      }
+    },
+    centipede: {
+      // the worm serpentines DOWN. [◄][►] move · HOLD [A] to spray
+      init(s, p) {
+        s.px = AR_W / 2; s.shots = []; s.cool = 0; s.kills = 0;
+        s.segs = []; for (let i = 0; i < 10; i++) s.segs.push({ x: -i * 9, y: 12, dir: 1 });
+      },
+      tick(s, p, inp) {
+        if (inp.left) s.px = Math.max(8, s.px - 2.5);
+        if (inp.right) s.px = Math.min(AR_W - 8, s.px + 2.5);
+        if (s.cool > 0) s.cool--;
+        if (inp.aHeld && s.cool <= 0) { s.shots.push({ x: s.px, y: 78 }); s.cool = 12; playTone(1300, 'square', 0.03, 0, 0.02); }
+        s.shots.forEach((sh) => { sh.y -= 2.8; });
+        s.shots = s.shots.filter((sh) => sh.y > -4);
+        const v = 0.75 + (p.speed || 2) * 0.2;
+        s.segs.forEach((sg) => {
+          sg.x += sg.dir * v;
+          if (sg.x > AR_W - 6 && sg.dir > 0) { sg.dir = -1; sg.y += 9; sg.x = AR_W - 6; }
+          else if (sg.x < 6 && sg.dir < 0) { sg.dir = 1; sg.y += 9; sg.x = 6; }
+        });
+        s.shots = s.shots.filter((sh) => {
+          const i = s.segs.findIndex((sg) => Math.abs(sg.x - sh.x) < 6 && Math.abs(sg.y - sh.y) < 6);
+          if (i < 0) return true;
+          s.segs.splice(i, 1); s.kills++;
+          playTone(700 + s.kills * 40, 'square', 0.05, 0, 0.03);
+          return false;
+        });
+        if (!s.segs.length) { s.win = true; return; }
+        if (s.segs.some((sg) => sg.y > 70)) s.lose = true;
+      },
+      draw(s, p, g2) {
+        s.segs.forEach((sg, i) => {
+          g2.fillStyle = i === 0 ? AR_G[0] : AR_G[1];
+          g2.fillRect(Math.round(sg.x - 4), Math.round(sg.y - 4), 8, 8);
+        });
+        g2.fillStyle = AR_G[0];
+        s.shots.forEach((sh) => g2.fillRect(Math.round(sh.x - 1), Math.round(sh.y - 4), 2, 6));
+        g2.fillRect(Math.round(s.px - 6), 80, 12, 4); g2.fillRect(Math.round(s.px - 1), 76, 2, 4);
+        arText(g2, s.kills + '/10', 136, 10);
+      }
+    },
+    pongvs: {
+      // an actual OPPONENT. [◄][►] paddle · first to 3 · no mercy (some mercy)
+      init(s, p) {
+        s.px = AR_W / 2; s.cx = AR_W / 2; s.you = 0; s.cpu = 0; s.hold = 40;
+        s.bx = AR_W / 2; s.by = AR_H / 2; s.vx = 0.9; s.vy = 1.15 + (p.speed || 2) * 0.15;
+      },
+      tick(s, p, inp) {
+        if (inp.left) s.px = Math.max(14, s.px - 2.6);
+        if (inp.right) s.px = Math.min(AR_W - 14, s.px + 2.6);
+        const cv = 1.1 + (p.speed || 2) * 0.12;
+        if (s.cx < s.bx - 3) s.cx = Math.min(s.cx + cv, AR_W - 14);
+        else if (s.cx > s.bx + 3) s.cx = Math.max(s.cx - cv, 14);
+        if (s.hold > 0) { s.hold--; return; }
+        s.bx += s.vx; s.by += s.vy;
+        if (s.bx < 5 || s.bx > AR_W - 5) s.vx *= -1;
+        if (s.by > 74 && s.by < 82 && Math.abs(s.bx - s.px) < 13 && s.vy > 0) { s.vy = -Math.abs(s.vy) * 1.03; s.vx += (s.bx - s.px) * 0.06; playTone(880, 'square', 0.04, 0, 0.02); }
+        if (s.by < 20 && s.by > 12 && Math.abs(s.bx - s.cx) < 13 && s.vy < 0) { s.vy = Math.abs(s.vy) * 1.02; s.vx += (s.bx - s.cx) * 0.05; playTone(520, 'square', 0.04, 0, 0.02); }
+        s.vx = Math.max(-2.2, Math.min(2.2, s.vx));
+        const reset = (dir) => { s.bx = AR_W / 2; s.by = AR_H / 2; s.vx = (Math.random() < 0.5 ? -1 : 1) * 0.9; s.vy = dir * (1.15 + (p.speed || 2) * 0.15); s.hold = 45; };
+        if (s.by > AR_H + 4) { s.cpu++; playTone(200, 'square', 0.1, 0, 0.05); if (s.cpu >= (p.goals || 3)) { s.lose = true; return; } reset(-1); }
+        if (s.by < -4) { s.you++; playTone(1175, 'triangle', 0.1, 0, 0.05); if (s.you >= (p.goals || 3)) { s.win = true; return; } reset(1); }
+      },
+      draw(s, p, g2) {
+        g2.fillStyle = AR_G[2];
+        for (let x = 4; x < AR_W; x += 12) g2.fillRect(x, AR_H / 2, 6, 1);
+        g2.fillStyle = AR_G[1]; g2.fillRect(Math.round(s.cx - 12), 14, 24, 4);
+        g2.fillStyle = AR_G[0]; g2.fillRect(Math.round(s.px - 12), 78, 24, 4);
+        arDrawGlyph(g2, p.ball || '🟢', s.bx, s.by, 10);
+        arText(g2, trT('you', 'toi') + ' ' + s.you + ' — ' + s.cpu + ' cpu', 54, 10);
+      }
+    },
+    tapper: {
+      // thirsty customers shuffle toward the bar. send boba down their
+      // lane before anyone reaches the counter: [◄]=top [A]=mid [►]=low
+      init(s, p) {
+        s.lanes = [26, 48, 70];
+        s.cust = []; s.drinks = []; s.served = 0; s.spawn = 70;
+      },
+      tick(s, p, inp) {
+        if (--s.spawn <= 0) {
+          s.spawn = Math.max(40, 95 - (p.speed || 2) * 12 - s.served * 3);
+          s.cust.push({ lane: Math.floor(Math.random() * 3), x: AR_W + 8, v: 0.3 + (p.speed || 2) * 0.08 + Math.random() * 0.15 });
+        }
+        const press = inp.leftEdge ? 0 : (inp.a ? 1 : (inp.rightEdge ? 2 : null));
+        if (press != null) { s.drinks.push({ lane: press, x: 20 }); playTone(760, 'square', 0.05, 0, 0.03); }
+        s.cust.forEach((c) => { c.x -= c.v; });
+        s.drinks.forEach((d) => { d.x += 2.4; });
+        s.drinks = s.drinks.filter((d) => {
+          const c = s.cust.find((cc) => cc.lane === d.lane && Math.abs(cc.x - d.x) < 8);
+          if (c) {
+            s.cust.splice(s.cust.indexOf(c), 1); s.served++;
+            playTone(1046, 'triangle', 0.07, 0, 0.04);
+            if (s.served >= (p.serves || 8)) s.win = true;
+            return false;
+          }
+          return d.x < AR_W + 10;
+        });
+        if (s.cust.some((c) => c.x < 16)) s.lose = true;
+      },
+      draw(s, p, g2) {
+        g2.fillStyle = AR_G[1]; g2.fillRect(8, 16, 5, 62); // the bar
+        g2.fillStyle = AR_G[2];
+        s.lanes.forEach((ly) => g2.fillRect(13, ly + 7, AR_W - 18, 1));
+        s.cust.forEach((c) => arDrawGlyph(g2, p.thirsty || '🥺', c.x, s.lanes[c.lane], 12));
+        s.drinks.forEach((d) => arDrawGlyph(g2, p.drink || '🧋', d.x, s.lanes[d.lane], 11));
+        s.lanes.forEach((ly, i) => arText(g2, i === 0 ? '◄' : i === 1 ? 'A' : '►', 1, ly + 3, 1));
+        arText(g2, s.served + '/' + (p.serves || 8), 136, 10);
+      }
     }
   };
 
@@ -11253,7 +11548,22 @@ document.addEventListener('DOMContentLoaded', () => {
     { id: "bug_spray_2000", tpl: "shooter", name: ["BUG SPRAY 2000", "INSECTICIDE 2000"], prompt: ["the bugs shipped to prod. spray all 12", "les bugs sont partis en prod. asperge les 12"], win: ["zero bugs remain. QA lights a small candle", "zéro bug restant. la QA allume une bougie"], lose: ["the bugs reached the release branch. mercy", "les bugs ont atteint la branche release. pitié"], params: {"speed": 2, "bug": "🐛", "timeLimit": 40} },
     { id: "pocket_invaders", tpl: "shooter", name: ["POCKET INVADERS", "ENVAHISSEURS DE POCHE"], prompt: ["they came from cartridge slot 2. repel them", "ils sortent du port cartouche 2. repousse-les"], win: ["earth (a 160×96 screen) is saved once more", "la terre (un écran 160×96) est encore sauvée"], lose: ["invaded. they mostly want to play co-op though", "envahi. en vrai ils veulent juste jouer en coop"], params: {"speed": 3, "bug": "👾", "timeLimit": 40} },
     { id: "chiptune_idol", tpl: "rhythm", name: ["CHIPTUNE IDOL", "IDOLE CHIPTUNE"], prompt: ["the slime debuts. hit 10 notes on the line", "le slime fait ses débuts. 10 notes sur la ligne"], win: ["standing ovation from an audience of pikmin", "ovation debout d'un public de pikmin"], lose: ["the crowd hums it anyway. they love you", "le public fredonne quand même. il t'adore"], params: {"notes": 10, "tempo": 2, "note": "♥", "timeLimit": 40} },
-    { id: "metronome_panic", tpl: "rhythm", name: ["METRONOME PANIC", "PANIQUE MÉTRONOME"], prompt: ["the metronome drank espresso. 12 notes, fast", "le métronome a bu un expresso. 12 notes, vite"], win: ["perfect tempo. the espresso apologizes", "tempo parfait. l'expresso s'excuse"], lose: ["off-beat. even the metronome lost count, honestly", "hors tempo. même le métronome s'est perdu, en vrai"], params: {"notes": 12, "tempo": 3, "note": "♪", "timeLimit": 40} }
+    { id: "metronome_panic", tpl: "rhythm", name: ["METRONOME PANIC", "PANIQUE MÉTRONOME"], prompt: ["the metronome drank espresso. 12 notes, fast", "le métronome a bu un expresso. 12 notes, vite"], win: ["perfect tempo. the espresso apologizes", "tempo parfait. l'expresso s'excuse"], lose: ["off-beat. even the metronome lost count, honestly", "hors tempo. même le métronome s'est perdu, en vrai"], params: {"notes": 12, "tempo": 3, "note": "♪", "timeLimit": 40} },
+    /* ==== v125 batch: THE CLASSICS CABINET — seven legends, 14 carts ==== */
+    { id: "crossing_guard", tpl: "frogger", name: ["CROSSING GUARD", "PASSAGE PROTÉGÉ"], prompt: ["three lanes of traffic. cross 3 times", "trois voies de circulation. traverse 3 fois"], win: ["crossed thrice. the traffic applauds, confused", "trois traversées. le trafic applaudit, confus"], lose: ["bonked. the car apologized first, somehow", "percuté. la voiture s'est excusée en premier"], params: {"cross": 3, "speed": 2, "hopper": "🐸", "timeLimit": 40} },
+    { id: "rush_hour_1997", tpl: "frogger", name: ["RUSH HOUR 1997", "HEURE DE POINTE 97"], prompt: ["same road. angrier traffic. cross 3 times", "même route. trafic plus fâché. traverse 3 fois"], win: ["untouched. the DMV names a lane after you", "intact. la préfecture baptise une voie en ton nom"], lose: ["flattened gently. 1997 traffic was like that", "aplati gentiment. le trafic de 97 était comme ça"], params: {"cross": 3, "speed": 3, "hopper": "🐢", "timeLimit": 40} },
+    { id: "moon_delivery", tpl: "lander", name: ["MOON DELIVERY", "LIVRAISON LUNAIRE"], prompt: ["one package. one pad. land SOFTLY", "un colis. un pad. atterris EN DOUCEUR"], win: ["delivered. the moon tipped you in dust ♡", "livré. la lune a laissé un pourboire en poussière ♡"], lose: ["package status: crater. insurance says no", "statut du colis : cratère. l'assurance dit non"], params: {"landings": 1, "soft": 1.05, "timeLimit": 45} },
+    { id: "second_moon_shift", tpl: "lander", name: ["SECOND MOON SHIFT", "DEUXIÈME TOURNÉE"], prompt: ["two deliveries. the pad moves between them", "deux livraisons. le pad bouge entre les deux"], win: ["double delivery! employee of the lunar month", "double livraison ! employé du mois lunaire"], lose: ["the second crater is always the humbling one", "le deuxième cratère est toujours le plus humble"], params: {"landings": 2, "soft": 1.0, "timeLimit": 55} },
+    { id: "space_gravel", tpl: "asteroids", name: ["SPACE GRAVEL", "GRAVIER SPATIAL"], prompt: ["clear the gravel field. big rocks split", "nettoie le champ de gravier. les gros cailloux se fendent"], win: ["field cleared. the vacuum of space is now vacuumed", "champ nettoyé. le vide spatial est passé à l'aspirateur"], lose: ["you are now part of the gravel. it happens", "tu fais partie du gravier maintenant. ça arrive"], params: {"speed": 2, "timeLimit": 45} },
+    { id: "gravel_deluxe", tpl: "asteroids", name: ["GRAVEL DELUXE", "GRAVIER DELUXE"], prompt: ["the deluxe field. rocks hold grudges", "le champ deluxe. les cailloux sont rancuniers"], win: ["deluxe-cleared. NASA sends a sticker", "nettoyage deluxe. la NASA envoie un autocollant"], lose: ["a rock with a grudge found you. respect it", "un caillou rancunier t'a trouvé. respecte-le"], params: {"speed": 3, "timeLimit": 45} },
+    { id: "umbrella_command", tpl: "missile", name: ["UMBRELLA COMMAND", "COMMANDEMENT PARAPLUIE"], prompt: ["rain incoming. pop umbrellas over the sprouts", "pluie en approche. ouvre des parapluies sur les pousses"], win: ["eight drops popped. the sprouts stayed crispy-dry", "huit gouttes stoppées. les pousses sont restées sèches"], lose: ["the garden flooded. the sprouts learned to swim", "le jardin a débordé. les pousses ont appris à nager"], params: {"down": 8, "speed": 2, "base": "🌱", "timeLimit": 45} },
+    { id: "hailstorm_duty", tpl: "missile", name: ["HAILSTORM DUTY", "SERVICE GRÊLE"], prompt: ["hail now. faster, meaner. ten intercepts", "grêle maintenant. plus vite, plus méchant. dix interceptions"], win: ["ten for ten. the weather files a complaint", "dix sur dix. la météo porte plainte"], lose: ["hail 1, garden 0. it was very shiny hail though", "grêle 1, jardin 0. mais quelle belle grêle"], params: {"down": 10, "speed": 3, "base": "🌷", "timeLimit": 50} },
+    { id: "worm_patrol", tpl: "centipede", name: ["WORM PATROL", "PATROUILLE VER"], prompt: ["the segment worm descends. spray all 10", "le ver segmenté descend. arrose les 10"], win: ["worm dispersed. each segment found a new hobby", "ver dispersé. chaque segment a trouvé un hobby"], lose: ["the worm reached the garden. it eats WIFI now", "le ver a atteint le jardin. il mange le WIFI"], params: {"speed": 2, "timeLimit": 40} },
+    { id: "worm_rush", tpl: "centipede", name: ["WORM RUSH", "RUÉE DU VER"], prompt: ["the worm had coffee. spray faster", "le ver a pris un café. arrose plus vite"], win: ["decaf enforced. the garden thanks you", "décaféiné imposé. le jardin te remercie"], lose: ["caffeinated worm wins. honestly fair", "le ver caféiné gagne. honnêtement mérité"], params: {"speed": 3, "timeLimit": 40} },
+    { id: "vs_mode_1972", tpl: "pongvs", name: ["VS. MODE 1972", "MODE VS. 1972"], prompt: ["a real opponent. first to 3 points", "un vrai adversaire. premier à 3 points"], win: ["3 points! the CPU asks for a rematch, politely", "3 points ! le CPU demande une revanche, poliment"], lose: ["the CPU wins and feels bad about it", "le CPU gagne et s'en veut un peu"], params: {"goals": 3, "speed": 2, "ball": "🟢", "timeLimit": 60} },
+    { id: "champion_paddle", tpl: "pongvs", name: ["CHAMPION PADDLE", "RAQUETTE CHAMPIONNE"], prompt: ["the CPU trained. first to 3, no gifts", "le CPU s'est entraîné. premier à 3, zéro cadeau"], win: ["you beat the trained CPU. it updates its resume", "tu bats le CPU entraîné. il met à jour son CV"], lose: ["the champion holds. its resume grows", "le champion tient. son CV s'allonge"], params: {"goals": 3, "speed": 3, "ball": "🏓", "timeLimit": 60} },
+    { id: "boba_rush", tpl: "tapper", name: ["BOBA RUSH", "RUÉE BOBA"], prompt: ["thirsty pikmin approach. serve 8 bobas", "des pikmin assoiffés arrivent. sers 8 bobas"], win: ["eight served. the tip jar is full of petals", "huit servis. le pot à pourboires déborde de pétales"], lose: ["someone reached the bar unserved. the horror", "quelqu'un a atteint le bar sans boba. l'horreur"], params: {"serves": 8, "speed": 2, "thirsty": "🥺", "drink": "🧋", "timeLimit": 45} },
+    { id: "double_shift_boba", tpl: "tapper", name: ["DOUBLE SHIFT BOBA", "DOUBLE SERVICE BOBA"], prompt: ["rush hour at the boba bar. serve 10, faster", "heure de pointe au bar à boba. sers-en 10, plus vite"], win: ["ten served!! promoted to head boba engineer", "dix servis !! promu·e ingénieur·e boba en chef"], lose: ["the queue won. the queue always wins eventually", "la file a gagné. la file gagne toujours à la fin"], params: {"serves": 10, "speed": 3, "thirsty": "👾", "drink": "🧋", "timeLimit": 50} }
   ];
   var arSession = null; // { raf, keydown } — one arcade at a time
 
@@ -14527,20 +14837,27 @@ document.addEventListener('DOMContentLoaded', () => {
       playTone(1046, 'triangle', 0.08, 0, 0.05);
       playTone(1318, 'triangle', 0.12, 0.12, 0.05);
       cheatFall(['💙', '♡'], 8);
-      bubble.textContent = trT('there you are ♡ NOBODY gets left behind. not even errors.', 'te voilà ♡ PERSONNE n\'est laissé derrière. pas même les erreurs.');
+      // house pacing decree: the reunion reads as TWO beats — the gasp
+      // holds a full second, the vow holds two, and ONLY THEN does the
+      // hero march (the old single-line 1.4s blur was unreadable)
+      bubble.textContent = trT('there you are ♡', 'te voilà ♡');
       dT(() => {
         if (!dreamWorld) return;
-        if (img) par.insertBefore(img, par.firstChild);
-        try { nest.remove(); } catch (e) { /* rejoined */ }
-        // and off they march, all together this time
-        const t1 = Date.now(), OUT = 3200;
-        const sx = parseFloat(par.style.left) || targetX, ex = window.innerWidth + 160;
-        const iv2 = dI(() => {
-          const q = Math.min(1, (Date.now() - t1) / OUT);
-          par.style.left = (sx + (ex - sx) * q) + 'px';
-          if (q >= 1) { clearInterval(iv2); dwBsodParadeBow(par, f); }
-        }, 40);
-      }, 1400);
+        bubble.textContent = trT('NOBODY gets left behind. not even errors.', 'PERSONNE n\'est laissé derrière. pas même les erreurs.');
+        dT(() => {
+          if (!dreamWorld) return;
+          if (img) par.insertBefore(img, par.firstChild);
+          try { nest.remove(); } catch (e) { /* rejoined */ }
+          // and off they march, all together this time
+          const t1 = Date.now(), OUT = 3200;
+          const sx = parseFloat(par.style.left) || targetX, ex = window.innerWidth + 160;
+          const iv2 = dI(() => {
+            const q = Math.min(1, (Date.now() - t1) / OUT);
+            par.style.left = (sx + (ex - sx) * q) + 'px';
+            if (q >= 1) { clearInterval(iv2); dwBsodParadeBow(par, f); }
+          }, 40);
+        }, 2000);
+      }, 1000);
     }, 40);
   }
   function dwBsodParadeBow(par, f) {
