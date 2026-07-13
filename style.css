@@ -3589,6 +3589,20 @@ html[data-theme="dark"] .night-sky { display: block; }
 }
 .ns-star.ns-pink { color: #ff9ed4; text-shadow: 0 0 6px rgba(255, 110, 192, 0.9); }
 .ns-star.ns-blue { color: #9fdcff; text-shadow: 0 0 6px rgba(127, 208, 255, 0.9); }
+/* the shooting stars are BACK (v123 — the one eviction the owner repealed) */
+.ns-shoot {
+  position: absolute;
+  width: 90px;
+  height: 2px;
+  background: linear-gradient(90deg, #fff, rgba(255, 158, 212, 0));
+  transform: rotate(-24deg);
+  animation: ns-shoot 1.1s ease-out forwards;
+}
+@keyframes ns-shoot {
+  0% { opacity: 0; transform: rotate(-24deg) translateX(0); }
+  12% { opacity: 1; }
+  100% { opacity: 0; transform: rotate(-24deg) translateX(-46vw); }
+}
 
 /* dark: keep white-ink details readable */
 html[data-theme="dark"] .profile-card { box-shadow: 0 0 0 2px #170d29, 0 0 18px rgba(255,110,192,.3), 6px 6px 0 var(--shadow); }

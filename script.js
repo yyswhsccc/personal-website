@@ -4078,7 +4078,7 @@ document.addEventListener('DOMContentLoaded', () => {
     { id: 'gift500', icon: '🎆', m: 'gifts', v: 500, n: ['GDP Contributor', 'Contributeur·rice au PIB'], d: ['500 gifts. the stream economy issued you a passport.', '500 cadeaux. l\'économie du stream t\'a délivré un passeport.'], t: ['five hundred parcels.', 'cinq cents colis.'] },
     { id: 'nap300', icon: '🌌', m: 'naps', v: 300, n: ['Curator of Dreams', 'Conservateur·rice des Rêves'], d: ['300 naps curated. the dream museum has a you-shaped statue.', '300 siestes organisées. le musée du rêve a une statue à ton effigie.'], t: ['three hundred lullabies.', 'trois cents berceuses.'] },
     { id: 'jump100', icon: '🐇', m: 'jumps', v: 100, n: ['Bunny Apprentice', 'Apprenti·e Lapin'], d: ['100 jumps. the rabbits accepted your application.', '100 sauts. les lapins ont accepté ta candidature.'], t: ['the first hundred hops.', 'les cent premiers bonds.'] },
-    { id: 'gbchampion', icon: '🎮', n: ['Dream Boy Champion', 'Champion Dream Boy'], d: ['won all 35 BONUS CARTRIDGE microgames. the dex was only the tutorial.', 'a gagné les 35 microjeux de la CARTOUCHE BONUS. le dex n\'était que le tutoriel.'], t: ['complete the dream dex. then keep pressing A.', 'complète le dex des rêves. puis continue d\'appuyer sur A.'] },
+    { id: 'gbchampion', icon: '🎮', n: ['Dream Boy Champion', 'Champion Dream Boy'], d: ['won EVERY BONUS CARTRIDGE microgame — all 45. the dex was only the tutorial.', 'a gagné TOUS les microjeux de la CARTOUCHE BONUS — les 45. le dex n\'était que le tutoriel.'], t: ['complete the dream dex. then keep pressing A.', 'complète le dex des rêves. puis continue d\'appuyer sur A.'] },
     { id: 'cardshark', icon: '🃏', n: ['Card Shark of 1995', 'Requin des Cartes de 1995'], d: ['won a REAL hand at the slime\'s card table — solitaire, freecell, or hearts. the cascade was earned.', 'a gagné une VRAIE partie à la table du slime — solitaire, freecell ou hearts. la cascade était méritée.'], t: ['in the beige dream, the slime deals. say `sol`.', 'dans le rêve beige, le slime distribue. dis `sol`.'] },
     { id: 'chameleon', icon: '🦎', n: ['The Impossible Shade', 'La Teinte Impossible'], d: ['plucked the hidden CHAMELEON pikmin — it refuses to pick a colour. mood.', 'a cueilli le pikmin CAMÉLÉON caché — il refuse de choisir une couleur. tellement relatable.'], t: ['1 in 10 sprouts hides a secret.', '1 pousse sur 10 cache un secret.'] },
     { id: 'colorpicker', icon: '🎨', n: ['Color Picker', 'Pipette à Couleurs'], d: ['25% of the hue wheel collected. the eyedropper nods, professionally.', '25 % de la roue chromatique. la pipette hoche la tête, en pro.'], t: ['pluck across the rainbow.', 'cueille à travers l\'arc-en-ciel.'] },
@@ -10690,7 +10690,12 @@ document.addEventListener('DOMContentLoaded', () => {
     redlight: ['HOLD [A] to sneak · freeze when watched', 'MAINTIENS [A] pour avancer · fige sous le regard'],
     pong: ['[◄][►] move the paddle', '[◄][►] déplace la raquette'],
     race: ['[A] = jump the obstacles', '[A] = saute les obstacles'],
-    defuse: ['[A] exactly at 0.0 — not before', '[A] pile à 0.0 — pas avant']
+    defuse: ['[A] exactly at 0.0 — not before', '[A] pile à 0.0 — pas avant'],
+    tetris: ['[◄][►] move · [A] rotate the piece', '[◄][►] déplace · [A] tourne la pièce'],
+    snake: ['[◄] turn left · [►] turn right', '[◄] tourne à gauche · [►] à droite'],
+    breakout: ['[◄][►] paddle · [A] serve the ball', '[◄][►] raquette · [A] sers la balle'],
+    shooter: ['[◄][►] move · [A] = pew pew', '[◄][►] bouge · [A] = piou piou'],
+    rhythm: ['press the lane as the note hits the line: [◄][A][►]', 'appuie sur la voie quand la note touche la ligne : [◄][A][►]']
   };
 
   /* ---- the 12 mechanics. each: init(s,p) / tick(s,p,inp) / draw(s,p,g2)
@@ -10716,7 +10721,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     },
     catch: {
-      init(s, p) { s.px = AR_W / 2; s.items = []; s.got = 0; s.spawn = 0; },
+      init(s, p) { s.px = AR_W / 2; s.items = []; s.got = 0; s.spawn = 34; /* breath before the first drop */ },
       tick(s, p, inp) {
         if (inp.left) s.px = Math.max(10, s.px - 2.4);
         if (inp.right) s.px = Math.min(AR_W - 10, s.px + 2.4);
@@ -10738,7 +10743,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     },
     dodge: {
-      init(s, p) { s.px = AR_W / 2; s.items = []; s.spawn = 0; s.lastX = AR_W / 2; },
+      init(s, p) { s.px = AR_W / 2; s.items = []; s.spawn = 44; /* breath before the rain */ s.lastX = AR_W / 2; },
       tick(s, p, inp) {
         if (inp.left) s.px = Math.max(8, s.px - 2.6);
         if (inp.right) s.px = Math.min(AR_W - 8, s.px + 2.6);
@@ -10763,8 +10768,11 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     },
     flappy: {
-      init(s, p) { s.y = 44; s.vy = 0; s.gates = []; s.passed = 0; let gx = 170; let prev = 30; for (let i = 0; i < p.gates; i++) { const lo = Math.max(14, prev - 24), hi = Math.min(AR_H - 26 - (p.gap || 32), prev + 24); const gy = lo + Math.random() * Math.max(4, hi - lo); s.gates.push({ x: gx, gy }); prev = gy; gx += 62; } },
+      init(s, p) { s.y = 44; s.vy = 0; s.armed = false; s.gates = []; s.passed = 0; let gx = 190; let prev = 30; for (let i = 0; i < p.gates; i++) { const lo = Math.max(14, prev - 24), hi = Math.min(AR_H - 26 - (p.gap || 32), prev + 24); const gy = lo + Math.random() * Math.max(4, hi - lo); s.gates.push({ x: gx, gy }); prev = gy; gx += 62; } },
       tick(s, p, inp) {
+        // the world holds its breath until the FIRST flap — the old version
+        // dropped you (and marched the walls) the instant the countdown hit 0
+        if (!s.armed) { if (!inp.a) { s.y = 44 + Math.sin(s.t * 0.08) * 3; return; } s.armed = true; }
         if (inp.a) { s.vy = -2.1; playTone(760, 'square', 0.04, 0, 0.02); } // rise ≈13.8px — always fits the tightest gap
         s.vy += 0.16; s.y += s.vy;
         const v = 0.8 + p.speed * 0.4;
@@ -10777,6 +10785,7 @@ document.addEventListener('DOMContentLoaded', () => {
       draw(s, p, g2) {
         s.gates.forEach((g) => { g2.fillStyle = AR_G[1]; g2.fillRect(Math.round(g.x), 0, 8, Math.round(g.gy)); g2.fillRect(Math.round(g.x), Math.round(g.gy + (p.gap || 32)), 8, AR_H); });
         arDrawGlyph(g2, p.player, 20, s.y, 13);
+        if (!s.armed && s.t % 50 < 32) arText(g2, trT('[A] to launch!!', '[A] pour décoller !!'), 46, 30, 0, 10);
         arText(g2, s.passed + '/' + p.gates, 143, 10);
       }
     },
@@ -10890,10 +10899,11 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     },
     pong: {
-      init(s, p) { s.px = AR_W / 2; s.bx = AR_W / 2; s.by = 30; s.vx = 1.1 + p.speed * 0.3; s.vy = 1.2; s.n = 0; },
+      init(s, p) { s.px = AR_W / 2; s.bx = AR_W / 2; s.by = 30; s.vx = 1.1 + p.speed * 0.3; s.vy = 1.2; s.n = 0; s.hold = 50; },
       tick(s, p, inp) {
         if (inp.left) s.px = Math.max(14, s.px - 2.6);
         if (inp.right) s.px = Math.min(AR_W - 14, s.px + 2.6);
+        if (s.hold > 0) { s.hold--; return; } // the serve takes a polite beat
         s.bx += s.vx; s.by += s.vy;
         if (s.bx < 6 || s.bx > AR_W - 6) s.vx *= -1;
         if (s.by < 6) s.vy = Math.abs(s.vy);
@@ -10931,7 +10941,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     },
     race: {
-      init(s, p) { s.y = 0; s.vy = 0; s.obs = []; s.passed = 0; let ox = 170; /* ≥70px spacing: landing always beats the next tuft */ for (let i = 0; i < p.obstacles; i++) { s.obs.push({ x: ox }); ox += 70 + Math.random() * 30; } },
+      init(s, p) { s.y = 0; s.vy = 0; s.obs = []; s.passed = 0; let ox = 235; /* runway: read the field first */ /* ≥70px spacing: landing always beats the next tuft */ for (let i = 0; i < p.obstacles; i++) { s.obs.push({ x: ox }); ox += 70 + Math.random() * 30; } },
       tick(s, p, inp) {
         if (inp.a && s.y === 0) { s.vy = 3.4; playTone(760, 'square', 0.05, 0, 0.03); }
         s.y += s.vy; if (s.y > 0) s.vy -= 0.22; if (s.y <= 0) { s.y = 0; s.vy = 0; }
@@ -10946,6 +10956,244 @@ document.addEventListener('DOMContentLoaded', () => {
         arDrawGlyph(g2, p.runner, 20, 74 - s.y, 14);
         s.obs.forEach((o) => arDrawGlyph(g2, p.obstacle, o.x, 75, 13));
         arText(g2, s.passed + '/' + p.obstacles, 143, 10);
+      }
+    },
+    /* ==== v123: FIVE NEW MECHANICS — the shelf doubles its genres ==== */
+    tetris: {
+      // the real thing, pocket-sized: 10×12 well, five tetrominoes,
+      // [◄][►] move · [A] rotate · gravity does the dropping
+      init(s, p) {
+        s.W = 10; s.H = 12; s.cell = 6; s.bx = 50; s.by = 10;
+        s.grid = Array.from({ length: s.H }, () => new Array(s.W).fill(0));
+        s.lines = 0; s.dropF = 0;
+        s.SHAPES = [
+          [[0, 0], [1, 0], [0, 1], [1, 1]],   // O
+          [[-1, 0], [0, 0], [1, 0], [2, 0]],  // I
+          [[-1, 0], [0, 0], [1, 0], [0, 1]],  // T
+          [[-1, 0], [0, 0], [1, 0], [1, 1]],  // L
+          [[0, 0], [1, 0], [-1, 1], [0, 1]]   // S
+        ];
+        s.spawn = () => {
+          const k = Math.floor(Math.random() * s.SHAPES.length);
+          s.pc = { k, c: s.SHAPES[k].map((q) => q.slice()), x: 4, y: 0 };
+          if (s.pc.c.some(([cx, cy]) => s.grid[cy] && s.grid[cy][s.pc.x + cx])) s.lose = true; // well is full
+        };
+        s.fits = (cells, px, py) => cells.every(([cx, cy]) => {
+          const gx = px + cx, gy = py + cy;
+          return gx >= 0 && gx < s.W && gy < s.H && (gy < 0 || !s.grid[gy][gx]);
+        });
+        s.spawn();
+      },
+      tick(s, p, inp) {
+        if (!s.pc) return;
+        // held-move with a gentle repeat = silky steering
+        const wantL = inp.leftEdge || (inp.left && s.t % 7 === 0);
+        const wantR = inp.rightEdge || (inp.right && s.t % 7 === 0);
+        if (wantL && s.fits(s.pc.c, s.pc.x - 1, s.pc.y)) s.pc.x--;
+        if (wantR && s.fits(s.pc.c, s.pc.x + 1, s.pc.y)) s.pc.x++;
+        if (inp.a && s.pc.k !== 0) { // O doesn't rotate (it tried once. nothing happened.)
+          const rot = s.pc.c.map(([cx, cy]) => [-cy, cx]);
+          const kick = [0, -1, 1, -2, 2].find((dx) => s.fits(rot, s.pc.x + dx, s.pc.y));
+          if (kick != null) { s.pc.c = rot; s.pc.x += kick; playTone(680, 'square', 0.03, 0, 0.02); }
+        }
+        const gravEvery = Math.max(9, 24 - (p.speed || 2) * 3 - s.lines);
+        if (++s.dropF >= gravEvery) {
+          s.dropF = 0;
+          if (s.fits(s.pc.c, s.pc.x, s.pc.y + 1)) s.pc.y++;
+          else { // lock + sweep
+            s.pc.c.forEach(([cx, cy]) => { const gy = s.pc.y + cy; if (gy >= 0) s.grid[gy][s.pc.x + cx] = 1; });
+            playTone(300, 'square', 0.04, 0, 0.03);
+            for (let r = s.H - 1; r >= 0; r--) {
+              if (s.grid[r].every(Boolean)) {
+                s.grid.splice(r, 1); s.grid.unshift(new Array(s.W).fill(0));
+                s.lines++; playTone(1046 + s.lines * 80, 'square', 0.09, 0, 0.05);
+                r++; // recheck the row that slid down
+              }
+            }
+            if (s.lines >= (p.lines || 3)) { s.win = true; return; }
+            s.spawn();
+          }
+        }
+      },
+      draw(s, p, g2) {
+        g2.strokeStyle = AR_G[0]; g2.lineWidth = 1;
+        g2.strokeRect(s.bx - 2, s.by - 2, s.W * s.cell + 4, s.H * s.cell + 4);
+        for (let r = 0; r < s.H; r++) for (let c = 0; c < s.W; c++) {
+          if (s.grid[r][c]) { g2.fillStyle = AR_G[1]; g2.fillRect(s.bx + c * s.cell, s.by + r * s.cell, s.cell - 1, s.cell - 1); }
+        }
+        if (s.pc) s.pc.c.forEach(([cx, cy]) => {
+          const gy = s.pc.y + cy; if (gy < 0) return;
+          g2.fillStyle = AR_G[0];
+          g2.fillRect(s.bx + (s.pc.x + cx) * s.cell, s.by + gy * s.cell, s.cell - 1, s.cell - 1);
+        });
+        arText(g2, s.lines + '/' + (p.lines || 3), 130, 12);
+        arText(g2, trT('lines', 'lignes'), 124, 22, 1, 7);
+      }
+    },
+    snake: {
+      // relative steering on two buttons — the classiest of classics.
+      // [◄] turn left · [►] turn right (from the snake's point of view)
+      init(s, p) {
+        s.W = 18; s.H = 10; s.cell = 8; s.bx = 8; s.by = 6;
+        s.body = [[5, 5], [4, 5], [3, 5]];
+        s.dir = 0; // 0→ 1↓ 2← 3↑
+        s.turn = null; s.stepF = 0; s.n = 0;
+        s.drop = () => {
+          let px, py;
+          do { px = Math.floor(Math.random() * s.W); py = Math.floor(Math.random() * s.H); }
+          while (s.body.some(([bx2, by2]) => bx2 === px && by2 === py));
+          s.pellet = [px, py];
+        };
+        s.drop();
+      },
+      tick(s, p, inp) {
+        // buffer ONE turn per step — double-taps between steps stay honest
+        if (inp.leftEdge) s.turn = 'L';
+        else if (inp.rightEdge) s.turn = 'R';
+        if (++s.stepF < Math.max(6, (p.stepF || 9) - Math.floor(s.n / 3))) return;
+        s.stepF = 0;
+        if (s.turn === 'L') s.dir = (s.dir + 3) % 4;
+        if (s.turn === 'R') s.dir = (s.dir + 1) % 4;
+        s.turn = null;
+        const D = [[1, 0], [0, 1], [-1, 0], [0, -1]][s.dir];
+        const head = [s.body[0][0] + D[0], s.body[0][1] + D[1]];
+        if (head[0] < 0 || head[0] >= s.W || head[1] < 0 || head[1] >= s.H) { s.lose = true; return; }
+        if (s.body.some(([bx2, by2]) => bx2 === head[0] && by2 === head[1])) { s.lose = true; return; }
+        s.body.unshift(head);
+        if (head[0] === s.pellet[0] && head[1] === s.pellet[1]) {
+          s.n++; playTone(880 + s.n * 90, 'square', 0.06, 0, 0.03);
+          if (s.n >= (p.eats || 6)) { s.win = true; return; }
+          s.drop();
+        } else s.body.pop();
+      },
+      draw(s, p, g2) {
+        g2.strokeStyle = AR_G[2]; g2.lineWidth = 1;
+        g2.strokeRect(s.bx - 2, s.by - 2, s.W * s.cell + 4, s.H * s.cell + 4);
+        s.body.forEach(([cx, cy], i) => {
+          g2.fillStyle = i === 0 ? AR_G[0] : AR_G[1];
+          g2.fillRect(s.bx + cx * s.cell, s.by + cy * s.cell, s.cell - 1, s.cell - 1);
+        });
+        arDrawGlyph(g2, p.snack, s.bx + s.pellet[0] * s.cell + 4, s.by + s.pellet[1] * s.cell + 4, 9);
+        arText(g2, s.n + '/' + (p.eats || 6), 140, 12);
+      }
+    },
+    breakout: {
+      // [◄][►] paddle · [A] serves. the ball does the demolition.
+      init(s, p) {
+        s.px = AR_W / 2; s.bricks = [];
+        for (let r = 0; r < 2; r++) for (let c = 0; c < 6; c++) s.bricks.push({ x: 10 + c * 24, y: 14 + r * 10, w: 21, h: 7 });
+        s.ball = null; // glued until served
+        s.n = 0;
+      },
+      tick(s, p, inp) {
+        if (inp.left) s.px = Math.max(14, s.px - 2.6);
+        if (inp.right) s.px = Math.min(AR_W - 14, s.px + 2.6);
+        if (!s.ball) {
+          if (inp.a || s.t > 150) { s.ball = { x: s.px, y: 78, vx: (Math.random() < 0.5 ? -1 : 1) * (0.9 + (p.speed || 2) * 0.2), vy: -(1.4 + (p.speed || 2) * 0.2) }; playTone(760, 'square', 0.05, 0, 0.03); }
+          return;
+        }
+        const b = s.ball;
+        b.x += b.vx; b.y += b.vy;
+        if (b.x < 5 || b.x > AR_W - 5) b.vx *= -1;
+        if (b.y < 5) b.vy = Math.abs(b.vy);
+        if (b.y > 76 && b.y < 84 && Math.abs(b.x - s.px) < 14 && b.vy > 0) {
+          b.vy = -Math.abs(b.vy); b.vx += (b.x - s.px) * 0.07;
+          b.vx = Math.max(-2.4, Math.min(2.4, b.vx));
+          playTone(620, 'square', 0.04, 0, 0.02);
+        }
+        const hit = s.bricks.findIndex((k) => b.x > k.x - 2 && b.x < k.x + k.w + 2 && b.y > k.y - 2 && b.y < k.y + k.h + 2);
+        if (hit >= 0) {
+          const k = s.bricks[hit];
+          // bounce off the nearer face
+          if (b.x < k.x || b.x > k.x + k.w) b.vx *= -1; else b.vy *= -1;
+          s.bricks.splice(hit, 1); s.n++;
+          b.vy *= 1.02;
+          playTone(980 + s.n * 40, 'square', 0.05, 0, 0.03);
+          if (!s.bricks.length) { s.win = true; return; }
+        }
+        if (b.y > AR_H + 6) s.lose = true;
+      },
+      draw(s, p, g2) {
+        s.bricks.forEach((k, i) => { g2.fillStyle = i % 2 ? AR_G[0] : AR_G[1]; g2.fillRect(k.x, k.y, k.w, k.h); });
+        g2.fillStyle = AR_G[0]; g2.fillRect(Math.round(s.px - 12), 80, 24, 4);
+        if (s.ball) arDrawGlyph(g2, p.ball || '🧱', s.ball.x, s.ball.y, 10);
+        else { arDrawGlyph(g2, p.ball || '🧱', s.px, 74, 10); if (s.t % 50 < 32) arText(g2, trT('[A] serve!!', '[A] service !!'), 56, 60, 0, 9); }
+        arText(g2, s.n + '/12', 136, 12);
+      }
+    },
+    shooter: {
+      // [◄][►] move · [A] pew. the bugs march closer with every bounce.
+      init(s, p) {
+        s.px = AR_W / 2; s.shots = []; s.inv = [];
+        for (let r = 0; r < 2; r++) for (let c = 0; c < 6; c++) s.inv.push({ x: 24 + c * 20, y: 14 + r * 14 });
+        s.dx = 0.35 + (p.speed || 2) * 0.08; s.cool = 0; s.n = 0;
+      },
+      tick(s, p, inp) {
+        if (inp.left) s.px = Math.max(8, s.px - 2.4);
+        if (inp.right) s.px = Math.min(AR_W - 8, s.px + 2.4);
+        if (s.cool > 0) s.cool--;
+        if (inp.a && s.cool <= 0 && s.shots.length < 2) {
+          s.shots.push({ x: s.px, y: 76 }); s.cool = 13;
+          playTone(1240, 'square', 0.04, 0, 0.02);
+        }
+        s.shots.forEach((sh) => { sh.y -= 2.6; });
+        s.shots = s.shots.filter((sh) => sh.y > -6);
+        let edge = false;
+        s.inv.forEach((v) => { v.x += s.dx; if (v.x < 10 || v.x > AR_W - 10) edge = true; });
+        if (edge) { s.dx *= -1; s.inv.forEach((v) => { v.y += 5; }); }
+        s.shots = s.shots.filter((sh) => {
+          const hit = s.inv.findIndex((v) => Math.abs(v.x - sh.x) < 8 && Math.abs(v.y - sh.y) < 8);
+          if (hit >= 0) { s.inv.splice(hit, 1); s.n++; playTone(880 + s.n * 60, 'square', 0.06, 0, 0.03); return false; }
+          return true;
+        });
+        if (!s.inv.length) { s.win = true; return; }
+        if (s.inv.some((v) => v.y > 68)) s.lose = true;
+      },
+      draw(s, p, g2) {
+        s.inv.forEach((v) => arDrawGlyph(g2, p.bug, v.x, v.y, 12));
+        g2.fillStyle = AR_G[0];
+        s.shots.forEach((sh) => g2.fillRect(Math.round(sh.x - 1), Math.round(sh.y - 4), 2, 6));
+        g2.fillRect(Math.round(s.px - 6), 80, 12, 4); g2.fillRect(Math.round(s.px - 1), 76, 2, 4);
+        arText(g2, s.n + '/12', 136, 12);
+      }
+    },
+    rhythm: {
+      // three lanes, one heart: press the lane's button as the note kisses
+      // the line. [◄]=left lane · [A]=middle · [►]=right lane
+      init(s, p) {
+        s.lanes = [44, 80, 116]; s.notes = []; s.spawned = 0; s.hits = 0; s.miss = 0;
+        s.nextAt = 30; s.total = (p.notes || 10) + 3;
+      },
+      tick(s, p, inp) {
+        if (s.spawned < s.total && --s.nextAt <= 0) {
+          s.nextAt = 32 + Math.random() * ((p.tempo || 2) > 2 ? 8 : 16);
+          s.notes.push({ lane: Math.floor(Math.random() * 3), y: -6 });
+          s.spawned++;
+        }
+        const vy = 1.15 + (p.tempo || 2) * 0.18;
+        s.notes.forEach((n2) => { n2.y += vy; });
+        const press = inp.leftEdge ? 0 : (inp.a ? 1 : (inp.rightEdge ? 2 : null));
+        if (press != null) {
+          const ix = s.notes.findIndex((n2) => n2.lane === press && Math.abs(n2.y - 70) <= 10);
+          if (ix >= 0) {
+            s.notes.splice(ix, 1); s.hits++;
+            playTone([784, 988, 1175][press], 'square', 0.06, 0, 0.03);
+            if (s.hits >= (p.notes || 10)) { s.win = true; return; }
+          } else playTone(180, 'square', 0.04, 0, 0.02); // whiff: a shrug, not a penalty
+        }
+        s.notes = s.notes.filter((n2) => {
+          if (n2.y > 84) { s.miss++; playTone(240, 'square', 0.05, 0, 0.03); return false; }
+          return true;
+        });
+        if (s.miss > 3) s.lose = true;
+      },
+      draw(s, p, g2) {
+        g2.fillStyle = AR_G[2];
+        s.lanes.forEach((lx) => g2.fillRect(lx - 9, 6, 1, 78));
+        g2.fillStyle = AR_G[0]; g2.fillRect(24, 70, 112, 2); // the line
+        s.notes.forEach((n2) => arDrawGlyph(g2, p.note || '♥', s.lanes[n2.lane], n2.y, 12));
+        s.lanes.forEach((lx, i) => arText(g2, i === 0 ? '◄' : i === 1 ? 'A' : '►', lx - 4, 92, 1));
+        arText(g2, s.hits + '/' + (p.notes || 10) + ' ✕' + Math.max(0, 4 - s.miss), 118, 12);
       }
     }
   };
@@ -10986,7 +11234,18 @@ document.addEventListener('DOMContentLoaded', () => {
     { id: "pocket_egg_rally", tpl: "pong", name: ["EGG SITTER", "GARDE-ŒUF"], prompt: ["keep the pocket-pet egg off the floor", "l'œuf de poche ne doit pas toucher le sol"], win: ["it hatched! it thinks the paddle is its mom", "il a éclos ! la raquette est sa maman maintenant"], lose: ["the egg bounced. dream eggs are sturdy, promise", "l'œuf a rebondi. les œufs de rêve sont solides"], params: {"bounces": 6, "speed": 2, "ball": "🥚"} },
     { id: "slime_cable_dash", tpl: "race", name: ["CABLE HURDLES", "SAUTE-CÂBLES"], prompt: ["slime runs, tap A to jump the link cables", "le slime court, saute les câbles avec A"], win: ["flawless run. the cables link in applause", "sans faute. les câbles s'applaudissent en série"], lose: ["tripped. connection lost, dignity intact", "trébuché. connexion perdue, dignité intacte"], params: {"obstacles": 5, "speed": 2, "runner": "🟢", "obstacle": "🔌"} },
     { id: "dust_bunny_patrol", tpl: "whack", name: ["DUST BUNNIES", "LAPINS POUSSIÈRE"], prompt: ["bop dust bunnies. NEVER the save file", "tape les moutons. JAMAIS la sauvegarde"], win: ["spotless!! the save file slept through it ♡", "impeccable !! la sauvegarde n'a rien senti ♡"], lose: ["you bopped the save. 40 hours. gone. hug?", "tu as tapé la sauvegarde. 40 heures. envolées. câlin ?"], params: {"hits": 6, "upMs": 760, "mole": "🐇", "decoy": "💾"} },
-    { id: "rental_at_zero", tpl: "defuse", name: ["RENTAL PANIC", "PANIQUE VIDÉOCLUB"], prompt: ["return the rental at EXACTLY 0.0 late fees", "rends la cassette à EXACTEMENT 0.0 de frais"], win: ["0.0 owed. the clerk salutes you, slowly", "0.0 dû. le vendeur te salue, au ralenti"], lose: ["late fee: one (1) allowance. be kind, rewind", "frais de retard : un (1) argent de poche. sois sympa, rembobine"], params: {"rounds": 3, "window": 0.28, "bomb": "📼"} }
+    { id: "rental_at_zero", tpl: "defuse", name: ["RENTAL PANIC", "PANIQUE VIDÉOCLUB"], prompt: ["return the rental at EXACTLY 0.0 late fees", "rends la cassette à EXACTEMENT 0.0 de frais"], win: ["0.0 owed. the clerk salutes you, slowly", "0.0 dû. le vendeur te salue, au ralenti"], lose: ["late fee: one (1) allowance. be kind, rewind", "frais de retard : un (1) argent de poche. sois sympa, rembobine"], params: {"rounds": 3, "window": 0.28, "bomb": "📼"} },
+    /* ==== v123 batch: five NEW genres, ten new cartridges ==== */
+    { id: "block_party_1989", tpl: "tetris", name: ["BLOCK PARTY 1989", "TETRIS DE POCHE 1989"], prompt: ["stack the falling blocks. clear 3 full lines", "empile les blocs. complète 3 lignes"], win: ["3 lines!! somewhere in moscow, a folk song plays", "3 lignes !! quelque part à moscou, un air folklorique"], lose: ["the well overflowed. the blocks feel bad about it", "le puits déborde. les blocs s'en veulent, promis"], params: {"lines": 3, "speed": 2, "timeLimit": 50} },
+    { id: "garbage_shift", tpl: "tetris", name: ["GARBAGE SHIFT", "SERVICE DÉCHETS"], prompt: ["night shift at the block factory. 3 lines, faster", "service de nuit à l'usine à blocs. 3 lignes, plus vite"], win: ["shift complete. the foreman slime nods once", "service terminé. le contremaître slime hoche la tête"], lose: ["buried in blocks. the union will hear about this", "enseveli sous les blocs. le syndicat sera prévenu"], params: {"lines": 3, "speed": 3, "timeLimit": 50} },
+    { id: "cable_management", tpl: "snake", name: ["CABLE MANAGEMENT", "GESTION DE CÂBLES"], prompt: ["the link cable is hungry. feed it 6 plugs", "le câble link a faim. donne-lui 6 prises"], win: ["cable fed and neatly coiled. IT would weep with joy", "câble nourri et enroulé. le service info en pleurerait"], lose: ["the cable bit itself. classic cable move", "le câble s'est mordu tout seul. typique"], params: {"eats": 6, "stepF": 9, "snack": "🔌", "timeLimit": 40} },
+    { id: "noodle_overflow", tpl: "snake", name: ["NOODLE OVERFLOW", "DÉBORDEMENT NOUILLE"], prompt: ["the noodle wants dumplings. 7. no self-bites", "la nouille veut des raviolis. 7. sans se mordre"], win: ["seven dumplings. the noodle naps, endless and full", "sept raviolis. la nouille dort, infinie et repue"], lose: ["ouroboros speedrun. the noodle regrets everything", "speedrun ouroboros. la nouille regrette tout"], params: {"eats": 7, "stepF": 8, "snack": "🥟", "timeLimit": 40} },
+    { id: "brick_and_mortar", tpl: "breakout", name: ["BRICK & MORTAR", "BRIQUE & MORTIER"], prompt: ["the rental store wall must fall. all 12 bricks", "le mur du vidéoclub doit tomber. les 12 briques"], win: ["wall demolished. behind it: more games. always", "mur démoli. derrière : encore des jeux. toujours"], lose: ["the ball rolled under the shelf. classic ball", "la balle a roulé sous l'étagère. typique"], params: {"speed": 2, "ball": "🟢", "timeLimit": 45} },
+    { id: "paywall_breaker", tpl: "breakout", name: ["PAYWALL BREAKER", "CASSE-PAYWALL"], prompt: ["a paywall?? in MY dream?? demolish it", "un paywall ?? dans MON rêve ?? démolis-le"], win: ["paywall down!! the content was slimes all along", "paywall détruit !! le contenu, c'était des slimes"], lose: ["the paywall stands. it always stands. rude", "le paywall tient. il tient toujours. impoli"], params: {"speed": 3, "ball": "🪙", "timeLimit": 45} },
+    { id: "bug_spray_2000", tpl: "shooter", name: ["BUG SPRAY 2000", "INSECTICIDE 2000"], prompt: ["the bugs shipped to prod. spray all 12", "les bugs sont partis en prod. asperge les 12"], win: ["zero bugs remain. QA lights a small candle", "zéro bug restant. la QA allume une bougie"], lose: ["the bugs reached the release branch. mercy", "les bugs ont atteint la branche release. pitié"], params: {"speed": 2, "bug": "🐛", "timeLimit": 40} },
+    { id: "pocket_invaders", tpl: "shooter", name: ["POCKET INVADERS", "ENVAHISSEURS DE POCHE"], prompt: ["they came from cartridge slot 2. repel them", "ils sortent du port cartouche 2. repousse-les"], win: ["earth (a 160×96 screen) is saved once more", "la terre (un écran 160×96) est encore sauvée"], lose: ["invaded. they mostly want to play co-op though", "envahi. en vrai ils veulent juste jouer en coop"], params: {"speed": 3, "bug": "👾", "timeLimit": 40} },
+    { id: "chiptune_idol", tpl: "rhythm", name: ["CHIPTUNE IDOL", "IDOLE CHIPTUNE"], prompt: ["the slime debuts. hit 10 notes on the line", "le slime fait ses débuts. 10 notes sur la ligne"], win: ["standing ovation from an audience of pikmin", "ovation debout d'un public de pikmin"], lose: ["the crowd hums it anyway. they love you", "le public fredonne quand même. il t'adore"], params: {"notes": 10, "tempo": 2, "note": "♥", "timeLimit": 40} },
+    { id: "metronome_panic", tpl: "rhythm", name: ["METRONOME PANIC", "PANIQUE MÉTRONOME"], prompt: ["the metronome drank espresso. 12 notes, fast", "le métronome a bu un expresso. 12 notes, vite"], win: ["perfect tempo. the espresso apologizes", "tempo parfait. l'expresso s'excuse"], lose: ["off-beat. even the metronome lost count, honestly", "hors tempo. même le métronome s'est perdu, en vrai"], params: {"notes": 12, "tempo": 3, "note": "♪", "timeLimit": 40} }
   ];
   var arSession = null; // { raf, keydown } — one arcade at a time
 
@@ -11041,11 +11300,23 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('keydown', onKey);
     window.addEventListener('keyup', onKey);
 
-    let game = pool[Math.floor(Math.random() * pool.length)];
+    // the shelf is ORDERED now: [◄] previous cartridge · [►] next — a random
+    // one still greets each visit (the shelf spins overnight, obviously)
+    let gIx = Math.floor(Math.random() * pool.length);
+    let game = pool[gIx];
     // first boot ever → the tutorial card the cartridges never shipped
     let mode = store.get('yos-gb-arcade-tut', 0) ? 'title' : 'tut', mT = 0, s = null;
-    try { window.__yosARC = { state: () => ({ mode, id: game.id, t: s && s.t, n: s && s.n, win: s && s.win, lose: s && s.lose }) }; } catch (e) { /* no toys */ }
-    const bootGame = (g) => { game = g; mode = 'title'; mT = 0; s = null; playTone(523, 'square', 0.07, 0, 0.04); playTone(784, 'square', 0.07, 0.09, 0.04); syncHead(); };
+    try {
+      window.__yosARC = {
+        state: () => ({ mode, id: game.id, t: s && s.t, n: s && s.n, win: s && s.win, lose: s && s.lose }),
+        boot: (id) => { const i = pool.findIndex((g3) => g3.id === id); if (i < 0) return false; gIx = i; game = pool[i]; mode = 'ready'; mT = 0; s = null; syncHead(); return true; },
+        // manual frame-stepping: rAF sleeps in hidden tabs, tests don't
+        // (same pact as __yosGAME.tick — cancel the pending rAF each pass
+        // so a stepped session never stacks callbacks)
+        step: (n2) => { for (let i = 0; i < (n2 || 1); i++) { if (arSession) cancelAnimationFrame(arSession.raf); try { frame(performance.now() + i * 16.7); } catch (e2) { return String(e2); } } return true; }
+      };
+    } catch (e) { /* no toys */ }
+    const bootGame = (dir) => { gIx = (gIx + dir + pool.length) % pool.length; game = pool[gIx]; mode = 'title'; mT = 0; s = null; playTone(dir > 0 ? 523 : 494, 'square', 0.07, 0, 0.04); playTone(dir > 0 ? 784 : 659, 'square', 0.07, 0.09, 0.04); syncHead(); };
     const syncHead = () => {
       const wins = store.get('yos-gb-arcade', {});
       marq.textContent = '🎮 ' + trT(game.name[0], game.name[1]) + ' · ' + trT('shelf', 'étagère') + ' ' + Object.keys(wins).length + '/' + pool.length;
@@ -11067,23 +11338,28 @@ document.addEventListener('DOMContentLoaded', () => {
       if (mode === 'tut') {
         // one-time welcome: what this even IS, and how to hold it
         arText(g2, trT('☆ BONUS ARCADE ☆', '☆ ARCADE BONUS ☆'), 12, 18, 0, 13);
-        arTextWrap(g2, trT('dex complete!! the tall grass grew 35 tiny cartridges.', 'dex complet !! les hautes herbes ont fait pousser 35 mini-cartouches.'), 12, 32, 1, 8, 140, 10);
+        arTextWrap(g2, trT('dex complete!! the tall grass grew ' + pool.length + ' tiny cartridges.', 'dex complet !! les hautes herbes ont fait pousser ' + pool.length + ' mini-cartouches.'), 12, 32, 1, 8, 140, 10);
         arText(g2, trT('[►] browse the shelf', '[►] parcourir l\'étagère'), 12, 60, 0, 9);
         arText(g2, trT('[A] boot a cartridge', '[A] lancer une cartouche'), 12, 72, 0, 9);
-        arTextWrap(g2, trT('win all 35 = DREAM BOY CHAMPION ♡', 'gagne les 35 = CHAMPION DREAM BOY ♡'), 12, 86, 1, 8, 140, 10);
-        if (inp.a || inp.rightEdge) { store.set('yos-gb-arcade-tut', 1); mode = 'title'; }
+        arTextWrap(g2, trT('win them ALL = DREAM BOY CHAMPION ♡', 'gagne-les TOUTES = CHAMPION DREAM BOY ♡'), 12, 86, 1, 8, 140, 10);
+        if (inp.a || inp.rightEdge || inp.leftEdge) { store.set('yos-gb-arcade-tut', 1); mode = 'title'; }
       } else if (mode === 'title') {
         arText(g2, trT(game.name[0], game.name[1]), 12, 22, 0, 13);
         const py = arTextWrap(g2, trT(game.prompt[0], game.prompt[1]), 12, 36, 1, 9, 140, 11);
         // the control card: which buttons THIS mechanic actually listens to
         const how = AR_HOWTO[game.tpl];
         if (how) arTextWrap(g2, trT(how[0], how[1]), 12, Math.max(py + 13, 62), 0, 9, 140, 11);
-        arText(g2, trT('[A] boot · [►] browse the shelf', '[A] jouer · [►] parcourir'), 12, 90, 0, 8);
+        arText(g2, trT('[A] boot · [◄][►] browse · ' + (gIx + 1) + '/' + pool.length, '[A] jouer · [◄][►] parcourir · ' + (gIx + 1) + '/' + pool.length), 12, 90, 0, 8);
         if (inp.a) { mode = 'ready'; mT = 0; }
-        else if (inp.rightEdge) bootGame(pool[Math.floor(Math.random() * pool.length)]); // window shopping ♡
+        else if (inp.rightEdge) bootGame(1);
+        else if (inp.leftEdge) bootGame(-1);
       } else if (mode === 'ready') {
         mT += steps;
-        arText(g2, String(Math.max(1, 3 - Math.floor(mT / 30))), 76, 56, 0, 24);
+        // the countdown reads the manual out loud — no more mystery deaths
+        arText(g2, trT(game.name[0], game.name[1]), 12, 18, 0, 11);
+        const how2 = AR_HOWTO[game.tpl];
+        if (how2) arTextWrap(g2, trT(how2[0], how2[1]), 12, 32, 1, 9, 140, 11);
+        arText(g2, String(Math.max(1, 3 - Math.floor(mT / 30))), 74, 78, 0, 22);
         if (mT >= 90) { mode = 'play'; s = { t: 0 }; AR_TPLS[game.tpl].init(s, game.params); }
       } else if (mode === 'play') {
         const quiet = { a: 0, leftEdge: 0, rightEdge: 0, left: held.left, right: held.right, aHeld: held.a };
@@ -11092,7 +11368,7 @@ document.addEventListener('DOMContentLoaded', () => {
           AR_TPLS[game.tpl].tick(s, game.params, k === 0 ? inp : quiet);
         }
         AR_TPLS[game.tpl].draw(s, game.params, g2);
-        if (s.t > 60 * 25 && !s.win) s.lose = true; // the cartridge fell asleep waiting
+        if (s.t > 60 * (game.params.timeLimit || 25) && !s.win) s.lose = true; // the cartridge fell asleep waiting
         if (s.win) {
           mode = 'won'; mT = 0;
           const wins = store.get('yos-gb-arcade', {});
@@ -11106,9 +11382,10 @@ document.addEventListener('DOMContentLoaded', () => {
         arText(g2, mode === 'won' ? trT('YOU WIN!!', 'GAGNÉ !!') : trT('GAME OVER', 'GAME OVER'), 44, 26, 0, 14);
         const line = mode === 'won' ? game.win : game.lose;
         arTextWrap(g2, trT(line[0], line[1]), 10, 44, 1, 8, 142, 10);
-        arText(g2, trT('[A] again · [►] next cartridge', '[A] encore · [►] cartouche suivante'), 12, 88, 0, 8);
+        arText(g2, trT('[A] again · [◄][►] browse the shelf', '[A] encore · [◄][►] parcourir'), 12, 88, 0, 8);
         if (inp.a) { mode = 'ready'; mT = 0; }
-        else if (inp.rightEdge) bootGame(pool[Math.floor(Math.random() * pool.length)]);
+        else if (inp.rightEdge) bootGame(1);
+        else if (inp.leftEdge) bootGame(-1);
       }
       arSession.raf = requestAnimationFrame(frame);
     };
@@ -11167,7 +11444,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // BONUS CARTRIDGE boots on every visit ([►] shuffles the shelf)
         // …and the window hint stops talking about catching moments: that
         // chapter is OVER, the arcade needs its own instructions up top
-        hint.textContent = trT('DEX COMPLETE!! the grass grew an arcade: [◄►/A on screen or keyboard] · [►] browse 35 cartridges · [A] play · win them ALL for the champion crown ♡', 'DEX COMPLET !! l\'herbe a fait pousser une arcade : [◄►/A à l\'écran ou au clavier] · [►] parcourir les 35 cartouches · [A] jouer · gagne-les TOUTES pour la couronne ♡');
+        hint.textContent = trT('DEX COMPLETE!! the grass grew an arcade: [◄►/A on screen or keyboard] · [◄][►] browse ' + DL_GB_GAMES.length + ' cartridges · [A] play · win them ALL for the champion crown ♡', 'DEX COMPLET !! l\'herbe a fait pousser une arcade : [◄►/A à l\'écran ou au clavier] · [◄][►] parcourir les ' + DL_GB_GAMES.length + ' cartouches · [A] jouer · gagne-les TOUTES pour la couronne ♡');
         if (dlGbArcadeMount(stage)) {
           body.appendChild(stage);
           const list0 = document.createElement('div');
@@ -14750,8 +15027,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // midnight starfield (stars + pixel moon + occasional shooting star)
   function buildNightSky() {
-    // owner decree v121: dark mode keeps its twinkling STARS — the moon and
-    // the 7-second shooting-star spawner were evicted with the sticker layer
+    // owner decrees, reconciled: the moon stays retired (v121), the STARS
+    // twinkle, and the shooting stars are BACK by popular demand (v123)
     if (nightSkyBuilt) return;
     nightSkyBuilt = true;
     const sky = document.getElementById('night-sky');
@@ -14768,9 +15045,29 @@ document.addEventListener('DOMContentLoaded', () => {
       star.style.animationDelay = `${Math.random() * 3}s`;
       sky.appendChild(star);
     }
+    nsShootStart();
   }
-  function nsShootStart() { /* retired with the moon (owner decree v121) */ }
-  function nsShootStop() { /* retired with the moon (owner decree v121) */ }
+  // shooting stars only tick while it's actually night — light mode
+  // clears the interval instead of idling forever
+  var nsShootTimer = null;
+  function nsShootStart() {
+    if (nsShootTimer || REDUCED_MOTION) return;
+    const sky = document.getElementById('night-sky');
+    if (!sky) return;
+    nsShootTimer = setInterval(() => {
+      if (document.documentElement.getAttribute('data-theme') !== 'dark') return;
+      if (Math.random() < 0.45) return;
+      const shoot = document.createElement('span');
+      shoot.className = 'ns-shoot';
+      shoot.style.left = `${40 + Math.random() * 55}%`;
+      shoot.style.top = `${5 + Math.random() * 40}%`;
+      sky.appendChild(shoot);
+      shoot.addEventListener('animationend', () => shoot.remove());
+    }, 7000);
+  }
+  function nsShootStop() {
+    if (nsShootTimer) { clearInterval(nsShootTimer); nsShootTimer = null; }
+  }
 
   /* =====================================================
      v3.0 — REAL BROWSER NAVIGATION (back / forward / reload
