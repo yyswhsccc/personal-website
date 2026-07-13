@@ -5967,6 +5967,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         dreamApplyTitles(DREAM_TITLES[dreamWorld.id]);
       }
+      // the fan wall's dream paperwork is also [data-i18n]-clobbered
+      if (dreamWorld) fwDreamDress(dreamWorld.id);
     } catch (e) { /* pre-boot */ }
     // the cam button label is stateful — the blanket pass wrote the OFF
     // label over a camera that is visibly still streaming
@@ -8532,6 +8534,7 @@ document.addEventListener('DOMContentLoaded', () => {
     try { rotateOutfit(false); } catch (e) { /* the rack jammed — yesterday's fit survives */ }
     try { gSyncDreamSkin(); } catch (e) { /* the arcade dreams later */ }
     try { dreamAdaptOn(w); } catch (e) { /* the theme wears what it can */ }
+    try { fwDreamDress(w.id); } catch (e) { /* the wall dreams later */ }
     store.set('yos-dream', { id: w.id, until: dreamWorld.until });
     store.set('yos-dream-last', w.id);
     const seen = store.get('yos-dreams-seen', {});
@@ -14363,6 +14366,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // fold the card table properly: node teardown alone leaves dwcState
     // dangling, and the hearts fidget intervals idle forever against it
     try { if (typeof dwcClose === 'function') dwcClose(); } catch (e) { /* already folded */ }
+    try { fwDreamDress(null); } catch (e) { /* the wall wakes on its own */ }
     dreamWorld.nodes.forEach((n) => { try { n.remove(); } catch (e) { /* already gone */ } });
     document.querySelectorAll('.dream-dlg, .scp-lock, .dream-geo-tape, .dream-slippy, .dream-gb-tetro, .dream-amber-slip').forEach((n) => n.remove());
     // the dream journal exists only inside dreams — it closes with the world
@@ -15628,6 +15632,61 @@ document.addEventListener('DOMContentLoaded', () => {
     FAN_NAMES.forEach((n) => addFanAvatar(n));
     syncLikeBtn();
     fetchRemoteLikes();
+  }
+
+  /* ---- v122: the wall dreams HARDER — matrix special edition ----
+     v113 gave every world an avatar skin; the SLIMETRIX now also gets its
+     own paperwork: the log renames itself, the fans are "jacked in",
+     avatars randomly derez into phosphor static, and every so often a
+     white rabbit crosses the wall (follow it. obviously.) */
+  var fwDerezTimer = null, fwRabbitTimer = null;
+  function fwDreamDress(worldId) {
+    const title = document.querySelector('.fan-wall-title');
+    const sub = document.querySelector('.fan-wall-sub');
+    const likesLbl = document.querySelector('.fan-wall-count [data-i18n="wall.likes"]');
+    if (!title) return;
+    if (fwDerezTimer) { clearInterval(fwDerezTimer); fwDerezTimer = null; }
+    if (fwRabbitTimer) { clearInterval(fwRabbitTimer); fwRabbitTimer = null; }
+    document.querySelectorAll('.fw-rabbit').forEach((r) => r.remove());
+    if (worldId === 'matrix') {
+      title.textContent = 'the_ones.log';
+      if (sub) sub.textContent = trT('everyone here took the PINK pill ♡', 'ici tout le monde a pris la pilule ROSE ♡');
+      if (likesLbl) likesLbl.textContent = trT('jacked in', 'branché·e·s');
+      if (REDUCED_MOTION) return;
+      // one face at a time briefly derezzes into static — small, slow, gentle
+      fwDerezTimer = setInterval(() => {
+        if (!document.documentElement.classList.contains('dream-matrix')) return;
+        const faces = document.querySelectorAll('#fan-wall-grid .fan-avatar canvas');
+        if (!faces.length) return;
+        const pick = faces[Math.floor(Math.random() * faces.length)];
+        pick.classList.remove('fa-derez'); void pick.offsetWidth; pick.classList.add('fa-derez');
+        setTimeout(() => pick.classList.remove('fa-derez'), 1300);
+      }, 8000);
+      // …and the white rabbit does its rounds
+      fwRabbitTimer = setInterval(() => {
+        if (!document.documentElement.classList.contains('dream-matrix')) return;
+        const grid = document.getElementById('fan-wall-grid');
+        const wall = document.getElementById('fan-wall');
+        if (!grid || !wall || wall.classList.contains('is-collapsed') || grid.querySelector('.fw-rabbit')) return;
+        const r = document.createElement('span');
+        r.className = 'fw-rabbit';
+        r.textContent = '🐇';
+        r.style.top = (6 + Math.random() * Math.max(10, grid.clientHeight - 30)) + 'px';
+        r.title = trT('follow the white rabbit', 'suis le lapin blanc');
+        r.addEventListener('click', () => {
+          r.remove();
+          playSparkleSound();
+          showToast(trT('🐇 you followed the white rabbit — it led straight back to the fans. it always does ♡', '🐇 tu as suivi le lapin blanc — il ramène droit aux fans. comme toujours ♡'));
+        }, { once: true });
+        r.addEventListener('animationend', () => r.remove());
+        grid.appendChild(r);
+      }, 19000);
+    } else {
+      // wake up: the wall speaks its daytime language again
+      title.textContent = t('wall.title');
+      if (sub) sub.textContent = t('wall.sub');
+      if (likesLbl) likesLbl.textContent = t('wall.likes');
+    }
   }
 
   if (likeBtn) {
