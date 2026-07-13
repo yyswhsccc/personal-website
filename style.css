@@ -124,14 +124,15 @@ input {
 }
 
 /* ================= BACKGROUND DECORATIONS ================= */
+/* lives INSIDE .desktop-area now: as a body child it was painted under the
+   opaque .browser-frame (z-index 10) — every sprite animated invisibly.
+   absolute + z-index 0 = above the desk wallpaper, below icons (z 5) and
+   windows (z 100); desktop-area's overflow keeps it off the taskbar. */
 .decorations-bg {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  position: absolute;
+  inset: 0;
   pointer-events: none;
-  z-index: 1;
+  z-index: 0;
   overflow: hidden;
 }
 
@@ -686,8 +687,9 @@ input {
   100% { filter: hue-rotate(300deg) saturate(1.6); transform: translateX(3px); }
 }
 
-/* Habitat glitch mode */
-.profile-avatar-wrapper.glitch-mode {
+/* Arena glitch mode (love overflow hits wherever the pet performs) */
+.profile-avatar-wrapper.glitch-mode,
+.live-stage.glitch-mode {
   animation: habitat-glitch 0.16s steps(2, end) 12;
 }
 
@@ -697,16 +699,20 @@ input {
   100% { filter: invert(0.08) saturate(1.8); transform: translate(2px, -1px); }
 }
 
-/* Habitat night mode while napping */
-.profile-avatar-wrapper.night-mode::after {
+/* Arena night mode while napping — the live stage naps too, since the
+   lullaby lands wherever the pet actually performs */
+.profile-avatar-wrapper.night-mode::after,
+.live-stage.night-mode::after {
   content: "🌙";
   position: absolute;
   top: 8px;
   right: 10px;
   font-size: 1rem;
   animation: float 3s ease-in-out infinite;
+  z-index: 4;
 }
-.profile-avatar-wrapper.night-mode {
+.profile-avatar-wrapper.night-mode,
+.live-stage.night-mode {
   filter: saturate(0.7) brightness(0.82);
   transition: filter 0.6s;
 }
@@ -3622,13 +3628,15 @@ html[data-theme="dark"] .search-go {
   box-shadow: 2px 2px 0 var(--border), 0 0 12px rgba(255, 110, 192, 0.45);
 }
 
-/* starfield (spawned by JS into #night-sky) */
+/* starfield (spawned by JS into #night-sky) — rehomed inside .desktop-area:
+   the old body-child placement painted it under the opaque .browser-frame,
+   so the moon, 26 stars and every shooting star spent v-forever invisible */
 .night-sky {
   display: none;
-  position: fixed;
+  position: absolute;
   inset: 0;
   pointer-events: none;
-  z-index: 2;
+  z-index: 0;
   overflow: hidden;
 }
 html[data-theme="dark"] .night-sky { display: block; }
@@ -7678,6 +7686,8 @@ body.terminal-only .desktop-taskbar,
 body.terminal-only .desktop-layout,
 body.terminal-only .fan-wall-widget,
 body.terminal-only #desk-pik-layer,
+body.terminal-only .decorations-bg,
+body.terminal-only .night-sky,
 body.terminal-only .cloud-decor,
 body.terminal-only .heart-decor,
 body.terminal-only .mini-danmaku, /* the chat ticker kept broadcasting over the DOOR (and the rescue cage) — backstage means backstage */
@@ -8071,10 +8081,12 @@ body.rescue-quake-big { animation: rescue-quake-big 1s; }
   max-width: 94%;
   font-family: var(--font-pixel);
   font-size: 0.72rem;
-  color: var(--ink);
+  /* the gradient is a hard light palette — pin the ink to match (var(--ink)
+     goes near-white in dark mode: unreadable on cream/pink) */
+  color: #14020e;
   background: linear-gradient(90deg, #ffe98a, #ffb3dd);
-  border: 2px solid var(--ink);
-  box-shadow: 3px 3px 0 var(--ink);
+  border: 2px solid #14020e;
+  box-shadow: 3px 3px 0 #14020e;
   padding: 6px 8px;
   animation: window-pop-in 0.25s steps(3, end);
 }
@@ -8089,7 +8101,7 @@ body.rescue-quake-big { animation: rescue-quake-big 1s; }
   cursor: var(--cursor-heart);
   white-space: nowrap;
 }
-.live-beam-x { background: transparent; border: 0; font-family: var(--font-pixel); cursor: var(--cursor-heart); }
+.live-beam-x { background: transparent; color: #14020e; border: 0; font-family: var(--font-pixel); cursor: var(--cursor-heart); }
 /* landscape phones: shrink the stage so the GRASS stays on screen */
 @media (orientation: landscape) and (max-height: 520px) {
   .live-stage { min-height: min(300px, calc(100dvh - 150px)); }
@@ -10476,7 +10488,9 @@ html[data-theme="dark"].dream-amber .window-title { color: #ffd23f; text-shadow:
 }
 .tarot-cardface .t-cap { z-index: 4; }
 .tarot-px { cursor: var(--cursor-heart); }
-.tarot-wiggle { animation: tarot-wiggle 0.4s ease; }
+/* compound selector: must outrank .tarot-stage.is-charge (whose `forwards`
+   fill used to suppress the poke wiggle forever after the first charge) */
+.tarot-wiggle, .tarot-stage.tarot-wiggle { animation: tarot-wiggle 0.4s ease; }
 @keyframes tarot-wiggle {
   25% { transform: scale(1.05) rotate(-2deg); }
   60% { transform: scale(1.03) rotate(2deg); }
@@ -11258,6 +11272,10 @@ html.dreaming #icon-dreamlog .icon-visual-emoji {
 .dl-amber .dl-got::after { right: 8px; transform: rotate(38deg); }
 @media (prefers-reduced-motion: reduce) {
   .dl-gb-sprite, .dl-geo .dl-geo-soon, html.dreaming #icon-dreamlog .icon-visual-emoji { animation: none; }
+  /* class-level animation:…!important outranks the universal kill switch —
+     these two escaped it (52vw window haul + 1.3s full-window shake) */
+  .bsod-dragged { animation: none !important; opacity: 0; transition: opacity 0.3s; }
+  .ama-fx-shake { animation: none !important; }
 }
 
 /* yongle provenance stamps */
@@ -11543,7 +11561,9 @@ html[data-theme="dark"].dream-amber .console-btn-eject .console-btn-icon { color
   padding: 3px 8px;
   font-size: 0.86rem;
 }
-.dwc-x { background: #c0c0c0; border: 2px solid #14020e; font-family: var(--font-pixel); font-size: 0.7rem; padding: 1px 6px; box-shadow: 1px 1px 0 #14020e; cursor: var(--cursor-heart, pointer); }
+/* explicit ink: dreams run under color-scheme:dark, whose UA ButtonText
+   default is white — white ✕ on silver was ~1.8:1 (see .album-tab note) */
+.dwc-x { background: #c0c0c0; color: #14020e; border: 2px solid #14020e; font-family: var(--font-pixel); font-size: 0.7rem; padding: 1px 6px; box-shadow: 1px 1px 0 #14020e; cursor: var(--cursor-heart, pointer); }
 .dwc-menu { display: flex; gap: 4px; padding: 3px 6px; border-bottom: 2px solid #8a8a8a; }
 .dwc-menu button { background: #c0c0c0; border: 1px solid #8a8a8a; font-family: var(--font-pixel); font-size: 0.68rem; padding: 2px 7px; cursor: var(--cursor-heart, pointer); color: #14020e; }
 .dwc-menu button:hover { background: #dfdfdf; }
@@ -11583,6 +11603,7 @@ html[data-theme="dark"].dream-amber .console-btn-eject .console-btn-icon { color
   display: block;
   margin: 10px auto 0;
   background: #ffd400;
+  color: #14020e; /* color-scheme:dark would render the label white-on-yellow */
   border: 2px solid #14020e;
   box-shadow: 2px 2px 0 #14020e;
   font-family: var(--font-pixel);

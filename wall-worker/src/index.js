@@ -47,11 +47,19 @@ async function getStatsBlob(env) {
   let blob = await env.WALL.get('idx:stats', { type: 'json' });
   if (!blob || typeof blob !== 'object') {
     blob = {};
+    // a throttled list() (429 after the daily quota) must NOT be mistaken
+    // for a fresh namespace: persisting {} would bury any surviving legacy
+    // keys forever. on failure we serve empty for THIS request only,
+    // leave the blob unwritten, and FLAG it so write paths (/bump,
+    // /admin/stat) refuse to persist this fallback — a write would bury
+    // the legacy keys just as surely as persisting it here.
     try { // one-time migration from the legacy s:* keys
       const l = await env.WALL.list({ prefix: 's:', limit: 1000 });
       l.keys.forEach((k) => { blob[k.name.slice(2)] = (k.metadata && typeof k.metadata.v === 'number') ? k.metadata.v : 0; });
-    } catch (e) { /* fresh namespace */ }
-    await env.WALL.put('idx:stats', JSON.stringify(blob));
+      await env.WALL.put('idx:stats', JSON.stringify(blob));
+    } catch (e) {
+      Object.defineProperty(blob, '__unmigrated', { value: true, enumerable: false });
+    }
   }
   return blob;
 }
@@ -67,8 +75,8 @@ async function getPhotoIndex(env) {
         cursor = l.list_complete ? null : l.cursor;
       } while (cursor);
       idx.sort((a, b) => String(b.t || '').localeCompare(String(a.t || '')));
-    } catch (e) { /* empty wall */ }
-    await env.WALL.put('idx:photos', JSON.stringify(idx));
+      await env.WALL.put('idx:photos', JSON.stringify(idx));
+    } catch (e) { /* list throttled/failed — serve empty now, migrate later */ }
   }
   return idx;
 }
@@ -647,6 +655,9 @@ export default {
       const used = parseInt(await env.WALL.get(rlKey) || '0', 10);
       if (used >= STAT_RATE_MAX) return json(req, 429, { error: 'the counters need a breather ♡' });
       const blob = await getStatsBlob(env);
+      // never persist the failure-fallback blob: that would bury the very
+      // legacy counters the migration guard is protecting. try again later.
+      if (blob.__unmigrated) return json(req, 503, { error: 'the counters are mid-move — try again in a minute ♡' });
       if (!(key in blob) && Object.keys(blob).length >= 800) return json(req, 400, { error: 'the counter shelf is full' });
       const next = Math.max(0, (parseInt(blob[key], 10) || 0) + n);
       blob[key] = next;
@@ -683,9 +694,13 @@ export default {
       let payload;
       try { payload = await req.json(); } catch (e) { return json(req, 400, { error: 'json only' }); }
       // v117: worldwide names keep their letters in every script — the old
-      // latin-only soap turned 永善 into '???' and ate emoji signatures
-      const n = Array.from(String((payload && payload.n) || '').toUpperCase())
-        .filter((ch) => /[\p{L}\p{N}♡★]/u.test(ch)).slice(0, 3).join('') || '???';
+      // latin-only soap turned 永善 into '???' and ate emoji signatures.
+      // \p{M} keeps combining marks (Thai vowels, matras, harakat) attached;
+      // Intl.Segmenter slices GRAPHEMES so a mark is never cut off its base.
+      const keptN = Array.from(String((payload && payload.n) || '').toUpperCase())
+        .filter((ch) => /[\p{L}\p{M}\p{N}♡★]/u.test(ch)).join('');
+      const n = Array.from(new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(keptN), (seg) => seg.segment)
+        .slice(0, 3).join('') || '???';
       const s = Math.round(Number(payload && payload.s) || 0);
       if (!(s > 0 && s <= 131000)) return json(req, 400, { error: 'that score belongs to another universe' });
       let hall = [];
@@ -708,6 +723,7 @@ export default {
       if (!STAT_KEY_RE.test(key)) return json(req, 400, { error: 'bad key' });
       const v = Math.max(0, Math.round(Number(payload && payload.value) || 0));
       const blob = await getStatsBlob(env);
+      if (blob.__unmigrated) return json(req, 503, { error: 'the counters are mid-move — try again in a minute ♡' });
       blob[key] = v;
       await env.WALL.put('idx:stats', JSON.stringify(blob));
       return json(req, 200, { ok: true, key, value: v });

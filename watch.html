@@ -5,6 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#ffd9ec">
 <title>yongshanOS ⌚</title>
+<!-- same pixel slime as the big site — the wrist tab deserves a face too
+     (also: no icon links meant every load begged /favicon.ico into a 404) -->
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <style>
   /* ⌚ wrist edition — one file, zero dependencies, pure Y2K jelly */
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -119,10 +125,12 @@
     return s;
   }
   function get(key) {
+    // null = the read FAILED (rate limit / network) — callers must never
+    // confuse that with a true zero: the pairing hijack guard depends on it
     return fetch(API + '/get/' + NS + '/' + key)
-      .then(function (r) { return r.ok ? r.json() : { value: 0 }; })
-      .then(function (d) { return Math.max(0, Number(d.value) || 0); })
-      .catch(function () { return 0; });
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) { return d === null ? null : Math.max(0, Number(d.value) || 0); })
+      .catch(function () { return null; });
   }
   function hit(key) {
     // honest hits: resolve true only when the cloud really counted it
@@ -215,7 +223,8 @@
     // minted-fresh trust pass. cb(…, false) keeps the hijack guard armed.
     if (attempt >= 6 || !navigator.onLine) { cb(candidate, false); return; }
     get('wpair-' + candidate).then(function (v) {
-      if (v > 0) mintPin(cb, attempt + 1); // burned by pairing history — skip it
+      if (v === null) mintPin(cb, attempt + 1); // read FAILED — proves nothing, try again
+      else if (v > 0) mintPin(cb, attempt + 1); // burned by pairing history — skip it
       else cb(candidate, true); // read back clean — provably nobody's
     });
   }
@@ -259,6 +268,7 @@
         if (tries > 70 && tries % 4 !== 0) return; // eco mode after ~3 min: one look every ~10s
         if (tries === 71) status.textContent = 'still listening (eco mode)…';
         get('wpair-' + pin).then(function (v) {
+          if (v === null) return; // failed read proves nothing — never marks verified
           if (v > 0 && !verified && !mintedFresh) {
             // value already there on a code we didn't just mint = somebody
             // ELSE's pairing from history. never adopt a stranger's save.
@@ -457,6 +467,7 @@
     function pollWst() {
       if (!navigator.onLine) { stats.textContent = 'offline — pets are queued ♡'; return; }
       get('sv2-' + uid + '-wst').then(function (v) {
+        if (v === null) return; // read failed — keep the last known stats
         if (v <= 0) { lastStats = 'open the big site once to sync ♡'; refreshStats(); return; }
         v = v - 1;
         lastFans = v % 100000;

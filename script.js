@@ -329,6 +329,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (winId === 'win-live' && typeof liveEnter === 'function') {
       win.classList.add('window-maximized'); // the live room opens big, front and centre
+      // keep the glyph honest: only toggleMaximizeWindow ever set '❐', so a
+      // programmatic maximize left '⛶' up and the first click SHRANK the room
+      const mb = win.querySelector('.win-btn-maximize');
+      if (mb) mb.textContent = '❐';
       setTimeout(liveEnter, 120);
     }
     if (winId === 'win-leaderboard' && typeof renderLeaderboard === 'function') renderLeaderboard();
@@ -394,6 +398,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (win.id === 'win-game' && typeof gameCamExit === 'function') gameCamExit();
     if (win.id === 'win-game' && typeof gameUnrotate === 'function') gameUnrotate();
+    // summon overlays live on document.body — closing the game mid-summon
+    // would strand them on the desktop (and a mid-melt corruption forever)
+    if (win.id === 'win-game' && typeof nmClearAttack === 'function') { try { nmClearAttack(); } catch (e) { /* nothing armed */ } }
     // v5.2: slamming the arcade shut right after the post-curfew dream
     // ambush — without ever pressing start — is an answer. the slime
     // hears it, takes it well, and writes it down (see swArcadeRejected)
@@ -410,7 +417,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // hand focus back to whatever opened this window
     const opener = winOpeners.get(win.id);
-    if (opener && document.contains(opener)) {
+    // getClientRects: focusing an element inside a display:none container
+    // (a closed Start menu, another closed window) is a silent no-op that
+    // strands keyboard focus on <body> — fall through to the desktop then
+    if (opener && document.contains(opener) && opener.getClientRects().length) {
       opener.focus();
     } else {
       const main = document.getElementById('main-desktop');
@@ -426,6 +436,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (win.id === 'win-game' && typeof gameCamExit === 'function') gameCamExit();
     if (win.id === 'win-game' && typeof gameUnrotate === 'function') gameUnrotate();
+    if (win.id === 'win-game' && typeof nmClearAttack === 'function') { try { nmClearAttack(); } catch (e) { /* nothing armed */ } }
     if (win.id === 'win-pikdex' && typeof pikProfileTimer !== 'undefined' && pikProfileTimer) { clearInterval(pikProfileTimer); pikProfileTimer = null; }
     if (win.id === 'win-interview') {
       win.classList.remove('window-itv-modal');
@@ -457,10 +468,19 @@ document.addEventListener('DOMContentLoaded', () => {
       btn.textContent = '❐';
       win.style.top = '';
       win.style.left = '';
+      // the fresh-open fit-above-the-taskbar cap is an INLINE style — it
+      // outranks the class's `max-height: none` and pins a "maximized"
+      // window at 540px. stash it, clear it, restore on unmaximize.
+      win.__capMaxH = win.style.maxHeight;
+      win.__capMinH = win.style.minHeight;
+      win.style.maxHeight = '';
+      win.style.minHeight = '';
     } else {
       btn.textContent = '⛶';
       win.style.top = '100px';
       win.style.left = '50px';
+      if (win.__capMaxH) win.style.maxHeight = win.__capMaxH;
+      if (win.__capMinH) win.style.minHeight = win.__capMinH;
     }
   }
 
@@ -515,6 +535,9 @@ document.addEventListener('DOMContentLoaded', () => {
       document.addEventListener('touchend', dragEnd);
 
       function dragStart(e) {
+        // primary button only: right-press opens the custom context menu,
+        // and it must not ALSO start dragging the window underneath it
+        if (e.type === 'mousedown' && e.button !== 0) return;
         if (win.classList.contains('window-maximized')) return;
         if (e.target.closest('.win-btn')) return;
         focusWindow(win);
@@ -1343,7 +1366,8 @@ document.addEventListener('DOMContentLoaded', () => {
     slimeBody.classList.toggle('is-angel', pet.affection >= 96);
 
     store.set('yos-affection', pet.affection);
-    store.set('yos-energy', pet.energy);
+    // (yos-energy write retired: booting at full energy is the decreed
+    // design, so nothing ever read the persisted value back — v87 leftover)
     store.set('yos-followers', pet.followers);
     store.set('yos-total-pets', pet.totalPets);
 
@@ -1701,13 +1725,14 @@ document.addEventListener('DOMContentLoaded', () => {
   function triggerGlitchMode() {
     playGlitchSound();
     achvUnlock('loveoverflow');
-    slimeHabitat.classList.add('glitch-mode');
+    const glitchArena = petArena(); // overflow where the pet performs, not the hidden sidebar
+    glitchArena.classList.add('glitch-mode');
     setSlimeAction('is-glitch');
     pet.mood = 'l0v3_0v3rfl0w';
     showBubble(trT('ERR0R: love_overflow ♡♡♡', 'ERREUR : débordement_d\'amour ♡♡♡'), 2600);
     updateSlimeHud();
     setTimeout(() => {
-      slimeHabitat.classList.remove('glitch-mode');
+      glitchArena.classList.remove('glitch-mode');
       setSlimeAction('');
       pet.mood = 'recovered';
       showBubble(trT('...I\'m ok. that was the good kind of crash', '...ça va. c\'était le bon genre de plantage'), 2400);
@@ -1951,13 +1976,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const targetX = Math.round((Math.random() - 0.5) * 2 * bounds.x * 0.8);
     const targetY = Math.round((Math.random() - 0.5) * 2 * bounds.y * 0.7);
 
-    // drop the candy into the habitat (habitat px coords)
+    // drop the candy where the slime will actually WALK: goto targets are
+    // transform offsets from the pet's layout spot, and in the live stage
+    // that spot is nowhere near the arena's center (the old anchor left
+    // the candy floating mid-air while the slime ate at its feet)
     const candy = document.createElement('span');
     candy.className = 'pet-candy';
     candy.textContent = CANDY_CHARS[Math.floor(Math.random() * CANDY_CHARS.length)];
     const arena = petArena();
-    candy.style.left = `${arena.clientWidth / 2 + targetX - 9}px`;
-    candy.style.top = `${arena.clientHeight / 2 + targetY}px`;
+    const baseCx = slimeBody.offsetLeft + (slimeBody.offsetWidth || 85) / 2;
+    const baseCy = slimeBody.offsetTop + (slimeBody.offsetHeight || 75) / 2;
+    candy.style.left = `${baseCx + targetX - 9}px`;
+    candy.style.top = `${baseCy + targetY}px`;
     arena.appendChild(candy);
     activeCandy = candy;
 
@@ -2043,7 +2073,9 @@ document.addEventListener('DOMContentLoaded', () => {
     playCloseSound();
     pet.sleeping = true;
     pet.mood = 'sleeping';
-    slimeHabitat.classList.add('night-mode');
+    // dim the arena the pet is actually IN — on air that's the live stage,
+    // not the sidebar habitat hiding behind the GONE LIVE overlay
+    petArena().classList.add('night-mode');
     moveSlime({ action: 'nap', mood: 'sleeping', phrase: trT('sleep(14000)... zzz', 'sleep(14000)... zzz'), duration: 1400, scheduleNext: false });
 
     sleepZzzTimer = setInterval(() => {
@@ -2059,7 +2091,10 @@ document.addEventListener('DOMContentLoaded', () => {
     pet.sleeping = false;
     if (sleepTimer) clearTimeout(sleepTimer);
     if (sleepZzzTimer) clearInterval(sleepZzzTimer);
+    // the nap may have started in a different arena (live stage ↔ habitat)
     slimeHabitat.classList.remove('night-mode');
+    const liveStageEl = document.getElementById('live-stage');
+    if (liveStageEl) liveStageEl.classList.remove('night-mode');
 
     // naps always refill to 100% — grumpy or not, the bar comes back green
     pet.energy = 100;
@@ -2094,21 +2129,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 3200 + Math.random() * 4800);
   })();
 
-  // --- slime notices opened windows ---
+  // --- slime notices opened windows (EN/FR pairs — trT picks at speak time) ---
   const windowReactions = {
-    'win-career': 'ooh, my quest log! the AWS arc is my fave',
-    'win-skills': 'my inventory! don\'t touch the Python, it\'s equipped',
-    'win-chat': 'chat\'s here!! everyone behave',
-    'win-education': 'two degrees!! pat pat',
-    'win-start-here': 'read the tips! there\'s a secret in there...',
-    'win-ama': 'the bot knows everything about her. EVERYTHING.',
-    'win-terminal': 'ooh, hacker mode!! type neofetch, trust me'
+    'win-career': ['ooh, my quest log! the AWS arc is my fave', 'ooh, mon journal de quêtes ! l\'arc AWS est mon préféré'],
+    'win-skills': ['my inventory! don\'t touch the Python, it\'s equipped', 'mon inventaire ! touche pas au Python, il est équipé'],
+    'win-chat': ['chat\'s here!! everyone behave', 'le chat est là !! tenez-vous bien'],
+    'win-education': ['two degrees!! pat pat', 'deux diplômes !! tapote tapote'],
+    'win-start-here': ['read the tips! there\'s a secret in there...', 'lis les astuces ! il y a un secret dedans…'],
+    'win-ama': ['the bot knows everything about her. EVERYTHING.', 'le bot sait tout sur elle. TOUT.'],
+    'win-terminal': ['ooh, hacker mode!! type neofetch, trust me', 'ooh, mode hacker !! tape neofetch, crois-moi']
   };
 
   function slimeReactToWindow(win) {
     if (pet.sleeping || pet.busy || Math.random() < 0.45) return;
     const line = windowReactions[win.id];
-    if (line) showBubble(line, 2600);
+    if (line) showBubble(Array.isArray(line) ? trT(line[0], line[1]) : line, 2600);
   }
 
   // --- passive stat drift ---
@@ -3316,7 +3351,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const actives = pikdexActives(dex);
       if (!dex.length) termLine(trT('no pikmin yet — but watch this…', 'aucun pikmin — mais regardez ça…'), 't-dim');
       else {
-        termLine(trT(`SQUAD ROSTER (${actives.length}/${PIK_MAX} on duty · ${dex.filter((p) => !p.ch).length}/${PIKDEX_CAP} collected)`, `ESCOUADE (${actives.length}/${PIK_MAX} en service · ${dex.filter((p) => !p.ch).length}/${PIKDEX_CAP} au total)`), 't-accent');
+        termLine(trT(`SQUAD ROSTER (${actives.length}/${PIK_MAX} on duty · ${pikdexKindCount(dex)}/${PIKDEX_CAP} collected)`, `ESCOUADE (${actives.length}/${PIK_MAX} en service · ${pikdexKindCount(dex)}/${PIKDEX_CAP} au total)`), 't-accent');
         actives.slice(0, PIK_MAX).forEach((p) => {
           const ix = dex.indexOf(p);
           const sp = p.sp ? pikSpecies(p.sp) : null;
@@ -3795,9 +3830,16 @@ document.addEventListener('DOMContentLoaded', () => {
       fireCheat(canon, false);
       return true;
     }
+    // punctuation/extra spaces were the ONLY thing wrong? that IS the spell —
+    // fire it. (exact dispatch upstairs sees the raw line, so `do a barrel
+    // roll!!` used to be refused while an actual typo sailed through.)
+    if (Object.prototype.hasOwnProperty.call(TERM_CHEATS, phrase)) {
+      if (Object.prototype.hasOwnProperty.call(store.get('yos-cheat-renames', {}), phrase)) return false; // dust words stay dust
+      fireCheat(phrase, false);
+      return true;
+    }
     const canonical = fuzzyCheatMatch(rawInput);
     if (!canonical || phrase === spellNorm(canonical)) return false;
-    if (TERM_CHEATS[phrase]) return false; // that IS another spell — no stealing
 
     // sacred words can't be overwritten — fire the spell, skip the rename
     if (SPELL_RESERVED.indexOf(phrase.split(' ')[0]) !== -1 || SPELL_RESERVED.indexOf(phrase) !== -1) {
@@ -4381,11 +4423,24 @@ document.addEventListener('DOMContentLoaded', () => {
      live beside the main slot; write keys are created lazily and
      cached; reads are public, so any device can restore. ---------- */
   const CLOUD_ALPHA = ' abcdefghijklmnopqrstuvwxyz0123456789|~';
+  // annex counters whose one-time admin key was minted in ANOTHER browser:
+  // /create 409s forever and the key is unrecoverable, so remember the lock
+  // instead of re-asking on every sync (sv2-* only — wpair pins must stay
+  // live probes, their 409 IS the stale-pin hijack guard)
+  var cloudLocked = store.get('yos-cloud-locked', {});
   function cloudKeyFor(name) {
     const keys = store.get('yos-cloud-keys', {});
     if (keys[name]) return Promise.resolve(keys[name]);
+    if (cloudLocked[name]) { const e = new Error('exists'); e.exists = true; return Promise.reject(e); }
     return fetch(`${ACHV_API}/create/${ACHV_NS}/${name}`, { method: 'POST' })
-      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then((r) => {
+        if (r.ok) return r.json();
+        if (r.status === 409) {
+          if (name.indexOf('sv2-') === 0) { cloudLocked[name] = 1; store.set('yos-cloud-locked', cloudLocked); }
+          const e = new Error('exists'); e.exists = true; throw e;
+        }
+        return Promise.reject(new Error('create failed'));
+      })
       .then((d) => {
         if (!d || !d.admin_key) throw new Error('no key');
         keys[name] = d.admin_key;
@@ -4394,8 +4449,12 @@ document.addEventListener('DOMContentLoaded', () => {
       });
   }
   function cloudSet(name, v) {
-    return cloudKeyFor(name).then((key) =>
-      fetch(`${ACHV_API}/set/${ACHV_NS}/${name}?value=${v}`, { method: 'POST', headers: { Authorization: `Bearer ${key}` } }));
+    return cloudKeyFor(name)
+      .then((key) =>
+        fetch(`${ACHV_API}/set/${ACHV_NS}/${name}?value=${v}`, { method: 'POST', headers: { Authorization: `Bearer ${key}` } }))
+      // a counter homed to another browser is skipped, not fatal: the rest
+      // of the save chain (including counters this browser CAN mint) flows on
+      .catch((e) => { if (e && e.exists) return null; throw e; });
   }
   function cloudGet(name) {
     return fetch(`${ACHV_API}/get/${ACHV_NS}/${name}`)
@@ -4562,7 +4621,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const dex = pikdexGet();
     if (remote.length <= dex.length) return;
     const before = pikdexWheelPct(dex);
-    remote.slice(dex.length).forEach((r) => { dex.push(r); });
+    // diverged devices produce tails that re-contain kinds we already own —
+    // appending those would pad the deck with duplicates (and eat slots),
+    // so only genuinely new kinds ride in. identity: hue segment / species.
+    const ownedSegs = pikdexWheelSegs(dex);
+    const ownedSp = new Set(dex.filter((p) => p.sp != null).map((p) => p.sp));
+    const hasCh = dex.some((p) => p.ch);
+    remote.slice(dex.length).forEach((r) => {
+      if (r && r.ch) { if (hasCh) return; dex.push(r); return; }
+      if (r && r.sp != null) { if (ownedSp.has(r.sp)) return; ownedSp.add(r.sp); dex.push(r); return; }
+      const seg = Math.floor(pikHueOf(r) / WHEEL_STEP) % WHEEL_SEGS;
+      if (ownedSegs.has(seg)) return;
+      ownedSegs.add(seg);
+      dex.push(r);
+    });
     // keep the squad staffed: if there's room on duty, promote arrivals
     let active = dex.filter((p) => p.a).length;
     dex.forEach((p) => { if (!p.a && active < PIK_MAX) { p.a = 1; active++; } });
@@ -5154,10 +5226,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return;
       }
+      // the cipher props only exist on nights the cipher lock is INSTALLED —
+      // serving key.enc when no lock would accept its word sent visitors
+      // typing the "answer" straight into the wrong-answer meter
+      const cipherArmed = door.chain.some((p) => p.id === 'cipher');
       const ENCODED = { rot13: doorEncode(door.cipherWord, 'rot13'), base64: doorEncode(door.cipherWord, 'base64'), hex: doorEncode(door.cipherWord, 'hex') };
       if (lower === 'ls' || lower === 'ls -la' || lower === 'dir') {
-        termLine('key.enc          README.whisper          the_rest_of_the_OS.zzz', 't-ok');
-        matrixGreeterSay(trT('ooh. a LOOKER. `cat` them. I would.', 'oh. quelqu\'un qui REGARDE. `cat`-les. moi je le ferais.'));
+        termLine(cipherArmed ? 'key.enc          README.whisper          the_rest_of_the_OS.zzz' : 'README.whisper          the_rest_of_the_OS.zzz', 't-ok');
+        matrixGreeterSay(cipherArmed
+          ? trT('ooh. a LOOKER. `cat` them. I would.', 'oh. quelqu\'un qui REGARDE. `cat`-les. moi je le ferais.')
+          : trT('ooh. a LOOKER. `cat` the README. I would.', 'oh. quelqu\'un qui REGARDE. `cat` le README. moi je le ferais.'));
         return;
       }
       if (lower === 'cat readme.whisper' || lower === 'cat readme') {
@@ -5165,12 +5243,20 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
       if (lower === 'cat key.enc') {
+        if (!cipherArmed) {
+          termLine(trT('cat: key.enc: rusted shut — it belongs to a lock this door didn\'t install tonight.', 'cat : key.enc : rouillé — il appartient à un verrou que la porte n\'a pas posé ce soir.'), 't-dim');
+          return;
+        }
         termLine(ENCODED[door.enc], 't-ok');
         termLine(trT(`   (encoding: ${door.enc} — decode it IRL, or \`decode key.enc\` if your wrists are tired)`, `   (encodage : ${door.enc} — décode-le en vrai, ou \`decode key.enc\` si tes poignets fatiguent)`), 't-dim');
         matrixGreeterSay(trT('a cipher!! I love this part.', 'un chiffre !! j\'adore ce moment.'));
         return;
       }
       if (lower === 'decode key.enc' || lower === 'decode') {
+        if (!cipherArmed) {
+          termLine(trT('decode: nothing here is encoded tonight — `hint` shows the lock that IS waiting.', 'decode : rien n\'est encodé ce soir — `hint` montre le verrou qui attend, lui.'), 't-dim');
+          return;
+        }
         const wEnc = ENCODED[door.enc];
         if (door.enc === 'rot13') termLine("$ tr 'a-z' 'n-za-m' <<< " + wEnc + '  →  ' + door.cipherWord, 't-ok');
         else if (door.enc === 'base64') termLine('$ echo ' + wEnc + ' | base64 -d  →  ' + door.cipherWord, 't-ok');
@@ -5868,6 +5954,26 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     } catch (e) { /* pre-boot */ }
 
+    // mid-dream: the blanket [data-i18n] pass just reverted every retitled
+    // window to its awake name — restore the dream titles, and refresh the
+    // backup so the eventual wake speaks the CURRENT language
+    try {
+      if (dreamWorld && DREAM_TITLES[dreamWorld.id]) {
+        if (dreamTitleBackup) {
+          Object.keys(dreamTitleBackup).forEach((winId) => {
+            const el = document.querySelector('#' + winId + ' .window-title');
+            if (el) dreamTitleBackup[winId] = el.textContent;
+          });
+        }
+        dreamApplyTitles(DREAM_TITLES[dreamWorld.id]);
+      }
+    } catch (e) { /* pre-boot */ }
+    // the cam button label is stateful — the blanket pass wrote the OFF
+    // label over a camera that is visibly still streaming
+    try {
+      if (camStream) { const cb = document.getElementById('live-cam'); if (cb) cb.textContent = t('live.cam.on'); }
+    } catch (e) { /* pre-boot */ }
+
     // the AMA feed follows too: re-greet if untouched, otherwise hand over politely
     if (typeof amaFeed !== 'undefined' && amaFeed && amaFeed.children.length) {
       if (!amaFeed.querySelector('.ama-msg-user')) {
@@ -5970,6 +6076,12 @@ document.addEventListener('DOMContentLoaded', () => {
     gRefreshTheme();
     setSlimeSkin(th);
     syncGhostMode();
+    // an open pikdex repaints its hue-wheel canvas — it bakes theme colors
+    // in at paint time, so a theme flip left it wearing the old palette
+    try {
+      const pikWin = document.getElementById('win-pikdex');
+      if (pikWin && !pikWin.classList.contains('window-closed') && typeof renderPikdexSoon === 'function') renderPikdexSoon();
+    } catch (e) { /* pre-boot */ }
   }
 
   /* =====================================================
@@ -7340,18 +7452,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const grid = document.createElement('div');
     grid.className = 'scp-keypad-grid';
     let buf = '';
+    let granted = false; // one grant per keypad — mashing keys during the
+    // 1.6s access-granted animation must not farm scpCleared to 3/3
     '123456789♡0⌫'.split('').forEach((k) => {
       const b = document.createElement('button');
       b.type = 'button';
       b.textContent = k;
       b.addEventListener('click', () => {
+        if (granted) return;
         playClickSound();
         if (k === '⌫') buf = buf.slice(0, -1);
         else if (k === '♡') { disp.textContent = '♡ ♡ ♡'; playDreamPop(); setTimeout(() => { disp.textContent = buf.padEnd(3, '·').split('').join(' '); }, 600); return; }
         else if (buf.length < 3) buf += k;
         disp.textContent = buf.padEnd(3, '·').split('').join(' ');
         if (buf.length === 3) {
-          if (buf === '999') { dwScpGrant(overlay); }
+          if (buf === '999') { granted = true; dwScpGrant(overlay); }
           else {
             disp.textContent = trT('DENIED', 'REFUSÉ');
             overlay.classList.add('scp-shake');
@@ -8532,7 +8647,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!dreamWorld || REDUCED_MOTION || document.querySelector('.dream-dlg')) return;
     const id = dreamWorld.id;
     if (id === 'win95') { // minesweeper.exe: the real board (v110)
-      try { dwmOpen(); } catch (e) { /* the meadow is closed */ }
+      // the 96s beat INTRODUCES the toy — it never resets a live board
+      // (dwmOpen starts with dwmClose, which used to sweep mid-games),
+      // and it stays polite while the card table has the floor
+      if (!document.querySelector('.dwm-win') && !dwcState) {
+        try { dwmOpen(); } catch (e) { /* the meadow is closed */ }
+      }
       return;
     } else if (id === 'scp') { // Class-D orientation, question 1 of 1
       dreamDlg({
@@ -10872,7 +10992,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const keymap = (code) => code === 'Space' || code === 'Enter' || code === 'KeyA' ? 'a' : code === 'ArrowLeft' ? 'left' : code === 'ArrowRight' ? 'right' : null;
     const onKey = (e) => {
       const w = document.getElementById('win-dreamlog');
-      if (!w || w.classList.contains('window-closed')) return;
+      if (!w || w.classList.contains('window-closed') || w.classList.contains('window-minimized')) return;
+      // someone typing in the terminal (or any field) keeps their letters —
+      // the arcade only owns the keys when nothing text-shaped has focus
+      if (e.target instanceof Element && e.target.closest('input, textarea, [contenteditable="true"]')) return;
       const k = keymap(e.code);
       if (!k) return;
       e.preventDefault();
@@ -11021,7 +11144,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const s = gbSprite.el.getBoundingClientRect();
         const r = gbSprite.ring.getBoundingClientRect();
         const dx = Math.abs((s.left + s.width / 2) - (r.left + r.width / 2));
-        if (dx < 26) {
+        // reduced motion parks the sprite at the start line (animation: none)
+        // so the ring can never be crossed — the press itself is the catch
+        if (REDUCED_MOTION || dx < 26) {
           playSparkleSound();
           dreamlogAdd(wid, gbSprite.m.id);
         } else {
@@ -14177,6 +14302,9 @@ document.addEventListener('DOMContentLoaded', () => {
     try { dreamAdaptOff(); } catch (e) { /* the theme leaves anyway */ }
     dreamWorld.timers.forEach((t) => { clearTimeout(t); clearInterval(t); });
     if (w.exit) { try { w.exit(); } catch (e) { /* the dream keeps its secrets */ } }
+    // fold the card table properly: node teardown alone leaves dwcState
+    // dangling, and the hearts fidget intervals idle forever against it
+    try { if (typeof dwcClose === 'function') dwcClose(); } catch (e) { /* already folded */ }
     dreamWorld.nodes.forEach((n) => { try { n.remove(); } catch (e) { /* already gone */ } });
     document.querySelectorAll('.dream-dlg, .scp-lock, .dream-geo-tape, .dream-slippy, .dream-gb-tetro, .dream-amber-slip').forEach((n) => n.remove());
     // the dream journal exists only inside dreams — it closes with the world
@@ -14186,11 +14314,13 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (e) { /* the journal tucked itself in */ }
     document.querySelectorAll('.scp-locked-body').forEach((n) => n.classList.remove('scp-locked-body'));
     document.documentElement.classList.remove('dreaming', w.cls);
-    try { rotateOutfit(false); } catch (e) { /* home rack, whenever it's ready */ }
     try { gSyncDreamSkin(); } catch (e) { /* the arcade wakes later */ }
     store.set('yos-dream', null);
     store.set('yos-dream-cd', Date.now() + 6 * 60000); // one reality bend per while
     dreamWorld = null;
+    // re-dress AFTER dreamWorld is nulled — wardrobePool() keys off it, and
+    // the old order woke the slime still wearing the dream world's rack
+    try { rotateOutfit(false); } catch (e) { /* home rack, whenever it's ready */ }
     if (reason === 'timer') {
       cheatFall(['💭', '✦', '♡'], 16);
       playStartupChime();
@@ -14544,6 +14674,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // long-press / right-click jumps straight back to AUTO — the escape hatch
     themeToggleBtn.addEventListener('contextmenu', (e) => {
       e.preventDefault();
+      e.stopPropagation(); // the document-level handler would ALSO open the Y2K context menu on this gesture
       setThemePref('auto');
       playSparkleSound();
       showToast(trT('🌗 theme: AUTO — back on the clock ♡', '🌗 thème : AUTO — de retour sur l\'horloge ♡'));
@@ -16246,6 +16377,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (it.act === 'slam') {
         if (it.warn > 0 && (it.warn >> 3) % 2) { g2.fillStyle = col; g2.font = "11px 'Jersey 25', 'VT323', monospace"; g2.fillText('!', it.x - 2, G_GROUND - 8); }
         if (it.slamT > 0) { g2.fillStyle = col; g2.fillRect(it.x - 12, 8, 24, G_GROUND - 40); }
+        g2.fillStyle = col; // warn/slamT both 0 → nothing above set it this frame
         g2.font = "12px sans-serif";
         g2.fillText(it.g, it.x - 6, 16);
         return;
@@ -16257,6 +16389,10 @@ document.addEventListener('DOMContentLoaded', () => {
         g2.fillText(it.g, it.x - 5, G_GROUND - 9);
         return;
       }
+      // fall/sweep/coinarc/prize: text glyphs (the coinarc '·' dots!) were
+      // painted in whatever fillStyle the previous draw left behind —
+      // sometimes the ground color, i.e. invisible pickups
+      g2.fillStyle = col;
       g2.font = (it.act === 'prize' ? '15px' : '12px') + ' sans-serif';
       g2.fillText(it.g, it.x - 6, (it.y || G_GROUND - 12) + 4);
     });
@@ -16378,7 +16514,12 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   function gStageTick() {
-    if (!gDreamSkin) { GAME.stage = null; return; }
+    if (!gDreamSkin) {
+      // hard-cut teardown (dream ended mid-stage): no invisible hitboxes left behind
+      if (GAME.stage) GAME.obs.forEach((o) => { if (o.hidden) { o.hidden = 0; o._pop = 14; } });
+      GAME.stage = null;
+      return;
+    }
     const st = GAME.stage;
     const sb = gSlimeBox();
     if (!st) {
@@ -16600,6 +16741,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (st.t > 1450) {
       st.phase = 'clear'; st.t = 0;
+      // route 1's reveal tick only runs during the run phase — any obstacle
+      // still crouching in the grass would stay an invisible hitbox and
+      // kill the player right under the STAGE CLEAR banner. flush them out.
+      GAME.obs.forEach((o) => { if (o.hidden) { o.hidden = 0; o._pop = 14; } });
       const bonus = 25 + (st.score || 0);
       fxScore(bonus);
       st.data.bonus = bonus;
@@ -17546,6 +17691,10 @@ document.addEventListener('DOMContentLoaded', () => {
     g2.setTransform(G_SCALE, 0, 0, G_SCALE, 0, 0);
     g2.imageSmoothingEnabled = false;
     GAME.frame++;
+    // the world's scroll phase: frame*speed is only linear while speed is
+    // constant — with the ramp it made ground dashes and puddles jitter and
+    // occasionally lurch backwards. an accumulator scrolls honestly.
+    if (GAME.state === 'run' && !GAME.nm) GAME.scrollPhase = (GAME.scrollPhase || 0) + gSpeed();
     g2.clearRect(0, 0, G_W, G_H);
 
     // the sponsor's 15 seconds tick down even while the world sleeps
@@ -17615,7 +17764,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       g2.fillStyle = 'rgba(108, 196, 245, 0.35)';
       for (let i = 0; i < 3; i++) {
-        const scroll = GAME.state === 'run' && !GAME.nm ? (GAME.frame * GAME.speed) % (G_W + 60) : 0;
+        const scroll = GAME.state === 'run' && !GAME.nm ? (GAME.scrollPhase || 0) % (G_W + 60) : 0;
         const px = ((i * 173 + 40 - scroll) % (G_W + 60) + (G_W + 60)) % (G_W + 60) - 30;
         g2.fillRect(px, G_GROUND + G_SLIME_S - 2, 26, 2);
       }
@@ -17718,7 +17867,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // dashed pixel ground (the world stands STILL during the nightmare)
     g2.fillStyle = (wxSnowy && !gDreamSkin) ? '#9fc4ea' : gTheme.purple; // fresh powder on snow days (never inside a dream)
-    const dashShift = (GAME.state === 'run' && !GAME.nm) ? (GAME.frame * GAME.speed) % 18 : 0;
+    const dashShift = (GAME.state === 'run' && !GAME.nm) ? (GAME.scrollPhase || 0) % 18 : 0;
     for (let x = -18; x < G_W + 18; x += 18) {
       g2.fillRect(x - dashShift, G_GROUND + G_SLIME_S - 4, 10, 3);
     }
@@ -20332,6 +20481,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     const root = document.getElementById('nm-summon-root');
     if (root) root.innerHTML = '';
+    // the résumé attack's HIRE ME stamp lives in the career window, outside
+    // the summon root — every non-click ending used to leave it there
+    const stamp = document.getElementById('nm-hire-stamp');
+    if (stamp) stamp.remove();
     if (GAME.nm) GAME.nm.attack = null;
   }
   function nmResolveAttack(dmg, noteEn, noteFr) {
@@ -20709,10 +20862,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const scr = document.createElement('div');
     scr.className = 'yos-bsod nm-bsod';
     const face = document.createElement('div');
-    face.className = 'yos-bsod-face';
+    face.className = 'bsod-face'; // the real BSOD's classes — 'yos-bsod-face' never existed in CSS
     face.textContent = ':(';
     const txt = document.createElement('div');
-    txt.className = 'yos-bsod-text';
+    txt.className = 'bsod-title';
     txt.textContent = trT('NIGHTMARE_OVERFLOW at 0xZZZ… press ANY key to banish the pink', 'NIGHTMARE_OVERFLOW à 0xZZZ… toute touche bannit le rose');
     scr.append(face, txt);
     const done = () => {
@@ -20819,6 +20972,12 @@ document.addEventListener('DOMContentLoaded', () => {
     GAME.pickup = null;
     GAME.event = null; // the nightmare clears the stage — no event dialogs mid-boss
     GAME.nextEventSec = 99999; // and none may interrupt (gNmWin re-arms below)
+    // …and it clears the SHOW: a stage or gimmick frozen mid-act (blackout
+    // curtain, closed eyelids, dialog plates) would render all fight long,
+    // because the nm branch never ticks them again
+    GAME.stage = null; GAME.stageAt = 0;
+    GAME.gimmick = null; GAME.nextGimmickAt = 0;
+    GAME.showBanner = null;
     // ⚡ GRAND ENTRANCE: rumble, alarm arpeggio, the works
     playGlitchSound();
     playTone(65, 'sawtooth', 0.5, 0, 0.12);
@@ -21987,7 +22146,10 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
       if (ev.cursed) {
-        GAME.weapon = { id: ev.weapon.id, rate: ev.weapon.rate, name: ev.weapon.name };
+        // pixKind rides along: dream-pack cursed weapons carry their v106
+        // firing school (twin/arc/pierce) in it — dropping it made them all
+        // fire generic single shots until a keepsake restore
+        GAME.weapon = { id: ev.weapon.id, rate: ev.weapon.rate, name: ev.weapon.name, pixKind: ev.weapon.pixKind };
         ev.weapon.fx();
         gEndEvent(ev.weapon.reveal);
       } else {
@@ -22076,6 +22238,10 @@ document.addEventListener('DOMContentLoaded', () => {
   var coachRebelN = 0; // ignored recommendations — the coach remembers
 
   function gStartCoach() {
+    // the flight takes ~2.6s — by landing the visitor may have restarted
+    // (or an ad revive may be rolling). a coach card over a LIVE run
+    // freezes it mid-jump, so the coach only counsels a dead one.
+    if (GAME.state !== 'over' || GAME.event || !gameWindowVisible()) return;
     const pool = [...REWARD_BUFFS];
     const opts = [];
     for (let i = 0; i < 3; i++) opts.push(pool.splice(gStateHash('co' + i) % pool.length, 1)[0]);
@@ -22502,8 +22668,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function lbEsc(str) {
     // v117: names are worldwide now — keep letters in EVERY script (永善
-    // used to come back as '???'), digits, and the house glyphs
-    const clean = Array.from(String(str)).filter((ch) => /[\p{L}\p{N}♡★]/u.test(ch)).slice(0, 3).join('');
+    // used to come back as '???'), digits, and the house glyphs.
+    // \p{M} rides along: Thai vowels, Devanagari matras, Arabic harakat
+    // are combining MARKS, not letters — dropping them mangled क्षि to कष.
+    const kept = Array.from(String(str)).filter((ch) => /[\p{L}\p{M}\p{N}♡★]/u.test(ch)).join('');
+    // three GRAPHEMES, not three code points — a mark must never be
+    // beheaded from its base letter by the slice
+    const clean = (typeof Intl !== 'undefined' && Intl.Segmenter)
+      ? Array.from(new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(kept), (seg) => seg.segment).slice(0, 3).join('')
+      : Array.from(kept).slice(0, 3).join('');
     return (clean.toUpperCase() || 'YOU');
   }
   function lbPendingGet() {
@@ -22529,6 +22702,7 @@ document.addEventListener('DOMContentLoaded', () => {
   /* ---- v99: the hall goes WORLDWIDE. when the backend answers, the
      top-10 list shows the one shared board every visitor sees; the
      local board stays on as the offline fallback. ---- */
+  var lbHallFreshUntil = 0; // a just-signed board outranks cache-stale GETs
   function lbRenderHall(hall) {
     const listEl = document.getElementById('lb-local-list');
     if (!listEl) return;
@@ -22564,11 +22738,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!listEl) return;
 
     // worldwide board, when reachable (local render below stands in
-    // instantly and stays if the visitor is offline)
-    if (wallApi) {
+    // instantly and stays if the visitor is offline). a fresh POST /hall
+    // response outranks GET for 15s — the GET rides a 10s edge cache and
+    // would repaint the pre-signature list right over the new entry.
+    if (wallApi && Date.now() >= lbHallFreshUntil) {
       fetch(wallApi + '/hall')
         .then((r) => (r.ok ? r.json() : null))
-        .then((b) => { if (b && b.ok && Array.isArray(b.hall)) lbRenderHall(b.hall); })
+        .then((b) => { if (b && b.ok && Array.isArray(b.hall) && Date.now() >= lbHallFreshUntil) lbRenderHall(b.hall); })
         .catch(() => { /* offline: the local board holds the fort */ });
     }
 
@@ -22626,13 +22802,15 @@ document.addEventListener('DOMContentLoaded', () => {
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ n: initials, s: current })
             })
-              .then((r) => (r.ok ? r.json() : null))
+              // the worker speaks JSON even when it refuses (429 rate limit,
+              // 400 score cap) — parse every status or resp.error is dead code
+              .then((r) => r.json().catch(() => null))
               .then((resp) => {
                 if (resp && resp.made) showToast(trT('🌍 you are on the WORLDWIDE top-10!!', '🌍 tu es dans le TOP 10 MONDIAL !!'), { scroll: true });
                 // the POST response IS the fresh board — rendering it directly
                 // beats refetching into the 10s edge cache (which still shows
                 // the pre-signature list and made the signing look broken)
-                if (resp && Array.isArray(resp.hall)) lbRenderHall(resp.hall);
+                if (resp && Array.isArray(resp.hall)) { lbHallFreshUntil = Date.now() + 15000; lbRenderHall(resp.hall); }
                 else renderLeaderboard();
                 if (resp && resp.error) showToast(trT('🌍 worldwide board: ' + resp.error, '🌍 panthéon mondial : ' + resp.error), { scroll: true });
               })
@@ -23150,8 +23328,18 @@ document.addEventListener('DOMContentLoaded', () => {
      offline opening act; the cloud owns the truth. ---- */
   var yosStats = null;
   var yosStatsAt = 0;
+  var yosBumpGuard = {}; // key → {at, v}: bump-confirmed values outrank stale polls
   function statsApply(stats) {
     if (!stats) return;
+    // GET /stats rides a 30s edge cache — a poll can hand back a snapshot
+    // OLDER than a bump this browser just confirmed, visibly yanking the
+    // counter down ~35s after the user's own action. within the guard
+    // window, a lower polled value loses to the confirmed one.
+    Object.keys(yosBumpGuard).forEach((k) => {
+      const g2 = yosBumpGuard[k];
+      if (Date.now() - g2.at > 70000) { delete yosBumpGuard[k]; return; }
+      if (typeof stats[k] === 'number' && stats[k] < g2.v) stats[k] = g2.v;
+    });
     yosStats = stats;
     yosStatsAt = Date.now();
     if (typeof stats.fans === 'number' && pet && stats.fans !== pet.followers) {
@@ -23175,16 +23363,22 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   function statBump(key, n) {
     if (!wallApi) return;
+    // the worker caps one hop at +5 — bigger celebrations (konami +10,
+    // fans25 +25) ride as a caravan of ≤5 hops, otherwise the clamped
+    // echo visibly yanks back fans the HUD already granted
+    const hop = Math.max(-1, Math.min(5, n));
+    const rest = n > 5 ? n - 5 : 0;
     fetch(wallApi + '/bump', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ key: key, n: n })
+      body: JSON.stringify({ key: key, n: hop })
     })
       .then((r) => (r.ok ? r.json() : null))
       .then((b) => {
         if (!b || !b.ok) return;
+        yosBumpGuard[b.key] = { at: Date.now(), v: b.value };
         if (yosStats) yosStats[b.key] = b.value;
-        if (b.key === 'fans' && pet && typeof b.value === 'number' && b.value !== pet.followers) {
+        if (b.key === 'fans' && pet && typeof b.value === 'number' && b.value !== pet.followers && !rest) {
           pet.followers = b.value;
           updateSlimeHud();
         }
@@ -23193,6 +23387,7 @@ document.addEventListener('DOMContentLoaded', () => {
           syncLikeBtn();
           syncAnonFans();
         }
+        if (rest > 0) statBump(key, rest); // next wagon of the caravan
       })
       .catch(() => { /* the bump stays local; the next sync reconciles */ });
   }
@@ -23413,20 +23608,31 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     photoCountdown(() => {
-      const first = stageSnapshot(zoom);
-      const rc = document.createElement('canvas');
-      rc.width = first.cv.width; rc.height = first.cv.height;
-      const rx = rc.getContext('2d');
-      rx.drawImage(first.cv, 0, 0);
-      const stream = rc.captureStream(30);
-      const mime = MediaRecorder.isTypeSupported('video/mp4') ? 'video/mp4' : (MediaRecorder.isTypeSupported('video/webm') ? 'video/webm' : '');
-      const rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+      // window.MediaRecorder existing is no guarantee: captureStream, the
+      // constructor and start() can each still throw (codec/policy) — fail
+      // over to a photo instead of ending the countdown in silence
+      let rc, rx, stream, mime, rec;
+      try {
+        const first = stageSnapshot(zoom);
+        rc = document.createElement('canvas');
+        rc.width = first.cv.width; rc.height = first.cv.height;
+        rx = rc.getContext('2d');
+        rx.drawImage(first.cv, 0, 0);
+        stream = rc.captureStream(30);
+        mime = MediaRecorder.isTypeSupported('video/mp4') ? 'video/mp4' : (MediaRecorder.isTypeSupported('video/webm') ? 'video/webm' : '');
+        rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+      } catch (eRec) {
+        showBubble(trT('the camera jammed on video — have a photo instead!! 📸', 'la caméra a calé sur la vidéo — voilà une photo à la place !! 📸'), 2600);
+        photoShoot(zoom);
+        return;
+      }
       const chunks = [];
       rec.ondataavailable = (ev) => { if (ev.data && ev.data.size) chunks.push(ev.data); };
       const tag = document.createElement('div');
       tag.className = 'photo-rec-tag';
       tag.textContent = '● REC';
       liveStage.appendChild(tag);
+      rec.onerror = () => { try { tag.remove(); } catch (e4) {} };
       let stop = false;
       const draw = () => {
         if (stop) return;
@@ -23446,7 +23652,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (typeof renderAlbum === 'function') renderAlbum();
         openWindow('win-album');
       };
-      rec.start();
+      try {
+        rec.start();
+      } catch (eStart) {
+        tag.remove();
+        showBubble(trT('the camera jammed on video — have a photo instead!! 📸', 'la caméra a calé sur la vidéo — voilà une photo à la place !! 📸'), 2600);
+        photoShoot(zoom);
+        return;
+      }
       draw();
       setTimeout(() => { try { rec.stop(); } catch (e3) {} }, 4000);
     });
@@ -23580,7 +23793,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const gen = albumGen; // a tab switch re-renders the shell; late fetches must not touch the new render
     const load = (cursor) => wallList(cursor).then((res) => {
       if (gen !== albumGen) return;
-      if (!res) { note.textContent = trT('🌍 the wall is warming up — hang the first photo from a selfie ♡', '🌍 le mur chauffe — accroche la première photo depuis un selfie ♡'); if (!cursor) albumDeco(shell, 0); return; }
+      if (!res) {
+        // a FAILED page-2+ fetch must not rewrite the count note into the
+        // empty-wall greeting — the photos already on screen say otherwise
+        if (cursor) { note.textContent = trT(`🌍 THE WORLDWIDE WALL — ${wallSeen}+ framed visitors (more are shy — try again in a minute ♡)`, `🌍 LE MUR MONDIAL — ${wallSeen}+ visiteurs encadrés (les autres sont timides — réessaie dans une minute ♡)`); return; }
+        note.textContent = trT('🌍 the wall is warming up — hang the first photo from a selfie ♡', '🌍 le mur chauffe — accroche la première photo depuis un selfie ♡');
+        albumDeco(shell, 0);
+        return;
+      }
       wallSeen += res.photos.length;
       if (!cursor) albumDeco(shell, wallSeen); // deco density follows the REAL wall size
       albumSetHits(shell, wallSeen);
@@ -23919,6 +24139,7 @@ document.addEventListener('DOMContentLoaded', () => {
   ];
   function vibeStop() {
     window.__vibeOn = false;
+    if (window.__vibeActTimer) { clearTimeout(window.__vibeActTimer); window.__vibeActTimer = null; }
     const btn = document.getElementById('live-vibe');
     if (btn) { btn.setAttribute('aria-pressed', 'false'); btn.classList.remove('is-on'); }
     if (liveStage) {
@@ -23950,7 +24171,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     wxSfx(wxCurrent); // re-applies volume with the vibe duck
     showBubble(trT('you like listening to music? I ALSO like listening to music 😋', 'tu aimes écouter de la musique ? MOI AUSSI j\'aime écouter de la musique 😋'), 2800);
-    setTimeout(() => {
+    // cancelable + rechecked: a quick vibe-off used to let this fire anyway,
+    // re-dressing the stage with genre props that then never left
+    if (window.__vibeActTimer) clearTimeout(window.__vibeActTimer);
+    window.__vibeActTimer = setTimeout(() => {
+      window.__vibeActTimer = null;
+      if (!window.__vibeOn) return;
       showBubble(trT(genre.line[0], genre.line[1]), 3000);
       genre.act(liveStage);
       burstAtSlime(['🎧', '♪', '♥'], 6);
@@ -24785,15 +25011,20 @@ document.addEventListener('DOMContentLoaded', () => {
     blizzard: ['assets/wx/16_blizzard.mp3'],
     hurricane: ['assets/wx/21_hurricane_extreme_storm.mp3']
   };
-  var wxAudioEl = null;
+  var wxAudioEl = null, wxSfxKind = null;
   try { if (navigator.audioSession) navigator.audioSession.type = 'ambient'; } catch (e) { /* older WebKit */ }
   function wxSfx(kind) {
     if (!wxAudioEl) { wxAudioEl = new Audio(); wxAudioEl.loop = true; }
     const list = WX_SFX[kind];
-    if (!list || !liveOpen || !soundEnabled) { try { wxAudioEl.pause(); } catch (e) {} return; }
-    wxAudioEl.src = list[Math.floor(Math.random() * list.length)];
+    if (!list || !liveOpen || !soundEnabled) { try { wxAudioEl.pause(); } catch (e) {} wxSfxKind = null; return; }
     const wxCoarse = window.matchMedia('(pointer: coarse)').matches; // phones: whisper, not noise
     wxAudioEl.volume = (resolvedTheme() === 'dark' ? 0.06 : 0.13) * (wxCoarse ? 0.3 : 1) * (window.__vibeOn ? 0.15 : 1);
+    // same weather, still playing → volume refresh only. the 60s forecast
+    // check used to reroll the track and restart it from zero every minute
+    if (!(wxSfxKind === kind && !wxAudioEl.paused)) {
+      wxAudioEl.src = list[Math.floor(Math.random() * list.length)];
+      wxSfxKind = kind;
+    }
     if (!document.hidden && document.hasFocus()) wxAudioEl.play().catch(() => { /* pre-gesture */ });
   }
   function wxSfxStop() { if (wxAudioEl) { try { wxAudioEl.pause(); } catch (e) {} } }
@@ -24960,10 +25191,14 @@ document.addEventListener('DOMContentLoaded', () => {
   };
   function applyWx(kind) {
     if (!liveStage || WX_KINDS.indexOf(kind) === -1) return;
+    // unchanged forecast + sky already dressed → skip the sprite rebuild
+    // (the minute-refresh used to reshuffle the whole sky in place; theme
+    // flips rebuild through their own wxDecor call, so nothing is missed)
+    const sameSky = wxCurrent === kind && liveStage.querySelector('.wx-sprite');
     WX_KINDS.forEach((k) => liveStage.classList.remove('wx-' + k));
     liveStage.classList.add('wx-' + kind);
     wxCurrent = kind;
-    wxDecor(kind);
+    if (!sameSky) wxDecor(kind);
     wxSfx(kind);
     if (liveOpen && wxAnnounced !== kind && !dreamWorld) { // dreams have their own sky to talk about
       wxAnnounced = kind;
@@ -25011,7 +25246,9 @@ document.addEventListener('DOMContentLoaded', () => {
     a.loop = looping;
     const seg = looping ? 24 : Math.min(pick.dur, 27);
     const startAt = (!looping && pick.dur > seg) ? Math.random() * (pick.dur - seg) : 0;
-    const peak = (resolvedTheme() === 'dark') ? 0.07 : 0.55; // night honks are a whisper
+    // night honks are a whisper; VIBE mode ducks the flock like it ducks
+    // the weather bed (headphones on = the geese respect the playlist)
+    const peak = ((resolvedTheme() === 'dark') ? 0.07 : 0.55) * (window.__vibeOn ? 0.15 : 1);
     try { a.currentTime = startAt; } catch (e) { /* not seekable yet */ }
     a.volume = 0;
     a.play().catch(() => { /* autoplay gate — geese stay polite */ });
@@ -25680,7 +25917,7 @@ document.addEventListener('DOMContentLoaded', () => {
     fly.style.top = br.top + 'px';
     document.body.appendChild(fly);
     requestAnimationFrame(() => {
-      fly.style.transform = `translate(${sr.left + sr.width / 2 - br.left}px, ${sr.top + sr.height / 2 - br.top}px) scale(1.6)`;
+      fly.style.transform = `translate(${sr.left + sr.width / 2 - (br.left + br.width / 2)}px, ${sr.top + sr.height / 2 - br.top}px) scale(1.6)`; // measured from the fly's own center (left includes br.width/2)
       fly.style.opacity = '0';
     });
     setTimeout(() => fly.remove(), 900);
@@ -25928,11 +26165,20 @@ document.addEventListener('DOMContentLoaded', () => {
       EMOJI_CATS.forEach((c) => c.list.forEach(([e, kw]) => {
         if (e === q || kw.toLowerCase().indexOf(q) !== -1) hits.push([e, kw]);
       }));
-      if (hits.length) addSection(trT(`🔎 ${hits.length} found`, `🔎 ${hits.length} trouvés`), hits);
-      else {
+      if (hits.length) { addSection(trT(`🔎 ${hits.length} found`, `🔎 ${hits.length} trouvés`), hits); return; }
+      // not in the catalog? if they PASTED an emoji, honor it — this is
+      // the any-emoji road the old copy promised (and the only road to
+      // several MEGA blessings: the shop's own set covers just 2 of 8)
+      const typed = (typeof Intl !== 'undefined' && Intl.Segmenter)
+        ? [...new Intl.Segmenter('en', { granularity: 'grapheme' }).segment(q)].map((s) => s.segment)
+        : Array.from(q);
+      const emo = typed.find((s) => /\p{Extended_Pictographic}/u.test(s));
+      if (emo) {
+        addSection(trT('🎁 not in the shop — gift it anyway ♡', '🎁 pas en boutique — offre-le quand même ♡'), [[emo, '']]);
+      } else {
         const none = document.createElement('div');
         none.className = 'emoji-cat-label';
-        none.textContent = trT('nothing… the slime accepts ANY emoji via chat tho ♡', 'rien… le slime accepte TOUT emoji par le chat ♡');
+        none.textContent = trT('nothing… paste ANY emoji right here — the slime accepts it ♡', 'rien… colle N\'IMPORTE QUEL emoji ici — le slime accepte ♡');
         emojiBody.appendChild(none);
       }
       return;
@@ -25991,7 +26237,7 @@ document.addEventListener('DOMContentLoaded', () => {
     fly.style.top = br.top + 'px';
     document.body.appendChild(fly);
     requestAnimationFrame(() => {
-      fly.style.transform = `translate(${sr.left + sr.width / 2 - br.left}px, ${sr.top + sr.height / 2 - br.top}px) scale(1.6)`;
+      fly.style.transform = `translate(${sr.left + sr.width / 2 - (br.left + br.width / 2)}px, ${sr.top + sr.height / 2 - br.top}px) scale(1.6)`; // measured from the fly's own center (left includes br.width/2)
       fly.style.opacity = '0';
     });
     setTimeout(() => fly.remove(), 900);
@@ -26110,7 +26356,12 @@ document.addEventListener('DOMContentLoaded', () => {
       playTone(700 + (3 - n) * 160, 'square', 0.1, 0, 0.04);
       if (n-- > 1) { setTimeout(step, 800); return; }
       setTimeout(() => {
+        // the steps re-check the overlay each tick — the tail must too, plus
+        // whether rotating is still even wanted (user rotated the phone or
+        // closed the game during the 3…2…1)
+        if (!document.body.contains(ov)) return;
         ov.remove();
+        if (!gameNeedsRotate() || win.classList.contains('window-closed')) return;
         gameRotated = true;
         win.classList.add('game-rotated');
         playSparkleSound();
@@ -26727,12 +26978,16 @@ document.addEventListener('DOMContentLoaded', () => {
         camBlob = { cls: best, x: bx2, y: by2, streak: 1 };
       }
       if (camBlob.streak === 9 && Date.now() - (camTypeAt['drink-' + best] || 0) > 180000) {
-        camTypeAt['drink-' + best] = Date.now();
         const line = CAM_DRINKS[best];
         const guess = Math.random() < 0.35;
-        camSay('drink',
+        // stamp the 3-min per-colour cooldown ONLY if the line was actually
+        // said — camSay can refuse (5s global / 20s type cooldown), and the
+        // old order burned the compliment without ever delivering it
+        if (camSay('drink',
           line[0] + (guess ? ' (I judged by colour… was I right??)' : ''),
-          line[1] + (guess ? " (j'ai jugé à la couleur… j'ai bon ??)" : ''), 1);
+          line[1] + (guess ? " (j'ai jugé à la couleur… j'ai bon ??)" : ''), 1)) {
+          camTypeAt['drink-' + best] = Date.now();
+        }
       }
     } else if (camBlob) {
       camBlob.streak = Math.max(0, camBlob.streak - 1);
@@ -26815,7 +27070,13 @@ document.addEventListener('DOMContentLoaded', () => {
       if (e.target instanceof Element && e.target.closest('input, textarea')) return;
       if (GAME.state === 'ad') {
         // the ad is unskippable… except by giving up the revive
-        if (e.code === 'Escape') { GAME.state = 'over'; playCloseSound(); }
+        if (e.code === 'Escape') {
+          GAME.state = 'over';
+          playCloseSound();
+          // the reaction cam docked for the ad — walking out un-docks it
+          const adCam = document.getElementById('game-reaction-cam');
+          if (adCam) adCam.classList.remove('cam-ad-dock');
+        }
         e.preventDefault();
         return;
       }
@@ -26844,6 +27105,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // Space would "click" it on keyup and minimize the game — defuse it
         const ae = document.activeElement;
         if (ae && ae !== gCanvas && (ae.tagName === 'BUTTON' || ae.tagName === 'A')) {
+          // …but a button INSIDE a window (the game's own quit, another
+          // app's controls) is real UI, not parked focus — keys stay theirs
+          if (ae.closest('.window')) return;
           ae.blur();
           gCanvas.classList.add('ring-off');
           gCanvas.focus({ preventScroll: true });
@@ -26886,8 +27150,8 @@ document.addEventListener('DOMContentLoaded', () => {
   /* =====================================================
      v3.0 — bonus wiring: slime reactions, AMA food topic
      ===================================================== */
-  windowReactions['win-search'] = 'searching?? the top results are all about her, just saying';
-  windowReactions['win-game'] = 'that runner slime? my stunt double. we\'re both adorable';
+  windowReactions['win-search'] = ['searching?? the top results are all about her, just saying', 'tu cherches ?? les meilleurs résultats parlent tous d\'elle, je dis ça'];
+  windowReactions['win-game'] = ['that runner slime? my stunt double. we\'re both adorable', 'ce slime coureur ? ma doublure cascade. on est adorables tous les deux'];
 
   AMA_TOPICS.push({
     web: true,
@@ -27195,7 +27459,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (key[0] === 's') {
       const i = Math.max(0, HIDDEN_SPECIES.findIndex((sp) => 's:' + sp.id === key));
       const t2 = 2 + (i % 3);                       // 2-4 for form ★★
-      return [t2, t2 + 3 + ((i * 5) % 5)];          // +3-7 more for APEX
+      // (i*5)%5 was identically 0 — every species hit APEX at exactly +3,
+      // flattening the intended 3-7 spread. ×3 is coprime with 5: real variety.
+      return [t2, t2 + 3 + ((i * 3) % 5)];          // +3-7 more for APEX
     }
     const seg = parseInt(key.slice(2), 10) || 0;
     const t2 = 3 + ((seg * 7) % 4);                 // 3-6 for form ★★
@@ -27285,6 +27551,15 @@ document.addEventListener('DOMContentLoaded', () => {
     return segs;
   }
   function pikdexWheelCount(dex) { return pikdexWheelSegs(dex).size; }
+  // distinct KINDS owned (50 hue slots + 22 hidden species): the honest
+  // fullness measure — raw entry counts drift upward when cross-device
+  // merges append duplicate kinds, and a dupe must never eat a '?' slot
+  function pikdexKindCount(dex) {
+    const d = dex || pikdexGet();
+    const sp = new Set();
+    d.forEach((p) => { if (p.sp != null) sp.add(p.sp); });
+    return pikdexWheelSegs(d).size + sp.size;
+  }
   function pikdexWheelPct(dex) { return Math.round((pikdexWheelCount(dex) / WHEEL_SEGS) * 100); }
   function pikdexWheelCheck(before) {
     const pct = pikdexWheelPct();
@@ -27323,8 +27598,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const dex = pikdexGet();
     pikCountBump(entry); // the evolution ledger counts EVERY pluck, first or fiftieth
     // the chameleon is capless (it lives in the wheel hub, not a slot);
-    // a full dex means this pluck is a DUPLICATE — ledger fuel, no new slot
-    if (!entry.ch && dex.filter((p) => !p.ch).length >= PIKDEX_CAP) return 'dup';
+    // a full dex means this pluck is a DUPLICATE — ledger fuel, no new slot.
+    // fullness = distinct KINDS, not entries: merged duplicates must never
+    // wedge the deck shut while '?' slots are still waiting
+    if (!entry.ch && pikdexKindCount(dex) >= PIKDEX_CAP) return 'dup';
     const before = pikdexWheelPct(dex);
     entry.a = pikdexActives(dex).length < PIK_MAX ? 1 : 0;
     entry.t = Date.now();
@@ -27753,8 +28030,10 @@ document.addEventListener('DOMContentLoaded', () => {
       );
     };
     if (pikLbCache && Date.now() - pikLbCacheAt < 600000) { paint(pikLbCache); return; }
+    // offline: say so — the old order wedged the label on "contacting…"
+    // with no fetch ever coming to resolve it
+    if (!navigator.onLine) { el.textContent = mine + ' · ' + trT('🌍 the worldwide meadow needs internet ♡', '🌍 la prairie mondiale a besoin d\'internet ♡'); return; }
     el.textContent = mine + ' · ' + trT('🌍 contacting the worldwide meadow…', '🌍 contact de la prairie mondiale…');
-    if (!navigator.onLine) return;
     Promise.all(Array.from({ length: PIKLB_TIERS.length + 1 }, (_, i) =>
       fetch(`${ACHV_API}/get/${ACHV_NS}/piklb-t${i}`).then((r) => (r.ok ? r.json() : { value: 0 })).then((d) => Math.max(0, Number(d.value) || 0)).catch(() => 0)
     )).then((counts) => { pikLbCache = counts; pikLbCacheAt = Date.now(); paint(counts); })
@@ -27818,7 +28097,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (lbLine && typeof pikLbRender === 'function') pikLbRender(lbLine);
     const squad = document.getElementById('pikdex-squadline');
     if (squad) {
-      const nonChN = dex.filter((p) => !p.ch).length;
+      const nonChN = pikdexKindCount(dex);
       const chTag = dex.some((p) => p.ch) ? ' · 🦎' : '';
       const lbTotal = pikCountTotal();
       squad.textContent = trT(
@@ -27963,8 +28242,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     const hint = document.getElementById('pikdex-hint');
     if (hint) {
-      const nonCh = dex.filter((p) => !p.ch).length;
-      if (nonCh >= PIKDEX_CAP) {
+      if (pikdexKindCount(dex) >= PIKDEX_CAP) {
         hint.textContent = trT('PIKDEX COMPLETE — 72/72!! the meadow now grows DUPLICATES: same kind × enough = EVOLUTION (3 forms each) ♡', 'PIKDEX COMPLET — 72/72 !! la prairie fait pousser des DOUBLONS : même espèce × assez = ÉVOLUTION (3 formes) ♡');
       } else if (dex.length) {
         hint.textContent = trT('tap a cell for the personnel file ♡ — 50 hues + 22 hidden species = a perfect 72. hidden sprouts ✨glitter✨, pluck them fast!!', 'touche une case pour le dossier ♡ — 50 teintes + 22 espèces cachées = un 72 parfait. les pousses cachées ✨scintillent✨, cueille-les vite !!');
@@ -29437,15 +29715,25 @@ document.addEventListener('DOMContentLoaded', () => {
         termLine(trT(`   this door is LOCKED — ${door.chain.length} locks, freshly shuffled for you alone.`, `   cette porte est VERROUILLÉE — ${door.chain.length} verrous, fraîchement mélangés rien que pour toi.`), 't-ok');
         termLine(trT('   (`hint` reprints the lock · `visitorfetch` & `matrix` & the whole shell still work)', '   (`hint` réaffiche le verrou · `visitorfetch` & `matrix` & tout le shell marchent)'), 't-dim');
         doorPuzzleShow(door);
-        // discoverability: if the visitor just stares, the greeter drives ONCE
+        // discoverability: if the visitor just stares, the greeter drives ONCE.
+        // ABORTABLE: the visitor starting to type mid-drive must not end up
+        // with 'helhint p' garbage — every keystroke checks the wheel is
+        // still exactly where the autopilot left it, and bails otherwise.
         window.__doorIdle = setTimeout(() => {
           if (!document.body.classList.contains('terminal-only')) return;
           const ti2 = document.getElementById('term-input');
           if (!ti2 || ti2.value) return;
           matrixGreeterSay(trT('no rush. here — I\'ll drive:', 'pas de stress. tiens — je conduis :'));
-          ['h', 'i', 'n', 't'].forEach((ch, i) => setTimeout(() => { ti2.value += ch; }, 700 + i * 240));
+          let expected = '';
+          let aborted = false;
+          ['h', 'i', 'n', 't'].forEach((ch, i) => setTimeout(() => {
+            if (aborted) return;
+            if (ti2.value !== expected) { aborted = true; return; } // human at the wheel
+            ti2.value += ch;
+            expected += ch;
+          }, 700 + i * 240));
           setTimeout(() => {
-            if (!document.body.classList.contains('terminal-only')) return;
+            if (aborted || ti2.value !== expected || !document.body.classList.contains('terminal-only')) return;
             if (ti2.form) ti2.form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
             setTimeout(() => matrixGreeterSay(trT('like THIS. your turn ♡', 'comme ÇA. à toi ♡')), 500);
           }, 1900);

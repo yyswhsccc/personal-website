@@ -110,7 +110,7 @@
     })();
   </script>
 
-  <link rel="stylesheet" href="style.css?v=122">
+  <link rel="stylesheet" href="style.css?v=123">
 <script>/* wrist-sized screens get the wrist edition */(function(){try{if(screen.width<=340&&screen.height<=430)location.replace('watch.html');}catch(e){}})();</script>
 </head>
 <body>
@@ -161,7 +161,10 @@
   <div class="crt-overlay" aria-hidden="true"></div>
 
   <!-- Midnight-mode starfield (visible only in dark mode) -->
-  <div class="night-sky" id="night-sky" aria-hidden="true"></div>
+  <!-- night-sky moved into .desktop-area: as a body child it spent its whole
+       life painted under the opaque .browser-frame (z-index 10) — 26 stars,
+       a moon and 7s shooting-star spawns, none of it ever visible -->
+
 
   <!-- Shared SVG Definitions for Y2K Icons -->
   <svg style="display: none;" aria-hidden="true">
@@ -303,40 +306,8 @@
     </defs>
   </svg>
 
-  <!-- Floating Y2K background decorations -->
-  <div class="decorations-bg" aria-hidden="true">
-    <div class="star-decor star-1">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0l3 9 9 3-9 3-3 9-3-9-9-3 9-3z"/></svg>
-    </div>
-    <div class="star-decor star-2">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0l3 9 9 3-9 3-3 9-3-9-9-3 9-3z"/></svg>
-    </div>
-    <div class="star-decor star-3">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0l3 9 9 3-9 3-3 9-3-9-9-3 9-3z"/></svg>
-    </div>
-
-    <div class="cloud-decor cloud-bottom-right">
-      <svg width="120" height="70" viewBox="0 0 120 70">
-        <path d="M 20 50 A 20 20 0 0 1 35 25 A 25 25 0 0 1 75 15 A 22 22 0 0 1 105 32 A 18 18 0 0 1 110 50 Z" fill="#ffffff" stroke="#c9a7f5" stroke-width="3" />
-        <line x1="16" y1="50" x2="114" y2="50" stroke="#c9a7f5" stroke-width="3" />
-        <path d="M 25 50 A 15 15 0 0 1 37 32" fill="none" stroke="#ffc2e2" stroke-width="2.5" />
-        <path d="M 72 20 A 20 20 0 0 1 98 35" fill="none" stroke="#ffc2e2" stroke-width="2.5" />
-      </svg>
-    </div>
-
-    <div class="cloud-decor cloud-top-left">
-      <svg width="90" height="50" viewBox="0 0 100 60">
-        <path d="M 15 45 A 15 15 0 0 1 25 22 A 20 20 0 0 1 60 15 A 18 18 0 0 1 85 30 A 15 15 0 0 1 90 45 Z" fill="#ffffff" stroke="#c9a7f5" stroke-width="2.5" />
-        <line x1="12" y1="45" x2="92" y2="45" stroke="#c9a7f5" stroke-width="2.5" />
-      </svg>
-    </div>
-
-    <div class="heart-decor heart-1">♥</div>
-    <div class="heart-decor heart-2">♡</div>
-    <div class="heart-decor heart-3">♥</div>
-    <div class="bow-decor bow-1">🎀</div>
-
-  </div>
+  <!-- (Y2K decorations moved inside .desktop-area — see below. As a body
+       child this layer animated invisibly under .browser-frame forever.) -->
 
   <!-- Main Retro Browser Wrapper -->
   <div class="browser-frame" id="top">
@@ -382,6 +353,45 @@
 
     <!-- Main Desktop Area -->
     <main class="desktop-area" id="main-desktop" tabindex="-1">
+
+      <!-- night sky (dark mode): rehomed from <body> where the opaque
+           browser-frame buried it — now it twinkles behind the windows -->
+      <div class="night-sky" id="night-sky" aria-hidden="true"></div>
+
+      <!-- Floating Y2K background decorations (rehomed for the same reason) -->
+      <div class="decorations-bg" aria-hidden="true">
+        <div class="star-decor star-1">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0l3 9 9 3-9 3-3 9-3-9-9-3 9-3z"/></svg>
+        </div>
+        <div class="star-decor star-2">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0l3 9 9 3-9 3-3 9-3-9-9-3 9-3z"/></svg>
+        </div>
+        <div class="star-decor star-3">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0l3 9 9 3-9 3-3 9-3-9-9-3 9-3z"/></svg>
+        </div>
+
+        <div class="cloud-decor cloud-bottom-right">
+          <svg width="120" height="70" viewBox="0 0 120 70">
+            <path d="M 20 50 A 20 20 0 0 1 35 25 A 25 25 0 0 1 75 15 A 22 22 0 0 1 105 32 A 18 18 0 0 1 110 50 Z" fill="#ffffff" stroke="#c9a7f5" stroke-width="3" />
+            <line x1="16" y1="50" x2="114" y2="50" stroke="#c9a7f5" stroke-width="3" />
+            <path d="M 25 50 A 15 15 0 0 1 37 32" fill="none" stroke="#ffc2e2" stroke-width="2.5" />
+            <path d="M 72 20 A 20 20 0 0 1 98 35" fill="none" stroke="#ffc2e2" stroke-width="2.5" />
+          </svg>
+        </div>
+
+        <div class="cloud-decor cloud-top-left">
+          <svg width="90" height="50" viewBox="0 0 100 60">
+            <path d="M 15 45 A 15 15 0 0 1 25 22 A 20 20 0 0 1 60 15 A 18 18 0 0 1 85 30 A 15 15 0 0 1 90 45 Z" fill="#ffffff" stroke="#c9a7f5" stroke-width="2.5" />
+            <line x1="12" y1="45" x2="92" y2="45" stroke="#c9a7f5" stroke-width="2.5" />
+          </svg>
+        </div>
+
+        <div class="heart-decor heart-1">♥</div>
+        <div class="heart-decor heart-2">♡</div>
+        <div class="heart-decor heart-3">♥</div>
+        <div class="bow-decor bow-1">🎀</div>
+
+      </div>
       <div class="desktop-layout">
 
         <!-- Left Area: Folder grid -->
@@ -1497,6 +1507,6 @@
   <div id="email-toast" class="toast-hidden" role="status" aria-live="polite">Email copied to clipboard! ♡</div>
 
   <script src="i18n.js?v=87"></script>
-  <script src="script.js?v=131"></script>
+  <script src="script.js?v=133"></script>
 </body>
 </html>
