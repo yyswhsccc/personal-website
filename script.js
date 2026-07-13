@@ -9966,7 +9966,7 @@ document.addEventListener('DOMContentLoaded', () => {
           dsL('fresh AAs found in the couch (emotionally). the LED glows brave again.', 'des piles AA trouvées dans le canapé (émotionnellement). la LED rebrille bravement.', 't-ok');
         } },
         wildbug: { d: ['a wild BUG appears!!', 'un BUG sauvage apparaît !!'], fx() {
-          try { dwBeatWildBug(); } catch (e) { dsL('the tall grass is empty. suspicious.', 'les hautes herbes sont vides. suspect.', 't-dim'); }
+          try { dwBeatWildBug(true); } catch (e) { dsL('the tall grass is empty. suspicious.', 'les hautes herbes sont vides. suspect.', 't-dim'); }
         } },
         catch: { d: ['throw the ball (wobble… wobble…)', 'lancer la ball (elle bouge… bouge…)'], fx() {
           dsL('you threw a ball at the BUG!', 'tu lances une ball sur le BUG !', 't-dim');
@@ -10657,6 +10657,38 @@ document.addEventListener('DOMContentLoaded', () => {
     g2.font = (size || 8) + "px 'Jersey 25', 'VT323', monospace";
     g2.fillText(txt, x, y);
   }
+  // word-wrap for the tiny screen: long prompts used to run off the bezel
+  function arTextWrap(g2, txt, x, y, shade, size, maxW, lineH) {
+    g2.fillStyle = AR_G[shade == null ? 0 : shade];
+    g2.font = (size || 8) + "px 'Jersey 25', 'VT323', monospace";
+    const words = String(txt).split(' ');
+    let line = '', yy = y;
+    words.forEach((w) => {
+      const probe = line ? line + ' ' + w : w;
+      if (g2.measureText(probe).width > (maxW || 140) && line) {
+        g2.fillText(line, x, yy);
+        yy += (lineH || size + 3 || 11);
+        line = w;
+      } else line = probe;
+    });
+    if (line) g2.fillText(line, x, yy);
+    return yy; // baseline of the last line, for stacking below
+  }
+  // per-mechanic control cards — the tutorial the cartridges never shipped
+  const AR_HOWTO = {
+    timing: ['[A] = stop it right in the zone', '[A] = arrête-le pile dans la zone'],
+    catch: ['[◄][►] move · catch good, dodge bad', '[◄][►] bouge · attrape le bon, évite le reste'],
+    dodge: ['[◄][►] dodge EVERYTHING', '[◄][►] esquive TOUT'],
+    flappy: ['[A] = flap up · gravity does the rest', '[A] = bats des ailes · la gravité fait le reste'],
+    mash: ['mash [A] as fast as you can!!', 'martèle [A] aussi vite que possible !!'],
+    memory: ['watch the code · replay it: [◄][A][►]', 'regarde le code · rejoue-le : [◄][A][►]'],
+    whack: ['[◄]=left · [A]=middle · [►]=right hole', '[◄]=gauche · [A]=milieu · [►]=trou droit'],
+    snipe: ['the crosshair drifts · [A] = fire', 'le viseur dérive · [A] = tire'],
+    redlight: ['HOLD [A] to sneak · freeze when watched', 'MAINTIENS [A] pour avancer · fige sous le regard'],
+    pong: ['[◄][►] move the paddle', '[◄][►] déplace la raquette'],
+    race: ['[A] = jump the obstacles', '[A] = saute les obstacles'],
+    defuse: ['[A] exactly at 0.0 — not before', '[A] pile à 0.0 — pas avant']
+  };
 
   /* ---- the 12 mechanics. each: init(s,p) / tick(s,p,inp) / draw(s,p,g2)
      s.win / s.lose end the round; s.t counts frames (60/s). ---- */
@@ -10966,7 +10998,9 @@ document.addEventListener('DOMContentLoaded', () => {
     marq.className = 'dl-gb-ar-head';
     host.appendChild(marq);
     const cv = document.createElement('canvas');
-    cv.width = AR_W * 2; cv.height = AR_H * 2;
+    // 4× backing store: at 2× the CSS upscale blurred every glyph — the
+    // user report was literally "字和图案都有点太糊太小"
+    cv.width = AR_W * 4; cv.height = AR_H * 4;
     cv.className = 'dl-gb-ar-screen';
     host.appendChild(cv);
     const pads = document.createElement('div');
@@ -10977,7 +11011,7 @@ document.addEventListener('DOMContentLoaded', () => {
     host.appendChild(pads);
     const g2 = cv.getContext('2d');
     g2.imageSmoothingEnabled = false;
-    g2.setTransform(2, 0, 0, 2, 0, 0);
+    g2.setTransform(4, 0, 0, 4, 0, 0);
 
     const held = { a: 0, left: 0, right: 0 };
     const edges = { a: 0, left: 0, right: 0 };
@@ -11005,7 +11039,8 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('keyup', onKey);
 
     let game = pool[Math.floor(Math.random() * pool.length)];
-    let mode = 'title', mT = 0, s = null;
+    // first boot ever → the tutorial card the cartridges never shipped
+    let mode = store.get('yos-gb-arcade-tut', 0) ? 'title' : 'tut', mT = 0, s = null;
     try { window.__yosARC = { state: () => ({ mode, id: game.id, t: s && s.t, n: s && s.n, win: s && s.win, lose: s && s.lose }) }; } catch (e) { /* no toys */ }
     const bootGame = (g) => { game = g; mode = 'title'; mT = 0; s = null; playTone(523, 'square', 0.07, 0, 0.04); playTone(784, 'square', 0.07, 0.09, 0.04); syncHead(); };
     const syncHead = () => {
@@ -11026,10 +11061,21 @@ document.addEventListener('DOMContentLoaded', () => {
       for (let y = 0; y < AR_H; y += 8) g2.fillRect(0, y, AR_W, 1); // faint scanlines
       const inp = { a: edges.a, leftEdge: edges.left, rightEdge: edges.right, left: held.left, right: held.right, aHeld: held.a };
       edges.a = edges.left = edges.right = 0;
-      if (mode === 'title') {
-        arText(g2, trT(game.name[0], game.name[1]), 12, 34, 0, 12);
-        arText(g2, trT(game.prompt[0], game.prompt[1]), 12, 52, 1, 8);
-        arText(g2, trT('[A] boot · [►] browse the shelf', '[A] jouer · [►] parcourir'), 12, 76, 0, 8);
+      if (mode === 'tut') {
+        // one-time welcome: what this even IS, and how to hold it
+        arText(g2, trT('☆ BONUS ARCADE ☆', '☆ ARCADE BONUS ☆'), 12, 18, 0, 13);
+        arTextWrap(g2, trT('dex complete!! the tall grass grew 35 tiny cartridges.', 'dex complet !! les hautes herbes ont fait pousser 35 mini-cartouches.'), 12, 32, 1, 8, 140, 10);
+        arText(g2, trT('[►] browse the shelf', '[►] parcourir l\'étagère'), 12, 60, 0, 9);
+        arText(g2, trT('[A] boot a cartridge', '[A] lancer une cartouche'), 12, 72, 0, 9);
+        arTextWrap(g2, trT('win all 35 = DREAM BOY CHAMPION ♡', 'gagne les 35 = CHAMPION DREAM BOY ♡'), 12, 86, 1, 8, 140, 10);
+        if (inp.a || inp.rightEdge) { store.set('yos-gb-arcade-tut', 1); mode = 'title'; }
+      } else if (mode === 'title') {
+        arText(g2, trT(game.name[0], game.name[1]), 12, 22, 0, 13);
+        const py = arTextWrap(g2, trT(game.prompt[0], game.prompt[1]), 12, 36, 1, 9, 140, 11);
+        // the control card: which buttons THIS mechanic actually listens to
+        const how = AR_HOWTO[game.tpl];
+        if (how) arTextWrap(g2, trT(how[0], how[1]), 12, Math.max(py + 13, 62), 0, 9, 140, 11);
+        arText(g2, trT('[A] boot · [►] browse the shelf', '[A] jouer · [►] parcourir'), 12, 90, 0, 8);
         if (inp.a) { mode = 'ready'; mT = 0; }
         else if (inp.rightEdge) bootGame(pool[Math.floor(Math.random() * pool.length)]); // window shopping ♡
       } else if (mode === 'ready') {
@@ -11054,10 +11100,10 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (s.lose) { mode = 'lost'; mT = 0; playTone(220, 'square', 0.14, 0, 0.06); playTone(160, 'square', 0.16, 0.15, 0.06); }
       } else { // won / lost
         mT++;
-        arText(g2, mode === 'won' ? trT('YOU WIN!!', 'GAGNÉ !!') : trT('GAME OVER', 'GAME OVER'), 48, 30, 0, 14);
+        arText(g2, mode === 'won' ? trT('YOU WIN!!', 'GAGNÉ !!') : trT('GAME OVER', 'GAME OVER'), 44, 26, 0, 14);
         const line = mode === 'won' ? game.win : game.lose;
-        arText(g2, trT(line[0], line[1]), 8, 50, 1, 7);
-        arText(g2, trT('[A] again · [►] next cartridge', '[A] encore · [►] cartouche suivante'), 12, 78, 0, 8);
+        arTextWrap(g2, trT(line[0], line[1]), 10, 44, 1, 8, 142, 10);
+        arText(g2, trT('[A] again · [►] next cartridge', '[A] encore · [►] cartouche suivante'), 12, 88, 0, 8);
         if (inp.a) { mode = 'ready'; mT = 0; }
         else if (inp.rightEdge) bootGame(pool[Math.floor(Math.random() * pool.length)]);
       }
@@ -11116,6 +11162,9 @@ document.addEventListener('DOMContentLoaded', () => {
       } else if (n >= cat.length) {
         // v104: dex complete → the tall grass grows an ARCADE. a random
         // BONUS CARTRIDGE boots on every visit ([►] shuffles the shelf)
+        // …and the window hint stops talking about catching moments: that
+        // chapter is OVER, the arcade needs its own instructions up top
+        hint.textContent = trT('DEX COMPLETE!! the grass grew an arcade: [◄►/A on screen or keyboard] · [►] browse 35 cartridges · [A] play · win them ALL for the champion crown ♡', 'DEX COMPLET !! l\'herbe a fait pousser une arcade : [◄►/A à l\'écran ou au clavier] · [►] parcourir les 35 cartouches · [A] jouer · gagne-les TOUTES pour la couronne ♡');
         if (dlGbArcadeMount(stage)) {
           body.appendChild(stage);
           const list0 = document.createElement('div');
@@ -13510,8 +13559,17 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // gameboy: A WILD BUG APPEARED — a tiny turn-based battle box
-  function dwBeatWildBug() {
+  function dwBeatWildBug(force) {
     if (document.querySelector('.dream-dlg')) return;
+    // house rule: the wild BUG performs exactly TWICE per visitor, ever —
+    // one pop per button to try — and the encore keeps its distance (≥6 min).
+    // the terminal dialect (`force`) can always summon it on purpose.
+    if (!force) {
+      const seen = store.get('yos-gb-bug-pops', { n: 0, at: 0 });
+      if (seen.n >= 2) return;
+      if (seen.n === 1 && Date.now() - seen.at < 360000) return;
+      store.set('yos-gb-bug-pops', { n: (seen.n || 0) + 1, at: Date.now() });
+    }
     let hp = 3;
     const box = dreamDlg({
       title: trT('a wild BUG appeared!', 'un BUG sauvage apparaît !'),
@@ -16833,9 +16891,14 @@ document.addEventListener('DOMContentLoaded', () => {
         g2.fillRect(it.x - 1, it.y - 1, 2, 2);
       });
     } else if (k === 'route1') {
-      // the grass band over the floor line
-      for (let gx = -(GAME.frame * 2 % 18); gx < G_W; gx += 18) {
-        g2.fillStyle = (gx / 18) % 2 ? gLite('#57c689') : gDreamColor('#306230');
+      // the grass band over the floor line. each tuft keeps ONE color for
+      // its whole ride across the screen — the old key was the scrolling x
+      // divided by the stride (fractional!), which re-rolled every tuft's
+      // color every frame: a full-band 60Hz strobe. photosensitive-hostile.
+      const ph = Math.floor(GAME.scrollPhase || 0);
+      let tuft = Math.floor(ph / 18);
+      for (let gx = -(ph % 18); gx < G_W; gx += 18, tuft++) {
+        g2.fillStyle = tuft % 2 ? gLite('#57c689') : gDreamColor('#306230');
         g2.fillRect(gx, G_GROUND - 8, 4, 8);
         g2.fillRect(gx + 7, G_GROUND - 12, 3, 12);
       }
@@ -20324,10 +20387,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const shift = (GAME.adT * 0.8) % 46;
     for (let x = -shift; x < G_W; x += 46) g2.fillText('AD ♡', x, 10);
     if (!loopMode) {
+      // the countdown wears its OWN chip below the marquee — it used to be
+      // typeset straight across the AD ♡ strip, hourglass and all
       g2.textAlign = 'right';
-      g2.fillStyle = tintInk; // countdown sits on the raw tint, not the card
       g2.font = "12px 'Jersey 25', 'VT323', monospace";
-      g2.fillText(`⏳ ${tLeft}s`, G_W - 6, 15);
+      const ctTxt = `⏳ ${tLeft}s`;
+      const ctW = g2.measureText(ctTxt).width;
+      g2.fillStyle = 'rgba(10, 6, 16, 0.85)';
+      g2.fillRect(G_W - ctW - 16, 15, ctW + 14, 17);
+      g2.fillStyle = '#ffffff';
+      g2.fillText(ctTxt, G_W - 8, 28);
     }
     g2.textAlign = 'center';
     if (loopMode) {
@@ -21646,20 +21715,23 @@ document.addEventListener('DOMContentLoaded', () => {
       const hop = Math.abs(Math.sin(GAME.frame * 0.18 + p.phase)) * (GAME.y > 0 ? 7 : 3);
       const by = G_GROUND - (bh + 3) - hop;
       const mx = bx + Math.round(bw / 2) - 1; // stem anchor
-      g2.fillStyle = gDreamColor('#57c689'); // stem
+      // pikmin are CHARACTERS — same decree as the slime: dream worlds may
+      // redress the scenery, but a buddy's body keeps its true colors
+      // (the DMG ramp used to march the whole squad out in uniform green)
+      g2.fillStyle = '#57c689'; // stem
       g2.fillRect(mx, by - 5, 2, 5);
-      if (p.stage === 0) { g2.fillStyle = gDreamColor('#7ddba4'); g2.fillRect(mx - 2, by - 7, 3, 2); }
-      else if (p.stage === 1) { g2.fillStyle = gDreamColor(p.dark); g2.fillRect(mx - 2, by - 8, 4, 3); }
+      if (p.stage === 0) { g2.fillStyle = '#7ddba4'; g2.fillRect(mx - 2, by - 7, 3, 2); }
+      else if (p.stage === 1) { g2.fillStyle = p.dark; g2.fillRect(mx - 2, by - 8, 4, 3); }
       else {
-        g2.fillStyle = gDreamColor('#ffffff');
+        g2.fillStyle = '#ffffff';
         g2.fillRect(mx - 3, by - 8, 2, 2); g2.fillRect(mx + 2, by - 8, 2, 2); g2.fillRect(mx - 1, by - 10, 3, 2);
-        g2.fillStyle = gDreamColor('#ffd400'); g2.fillRect(mx - 1, by - 8, 3, 2);
+        g2.fillStyle = '#ffd400'; g2.fillRect(mx - 1, by - 8, 3, 2);
       }
-      g2.fillStyle = gDreamColor(p.color); // glowing jelly body (dream-dyed)
+      g2.fillStyle = p.color; // glowing jelly body, true to itself
       g2.fillRect(bx, by, bw, bh); g2.fillRect(bx + 1, by + bh, bw - 2, 2);
-      if (p.form === 3) { g2.fillStyle = gDreamColor('#ffd400'); g2.fillRect(bx - 1, by - 1, bw + 2, 1); } // apex gold rim
+      if (p.form === 3) { g2.fillStyle = '#ffd400'; g2.fillRect(bx - 1, by - 1, bw + 2, 1); } // apex gold rim
       g2.fillStyle = 'rgba(255,255,255,0.7)'; g2.fillRect(bx + 1, by + 1, 2, 2);
-      g2.fillStyle = gDreamColor('#14020e'); // eyes
+      g2.fillStyle = '#14020e'; // eyes
       g2.fillRect(bx + 2, by + Math.round(bh * 0.38), 2, 2);
       g2.fillRect(bx + bw - 4, by + Math.round(bh * 0.38), 2, 2);
       if (p.hat) { // hidden species wear their hats into battle, obviously

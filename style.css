@@ -9251,9 +9251,48 @@ html[data-theme="dark"].dream-gameboy #desk-pik-layer img,
 html[data-theme="dark"].dream-gameboy .profile-avatar-wrapper img,
 html[data-theme="dark"].dream-gameboy .profile-avatar-wrapper canvas,
 html[data-theme="dark"].dream-gameboy .slime-coach img,
-html[data-theme="dark"].dream-gameboy .pik-parade img {
+html[data-theme="dark"].dream-gameboy .pik-parade img,
+/* pikmin are CHARACTERS, not scenery — same decree as the slime: costumes
+   change, bodies never get dyed. the dex shows their true colors. */
+html[data-theme="dark"].dream-gameboy #win-pikdex img,
+html[data-theme="dark"].dream-gameboy #win-pikdex canvas {
   filter: none;
 }
+/* DEX.GB readability: the dark theme hardcodes navy panels (#3a2452 家族)
+   while this dream re-inks text to DMG dark green — dark on dark, nothing
+   readable. in the dream boy's world, the dex prints on light paper. */
+html[data-theme="dark"].dream-gameboy .pikdex-top,
+html[data-theme="dark"].dream-gameboy .pikdex-squadline,
+html[data-theme="dark"].dream-gameboy .pikdex-cell,
+html[data-theme="dark"].dream-gameboy .pikdex-float,
+html[data-theme="dark"].dream-gameboy .pikdex-hidden-head {
+  background: #9bbc0f;
+  background-image: none;
+  box-shadow: 2px 2px 0 #0f380f;
+  border-color: #306230;
+  color: #0f380f;
+}
+html[data-theme="dark"].dream-gameboy .pikdex-pct { color: #0f380f; text-shadow: 2px 2px 0 #c6dd5a; }
+html[data-theme="dark"].dream-gameboy .pikdex-wheel-note,
+html[data-theme="dark"].dream-gameboy .pikdex-hint,
+html[data-theme="dark"].dream-gameboy .pikdex-cell-name,
+html[data-theme="dark"].dream-gameboy .pikdex-heading { color: #0f380f; }
+html[data-theme="dark"].dream-gameboy .pikdex-wheel-center { color: #0f380f; text-shadow: 1px 1px 0 #c6dd5a; }
+html[data-theme="dark"].dream-gameboy .pikdex-float-btn { background: #8bac0f; color: #0f380f; }
+html[data-theme="dark"].dream-gameboy .pikdex-float-btn.is-picked { background: #306230; color: #9bbc0f; }
+html[data-theme="dark"].dream-gameboy .pikdex-lb-line {
+  background: #a3c11c;
+  border-color: #0f380f;
+  color: #0f380f;
+}
+/* the album's translucent candy banners turn to mud on DMG olive —
+   print them on solid light paper with dark ink instead */
+html[data-theme="dark"].dream-gameboy .album-note {
+  background: #9bbc0f;
+  border-color: #0f380f;
+  color: #0f380f;
+}
+html[data-theme="dark"].dream-gameboy .album-empty { color: #0f380f; }
 .dream-gb-boot {
   position: fixed;
   inset: 0;
@@ -11538,6 +11577,13 @@ html[data-theme="dark"].dream-bsod .console-btn-eject .console-btn-icon { color:
 html[data-theme="dark"].dream-amber .console-btn-eject { background: linear-gradient(#ffb000, #d68d00); }
 html[data-theme="dark"].dream-amber .console-btn-eject .console-btn-label,
 html[data-theme="dark"].dream-amber .console-btn-eject .console-btn-icon { color: #1a0e00; text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.3); }
+/* house decree: inside ANY dream, console button labels (hall of slime /
+   quit game) drop their shadows — the offset copy read as double vision
+   against the dream palettes instead of adding depth */
+html[data-theme="dark"].dreaming .console-btn-label,
+html[data-theme="dark"].dreaming .console-btn-icon,
+html[data-theme="dark"].dreaming .console-btn-eject .console-btn-label,
+html[data-theme="dark"].dreaming .console-btn-eject .console-btn-icon { text-shadow: none; }
 
 /* ==== v109: THE CARD TABLE (win95 dream) — green felt, beige chrome ==== */
 .dwc-win {
