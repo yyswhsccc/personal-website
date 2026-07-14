@@ -12064,3 +12064,30 @@ html.scp-form-2521 .fan-avatar:nth-child(4n)::after { content: '●'; }
 @media (prefers-reduced-motion: reduce) {
   html[class*="scp-form-"] .fan-avatar canvas, html[class*="scp-form-"] .fan-avatar::after { animation: none !important; }
 }
+
+/* ==== v118.2: CINEMA MODE for the fake-landscape phone game ====
+   while .game-rotated is on, the GAME IS THE OS. everything that
+   belongs to the portrait desktop — taskbar, the wandering pet and
+   its bubble, sleepwalkers, bullet chat, desk clutter, dream
+   critters — stands down instead of painting across the canvas. */
+body:has(.game-rotated) .desktop-taskbar,
+body:has(.game-rotated) #slime-pet,
+body:has(.game-rotated) #slime-speech-bubble,
+body:has(.game-rotated) .sleepwalker,
+body:has(.game-rotated) #mini-danmaku,
+body:has(.game-rotated) .desk-clock,
+body:has(.game-rotated) .desk-note,
+body:has(.game-rotated) .desk-sticker,
+body:has(.game-rotated) .dream-critter,
+body:has(.game-rotated) .dream-badge-rail,
+body:has(.game-rotated) .scp-mail-wrap,
+body:has(.game-rotated) .dwc-win {
+  display: none !important;
+}
+/* the side rail clips its own scripture — the mercy ticker was
+   running off the rail and across the field */
+.game-rotated .console-side { overflow: hidden; }
+.game-rotated .console-mercy { max-width: 100%; overflow: hidden; }
+/* the reaction cam keeps its pet INSIDE the frame */
+.game-rotated .game-reaction-cam,
+.game-rotated .game-reaction-cam .profile-avatar-wrapper { overflow: hidden; }
