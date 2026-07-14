@@ -3466,10 +3466,19 @@ html[data-theme="dark"] .game-reaction-cam {
   height: 100vw !important;
   width: 100dvh !important;
   height: 100dvw !important;
+  /* immune to the mobile .window max-height clamp — a poisoned
+     --taskbar-avoid-bottom once made this calc negative and crushed
+     the whole rotated console to an 8px sliver */
+  max-height: none !important;
+  min-height: 0 !important;
   transform: rotate(90deg) translateY(-100%) !important;
   transform-origin: top left !important;
-  z-index: 4000;
+  /* beats the focus manager's inline z — the rotated game IS the OS */
+  z-index: 4000 !important;
   margin: 0 !important;
+  /* and NO transitions: a mid-flight transform transition can pin the
+     rotation at frame zero if anything rewrites inline styles */
+  transition: none !important;
 }
 .game-rotated .game-reaction-cam { width: 132px; top: 40px; right: 6px; }
 .game-rotated .game-reaction-cam .profile-avatar-wrapper { height: 84px; }
@@ -12084,10 +12093,33 @@ body:has(.game-rotated) .scp-mail-wrap,
 body:has(.game-rotated) .dwc-win {
   display: none !important;
 }
-/* the side rail clips its own scripture — the mercy ticker was
-   running off the rail and across the field */
-.game-rotated .console-side { overflow: hidden; }
-.game-rotated .console-mercy { max-width: 100%; overflow: hidden; }
-/* the reaction cam keeps its pet INSIDE the frame */
-.game-rotated .game-reaction-cam,
-.game-rotated .game-reaction-cam .profile-avatar-wrapper { overflow: hidden; }
+/* v118.3: the rotated rail, PROPERLY — on a phone the rail is one tidy
+   strip: two compact single-line pills, nothing else. the mercy ticker
+   and the reaction cam (which drags the live room's ON AIR badge along
+   with it — the reported "residue") stand down entirely. */
+.game-rotated .console-side {
+  overflow: hidden;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 4px 2px;
+}
+.game-rotated .console-mercy { display: none; }
+.game-rotated .game-reaction-cam { display: none; }
+.game-rotated .console-btn {
+  width: auto;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 12px;
+  box-shadow: 0 0 5px rgba(255, 255, 255, 0.55);
+}
+.game-rotated .console-btn-icon { font-size: 0.95rem; }
+.game-rotated .console-btn-label { font-size: 0.72rem; white-space: nowrap; }
+/* the cam slot and its LIVE label leave with the cam — the orphaned
+   pink 'LIVE● REC' chip was the reported residue */
+.game-rotated .console-screen,
+.game-rotated .console-screen-label { display: none; }

@@ -206,6 +206,8 @@ document.addEventListener('DOMContentLoaded', () => {
   function syncViewportChromeVars() {
     if (!desktopTaskbar) return;
     const taskbarRect = desktopTaskbar.getBoundingClientRect();
+    if (!taskbarRect.height) return; // hidden (cinema mode) — keep the last sane values,
+    // else avoid-bottom balloons past the viewport and max-height math goes negative
     const taskbarHeight = Math.ceil(taskbarRect.height);
     const taskbarBottomAvoid = Math.max(
       taskbarHeight + 12,
@@ -27121,6 +27123,10 @@ document.addEventListener('DOMContentLoaded', () => {
   function gameFitBig() {
     const win = document.getElementById('win-game');
     if (!win || win.classList.contains('window-closed')) return;
+    // NEVER while rotated: each inline transform write restarts the CSS
+    // transition on transform, and rapid resize events (mobile URL bar!)
+    // pinned the rotation at its starting frame forever
+    if (win.classList.contains('game-rotated')) return;
     const taskbarH = desktopTaskbar ? desktopTaskbar.offsetHeight : 48;
     win.style.position = 'fixed';
     win.style.left = '12px';
@@ -27285,6 +27291,7 @@ document.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('resize', () => {
     const gw = document.getElementById('win-game');
     if (gw && gw.classList.contains('window-game-big') && !gw.classList.contains('window-closed')) {
+      if (gw.classList.contains('game-rotated')) { if (typeof gFitCanvas === 'function') setTimeout(gFitCanvas, 80); return; }
       gameFitBig();
       if (typeof gFitCanvas === 'function') setTimeout(gFitCanvas, 80);
     }
