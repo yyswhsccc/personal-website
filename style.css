@@ -6500,6 +6500,73 @@ html[data-theme="dark"] .pikdex-squad-chip {
 }
 html[data-theme="dark"] .pikdex-squad-chip:hover { box-shadow: 2px 5px 0 #1c0f2e, 0 0 10px var(--purple-dark), inset 0 0 0 1px rgba(201, 167, 245, 0.25); }
 @media (prefers-reduced-motion: reduce) { .pikdex-squad-chip { transition: none; } }
+/* ---- the EVOLUTION CEREMONY: spotlight, charge, flash, gold ---- */
+.pik-evo {
+  position: fixed;
+  inset: 0;
+  z-index: 99996; /* above even the parade — a rite outranks a march */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at 50% 44%, rgba(90, 61, 110, 0.55), rgba(18, 6, 36, 0.93));
+  animation: pik-evo-in 0.4s ease;
+  cursor: pointer;
+}
+@keyframes pik-evo-in { from { opacity: 0; } }
+.pik-evo.is-out { opacity: 0; transition: opacity 0.6s ease; }
+.pik-evo-flash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; }
+.pik-evo.flashing .pik-evo-flash { animation: pik-evo-flashfx 0.55s ease; }
+@keyframes pik-evo-flashfx { 20% { opacity: 1; } 100% { opacity: 0; } }
+.pik-evo-stage { display: flex; flex-direction: column; align-items: center; gap: 16px; pointer-events: none; }
+.pik-evo-port { position: relative; }
+.pik-evo-sprite {
+  width: min(176px, 40vw);
+  image-rendering: pixelated;
+  filter: drop-shadow(0 0 16px rgba(255, 255, 255, 0.75));
+}
+.pik-evo.charging .pik-evo-sprite { animation: pik-evo-charge 0.5s ease-in-out infinite; }
+@keyframes pik-evo-charge {
+  50% { filter: drop-shadow(0 0 26px #ffffff) brightness(4) saturate(0.2); transform: scale(1.09); }
+}
+.pik-evo.revealed .pik-evo-sprite {
+  animation: pik-evo-land 0.7s ease;
+  filter: drop-shadow(0 0 10px #ffffff) drop-shadow(0 0 24px #ffd400);
+}
+@keyframes pik-evo-land { 30% { transform: scale(1.28) translateY(-16px); } }
+.pik-evo-hat { position: absolute; top: -26px; left: 50%; transform: translateX(-50%); font-size: 2rem; }
+.pik-evo-crown { position: absolute; top: -44px; left: 50%; transform: translate(-50%, -110px); font-size: 2.6rem; opacity: 0; }
+.pik-evo.revealed .pik-evo-crown { animation: pik-evo-crowndrop 0.9s ease 0.25s forwards; }
+@keyframes pik-evo-crowndrop {
+  from { transform: translate(-50%, -110px); opacity: 0; }
+  60% { opacity: 1; }
+  80% { transform: translate(-50%, 6px); }
+  100% { transform: translate(-50%, 0); opacity: 1; }
+}
+.pik-evo-title {
+  font-family: var(--font-pixel);
+  font-size: clamp(1.3rem, 5vw, 1.9rem);
+  color: #ffd400;
+  text-shadow: 2px 2px 0 #5a3d6e, 0 0 16px rgba(255, 212, 0, 0.85);
+  opacity: 0;
+}
+.pik-evo-sub {
+  font-family: var(--font-pixel);
+  font-size: clamp(0.9rem, 3.4vw, 1.15rem);
+  color: #ffffff;
+  text-shadow: 2px 2px 0 #5a3d6e;
+  opacity: 0;
+}
+.pik-evo.revealed .pik-evo-title, .pik-evo.revealed .pik-evo-sub { opacity: 1; transition: opacity 0.5s ease; }
+.pik-evo-hint {
+  font-family: var(--font-pixel);
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.55);
+  margin-top: 6px;
+}
+.pik-evo-dust { z-index: 99997; font-size: 1rem; }
+@media (prefers-reduced-motion: reduce) {
+  .pik-evo, .pik-evo-flash, .pik-evo-sprite, .pik-evo-crown { animation: none !important; }
+}
 
 /* --- the shoebox grid --- */
 .pikdex-grid {

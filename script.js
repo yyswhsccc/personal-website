@@ -23175,7 +23175,7 @@ document.addEventListener('DOMContentLoaded', () => {
       },
       game() { return GAME; } // raw state, for scripted playtests only
     };
-    window.__yosPik = { roll: pikRollSprout, counts: pikCounts, add: pikdexAdd, total: pikCountTotal, form: pikFormOfKind, th: pikThresholds, pull: watchPullSync, enc: pikCountsEncode, dec: pikCountsMergeRemote };
+    window.__yosPik = { roll: pikRollSprout, counts: pikCounts, add: pikdexAdd, total: pikCountTotal, form: pikFormOfKind, th: pikThresholds, pull: watchPullSync, enc: pikCountsEncode, dec: pikCountsMergeRemote, evo: pikEvolveCelebrate, cinema: pikEvolveCinema };
   } catch (e) { /* no window, no toys */ }
 
   /* — the random checkpoint disk: catch it mid-fight, keep your progress
@@ -27068,11 +27068,106 @@ document.addEventListener('DOMContentLoaded', () => {
     const apex = cnt === th[1];
     playFanfare();
     cheatFall(apex ? ['👑', '✨', '⭐'] : ['✨', '⭐'], 14);
+    try { pikEvolveCinema(kk, apex); } catch (e) { /* the ceremony is optional; the gold is not */ }
     showBubble(apex
       ? trT('APEX FORM!!! that kind walks in GOLD now — go look!!', 'FORME APEX !!! cette espèce marche en OR maintenant — va voir !!')
       : trT('IT EVOLVED!! ★★ gold medal, bigger stride — go look!!', 'ÉVOLUTION !! ★★ médaille d\'or, plus grande foulée — va voir !!'), 3600);
     try { deskPikResync(); } catch (e) { /* the meadow re-dresses on respawn */ }
     try { if (typeof renderPikdex === 'function') renderPikdex(); } catch (e) { /* dex repaints on open */ }
+    return true;
+  }
+  // v158: the fullscreen EVOLUTION CEREMONY — a pokémon-grade rite:
+  // spotlight, white-hot charge, converging stardust, the flash, the
+  // reveal in gold (crown descends for APEX). click anywhere to skip.
+  function pikEvolveCinema(kk, apex) {
+    if (REDUCED_MOTION) return false; // the toast path already told the story
+    if (document.querySelector('.pik-evo')) return false;
+    const dex = pikdexGet();
+    const ix = dex.findIndex((q) => !q.loan && pikKindKey(q) === kk);
+    if (ix < 0) return false;
+    const p = dex[ix];
+    const name = pikNameOf(dex, ix);
+    const newForm = apex ? 3 : 2;
+    const ov = document.createElement('div');
+    ov.className = 'pik-evo charging';
+    const flash = document.createElement('div');
+    flash.className = 'pik-evo-flash';
+    ov.appendChild(flash);
+    const stageEl = document.createElement('div');
+    stageEl.className = 'pik-evo-stage';
+    const port = document.createElement('div');
+    port.className = 'pik-evo-port';
+    const img = document.createElement('img');
+    img.className = 'pik-evo-sprite';
+    img.alt = '';
+    img.src = pikSprite(pikEntryColor(p), p.s || 0, p.sp || null, false, newForm - 1);
+    port.appendChild(img);
+    const sp = p.sp ? pikSpecies(p.sp) : null;
+    if (sp) {
+      const hat = document.createElement('span');
+      hat.className = 'pik-evo-hat';
+      hat.textContent = sp.hat;
+      port.appendChild(hat);
+    }
+    if (apex && !sp) {
+      const crown = document.createElement('span');
+      crown.className = 'pik-evo-crown';
+      crown.textContent = '👑';
+      port.appendChild(crown);
+    }
+    const title = document.createElement('div');
+    title.className = 'pik-evo-title';
+    title.textContent = apex ? trT('👑 APEX EVOLUTION 👑', '👑 ÉVOLUTION APEX 👑') : trT('✨ EVOLUTION!! ✨', '✨ ÉVOLUTION !! ✨');
+    const sub = document.createElement('div');
+    sub.className = 'pik-evo-sub';
+    sub.textContent = name + (apex ? ' · ★★ → 👑' : ' · ★ → ★★');
+    const hint = document.createElement('div');
+    hint.className = 'pik-evo-hint';
+    hint.textContent = trT('(tap to continue)', '(touche pour continuer)');
+    stageEl.append(port, title, sub, hint);
+    ov.appendChild(stageEl);
+    document.body.appendChild(ov);
+    // stardust converges on the chosen one
+    const cx = () => window.innerWidth / 2 || 400, cy = () => (window.innerHeight / 2 || 300) - 40;
+    const dust = setInterval(() => {
+      const a = Math.random() * 6.2832, r = 130 + Math.random() * 120;
+      const s = document.createElement('span');
+      s.className = 'trail-sparkle pik-evo-dust';
+      s.textContent = Math.random() < 0.5 ? '✦' : '⭐';
+      s.style.left = (cx() + Math.cos(a) * r) + 'px';
+      s.style.top = (cy() + Math.sin(a) * r) + 'px';
+      s.style.color = ['#ffd400', '#ff8fc7', '#ffffff'][Math.floor(Math.random() * 3)];
+      document.body.appendChild(s);
+      s.addEventListener('animationend', () => s.remove());
+    }, 130);
+    // the charge sings upward
+    [0, 1, 2, 3, 4, 5, 6].forEach((i) => playTone(392 + i * 74, 'triangle', 0.12, 0.15 + i * 0.27, 0.035));
+    const timers = [];
+    let done = 0;
+    const finish = () => {
+      if (done) return;
+      done = 1;
+      clearInterval(dust);
+      timers.forEach((t) => clearTimeout(t));
+      ov.classList.add('is-out');
+      setTimeout(() => { try { ov.remove(); } catch (e) { /* already bowed */ } }, 650);
+    };
+    ov.addEventListener('click', finish);
+    timers.push(setTimeout(() => { // THE FLASH
+      ov.classList.remove('charging');
+      ov.classList.add('flashing');
+      playTone(1567.98, 'square', 0.18, 0, 0.05);
+      playTone(130, 'sawtooth', 0.3, 0.02, 0.05);
+    }, 2300));
+    timers.push(setTimeout(() => { // THE REVEAL
+      ov.classList.remove('flashing');
+      ov.classList.add('revealed');
+      img.src = pikSprite(pikEntryColor(p), p.s || 0, p.sp || null, false, newForm);
+      clearInterval(dust);
+      playFanfare();
+      playSparkleSound();
+    }, 2800));
+    timers.push(setTimeout(finish, 6400));
     return true;
   }
 
