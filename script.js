@@ -27118,6 +27118,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // a chunky plus-star — isolated 1px dots read as noise at walker scale
     const star = (sx, sy, col) => { px(sx, sy, col); px(sx - 1, sy, col); px(sx + 1, sy, col); px(sx, sy - 1, col); px(sx, sy + 1, col); };
     const blk = (sx, sy, col) => { px(sx, sy, col); px(sx + 1, sy, col); px(sx, sy + 1, col); px(sx + 1, sy + 1, col); }; // 2×2 block
+    const blob = (sx, sy, col, dot) => { // 3×3 with rounded corners: a chub
+      px(sx, sy - 1, col); px(sx - 1, sy, col); px(sx, sy, col); px(sx + 1, sy, col); px(sx, sy + 1, col);
+      if (dot) px(sx, sy, dot);
+    };
     /* ---- the thirteen archetypes (hue kinds) — BOLD cuts, v161.2 ---- */
     const ARCH = [
       function horns() { // merge horns: 2×2 stubs, gold tips at APEX
@@ -27197,10 +27201,11 @@ document.addEventListener('DOMContentLoaded', () => {
         [-3, 0, 3].forEach((k, i) => { px(cx + k, h, i === 1 ? '#7ee787' : '#2ea043'); px(cx + k, h + 0, '#2ea043'); });
         if (epic) { px(cx - 2, h, '#7ee787'); px(cx + 2, h, '#7ee787'); rim('#2ea043'); }
       },
-      pointer() { // a REAL second cursor
-        const r = edgeR(bodyTop + 1);
-        px(r + 2, bodyTop - 2, '#ffffff'); px(r + 2, bodyTop - 1, '#ffffff'); px(r + 3, bodyTop - 1, '#ffffff'); px(r + 2, bodyTop, '#9aa0b4'); px(r + 3, bodyTop, '#9aa0b4');
-        if (epic) { const l = edgeL(bodyTop + 1); px(l - 2, bodyTop - 1, '#ffffff'); px(l - 2, bodyTop, '#ffffff'); px(l - 3, bodyTop, '#9aa0b4'); }
+      pointer() { // it multiplied: a chubby pointer-baby toddles behind
+        const r = edgeR(bodyTop + 2);
+        blob(r + 2, bodyTop + 1, '#c9cede', '#5a5f75');
+        px(r + 2, bodyTop - 1, '#ffffff'); // a soft highlight so the chub pops on white
+        if (epic) { const l = edgeL(bodyTop + 3); blob(l - 2, bodyTop + 3, '#dfe3f0', '#5a5f75'); }
       },
       wifi() { // thick arcs
         [cx - 1, cx, cx + 1].forEach((rx) => px(rx, -1, '#4f9edb'));
@@ -27212,10 +27217,10 @@ document.addEventListener('DOMContentLoaded', () => {
         px(r + 1, yB, '#2f2f2f'); px(r + 2, yB, '#2f2f2f'); blk(r + 3, yB - 1, '#2f2f2f');
         if (epic) { px(cx, bodyTop + 2, '#7cfc00'); px(cx + 1, bodyTop + 3, '#7cfc00'); px(cx, bodyTop + 4, '#7cfc00'); px(cx - 1, bodyTop + 3, '#7cfc00'); rim('#7cfc00'); }
       },
-      post() { // real music notes: head + stem
+      post() { // round beep-bubbles, warm and chubby (one short beep = all is well)
         const r = edgeR(bodyTop + 1);
-        blk(r + 2, bodyTop, '#14020e'); px(r + 3, bodyTop - 1, '#14020e'); px(r + 3, bodyTop - 2, '#14020e');
-        if (epic) { const l = edgeL(bodyTop + 1); blk(l - 3, bodyTop - 1, '#ffd400'); px(l - 1, bodyTop - 2, '#ffd400'); px(l - 1, bodyTop - 3, '#ffd400'); }
+        blob(r + 2, bodyTop - 1, '#fff3d6', '#c98a2e');
+        if (epic) { const l = edgeL(bodyTop + 1); blob(l - 2, bodyTop - 2, '#ffd9ec', '#f0509f'); px(cx, -2, '#ffd400'); px(cx + 1, -1, '#ffd400'); }
       },
       cumulus() { // puffy 2×2 clouds
         blk(edgeL(bodyTop + 2) - 3, bodyTop, '#ffffff'); blk(edgeR(bodyTop + 2) + 1, bodyTop - 1, '#ffffff');
@@ -27286,9 +27291,12 @@ document.addEventListener('DOMContentLoaded', () => {
         px(cx + 1, bodyTop + 4, '#7cba58'); px(cx + 2, bodyTop + 3, '#7cba58'); px(cx + 3, bodyTop + 2, '#7cba58');
         if (epic) rim('#7cba58');
       },
-      kernelpg() { // tux upgrades: red bowtie, then flippers
-        blk(cx - 2, bodyTop + 2, '#ff4d6d'); blk(cx + 1, bodyTop + 2, '#ff4d6d'); px(cx, bodyTop + 2, '#c9184a');
-        if (epic) { const yF = bodyTop + 5; px(edgeL(yF) - 1, yF, '#14020e'); px(edgeL(yF) - 1, yF + 1, '#14020e'); px(edgeR(yF) + 1, yF, '#14020e'); px(edgeR(yF) + 1, yF + 1, '#14020e'); }
+      kernelpg() { // tux upgrades: a round chest heart, then little flippers
+        const yH = bodyTop + 3;
+        px(cx - 1, yH, '#ff6b8a'); px(cx + 1, yH, '#ff6b8a');
+        px(cx - 1, yH + 1, '#ff6b8a'); px(cx, yH + 1, '#ff8fa8'); px(cx + 1, yH + 1, '#ff6b8a');
+        px(cx, yH + 2, '#ff6b8a');
+        if (epic) { const yF = bodyTop + 5; px(edgeL(yF) - 1, yF, '#3d7a94'); px(edgeL(yF) - 1, yF + 1, '#3d7a94'); px(edgeR(yF) + 1, yF, '#3d7a94'); px(edgeR(yF) + 1, yF + 1, '#3d7a94'); }
       }
     };
     if (kind === 'ch') {
