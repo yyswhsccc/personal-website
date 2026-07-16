@@ -30600,6 +30600,51 @@ document.addEventListener('DOMContentLoaded', () => {
         `⭐ en service : ${pikdexActives(dex).length}/${PIK_MAX} · deck : ${nonChN}/${PIKDEX_CAP}${chTag} · 🧺 cueillettes : ${lbTotal}`
       );
     }
+    // v157 (owner decree): the ACTIVE SQUAD gets its own front row — every
+    // on-duty pik as a tappable chip that opens its dossier, where the
+    // "send to rest" button already lives. no more hunting the big grid
+    let squadRow = document.getElementById('pikdex-squadrow');
+    if (!squadRow && squad && squad.parentNode) {
+      squadRow = document.createElement('div');
+      squadRow.id = 'pikdex-squadrow';
+      squadRow.className = 'pikdex-squadrow';
+      squad.parentNode.insertBefore(squadRow, squad.nextSibling);
+    }
+    if (squadRow) {
+      squadRow.innerHTML = ''; // rebuilt below — every string goes through textContent
+      dex.forEach((p, ix) => {
+        if (!p.a) return;
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'pikdex-squad-chip' + (p.ch ? ' is-chameleon' : '');
+        const nm = pikNameOf(dex, ix);
+        chip.title = nm + ' — ' + trT('open dossier', 'ouvrir le dossier');
+        const im = document.createElement('img');
+        im.src = pikSprite(p.sp ? pikEntryColor(p) : hueColor(pikHueOf(p)), p.s || 0, p.sp || null, false, typeof pikFormOf === 'function' ? pikFormOf(p) : 1);
+        im.alt = '';
+        chip.appendChild(im);
+        if (p.sp) {
+          const sp = pikSpecies(p.sp);
+          if (sp) { const hat = document.createElement('span'); hat.className = 'pikdex-squad-hat'; hat.textContent = sp.hat; chip.appendChild(hat); }
+        }
+        const tag = document.createElement('span');
+        tag.className = 'pikdex-squad-name';
+        tag.textContent = nm;
+        chip.appendChild(tag);
+        chip.addEventListener('click', () => pikProfileShow(ix));
+        squadRow.appendChild(chip);
+      });
+      for (let i = pikdexActives(dex).length; i < PIK_MAX; i++) {
+        const slot = document.createElement('div');
+        slot.className = 'pikdex-squad-chip pikdex-squad-empty';
+        slot.title = trT('empty slot — open any deck pik and hit "join the squad"', 'place libre — ouvre un pik du deck et « rejoindre l\'escouade »');
+        const z = document.createElement('span');
+        z.className = 'pikdex-squad-zz';
+        z.textContent = '💤';
+        slot.appendChild(z);
+        squadRow.appendChild(slot);
+      }
+    }
     // float-mode picker: exactly how high the squad hovers over the OS
     const floatBox = document.getElementById('pikdex-float');
     if (floatBox) {
