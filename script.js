@@ -27005,10 +27005,20 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
+  // v161.4: Low Batt's evolved life is a REAL-TIME charge cycle — one
+  // hour up, one hour down, forever. quantized to 8 bars so the sprite
+  // cache stays sane (a new frame every ~7.5 minutes)
+  function pikBattState() {
+    const CYC = 7200000, t = Date.now() % CYC;
+    const charging = t < 3600000;
+    const frac = charging ? t / 3600000 : 1 - (t - 3600000) / 3600000;
+    return { charging, level: Math.max(0, Math.min(8, Math.floor(frac * 8.0001))) };
+  }
   function pikSprite(color, stage, spId, silhouette, form, kk) {
     form = form && form > 1 ? form : 1;
     const kind = form >= 2 ? (kk || (spId ? 's:' + spId : 'w:' + pikSegOfHue(pikHueFromColor(color)))) : '';
-    const key = color.body + '/' + stage + '/' + (spId || '') + '/' + (silhouette ? 1 : 0) + '/' + form + '/' + kind;
+    let key = color.body + '/' + stage + '/' + (spId || '') + '/' + (silhouette ? 1 : 0) + '/' + form + '/' + kind;
+    if (!silhouette && form >= 2 && spId === 'lowbatt') { const bb = pikBattState(); key += '/b' + (bb.charging ? 'C' : 'D') + bb.level; }
     if (pikSpriteCache[key]) return pikSpriteCache[key];
     let rows;
     if (spId && PIK_SPECIES_TPLS[spId]) {
@@ -27212,10 +27222,24 @@ document.addEventListener('DOMContentLoaded', () => {
         px(cx - 2, 0, '#4f9edb'); px(cx + 2, 0, '#4f9edb');
         if (epic) { [cx - 1, cx, cx + 1].forEach((rx) => px(rx, -3, '#7cfc00')); px(cx, 0 - 2 + 1, '#7cfc00'); }
       },
-      lowbatt() { // the charger: chunky plug
-        const yB = h - 3, r = edgeR(yB);
-        px(r + 1, yB, '#2f2f2f'); px(r + 2, yB, '#2f2f2f'); blk(r + 3, yB - 1, '#2f2f2f');
-        if (epic) { px(cx, bodyTop + 2, '#7cfc00'); px(cx + 1, bodyTop + 3, '#7cfc00'); px(cx, bodyTop + 4, '#7cfc00'); px(cx - 1, bodyTop + 3, '#7cfc00'); rim('#7cfc00'); }
+      lowbatt() { // v161.4: it LIVES the charge cycle now (1h up, 1h down)
+        const bb = pikBattState();
+        // the BODY is the battery: fill the interior left→right. white
+        // while charging; the moment it tops out — and all the way down —
+        // the charge shows green. face pixels stay on top, obviously
+        const iTop = 4, iBot = 7;
+        const colsSet = [];
+        for (let rx = 0; rx < w; rx++) { for (let ry = iTop; ry <= iBot; ry++) { if (rows[ry] && rows[ry][rx] === 'B') { colsSet.push(rx); break; } } }
+        const nFill = Math.round(colsSet.length * bb.level / 8);
+        const fillCol = (!bb.charging || bb.level >= 8) ? '#8fe89b' : '#ffffff';
+        colsSet.slice(0, nFill).forEach((rx) => { for (let ry = iTop; ry <= iBot; ry++) { if (rows[ry][rx] === 'B') px(rx, ry, fillCol); } });
+        if (bb.charging) {
+          // plugged in: the cable, and the bright little bolt overhead
+          const yP = 6, r = edgeR(yP);
+          px(r + 1, yP, '#2f2f2f'); px(r + 2, yP, '#2f2f2f'); blk(r + 3, yP - 1, '#2f2f2f');
+          px(cx + 3, -3, '#ffe14d'); px(cx + 2, -2, '#ffe14d'); px(cx + 3, -2, '#fff9c9'); px(cx + 2, -1, '#ffe14d');
+        }
+        if (epic && bb.level >= 8) rim('#8fe89b'); // APEX glows only at full charge
       },
       post() { // round beep-bubbles, warm and chubby (one short beep = all is well)
         const r = edgeR(bodyTop + 1);
@@ -27315,6 +27339,21 @@ document.addEventListener('DOMContentLoaded', () => {
     ARCH[seg % ARCH.length]();
     if (epic) rim('#ffd400'); // APEX still glows — on top of its OWN gear
   }
+  // the battery clock: every 45s, if the quantized frame moved, every
+  // on-stage Low Batt re-dresses (desk, garden, and an open pikdex)
+  var pikBattLastFrame = '';
+  setInterval(() => {
+    try {
+      const bb = pikBattState();
+      const fr = (bb.charging ? 'C' : 'D') + bb.level;
+      if (fr === pikBattLastFrame) return;
+      pikBattLastFrame = fr;
+      if (typeof DESK_PIK !== 'undefined' && DESK_PIK.walkers) DESK_PIK.walkers.forEach((w) => { if (w.sp && w.sp.id === 'lowbatt') w.img.src = pikSprite(w.sp.body, w.stage, 'lowbatt', false, pikFormOfLive(w), 's:lowbatt'); });
+      if (typeof GARDEN !== 'undefined' && GARDEN.buddies) GARDEN.buddies.forEach((bd) => { if (bd.sp && bd.sp.id === 'lowbatt') bd.img.src = pikSprite(bd.color, bd.stage, 'lowbatt', false, pikFormOfLive(bd), 's:lowbatt'); });
+      const winPd = document.getElementById('win-pikdex');
+      if (winPd && !winPd.classList.contains('window-closed') && typeof renderPikdex === 'function') renderPikdex();
+    } catch (e) { /* the battery ticks on */ }
+  }, 45000);
   // kind/form lookup for buddy/walker shapes (sp is the OBJECT there, not the id)
   function pikKindOfLive(o) {
     try {
