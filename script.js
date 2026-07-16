@@ -14834,16 +14834,87 @@ document.addEventListener('DOMContentLoaded', () => {
   /* v150 REWORK (owner decree): broken things still OPEN — but what's
      inside has gone comedically wrong. blocking clicks was the coward's
      outage; this is the funny one. */
+  // damage groups keep combos legal: 't' body-transform, 'a' body-animation
+  // (t↔a fight over the same property), 'f' static filter vs 'fa' animated
+  // filter, 'c' children-only, 'x' text-only (c and x combine with anything)
   const GEO_BREAK_FX = [
-    { cls: 'geo-wreck-flip', toast: ['this page was installed upside down. warranty void if rotated.', 'cette page a été installée à l\'envers. garantie annulée si retournée.'] },
-    { cls: 'geo-wreck-mirror', toast: ['the page is mirrored. the plumber insists it reads better this way.', 'la page est en miroir. le plombier insiste : ça se lit mieux comme ça.'] },
-    { cls: 'geo-wreck-tilt', toast: ['minor earthquake damage. the shelves are FINE. mostly.', 'légers dégâts sismiques. les étagères vont BIEN. globalement.'] },
-    { cls: 'geo-wreck-drift', toast: ['the content is leaking. a bucket was ordered in 1998.', 'le contenu fuit. un seau a été commandé en 1998.'] },
-    { cls: 'geo-wreck-blur', toast: ['still loading since 1998 (56k). squint harder.', 'en cours de chargement depuis 1998 (56k). plissez plus fort.'] },
-    { cls: 'geo-wreck-space', toast: ['water damage: the letters swelled up.', 'dégât des eaux : les lettres ont gonflé.'] },
-    { cls: 'geo-wreck-wobble', toast: ['structural wobble. certified safe-ish by slime & sons.', 'oscillation structurelle. certifiée à peu près sûre par slime & sons.'] },
-    { cls: 'geo-wreck-tiny', toast: ['the page shrank in the wash. do not tumble-dry websites.', 'la page a rétréci au lavage. ne pas sécher les sites au tambour.'] }
+    { cls: 'geo-wreck-flip', grp: 't', toast: ['this page was installed upside down. warranty void if rotated.', 'cette page a été installée à l\'envers. garantie annulée si retournée.'] },
+    { cls: 'geo-wreck-mirror', grp: 't', toast: ['the page is mirrored. the plumber insists it reads better this way.', 'la page est en miroir. le plombier insiste : ça se lit mieux comme ça.'] },
+    { cls: 'geo-wreck-tiny', grp: 't', toast: ['the page shrank in the wash. do not tumble-dry websites.', 'la page a rétréci au lavage. ne pas sécher les sites au tambour.'] },
+    { cls: 'geo-wreck-drift', grp: 'a', toast: ['the content is leaking. a bucket was ordered in 1998.', 'le contenu fuit. un seau a été commandé en 1998.'] },
+    { cls: 'geo-wreck-wobble', grp: 'a', toast: ['structural wobble. certified safe-ish by slime & sons.', 'oscillation structurelle. certifiée à peu près sûre par slime & sons.'] },
+    { cls: 'geo-wreck-bounce', grp: 'a', toast: ['the page has the zoomies. the plumber blames the springs.', 'la page a la bougeotte. le plombier accuse les ressorts.'] },
+    { cls: 'geo-wreck-tilt', grp: 'c', toast: ['minor earthquake damage. the shelves are FINE. mostly.', 'légers dégâts sismiques. les étagères vont BIEN. globalement.'] },
+    { cls: 'geo-wreck-space', grp: 'x', toast: ['water damage: the letters swelled up.', 'dégât des eaux : les lettres ont gonflé.'] },
+    { cls: 'geo-wreck-blur', grp: 'f', toast: ['still loading since 1998 (56k). squint harder.', 'en cours de chargement depuis 1998 (56k). plissez plus fort.'] },
+    { cls: 'geo-wreck-rainbow', grp: 'fa', toast: ['the color dial is stuck on ALL OF THEM. enjoy.', 'la molette des couleurs est bloquée sur TOUTES. profitez.'] }
   ];
+  function geoWreckConflict(a, b) {
+    return a === b || (a === 't' && b === 'a') || (a === 'a' && b === 't') || (a === 'f' && b === 'fa') || (a === 'fa' && b === 'f');
+  }
+  const GEO_TOOLS = ['🔨', '🪚', '🔧', '⛏️', '🪛', '🪜', '🧰'];
+  // a pink pik with a swinging tool, hammering sparks at (x, y)
+  function geoWorkerAt(x, y, tool, ms) {
+    if (!dreamWorld || REDUCED_MOTION) return;
+    const w = document.createElement('div');
+    w.className = 'geo-crew-worker';
+    const img = document.createElement('img');
+    img.alt = '';
+    try { img.src = pikSprite(hueColor(318 + Math.random() * 15), Math.floor(Math.random() * 3), null); } catch (e) { return; }
+    img.style.width = (24 + Math.random() * 10) + 'px';
+    const t = document.createElement('span');
+    t.className = 'geo-crew-tool';
+    t.textContent = tool;
+    w.appendChild(img);
+    w.appendChild(t);
+    w.style.left = Math.max(4, Math.min((window.innerWidth || 1200) - 60, x)) + 'px';
+    w.style.top = Math.max(40, Math.min((window.innerHeight || 800) - 70, y)) + 'px';
+    if (Math.random() < 0.4) w.classList.add('geo-crew-worker-rtl');
+    document.body.appendChild(w);
+    dN(w);
+    const sparks = dI(() => {
+      const s = document.createElement('span');
+      s.className = 'trail-sparkle';
+      s.textContent = Math.random() < 0.5 ? '✦' : '·';
+      s.style.left = (parseFloat(w.style.left) + 16 + Math.random() * 16) + 'px';
+      s.style.top = (parseFloat(w.style.top) - 4 + Math.random() * 8) + 'px';
+      s.style.color = ['#ffd23f', '#ff8fc7', '#dff0ff'][Math.floor(Math.random() * 3)];
+      document.body.appendChild(s);
+      s.addEventListener('animationend', () => s.remove());
+    }, 380);
+    dT(() => { clearInterval(sparks); try { w.remove(); } catch (e) { /* clocked out */ } }, ms || 3400);
+  }
+  // heavy machinery: a pink pik drives the rig across the bottom of the site
+  function geoVehicle() {
+    if (!dreamWorld || REDUCED_MOTION) return;
+    const v = document.createElement('div');
+    v.className = 'geo-crew-vehicle';
+    const driver = document.createElement('img');
+    driver.className = 'geo-crew-vehicle-driver';
+    driver.alt = '';
+    try { driver.src = pikSprite(hueColor(324), 2, null); } catch (e) { /* the rig drives itself */ }
+    const rig = document.createElement('span');
+    rig.className = 'geo-crew-vehicle-rig';
+    rig.textContent = ['🚜', '🏗️', '🚚'][Math.floor(Math.random() * 3)];
+    v.appendChild(driver);
+    v.appendChild(rig);
+    const ltr = Math.random() < 0.5;
+    if (!ltr) v.classList.add('geo-crew-vehicle-rtl');
+    v.style.top = Math.max(80, (window.innerHeight || 800) - 116) + 'px';
+    document.body.appendChild(v);
+    dN(v);
+    const W = 80, iw = window.innerWidth || 1200;
+    const x0 = ltr ? -W : iw + W, x1 = ltr ? iw + W : -W;
+    const t0 = Date.now(), DUR = 6000;
+    let lastBeep = 0;
+    const iv = dI(() => {
+      const p = Math.min(1, (Date.now() - t0) / DUR);
+      v.style.left = (x0 + (x1 - x0) * p) + 'px';
+      const now = Date.now();
+      if (now - lastBeep > 900) { lastBeep = now; playTone(740, 'square', 0.07, 0, 0.02); } // reverse beeper
+      if (p >= 1) { clearInterval(iv); try { v.remove(); } catch (e) { /* parked */ } }
+    }, 60);
+  }
   // non-window comedy: buttons that still work, but the construction shows
   const GEO_MISC_COMEDY = {
     'btn-feed': ['the snack machine is under construction — it dispensed a traffic cone. the slime ate it anyway ♡', 'le distributeur de snacks est en travaux — il a distribué un cône. le slime l\'a mangé quand même ♡'],
@@ -14851,7 +14922,9 @@ document.addEventListener('DOMContentLoaded', () => {
     'btn-sleep': ['the bed is under construction. napping ON the scaffolding (advanced technique).', 'le lit est en travaux. sieste SUR l\'échafaudage (technique avancée).'],
     'btn-like-site': ['the like was counted!! twice, actually — the counter is broken in your favor ♡', 'le like a été compté !! deux fois, en fait — le compteur est cassé en votre faveur ♡']
   };
-  // opening a wrecked window: one 1998 loading séance, then the damage
+  // opening a wrecked window: one 1998 loading séance, then the damage.
+  // v151: the disaster RE-ROLLS on every visit (variety is the comedy),
+  // and 35% of visits ship a legal second disaster on top, free of charge
   function geoWreckWindow(wid) {
     if (!dreamWorld) return;
     const g = dreamWorld.flags.geoFix;
@@ -14859,13 +14932,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const win = document.getElementById(wid);
     const body = document.querySelector('#' + wid + ' .window-body');
     if (!win || !body || win.classList.contains('window-closed')) return;
-    if (/\bgeo-wreck-[a-z]+\b/.test(body.className)) return; // still wrecked from last visit
-    const fx = g.fxMap[wid] || (g.fxMap[wid] = GEO_BREAK_FX[Math.floor(Math.random() * GEO_BREAK_FX.length)]);
+    const prev = body.className.match(/\bgeo-wreck-(?!host\b|loading\b)[a-z]+\b/g) || [];
+    prev.forEach((c) => body.classList.remove(c));
+    let main = GEO_BREAK_FX[Math.floor(Math.random() * GEO_BREAK_FX.length)];
+    if (prev.indexOf(main.cls) >= 0) main = GEO_BREAK_FX[(GEO_BREAK_FX.indexOf(main) + 1 + Math.floor(Math.random() * (GEO_BREAK_FX.length - 1))) % GEO_BREAK_FX.length];
+    const sides = GEO_BREAK_FX.filter((f) => f !== main && !geoWreckConflict(main.grp, f.grp));
+    const side = (Math.random() < 0.35 && sides.length) ? sides[Math.floor(Math.random() * sides.length)] : null;
     const applyFx = () => {
       if (!dreamWorld || !dreamWorld.flags.geoFix || dreamWorld.flags.geoFix.done) return;
-      body.classList.add('geo-wreck-host', fx.cls);
+      body.classList.add('geo-wreck-host', main.cls);
+      if (side) body.classList.add(side.cls);
       playGlitchSound();
-      showToast('🚧 ' + trT(...fx.toast));
+      showToast('🚧 ' + trT(...main.toast) + (side ? ' ' + trT('(+ bonus damage, free of charge)', '(+ dégâts bonus, offerts)') : ''));
     };
     const loaded = (g.loaded = g.loaded || {});
     if (REDUCED_MOTION || loaded[wid]) { applyFx(); return; }
@@ -14876,6 +14954,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const line = document.createElement('span');
     line.textContent = trT('loading page… 0% (56k)', 'chargement… 0 % (56k)');
     ov.appendChild(line);
+    // two tiny contractors hammer the corners while the page "loads"
+    [0, 1].forEach((k) => {
+      const wk = document.createElement('div');
+      wk.className = 'geo-wreck-lworker' + (k ? ' geo-wreck-lworker-r' : '');
+      const im = document.createElement('img');
+      im.alt = '';
+      try { im.src = pikSprite(hueColor(320 + Math.random() * 12), Math.floor(Math.random() * 3), null); } catch (e) { return; }
+      im.style.width = '22px';
+      const tl = document.createElement('span');
+      tl.className = 'geo-crew-tool';
+      tl.textContent = k ? '🪛' : '🔨';
+      wk.appendChild(im);
+      wk.appendChild(tl);
+      ov.appendChild(wk);
+    });
     body.appendChild(ov);
     dN(ov);
     const steps = [12, 34, 61, 47, 99, 100]; // 61 → 47: the classic regression
@@ -15023,20 +15116,25 @@ document.addEventListener('DOMContentLoaded', () => {
     showToast(trT('⛑ SLIME & SONS CONSTRUCTION has arrived — with your entire pik crew ♡', '⛑ SLIME & SONS CONSTRUCTION est arrivée — avec toute votre équipe de piks ♡'), { scroll: true });
     const par = document.createElement('div');
     par.className = 'geo-crew-parade';
-    let cast = [];
-    try { cast = (pikEnsureCast() || []).slice(0, 6); } catch (e) { cast = []; }
-    while (cast.length < 5) cast.push({ h: [325, 48, 187][cast.length % 3], s: cast.length % 3, sp: null });
-    cast.forEach((p, i) => {
+    // v151 owner decree: full bsod-scale professional outfit — twelve
+    // crew members, ALL in foreman pink, half of them carrying the tools
+    const CREW = [
+      [318, 0, 34], [324, 1, 40], [330, 2, 46], [321, 0, 36], [327, 1, 42],
+      [333, 2, 44], [319, 1, 38], [325, 0, 34], [331, 2, 46], [323, 1, 40],
+      [329, 0, 36], [326, 2, 44]
+    ];
+    const CREW_TOOLS = ['🔨', null, '🪚', null, '🔧', null, '⛏️', null, '🪛', null, '🪜', '🧰'];
+    CREW.forEach((c, i) => {
       const mem = document.createElement('div');
       mem.className = 'geo-crew-mem';
       const img = document.createElement('img');
       img.className = 'geo-crew-pik';
       img.alt = '';
-      try { img.src = pikSprite(pikEntryColor(p), p.s || 0, p.sp || null); } catch (e) { return; }
-      img.style.width = (34 + (i % 3) * 6) + 'px';
+      try { img.src = pikSprite(hueColor(c[0]), c[1], null); } catch (e) { return; }
+      img.style.width = c[2] + 'px';
       img.style.animationDelay = (i * 0.09) + 's, ' + (i * 0.13) + 's';
       mem.appendChild(img);
-      try { const spec = p.sp && pikSpecies(p.sp); if (spec && spec.hat) { const hat = document.createElement('span'); hat.className = 'geo-crew-hat'; hat.textContent = spec.hat; mem.appendChild(hat); } } catch (e) { /* bare heads work too */ }
+      if (CREW_TOOLS[i]) { const t = document.createElement('span'); t.className = 'geo-crew-hat'; t.textContent = CREW_TOOLS[i]; mem.appendChild(t); }
       par.appendChild(mem);
     });
     const hero = geoCrewCanvas();
@@ -15073,31 +15171,42 @@ document.addEventListener('DOMContentLoaded', () => {
       if (p >= 1) { clearInterval(iv); dT(geoWorkOrder, 700); }
     }, 60);
   }
-  // the porters hop out and hammer while a request is "interpreted"
+  // the construction ballet: while a request is "interpreted", the crew
+  // swarms the damage with tools, sparks fly, and heavy machinery rolls by
   function geoCrewWork() {
     if (!dreamWorld) return;
     [0, 1, 2, 3, 4].forEach((i) => playTone(i % 2 ? 240 : 320, 'square', 0.05, 0.25 + i * 0.5, 0.04));
+    playTone(120, 'sawtooth', 0.35, 0.6, 0.03); // the chainsaw clears its throat
+    playTone(95, 'sawtooth', 0.3, 1.7, 0.03);
     const gf = dreamWorld.flags.geoFix;
     if (gf && gf.bubble && document.body.contains(gf.bubble)) {
       const lines = [
         ['lift with the leaves!! read the request AS WRITTEN!!', 'soulevez avec les feuilles !! lisez la demande TELLE QUELLE !!'],
         ['do NOT fix anything that is not in the contract!!', 'ne réparez RIEN qui ne soit pas au contrat !!'],
-        ['beautiful. technically perfect. morally? next question.', 'magnifique. techniquement parfait. moralement ? question suivante.']
+        ['beautiful. technically perfect. morally? next question.', 'magnifique. techniquement parfait. moralement ? question suivante.'],
+        ['chainsaw team, EASE UP. it\'s a homepage, not a forest.', 'équipe tronçonneuse, DOUCEMENT. c\'est une page perso, pas une forêt.']
       ];
       gf.bubble.textContent = trT(...lines[Math.floor(Math.random() * lines.length)]);
     }
     if (REDUCED_MOTION) return;
-    [0, 1].forEach((k) => {
-      const img = document.createElement('img');
-      img.className = 'geo-crew-porter';
-      try { img.src = pikSprite(hueColor([325, 48, 187][Math.floor(Math.random() * 3)]), Math.floor(Math.random() * 3), null); } catch (e) { return; }
-      img.style.width = '30px';
-      img.style.left = (window.innerWidth / 2 - 70 + k * 100 + Math.random() * 30) + 'px';
-      img.style.top = (Math.min(window.innerHeight - 80, window.innerHeight * 0.16 + 200) + Math.random() * 40) + 'px';
-      document.body.appendChild(img);
-      dN(img);
-      dT(() => { try { img.remove(); } catch (e) { /* clocked out */ } }, 3300);
+    // workers pick spots on the wreckage (or a center pit if nothing shows)
+    const spots = [];
+    document.querySelectorAll('.geo-wreck-host').forEach((b) => {
+      const r = b.getBoundingClientRect();
+      if (r.width) spots.push([r.left + 20 + Math.random() * Math.max(40, r.width - 80), r.top + 30 + Math.random() * Math.max(30, r.height - 60)]);
     });
+    const iw = window.innerWidth || 1200, ih = window.innerHeight || 800;
+    const cx = iw / 2, cy = Math.min(ih - 140, ih * 0.45);
+    const pool = GEO_TOOLS.slice();
+    const n = 5 + Math.floor(Math.random() * 2);
+    for (let i = 0; i < n; i++) {
+      const spot = (spots.length && Math.random() < 0.6)
+        ? spots[Math.floor(Math.random() * spots.length)]
+        : [cx - 170 + Math.random() * 340, cy - 60 + Math.random() * 170];
+      const tool = pool.length ? pool.splice(Math.floor(Math.random() * pool.length), 1)[0] : '🔨';
+      dT(() => geoWorkerAt(spot[0], spot[1], tool, 3200 + Math.random() * 700), i * 160);
+    }
+    if (Math.random() < 0.55) geoVehicle();
   }
   // the 📋 badge brings a closed work order back
   function geoFixBadge() {
@@ -15212,7 +15321,8 @@ document.addEventListener('DOMContentLoaded', () => {
       lines.push(trT('ALL REQUIREMENTS MET. the site is REOPENED — the fixes stay until you wake ♡', 'TOUTES LES EXIGENCES RESPECTÉES. le site est ROUVERT — les réparations restent jusqu\'au réveil ♡'));
       return {
         title: trT('📠 invoice_FINAL_v2.htm', '📠 facture_FINAL_v2.htm'),
-        force: true, cls: 'geo-fix-dlg', lines,
+        force: true, cls: 'geo-fix-dlg geo-fix-invoice', lines,
+        x: Math.max(12, (window.innerWidth || 1200) / 2 - 170), y: Math.max(44, Math.round((window.innerHeight || 800) * 0.07)),
         buttons: [
           [trT('it\'s perfect ♡', 'c\'est parfait ♡'), () => { playSparkleSound(); gainFollowers(1); showToast(trT('the crew frames your signature. it goes on the wall of the van.', 'l\'équipe encadre votre signature. elle ira sur le mur du fourgon.')); }],
           [trT('(read the fine print)', '(lire les petites lignes)'), () => { showToast(trT('fine print: “no refunds. the cones were never ours. love, s&s ♡”', 'petites lignes : « aucun remboursement. les cônes n\'ont jamais été à nous. bisous, s&s ♡ »')); }, true]

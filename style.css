@@ -9430,7 +9430,36 @@ html[data-theme="dark"].dream-geo .geo-broken {
 .geo-wreck-wobble { animation: geo-wreck-wobble 0.9s ease-in-out infinite; }
 @keyframes geo-wreck-wobble { 25% { transform: rotate(0.8deg); } 75% { transform: rotate(-0.8deg); } }
 .geo-wreck-tiny { transform: scale(0.72); transform-origin: top left; }
+.geo-wreck-bounce { animation: geo-wreck-bounce 0.85s ease-in-out infinite; }
+@keyframes geo-wreck-bounce { 50% { transform: translateY(-9px); } }
+.geo-wreck-rainbow { animation: geo-wreck-rainbow 3.2s linear infinite; }
+@keyframes geo-wreck-rainbow { from { filter: hue-rotate(0deg); } to { filter: hue-rotate(360deg); } }
 .geo-fix-grab { cursor: move; touch-action: none; }
+/* the workforce: pink piks with swinging tools, sparks included */
+.geo-crew-worker {
+  position: fixed;
+  z-index: 2689;
+  pointer-events: none;
+  display: flex;
+  align-items: flex-end;
+  filter: drop-shadow(0 0 5px #ffd23f);
+}
+.geo-crew-worker img { image-rendering: pixelated; animation: bsod-hero-bob 0.34s steps(2) infinite; }
+.geo-crew-worker-rtl img { transform: scaleX(-1); }
+.geo-crew-tool {
+  font-size: 1.05rem;
+  margin-left: -7px;
+  transform-origin: 20% 85%;
+  animation: geo-tool-swing 0.46s ease-in-out infinite;
+}
+@keyframes geo-tool-swing { 0%, 100% { transform: rotate(8deg); } 50% { transform: rotate(-52deg) translateY(-3px); } }
+.geo-crew-vehicle { position: fixed; z-index: 2688; pointer-events: none; }
+.geo-crew-vehicle-rig { font-size: 2.2rem; display: block; line-height: 1; }
+.geo-crew-vehicle-driver { position: absolute; top: -13px; left: 13px; width: 20px; image-rendering: pixelated; }
+.geo-crew-vehicle-rtl { transform: scaleX(-1); }
+.geo-wreck-lworker { position: absolute; bottom: 8px; left: 10px; display: flex; align-items: flex-end; }
+.geo-wreck-lworker img { image-rendering: pixelated; animation: bsod-hero-bob 0.4s steps(2) infinite; }
+.geo-wreck-lworker-r { left: auto; right: 10px; }
 .geo-broken-cone {
   position: absolute;
   /* INSIDE the corner — poking above the element hid the top-row icons'
@@ -9516,6 +9545,11 @@ html[data-theme="dark"].dream-geo .geo-broken {
   background: linear-gradient(90deg, #ff2fae, #ffd23f, #41e0ff);
   color: #1c0230;
 }
+/* long contracts scroll INSIDE the paper — never off the bottom of the site */
+.geo-fix-dlg .dream-dlg-body { max-height: min(52vh, 380px); overflow-y: auto; }
+/* the invoice prints on 1998 paper stock: readable, signable, framable */
+.geo-fix-invoice .dream-dlg-body { background: #fffbe6; }
+.geo-fix-invoice .dream-dlg-body p { color: #1c0230; }
 .geo-fix-meter { font-family: monospace; color: #7cfc00; background: #000; padding: 2px 6px; }
 .geo-fix-input {
   width: 100%;
@@ -9566,7 +9600,8 @@ html[data-theme="dark"].dream-geo.geo-fix-sat { --dream-grade: saturate(2.1) con
 }
 @media (prefers-reduced-motion: reduce) {
   .geo-broken-cone, .geo-crew-hero, .geo-crew-pik, .geo-crew-porter, .geo-fix-badgebtn,
-  .geo-wreck-drift, .geo-wreck-wobble { animation: none; }
+  .geo-wreck-drift, .geo-wreck-wobble, .geo-wreck-bounce, .geo-wreck-rainbow,
+  .geo-crew-worker img, .geo-crew-tool, .geo-wreck-lworker img { animation: none; }
   .geo-fix-follower { transition: none; }
 }
 
