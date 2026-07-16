@@ -27032,14 +27032,27 @@ document.addEventListener('DOMContentLoaded', () => {
     pikSpriteCache[key] = c.toDataURL();
     return pikSpriteCache[key];
   }
-  // v156: evolution you can SEE at sprite level — ★★ pins a gold medal on
-  // the chest; the APEX (★★★) additionally walks in a full golden rim.
-  // drawn into the pixels, so every venue (desk, dex, garden, parade,
-  // boot screen, card table, cages) shows the form for free
+  // v159: evolution as CHARACTER DEVELOPMENT (owner decree — gold alone
+  // was boring). the forms tell a career:
+  //   ★★  NERD GLASSES 🤓 — it read the documentation. ALL of it.
+  //   ★★★ THE GREYBEARD 🧙 — moustache + full beard + golden aura. it
+  //        maintains a package nobody dares fork.
+  // both are drawn ALGORITHMICALLY: the glasses anchor on the template's
+  // 'e' (eye) pixels and the beard on its 'm' (mouth) pixels, so all 35
+  // head-plants × 8 bodies × 22 hidden species get fitted automatically
   function pikDrawForm(x, rows, form) {
     const w = rows[0].length, h = rows.length;
     const solid = (rx, ry) => ry >= 0 && ry < h && rx >= 0 && rx < w && rows[ry][rx] !== '.';
+    const at = (ch) => { const out = []; for (let ry = 0; ry < h; ry++) for (let rx = 0; rx < w; rx++) if (rows[ry][rx] === ch) out.push([rx, ry]); return out; };
+    const eyes = at('e');
+    let eyeRow, exL, exR;
+    if (eyes.length) {
+      eyeRow = Math.min(...eyes.map((p) => p[1]));
+      const xs = eyes.filter((p) => p[1] === eyeRow).map((p) => p[0]);
+      exL = Math.min(...xs); exR = Math.max(...xs);
+    } else { eyeRow = h - 6; exL = Math.floor(w / 2) - 2; exR = Math.floor(w / 2) + 2; }
     if (form >= 3) {
+      // the APEX aura — seniority glows even from behind the beard
       x.fillStyle = '#ffd400';
       for (let ry = Math.max(0, h - 9); ry < h; ry++) {
         for (let rx = 0; rx < w; rx++) {
@@ -27048,11 +27061,47 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
     }
-    const cx = Math.floor(w / 2), cy = h - 5;
-    x.fillStyle = '#ffd400';
-    [[0, -1], [-1, 0], [1, 0], [0, 1]].forEach((d) => x.fillRect(cx + d[0], cy + d[1], 1, 1));
-    x.fillStyle = form >= 3 ? '#fff6c9' : '#ffffff';
-    x.fillRect(cx, cy, 1, 1);
+    // ★★ the NERD GLASSES: square frames around each eye (the eye itself
+    // stays visible), a bridge, little temple arms, one proud glint
+    const FRAME = '#221a30';
+    x.fillStyle = FRAME;
+    [exL, exR].forEach((ex) => {
+      for (let dx = -1; dx <= 1; dx++) {
+        for (let dy = -1; dy <= 1; dy++) {
+          if (dx === 0 && dy === 0) continue;
+          const px = ex + dx, py = eyeRow + dy;
+          if (px >= 0 && px < w && py >= 0 && py < h && rows[py][px] !== 'e') x.fillRect(px, py, 1, 1);
+        }
+      }
+    });
+    if (exR - exL >= 4) for (let px = exL + 2; px <= exR - 2; px++) { if (rows[eyeRow][px] !== 'e') x.fillRect(px, eyeRow, 1, 1); }
+    if (exL - 2 >= 0) x.fillRect(exL - 2, eyeRow, 1, 1); // temple arms
+    if (exR + 2 < w) x.fillRect(exR + 2, eyeRow, 1, 1);
+    x.fillStyle = '#ffffff';
+    if (exR + 1 < w && eyeRow - 1 >= 0) x.fillRect(exR + 1, eyeRow - 1, 1, 1); // the glint of knowledge
+    if (form < 3) return;
+    // ★★★ the GREYBEARD: moustache wings + full beard with a jagged hem.
+    // the mouth keeps breathing through it (important for code review)
+    const mouths = at('m');
+    const mTop = mouths.length ? Math.min(...mouths.map((p) => p[1])) : eyeRow + 3;
+    const mBot = mouths.length ? Math.max(...mouths.map((p) => p[1])) : eyeRow + 3;
+    const bl = Math.max(0, exL - 1), br = Math.min(w - 1, exR + 1);
+    const hem = Math.min(h - 2, mBot + 2);
+    x.fillStyle = '#f0edf8';
+    for (let ry = mTop; ry <= hem; ry++) {
+      for (let rx = bl; rx <= br; rx++) {
+        if (!solid(rx, ry)) continue;
+        if (rows[ry][rx] === 'm') continue;
+        if (ry === hem && (rx + ry) % 2 === 0) continue; // jagged hem — beards are not rectangles
+        x.fillRect(rx, ry, 1, 1);
+      }
+    }
+    x.fillStyle = '#d9d2ea'; // moustache wings, slightly shaded
+    if (mouths.length) {
+      const mxL = Math.min(...mouths.map((p) => p[0])), mxR = Math.max(...mouths.map((p) => p[0]));
+      if (solid(mxL - 1, mTop)) x.fillRect(mxL - 1, mTop, 1, 1);
+      if (solid(mxR + 1, mTop)) x.fillRect(mxR + 1, mTop, 1, 1);
+    }
   }
   // form lookup for buddy/walker shapes (sp is the OBJECT there, not the id)
   function pikFormOfLive(o) {
@@ -27070,8 +27119,8 @@ document.addEventListener('DOMContentLoaded', () => {
     cheatFall(apex ? ['👑', '✨', '⭐'] : ['✨', '⭐'], 14);
     try { pikEvolveCinema(kk, apex); } catch (e) { /* the ceremony is optional; the gold is not */ }
     showBubble(apex
-      ? trT('APEX FORM!!! that kind walks in GOLD now — go look!!', 'FORME APEX !!! cette espèce marche en OR maintenant — va voir !!')
-      : trT('IT EVOLVED!! ★★ gold medal, bigger stride — go look!!', 'ÉVOLUTION !! ★★ médaille d\'or, plus grande foulée — va voir !!'), 3600);
+      ? trT('🧙 APEX!!! the beard came in!! a GREYBEARD walks the desktop — go look!!', '🧙 APEX !!! la barbe a poussé !! un BARBE-GRISE arpente le bureau — va voir !!')
+      : trT('🤓 IT EVOLVED!! it put on glasses — it read the DOCS!! go look!!', '🤓 ÉVOLUTION !! il a mis des lunettes — il a lu la DOC !! va voir !!'), 3600);
     try { deskPikResync(); } catch (e) { /* the meadow re-dresses on respawn */ }
     try { if (typeof renderPikdex === 'function') renderPikdex(); } catch (e) { /* dex repaints on open */ }
     return true;
@@ -27117,10 +27166,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     const title = document.createElement('div');
     title.className = 'pik-evo-title';
-    title.textContent = apex ? trT('👑 APEX EVOLUTION 👑', '👑 ÉVOLUTION APEX 👑') : trT('✨ EVOLUTION!! ✨', '✨ ÉVOLUTION !! ✨');
+    title.textContent = apex ? trT('🧙 APEX EVOLUTION 👑', '🧙 ÉVOLUTION APEX 👑') : trT('🤓 EVOLUTION!! ✨', '🤓 ÉVOLUTION !! ✨');
     const sub = document.createElement('div');
     sub.className = 'pik-evo-sub';
-    sub.textContent = name + (apex ? ' · ★★ → 👑' : ' · ★ → ★★');
+    sub.textContent = name + (apex
+      ? trT(' · the beard came in · ★★ → 🧙', ' · la barbe a poussé · ★★ → 🧙')
+      : trT(' · it read the docs · ★ → 🤓', ' · il a lu la doc · ★ → 🤓'));
     const hint = document.createElement('div');
     hint.className = 'pik-evo-hint';
     hint.textContent = trT('(tap to continue)', '(touche pour continuer)');
@@ -30975,9 +31026,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const kTh = pikThresholds(kk);
     const kForm = pikFormOfCount(kCnt, kk);
     line(trT('FORM', 'FORME'), kForm === 3
-      ? trT(`👑 APEX — ×${kCnt} collected. a walking legend.`, `👑 APEX — ×${kCnt} attrapés. une légende ambulante.`)
+      ? trT(`🧙 APEX GREYBEARD — ×${kCnt}. it maintains a package nobody dares fork.`, `🧙 BARBE-GRISE APEX — ×${kCnt}. il maintient un paquet que personne n'ose forker.`)
       : kForm === 2
-        ? trT(`★★ evolved · ${kCnt}/${kTh[1]} to APEX (dupes count!)`, `★★ évolué · ${kCnt}/${kTh[1]} vers APEX (les doublons comptent !)`)
+        ? trT(`🤓 ★★ — it read the docs. ALL of them · ${kCnt}/${kTh[1]} to APEX (dupes count!)`, `🤓 ★★ — il a lu la doc. TOUTE la doc · ${kCnt}/${kTh[1]} vers APEX (les doublons comptent !)`)
         : trT(`★ base · ${kCnt}/${kTh[0]} to evolve (dupes count!)`, `★ base · ${kCnt}/${kTh[0]} pour évoluer (les doublons comptent !)`));
     line('UPTIME', pikAgeOf(p));
     line(trT('DUTY', 'SERVICE'), p.a
