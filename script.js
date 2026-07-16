@@ -27252,9 +27252,12 @@ document.addEventListener('DOMContentLoaded', () => {
         blob(r + 2, bodyTop - 1, '#fff3d6', '#c98a2e');
         if (epic) { const l = edgeL(bodyTop + 1); blob(l - 2, bodyTop - 2, '#ffd9ec', '#f0509f'); px(cx, -2, '#ffd400'); px(cx + 1, -1, '#ffd400'); }
       },
-      cumulus() { // puffy 2×2 clouds
-        blk(edgeL(bodyTop + 2) - 3, bodyTop, '#ffffff'); blk(edgeR(bodyTop + 2) + 1, bodyTop - 1, '#ffffff');
-        if (epic) { px(cx - 2, h, '#4f9edb'); px(cx, h, '#4f9edb'); px(cx + 2, h, '#4f9edb'); }
+      cumulus() { // v161.8: it grew WEATHER — a pixel rainbow over the cloud
+        // (white puffs on a white cloud were pure camouflage)
+        [[-3, -1], [-2, -2], [-1, -3], [0, -3], [1, -3], [2, -2], [3, -1]].forEach((d) => px(cx + d[0], d[1], '#ff8fc7'));
+        [[-2, -1], [-1, -2], [0, -2], [1, -2], [2, -1]].forEach((d) => px(cx + d[0], d[1], '#ffd400'));
+        [[-1, -1], [0, -1], [1, -1]].forEach((d) => px(cx + d[0], d[1], '#41e0ff'));
+        if (epic) { blk(cx + 4, -3, '#ffd400'); px(cx + 6, -2, '#ffd400'); px(cx + 4, -1 + 0, '#ffd400'); } // the sun peeks out at APEX
       },
       feature() { // the second face: two REAL eyes on the back
         const l = edgeL(bodyTop + 2);
@@ -27297,13 +27300,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const B = '#1a1a1a', W = '#f2f2f2';
         const flip = (rx, ry) => { const ch = rows[ry][rx]; if (ch === 'B' || ch === 'W' || ch === 'w') px(rx, ry, B); else if (ch === 'D') px(rx, ry, W); };
         for (let ry = bodyTop; ry < h; ry++) for (let rx = cx + 1; rx < w; rx++) flip(rx, ry); // ★★ HALF FLIP
+        for (let ry = bodyTop; ry < h; ry++) for (let rx = cx + 1; rx < w; rx++) { if (rows[ry][rx] === 'e') px(rx, ry, W); } // the flipped eye inverts too
         if (epic) {
-          // ★★★ SUPERPOSITION: checkerboard on the loyal half too, plus
-          // the 0 and the 1 it cannot pick, plus the guilty cosmic ray
-          for (let ry = bodyTop; ry < h; ry++) for (let rx = 0; rx <= cx; rx++) { if ((rx + ry) % 2) flip(rx, ry); }
+          // ★★★ THE SEAM (the checkerboard read as static — v161.8 redo):
+          // a neon fault line down the middle, the 0 and the 1 hovering in
+          // glitch colors, and the guilty golden cosmic ray. clean, weird, cute
+          for (let ry = bodyTop; ry < h; ry++) { if (solid(cx, ry)) px(cx, ry, ry % 2 ? '#ff2fae' : '#41e0ff'); }
           const l = edgeL(bodyTop + 2), r = edgeR(bodyTop + 2), y1 = bodyTop + 1;
-          px(l - 2, y1, B); px(l - 2, y1 + 1, B); px(l - 2, y1 + 2, B); px(l - 3, y1, W); // the 1
-          px(r + 2, y1, B); px(r + 3, y1, B); px(r + 1, y1 + 1, B); px(r + 4, y1 + 1, B); px(r + 2, y1 + 2, B); px(r + 3, y1 + 2, B); // the 0
+          px(l - 2, y1, '#41e0ff'); px(l - 2, y1 + 1, '#41e0ff'); px(l - 2, y1 + 2, '#41e0ff'); px(l - 3, y1, '#41e0ff'); // the 1, in cyan
+          px(r + 2, y1, '#ff2fae'); px(r + 3, y1, '#ff2fae'); px(r + 1, y1 + 1, '#ff2fae'); px(r + 4, y1 + 1, '#ff2fae'); px(r + 2, y1 + 2, '#ff2fae'); px(r + 3, y1 + 2, '#ff2fae'); // the 0, in magenta
           px(cx + 3, -3, '#ffd400'); px(cx + 2, -2, '#ffd400'); px(cx + 1, -1, '#fff6c9'); // the ray that did this
         }
       },
@@ -30112,6 +30117,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const w = {
       el, img, hue: hue !== null ? hue : null, chameleon: !!chameleon, hueAt: 0, stage: stage || 0,
       party: spId === 'y2kbug' && form >= 2, partyMax: spId === 'y2kbug' && form >= 3, partyAt: 0, // evolved Y2K Bug: a walking celebration (the wake is APEX-only)
+      starTrail: spId === 'pointer' && form >= 2, // the pointer family walks on stardust
+      weather: spId === 'cumulus' && form >= 2, apexWeather: spId === 'cumulus' && form >= 3, rainAt: 0, boltAt: 0,
       sp: species || null, spd: species && species.spd ? species.spd : 1, stepAt: 0,
       x: 40 + Math.random() * Math.max(120, r.width - 160),
       y: r.height * 0.35 + Math.random() * (r.height * 0.5),
@@ -30148,6 +30155,20 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
     });
+    // the pointer family (v161.8): a pink baby cursor toddles behind
+    if (spId === 'pointer' && form >= 2) {
+      const be = document.createElement('div');
+      be.className = 'desk-pik-baby';
+      const bi = document.createElement('img');
+      bi.alt = '';
+      try { bi.src = pikSprite({ body: '#ffb3dd', dark: '#f0509f' }, 0, 'pointer', false, 1); } catch (e) { /* no baby today */ }
+      be.appendChild(bi);
+      DESK_PIK.layer.appendChild(be);
+      w.babyEl = be;
+      w.babyX = (w.x || 40) - 16; w.babyY = (w.y || 40) + 8;
+      w.babyStallUntil = 0; w.babyStarAt = 0; w.fetching = false;
+      be.style.left = w.babyX + 'px'; be.style.top = w.babyY + 'px';
+    }
     DESK_PIK.walkers.push(w);
     return w;
   }
@@ -30557,7 +30578,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // its own footprints reads as a glitch, not a homecoming.
     const seats = DESK_PIK.walkers.map((w) => ({ x: w.x, y: w.y, tx: w.tx, ty: w.ty }));
     DESK_PIK.walkers.forEach((w) => {
-      try { if (w.bubbleEl) w.bubbleEl.remove(); w.el.remove(); } catch (e) { /* already gone */ }
+      try { if (w.bubbleEl) w.bubbleEl.remove(); if (w.babyEl) w.babyEl.remove(); w.el.remove(); } catch (e) { /* already gone */ }
     });
     DESK_PIK.walkers = [];
     deskRoster().slice(0, PIK_MAX).forEach((rr, i) => {
@@ -31540,6 +31561,72 @@ document.addEventListener('DOMContentLoaded', () => {
         DESK_PIK.layer.appendChild(cf);
         cf.addEventListener('animationend', () => cf.remove());
       }
+      // the pointer family: the pink baby follows, stalls, and gets fetched
+      if (w.babyEl) {
+        const bTx = w.x - 16, bTy = w.y + 8;
+        const stalled = now < w.babyStallUntil;
+        if (stalled) w.babyEl.classList.add('is-stalled');
+        else {
+          w.babyEl.classList.remove('is-stalled');
+          if (!w.fetching && Math.random() < 0.004 && Math.hypot(bTx - w.babyX, bTy - w.babyY) < 26) {
+            w.babyStallUntil = now + 2600 + Math.random() * 2400; // it found something. it MUST look at it
+          } else {
+            w.babyX += (bTx - w.babyX) * 0.07;
+            w.babyY += (bTy - w.babyY) * 0.07;
+          }
+        }
+        const babyDist = Math.hypot(w.x - w.babyX, w.y - w.babyY);
+        if (!stalled && babyDist > 56 && !w.fetching) w.fetching = true; // it fell behind — go back for it
+        if (w.fetching) {
+          w.tx = w.babyX + 16; w.ty = Math.max(8, w.babyY - 8);
+          if (babyDist < 26) {
+            w.fetching = false;
+            w.babyStallUntil = 0;
+            const hb = document.createElement('span'); // the reunion heart
+            hb.className = 'pik-party-bit';
+            hb.style.background = '#ff8fc7';
+            hb.style.left = (w.babyX + 8) + 'px';
+            hb.style.top = (w.babyY - 4) + 'px';
+            DESK_PIK.layer.appendChild(hb);
+            hb.addEventListener('animationend', () => hb.remove());
+          }
+        }
+        w.babyEl.style.left = w.babyX + 'px';
+        w.babyEl.style.top = w.babyY + 'px';
+        if (!stalled && now > w.babyStarAt && Math.hypot(bTx - w.babyX, bTy - w.babyY) > 3) {
+          w.babyStarAt = now + 300 + Math.random() * 260; // the baby's own stardust wake
+          const bs = document.createElement('img');
+          bs.className = 'pik-baby-star';
+          bs.src = trailStarSprite(Math.floor(Math.random() * 6));
+          bs.alt = '';
+          bs.style.left = (w.babyX + 5) + 'px';
+          bs.style.top = (w.babyY + 9) + 'px';
+          DESK_PIK.layer.appendChild(bs);
+          setTimeout(() => { try { bs.remove(); } catch (e) { /* twinkled out */ } }, 1500);
+        }
+      }
+      // cumulus weather: a personal drizzle; APEX adds the lightning
+      if (w.weather && now > w.rainAt) {
+        w.rainAt = now + 380 + Math.random() * 420;
+        const rd = document.createElement('span');
+        rd.className = 'pik-rain-bit';
+        rd.style.left = (w.x + 6 + Math.random() * 20) + 'px';
+        rd.style.top = (w.y + 30) + 'px';
+        DESK_PIK.layer.appendChild(rd);
+        rd.addEventListener('animationend', () => rd.remove());
+      }
+      if (w.apexWeather && now > w.boltAt) {
+        w.boltAt = now + 6000 + Math.random() * 7000;
+        const bl = document.createElement('span');
+        bl.className = 'pik-bolt-bit';
+        bl.textContent = '⚡';
+        bl.style.left = (w.x + 8 + Math.random() * 16) + 'px';
+        bl.style.top = (w.y + 26) + 'px';
+        DESK_PIK.layer.appendChild(bl);
+        bl.addEventListener('animationend', () => bl.remove());
+        w.el.classList.add('pik-flash');
+        setTimeout(() => { try { w.el.classList.remove('pik-flash'); } catch (e) { /* thundered off */ } }, 320);
+      }
       if (now < w.restUntil) return;
       const dx = w.tx - w.x, dy = w.ty - w.y;
       const d = Math.hypot(dx, dy);
@@ -31581,6 +31668,24 @@ document.addEventListener('DOMContentLoaded', () => {
           w.trailAt = now + 750 + Math.random() * 450; // airier cadence
           const n = 1 + Math.floor(Math.random() * 10);
           const cx = w.x + 14, cy = w.y + 34; // strictly below the sprite
+          if (w.starTrail) { // the pointer family walks on five-color stardust
+            for (let k = 0; k < 1 + Math.floor(Math.random() * 3); k++) {
+              const s = document.createElement('img');
+              s.className = 'pik-trail pik-star-trail';
+              s.src = trailStarSprite(Math.floor(Math.random() * 6));
+              s.alt = '';
+              const sz = 8 + Math.random() * 8;
+              s.style.width = sz + 'px';
+              s.style.left = (cx + Math.random() * 24 - 12 - sz / 2) + 'px';
+              s.style.top = (cy + Math.random() * 8) + 'px';
+              DESK_PIK.layer.appendChild(s);
+              setTimeout(() => s.classList.add('fading'), 10500);
+              setTimeout(() => s.remove(), 12000);
+            }
+            const trailsS = DESK_PIK.layer.querySelectorAll('.pik-trail');
+            for (let k = 0; k < trailsS.length - 120; k++) trailsS[k].remove();
+            return;
+          }
           if (w.partyMax) { // the APEX celebration walks WITH it: a confetti wake
             for (let k = 0; k < 2 + Math.floor(Math.random() * 4); k++) {
               const s = document.createElement('span');
@@ -31629,6 +31734,25 @@ document.addEventListener('DOMContentLoaded', () => {
   // six SOFT pastel bloom sprites — powder pink / milk lilac /
   // custard / powder blue / mint cream / peach milk. gentle on
   // the eyes, unmistakably Y2K NSO.
+  // five-color pixel stars for the pointer family's wake
+  var trailStarCache = null;
+  function trailStarSprite(i) {
+    if (!trailStarCache) {
+      const COLS = [['#ff8fc7', '#ffd9ec'], ['#ffd400', '#fff6c9'], ['#41e0ff', '#d9f6ff'], ['#c9a7f5', '#efe4fd'], ['#7cfc00', '#e0ffd1'], ['#ff8a5c', '#ffe3d6']];
+      trailStarCache = COLS.map((cc) => {
+        const c = document.createElement('canvas');
+        c.width = 7; c.height = 7;
+        const x = c.getContext('2d');
+        x.fillStyle = cc[0];
+        x.fillRect(3, 0, 1, 7); x.fillRect(0, 3, 7, 1);
+        x.fillRect(2, 2, 3, 3);
+        x.fillStyle = cc[1];
+        x.fillRect(3, 3, 1, 1); x.fillRect(1, 1, 1, 1); x.fillRect(5, 5, 1, 1);
+        return c.toDataURL();
+      });
+    }
+    return trailStarCache[i % trailStarCache.length];
+  }
   var trailBloomCache = null;
   function trailBloomSprite(i) {
     if (!trailBloomCache) {

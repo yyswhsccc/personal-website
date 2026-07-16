@@ -6528,6 +6528,59 @@ html[data-theme="dark"] .pikdex-squad-chip:hover { box-shadow: 2px 5px 0 #1c0f2e
   .pik-party-bit { display: none; }
 }
 
+/* the pointer family: a pink baby cursor with a stardust wake */
+.desk-pik-baby {
+  position: absolute;
+  pointer-events: none;
+  z-index: 2;
+  animation: pik-bob 0.5s steps(2) infinite;
+  filter: drop-shadow(0 0 3px rgba(255, 143, 199, 0.85));
+}
+.desk-pik-baby img { width: 18px; image-rendering: pixelated; display: block; }
+.desk-pik-baby.is-stalled { animation: none; }
+.desk-pik-baby.is-stalled::after {
+  content: '…';
+  position: absolute;
+  top: -10px;
+  left: 5px;
+  font-size: 9px;
+  color: #f0509f;
+  font-family: var(--font-pixel);
+}
+.pik-star-trail { image-rendering: pixelated; }
+.pik-baby-star {
+  position: absolute;
+  width: 7px;
+  image-rendering: pixelated;
+  pointer-events: none;
+  animation: pik-party-float 1.4s ease-out forwards;
+}
+/* cumulus weather: a personal drizzle, and APEX lightning */
+.pik-rain-bit {
+  position: absolute;
+  width: 2px;
+  height: 5px;
+  background: #7cc0f0;
+  border-radius: 1px;
+  pointer-events: none;
+  opacity: 0.85;
+  animation: pik-rain-fall 0.9s linear forwards;
+}
+@keyframes pik-rain-fall { to { transform: translateY(14px); opacity: 0; } }
+.pik-bolt-bit {
+  position: absolute;
+  font-size: 10px;
+  pointer-events: none;
+  filter: drop-shadow(0 0 4px #ffd400);
+  animation: pik-bolt-flash 0.5s steps(2) forwards;
+}
+@keyframes pik-bolt-flash { to { opacity: 0; transform: translateY(8px); } }
+.pik-flash img { filter: brightness(1.9) drop-shadow(0 0 8px #ffd400) !important; }
+@media (prefers-reduced-motion: reduce) {
+  .pik-rain-bit, .pik-bolt-bit, .pik-baby-star { display: none; }
+  .desk-pik-baby { animation: none; }
+}
+
 /* the dossier's appearance picker: lock any earned form, purely cosmetic */
 .pik-card-formpick {
   display: flex;
