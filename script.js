@@ -8133,6 +8133,15 @@ document.addEventListener('DOMContentLoaded', () => {
       // browser's own tab bar / address bar (a fixed top:0 used to cover them)
       (document.querySelector('.desktop-area') || document.body).appendChild(mq);
       dN(mq);
+      // owner decree v150: the marquee says it ONCE, then leaves the stage
+      // for good (it was covering the desktop's top row all night)
+      const mqSpan = mq.querySelector('span');
+      const mqBye = () => { mq.classList.add('dream-geo-marquee-out'); dT(() => { try { mq.remove(); } catch (e) { /* already gone */ } }, 900); };
+      if (mqSpan && !REDUCED_MOTION) {
+        mqSpan.style.animationIterationCount = '1';
+        mqSpan.addEventListener('animationend', mqBye, { once: true });
+        dT(mqBye, 26000); // idempotent failsafe — hidden tabs pause CSS animations
+      } else dT(mqBye, 9000);
       let hits = 337 + Math.floor(Math.random() * 3);
       let hitsSpoofUntil = 0;
       const counter = dreamBadge('', 'dream-geo-counter');
@@ -14822,6 +14831,98 @@ document.addEventListener('DOMContentLoaded', () => {
     if (best && bs >= 3) { used['t' + bi] = 1; return best; }
     return GEO_FIX_FALLBACKS[gf.round % GEO_FIX_FALLBACKS.length];
   }
+  /* v150 REWORK (owner decree): broken things still OPEN — but what's
+     inside has gone comedically wrong. blocking clicks was the coward's
+     outage; this is the funny one. */
+  const GEO_BREAK_FX = [
+    { cls: 'geo-wreck-flip', toast: ['this page was installed upside down. warranty void if rotated.', 'cette page a été installée à l\'envers. garantie annulée si retournée.'] },
+    { cls: 'geo-wreck-mirror', toast: ['the page is mirrored. the plumber insists it reads better this way.', 'la page est en miroir. le plombier insiste : ça se lit mieux comme ça.'] },
+    { cls: 'geo-wreck-tilt', toast: ['minor earthquake damage. the shelves are FINE. mostly.', 'légers dégâts sismiques. les étagères vont BIEN. globalement.'] },
+    { cls: 'geo-wreck-drift', toast: ['the content is leaking. a bucket was ordered in 1998.', 'le contenu fuit. un seau a été commandé en 1998.'] },
+    { cls: 'geo-wreck-blur', toast: ['still loading since 1998 (56k). squint harder.', 'en cours de chargement depuis 1998 (56k). plissez plus fort.'] },
+    { cls: 'geo-wreck-space', toast: ['water damage: the letters swelled up.', 'dégât des eaux : les lettres ont gonflé.'] },
+    { cls: 'geo-wreck-wobble', toast: ['structural wobble. certified safe-ish by slime & sons.', 'oscillation structurelle. certifiée à peu près sûre par slime & sons.'] },
+    { cls: 'geo-wreck-tiny', toast: ['the page shrank in the wash. do not tumble-dry websites.', 'la page a rétréci au lavage. ne pas sécher les sites au tambour.'] }
+  ];
+  // non-window comedy: buttons that still work, but the construction shows
+  const GEO_MISC_COMEDY = {
+    'btn-feed': ['the snack machine is under construction — it dispensed a traffic cone. the slime ate it anyway ♡', 'le distributeur de snacks est en travaux — il a distribué un cône. le slime l\'a mangé quand même ♡'],
+    'btn-play': ['the toy chest is boarded up — improvising with a cone. 10/10 toy.', 'le coffre à jouets est condamné — improvisation avec un cône. jouet 10/10.'],
+    'btn-sleep': ['the bed is under construction. napping ON the scaffolding (advanced technique).', 'le lit est en travaux. sieste SUR l\'échafaudage (technique avancée).'],
+    'btn-like-site': ['the like was counted!! twice, actually — the counter is broken in your favor ♡', 'le like a été compté !! deux fois, en fait — le compteur est cassé en votre faveur ♡']
+  };
+  // opening a wrecked window: one 1998 loading séance, then the damage
+  function geoWreckWindow(wid) {
+    if (!dreamWorld) return;
+    const g = dreamWorld.flags.geoFix;
+    if (!g || g.done) return;
+    const win = document.getElementById(wid);
+    const body = document.querySelector('#' + wid + ' .window-body');
+    if (!win || !body || win.classList.contains('window-closed')) return;
+    if (/\bgeo-wreck-[a-z]+\b/.test(body.className)) return; // still wrecked from last visit
+    const fx = g.fxMap[wid] || (g.fxMap[wid] = GEO_BREAK_FX[Math.floor(Math.random() * GEO_BREAK_FX.length)]);
+    const applyFx = () => {
+      if (!dreamWorld || !dreamWorld.flags.geoFix || dreamWorld.flags.geoFix.done) return;
+      body.classList.add('geo-wreck-host', fx.cls);
+      playGlitchSound();
+      showToast('🚧 ' + trT(...fx.toast));
+    };
+    const loaded = (g.loaded = g.loaded || {});
+    if (REDUCED_MOTION || loaded[wid]) { applyFx(); return; }
+    loaded[wid] = 1;
+    body.classList.add('geo-wreck-host');
+    const ov = document.createElement('div');
+    ov.className = 'geo-wreck-loading';
+    const line = document.createElement('span');
+    line.textContent = trT('loading page… 0% (56k)', 'chargement… 0 % (56k)');
+    ov.appendChild(line);
+    body.appendChild(ov);
+    dN(ov);
+    const steps = [12, 34, 61, 47, 99, 100]; // 61 → 47: the classic regression
+    let si = 0;
+    const iv = dI(() => {
+      if (!document.body.contains(ov)) { clearInterval(iv); return; }
+      const pc = steps[si];
+      line.textContent = trT('loading page… ', 'chargement… ') + pc + '% (56k)' + (si > 0 && pc < steps[si - 1] ? trT(' — hm.', ' — hum.') : '');
+      playTone(300 + pc * 4, 'square', 0.03, 0, 0.02);
+      si++;
+      if (si >= steps.length) { clearInterval(iv); dT(() => { try { ov.remove(); } catch (e) { /* dissolved */ } applyFx(); }, 500); }
+    }, 620);
+  }
+  // dialogs the visitor can shove around by the title bar (owner decree)
+  function geoDragify(d) {
+    const bar = d && d.querySelector('.dream-dlg-bar');
+    if (!bar || d.__geoDrag) return;
+    d.__geoDrag = 1;
+    bar.classList.add('geo-fix-grab');
+    let on = 0, sx = 0, sy = 0, ox = 0, oy = 0;
+    const down = (e) => {
+      if (e.target && e.target.closest && e.target.closest('.dream-dlg-x')) return;
+      const p = e.touches ? e.touches[0] : e;
+      on = 1; sx = p.clientX; sy = p.clientY;
+      const r = d.getBoundingClientRect(); ox = r.left; oy = r.top;
+      if (e.cancelable) e.preventDefault();
+    };
+    const mv = (e) => {
+      if (!on) return;
+      const p = e.touches ? e.touches[0] : e;
+      d.style.left = Math.max(0, Math.min(window.innerWidth - 120, ox + p.clientX - sx)) + 'px';
+      d.style.top = Math.max(0, Math.min(window.innerHeight - 60, oy + p.clientY - sy)) + 'px';
+    };
+    const up = () => { on = 0; };
+    bar.addEventListener('mousedown', down);
+    bar.addEventListener('touchstart', down, { passive: false });
+    document.addEventListener('mousemove', mv);
+    document.addEventListener('touchmove', mv, { passive: true });
+    document.addEventListener('mouseup', up);
+    document.addEventListener('touchend', up);
+    if (dreamWorld) dreamWorld.flags.removers.push(() => {
+      document.removeEventListener('mousemove', mv);
+      document.removeEventListener('touchmove', mv);
+      document.removeEventListener('mouseup', up);
+      document.removeEventListener('touchend', up);
+    });
+  }
   // a wooden certification sign, nailed wherever the crew felt like it
   function geoFixSign(text) {
     const s = document.createElement('div');
@@ -14850,26 +14951,13 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('touchmove', tv, { passive: true });
     dreamWorld.flags.removers.push(() => { document.removeEventListener('mousemove', mv); document.removeEventListener('touchmove', tv); });
   }
-  // phase 1: THE GREAT OUTAGE — half the site closes for renovations
+  // phase 1: THE GREAT OUTAGE — 70% of the site goes comedically wrong.
+  // nothing is blocked (v150 owner decree): everything still opens, but
+  // what's inside has suffered. discovery IS the gameplay.
   function geoOutageStart() {
     if (!dreamWorld || dreamWorld.id !== 'geo' || dreamWorld.flags.geoFix) return;
-    const gf = dreamWorld.flags.geoFix = { broken: [], found: 0, round: 0, contract: [], crewHere: 0, done: 0, dlgOpen: 0, busy: 0 };
-    const cands = [];
-    document.querySelectorAll('.desktop-icon-btn[data-window], .start-menu-item, .pet-action-btn, #btn-like-site, .quest-btn[data-window]').forEach((el) => {
-      const wid = el.getAttribute('data-window') || el.getAttribute('data-target') || '';
-      if (wid === 'win-terminal' || wid === 'win-dreamlog') return; // the escape hatch and the collection stay sacred
-      cands.push(el);
-    });
-    for (let i = cands.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = cands[i]; cands[i] = cands[j]; cands[j] = t; }
-    // VISIBLE things carry the game — items hiding in a closed start menu
-    // used to eat the quota and leave the desktop with barely any rubble.
-    // hidden items still get a few cones (a surprise for menu-openers),
-    // but they never count against the on-screen minimum of five.
-    const vis = cands.filter((el) => el.offsetParent !== null);
-    const hid = cands.filter((el) => el.offsetParent === null);
-    const chosen = vis.slice(0, Math.min(vis.length, Math.max(5, Math.ceil(vis.length * 0.5))))
-      .concat(hid.slice(0, Math.ceil(hid.length * 0.4)));
-    chosen.forEach((el) => {
+    const gf = dreamWorld.flags.geoFix = { broken: [], found: 0, round: 0, contract: [], crewHere: 0, done: 0, dlgOpen: 0, busy: 0, fxMap: {}, wreckIds: {} };
+    const markBroken = (el) => {
       el.classList.add('geo-broken');
       const cone = document.createElement('span');
       cone.className = 'geo-broken-cone';
@@ -14877,31 +14965,53 @@ document.addEventListener('DOMContentLoaded', () => {
       el.appendChild(cone);
       dN(cone);
       gf.broken.push(el);
+    };
+    const shuffle = (a) => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = a[i]; a[i] = a[j]; a[j] = t; } return a; };
+    // group window-openers by their winId so EVERY door to a wrecked room
+    // wears a cone (desktop icon AND start-menu item — per field report)
+    const byWin = {};
+    const misc = [];
+    document.querySelectorAll('.desktop-icon-btn[data-window], .start-menu-item, .pet-action-btn, #btn-like-site, .quest-btn[data-window]').forEach((el) => {
+      const wid = el.getAttribute('data-window') || el.getAttribute('data-target') || '';
+      if (wid === 'win-terminal' || wid === 'win-dreamlog') return; // the escape hatch and the collection stay sacred
+      if (wid) (byWin[wid] = byWin[wid] || []).push(el);
+      else misc.push(el);
     });
+    shuffle(Object.keys(byWin)).slice(0, Math.ceil(Object.keys(byWin).length * 0.7)).forEach((wid) => {
+      gf.wreckIds[wid] = 1;
+      byWin[wid].forEach(markBroken);
+    });
+    shuffle(misc).slice(0, Math.ceil(misc.length * 0.7)).forEach(markBroken);
     if (!gf.broken.length) return;
-    // capture-phase interception: broken things apologize instead of working
-    const block = (e) => {
+    // capture listener, but a PASS-THROUGH one: it never blocks, it only
+    // schedules comedy (window wreckage lands right after the window opens)
+    const watch = (e) => {
       if (!dreamWorld || !dreamWorld.flags.geoFix) return;
       const g = dreamWorld.flags.geoFix;
       if (g.done) return;
       const hit = e.target && e.target.closest ? e.target.closest('.geo-broken') : null;
       if (!hit) return;
-      e.preventDefault();
-      e.stopPropagation();
-      playTone(196, 'square', 0.09, 0, 0.05); playTone(147, 'square', 0.11, 0.1, 0.05);
-      document.body.classList.add('rescue-quake-sm');
-      dT(() => document.body.classList.remove('rescue-quake-sm'), 300);
-      const ex = GEO_FIX_EXCUSES[Math.floor(Math.random() * GEO_FIX_EXCUSES.length)];
-      showToast('🚧 ' + trT(...ex));
+      const wid = hit.getAttribute('data-window') || hit.getAttribute('data-target') || '';
+      if (wid && g.wreckIds[wid]) dT(() => geoWreckWindow(wid), 380);
+      else {
+        const line = GEO_MISC_COMEDY[hit.id];
+        const ex = line || GEO_FIX_EXCUSES[Math.floor(Math.random() * GEO_FIX_EXCUSES.length)];
+        dT(() => { playTone(196, 'square', 0.09, 0, 0.05); showToast('🚧 ' + trT(...ex)); }, 450);
+      }
       if (!hit.__geoBrokenSeen) { hit.__geoBrokenSeen = 1; g.found++; }
       if (g.found === 2) dreamSay(["zzz… yes… the site is… slightly under construction… tonight…", "zzz… oui… le site est… légèrement en travaux… ce soir…"], 3800);
-      if (g.found >= 3 && !g.crewHere) { g.crewHere = 1; dT(geoCrewArrive, 1100); }
+      if (g.found >= 3 && !g.crewHere) { g.crewHere = 1; dT(geoCrewArrive, 2600); }
     };
-    document.addEventListener('click', block, true);
-    dreamWorld.flags.removers.push(() => document.removeEventListener('click', block, true));
+    document.addEventListener('click', watch, true);
+    dreamWorld.flags.removers.push(() => document.removeEventListener('click', watch, true));
+    // windows already open when the outage hits get wrecked on the spot
+    Object.keys(gf.wreckIds).forEach((wid) => {
+      const win = document.getElementById(wid);
+      if (win && !win.classList.contains('window-closed') && !win.classList.contains('window-minimized')) dT(() => geoWreckWindow(wid), 900 + Math.random() * 2400);
+    });
     playGlitchSound();
-    showToast(trT('🚧 RENOVATION NIGHT — 50% of the site is now under construction. probably fine.', '🚧 NUIT DE RÉNOVATION — 50 % du site est maintenant en travaux. tout va bien. sans doute.'), { scroll: true });
-    dreamSay(["zzz… renovation night… I closed half the site… for polishing…", "zzz… nuit de rénovation… j'ai fermé la moitié du site… pour le polissage…"], 4600);
+    showToast(trT('🚧 RENOVATION NIGHT — 70% of this site is now under construction. everything still opens. that\'s the problem.', '🚧 NUIT DE RÉNOVATION — 70 % du site est en travaux. tout s\'ouvre encore. c\'est bien le problème.'), { scroll: true });
+    dreamSay(["zzz… renovation night… I fixed everything… myself… at 3am…", "zzz… nuit de rénovation… j'ai tout réparé… moi-même… à 3 h du matin…"], 4600);
   }
   // phase 2: the crew arrives (hero foreman + the visitor's own piks)
   function geoCrewArrive() {
@@ -15017,6 +15127,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }));
     if (!d) { dT(geoWorkOrder, 5000); return; }
     d.__dirty = 1; // live input + appended verdicts must survive a language toggle
+    geoDragify(d);
     gf.dlgOpen = 1;
     const body = d.querySelector('.dream-dlg-body');
     const meter = document.createElement('p');
@@ -15091,7 +15202,7 @@ document.addEventListener('DOMContentLoaded', () => {
     gainFollowers(2);
     achvUnlock('goblinfix');
     if (gf.bubble && document.body.contains(gf.bubble)) gf.bubble.textContent = trT('PROJECT COMPLETE. read the invoice. ESPECIALLY the fine print ♡', 'CHANTIER TERMINÉ. lisez la facture. SURTOUT les petites lignes ♡');
-    dreamDlg(() => {
+    const inv = dreamDlg(() => {
       const lines = [trT('SLIME & SONS — FINAL INVOICE (paid in exposure)', 'SLIME & SONS — FACTURE FINALE (payée en visibilité)')];
       gf.contract.forEach((c, i) => {
         lines.push('§' + (i + 1) + ' ' + trT('you said: ', 'vous avez dit : ') + '“' + (c.q.length > 34 ? c.q.slice(0, 33) + '…' : c.q) + '”');
@@ -15108,6 +15219,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ]
       };
     });
+    if (inv) geoDragify(inv);
     dT(geoCrewExit, 4200);
   }
   function geoCrewExit() {
@@ -15124,10 +15236,14 @@ document.addEventListener('DOMContentLoaded', () => {
       if (p >= 1) { clearInterval(iv); try { par.remove(); } catch (e) { /* already in the van */ } }
     }, 60);
   }
-  // undo the outage (cones + interception targets); effects stay until wake
+  // undo the outage (cones + wrecked interiors); contract effects stay until wake
   function geoFixRestore() {
     document.querySelectorAll('.geo-broken-cone').forEach((n) => { try { n.remove(); } catch (e) { /* pocketed */ } });
     document.querySelectorAll('.geo-broken').forEach((el) => { el.classList.remove('geo-broken'); try { delete el.__geoBrokenSeen; } catch (e) { /* sticky note stays */ } });
+    document.querySelectorAll('.geo-wreck-loading').forEach((n) => { try { n.remove(); } catch (e) { /* dissolved */ } });
+    document.querySelectorAll('.geo-wreck-host').forEach((el) => {
+      el.className = el.className.replace(/\bgeo-wreck-[a-z]+\b/g, ' ').replace(/\s+/g, ' ').trim();
+    });
   }
   // full wake teardown: outage undone AND every lingering "repair" stripped
   function geoFixTeardown() {
