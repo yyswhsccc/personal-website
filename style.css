@@ -9547,9 +9547,18 @@ html[data-theme="dark"].dream-geo .geo-broken {
 }
 /* long contracts scroll INSIDE the paper — never off the bottom of the site */
 .geo-fix-dlg .dream-dlg-body { max-height: min(52vh, 380px); overflow-y: auto; }
-/* the invoice prints on 1998 paper stock: readable, signable, framable */
-.geo-fix-invoice .dream-dlg-body { background: #fffbe6; }
-.geo-fix-invoice .dream-dlg-body p { color: #1c0230; }
+/* the invoice prints on 1998 thermal paper: a luxury supermarket receipt.
+   Courier + pre-wrap keeps the price columns honest */
+.geo-fix-invoice .dream-dlg-body { background: #fdfcf3; padding: 10px 8px; }
+.geo-fix-invoice .dream-dlg-body p {
+  color: #26203a;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.66rem;
+  line-height: 1.42;
+  white-space: pre-wrap;
+  margin: 1px 0;
+  word-break: break-word;
+}
 .geo-fix-meter { font-family: monospace; color: #7cfc00; background: #000; padding: 2px 6px; }
 .geo-fix-input {
   width: 100%;

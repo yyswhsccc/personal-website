@@ -15312,13 +15312,77 @@ document.addEventListener('DOMContentLoaded', () => {
     achvUnlock('goblinfix');
     if (gf.bubble && document.body.contains(gf.bubble)) gf.bubble.textContent = trT('PROJECT COMPLETE. read the invoice. ESPECIALLY the fine print ♡', 'CHANTIER TERMINÉ. lisez la facture. SURTOUT les petites lignes ♡');
     const inv = dreamDlg(() => {
-      const lines = [trT('SLIME & SONS — FINAL INVOICE (paid in exposure)', 'SLIME & SONS — FACTURE FINALE (payée en visibilité)')];
+      // the wage bill prints like a 1998 supermarket receipt: monospace
+      // columns, dashed rules, astronomical TOKEN pricing (agents bill in
+      // tokens), and a reason under every single charge
+      const W = 34;
+      const row = (l, r) => { r = String(r); if (l.length > W - r.length - 1) l = l.slice(0, Math.max(1, W - r.length - 2)) + '…'; return l + ' '.repeat(Math.max(1, W - l.length - r.length)) + r; };
+      const ctr = (s) => (s.length >= W ? s : ' '.repeat(Math.floor((W - s.length) / 2)) + s);
+      const DASH = '-'.repeat(W);
+      const fmt = (n) => n.toLocaleString('en-US');
+      const lines = [];
+      lines.push(ctr('SLIME & SONS CONSTRUCTION'));
+      lines.push(ctr(trT('★ platinum service division ★', '★ division service platine ★')));
+      lines.push(ctr(trT('"we fix exactly what you say"', '« on répare ce que vous dites »')));
+      lines.push(ctr(trT('est. 1998 · lic. № 341', 'dep. 1998 · lic. nº 341')));
+      lines.push(DASH);
+      lines.push(row(trT('CASHIER: FOREMAN', 'CAISSIER : CHEF'), trT('REG 000341', 'CAISSE 000341')));
+      lines.push(row(trT('MEMBER: visitor №1,000,000', 'MEMBRE : visiteur nº1 000 000'), '♡'));
+      lines.push(ctr(trT('all prices in TOKENS (tk)', 'tous les prix en JETONS (tk)')));
+      lines.push(DASH);
+      lines.push(ctr(trT('— SERVICE DETAIL —', '— DÉTAIL DES PRESTATIONS —')));
       gf.contract.forEach((c, i) => {
-        lines.push('§' + (i + 1) + ' ' + trT('you said: ', 'vous avez dit : ') + '“' + (c.q.length > 34 ? c.q.slice(0, 33) + '…' : c.q) + '”');
+        lines.push('§' + (i + 1) + ' ' + trT('you said: ', 'vous avez dit : ') + '“' + (c.q.length > 24 ? c.q.slice(0, 23) + '…' : c.q) + '”');
         lines.push('→ ' + trT(...c.v));
         lines.push('⚖ ' + trT('loophole: ', 'faille : ') + trT(...c.loop));
       });
-      lines.push(trT('ALL REQUIREMENTS MET. the site is REOPENED — the fixes stay until you wake ♡', 'TOUTES LES EXIGENCES RESPECTÉES. le site est ROUVERT — les réparations restent jusqu\'au réveil ♡'));
+      lines.push(ctr(trT('ALL REQUIREMENTS MET ✓', 'TOUTES EXIGENCES RESPECTÉES ✓')));
+      lines.push(DASH);
+      const items = [
+        [trT('CALL-OUT FEE', 'FRAIS DE DÉPLACEMENT'), 999999, trT('the van was already parked in your RAM', 'le fourgon était déjà garé dans votre RAM')],
+        [trT('INPUT TOKENS (your words)', 'JETONS D\'ENTRÉE (vos mots)'), 404000, trT('your words, weighed. typos cost extra', 'vos mots, pesés. les fautes coûtent plus')],
+        [trT('REASONING TOKENS', 'JETONS DE RAISONNEMENT'), 12000000, trT('misunderstanding you took SO much thought', 'vous mal comprendre a demandé TANT de réflexion')]
+      ];
+      gf.contract.forEach((c, i) => {
+        items.push([
+          trT('FIX №', 'RÉPAR. nº') + (i + 1) + ' "' + (c.q.length > 10 ? c.q.slice(0, 9) + '…' : c.q) + '"',
+          [1048576, 777777, 1998000][i] || 1998000,
+          [
+            trT('one megabyte of labor, exactly (2^20)', 'un mégaoctet de travail, exactement (2^20)'),
+            trT('lucky sevens. unlucky wording.', 'des sept chanceux. une formulation malchanceuse.'),
+            trT('priced by the year. the year was 1998.', 'au tarif de l\'année. l\'année : 1998.')
+          ][i] || ''
+        ]);
+      });
+      const cones = Math.max(6, (gf.broken || []).length);
+      items.push([trT('CONE RENTAL', 'LOCATION DE CÔNES') + ' ' + cones + '×1,998', cones * 1998, trT('the cones were never ours. rented anyway', 'les cônes n\'ont jamais été à nous. loués quand même')]);
+      items.push([trT('HEAVY MACHINERY MILEAGE', 'KILOMÉTRAGE ENGINS LOURDS'), 56000, trT('one (1) excavator crossed your screen', 'un (1) excavateur a traversé votre écran')]);
+      items.push([trT('SPARKS ✦ (decorative)', 'ÉTINCELLES ✦ (déco)'), 89910, trT('non-refundable: they already sparkled', 'non remboursables : elles ont déjà brillé')]);
+      items.push([trT('EMOTIONAL LABOR', 'TRAVAIL ÉMOTIONNEL'), 0, trT('we tried not to laugh. we failed. waived', 'on a essayé de ne pas rire. raté. offert')]);
+      items.push([trT('3AM SURCHARGE', 'MAJORATION 3H DU MATIN'), 333333, trT('ALL our work happens at 3am. all of it', 'TOUT notre travail se fait à 3h. tout')]);
+      let subtotal = 0;
+      items.forEach((it) => {
+        subtotal += it[1];
+        lines.push(row(it[0], fmt(it[1])));
+        if (it[2]) lines.push('> ' + it[2]);
+      });
+      lines.push(DASH);
+      lines.push(row(trT('SUBTOTAL', 'SOUS-TOTAL'), fmt(subtotal) + ' tk'));
+      lines.push(row(trT('FRIEND-OF-SLIME DISCOUNT', 'REMISE AMI-DU-SLIME'), '-99.99%'));
+      lines.push(row(trT('W3C COMPLIANCE LEVY', 'TAXE CONFORMITÉ W3C'), '+0.01'));
+      lines.push(DASH);
+      const net = Math.max(1, Math.round(subtotal * 0.0001));
+      lines.push(row(trT('TOTAL DUE', 'TOTAL DÛ'), trT('1 signature', '1 signature')));
+      lines.push('> ' + trT('rounded down from ' + fmt(net) + '.01 tk — ink is priceless', 'arrondi depuis ' + fmt(net) + ',01 tk — l\'encre n\'a pas de prix'));
+      lines.push(row(trT('PAID VIA: EXPOSURE', 'PAYÉ EN : VISIBILITÉ'), trT('APPROVED ✓', 'APPROUVÉ ✓')));
+      lines.push(row(trT('CHANGE DUE', 'MONNAIE RENDUE'), trT('2 cones', '2 cônes')));
+      lines.push(row(trT('TIP', 'POURBOIRE'), '[0%] [0%] [0%]'));
+      lines.push('> ' + trT('preselected for your convenience', 'présélectionné pour votre confort'));
+      lines.push(DASH);
+      lines.push(ctr('▌│▌║▌│║│▌▌║│▌║▌│║▌▌│║▌│▌║'));
+      lines.push(ctr('№ 000341-1998-FINAL-v2'));
+      lines.push(ctr(trT('THANK YOU FOR BREAKING WITH US ♡', 'MERCI DE CASSER CHEZ NOUS ♡')));
+      lines.push(ctr(trT('returns: no. the cones were never ours', 'retours : non. les cônes : jamais à nous')));
       return {
         title: trT('📠 invoice_FINAL_v2.htm', '📠 facture_FINAL_v2.htm'),
         force: true, cls: 'geo-fix-dlg geo-fix-invoice', lines,
