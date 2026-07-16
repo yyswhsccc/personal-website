@@ -8224,7 +8224,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // three broken things and SLIME & SONS arrive to take your order.
       // failsafe: if nobody pokes the rubble, the crew shows up anyway.
       dT(() => { try { geoOutageStart(); } catch (e) { /* the permit expired */ } }, resumed ? 12000 : 20000);
-      dT(() => { const g = dreamWorld && dreamWorld.flags.geoFix; if (g && !g.crewHere && !g.done) { g.crewHere = 1; geoCrewArrive(); } }, 200000);
+      dT(() => { const g = dreamWorld && dreamWorld.flags.geoFix; if (g && !g.crewHere && !g.done) { g.crewHere = 1; geoCrewArrive(); } }, 110000);
       // the sacred geocities cursor trail (mouse AND finger; reduced-motion exempt)
       if (!REDUCED_MOTION) {
         let lastTrail = 0;
@@ -14861,7 +14861,15 @@ document.addEventListener('DOMContentLoaded', () => {
       cands.push(el);
     });
     for (let i = cands.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = cands[i]; cands[i] = cands[j]; cands[j] = t; }
-    cands.slice(0, Math.max(3, Math.ceil(cands.length * 0.5))).forEach((el) => {
+    // VISIBLE things carry the game — items hiding in a closed start menu
+    // used to eat the quota and leave the desktop with barely any rubble.
+    // hidden items still get a few cones (a surprise for menu-openers),
+    // but they never count against the on-screen minimum of five.
+    const vis = cands.filter((el) => el.offsetParent !== null);
+    const hid = cands.filter((el) => el.offsetParent === null);
+    const chosen = vis.slice(0, Math.min(vis.length, Math.max(5, Math.ceil(vis.length * 0.5))))
+      .concat(hid.slice(0, Math.ceil(hid.length * 0.4)));
+    chosen.forEach((el) => {
       el.classList.add('geo-broken');
       const cone = document.createElement('span');
       cone.className = 'geo-broken-cone';

@@ -9403,8 +9403,10 @@ html[data-theme="dark"].dream-geo .geo-broken {
 }
 .geo-broken-cone {
   position: absolute;
-  top: -7px;
-  right: -5px;
+  /* INSIDE the corner — poking above the element hid the top-row icons'
+     cones behind the marquee banner (z2555, unwinnable from in here) */
+  top: 2px;
+  right: 2px;
   font-size: 0.85rem;
   z-index: 5;
   pointer-events: none;
