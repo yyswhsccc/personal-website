@@ -20,14 +20,15 @@
     background: linear-gradient(180deg, #ffd9ec 0%, #f3e0f8 40%, #d9eafc 75%, #c8f3f7 100%);
     color: #5a3d6e;
     display: flex;
-    align-items: center;
-    justify-content: center;
     padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto; /* taller than the screen? scroll — never guillotine the buttons */
     user-select: none;
     -webkit-user-select: none;
   }
-  #app { width: 100%; max-width: 230px; text-align: center; }
+  /* margin:auto = SAFE centering: centered when it fits, top still reachable
+     when it doesn't (align-items:center clipped both ends on square watches) */
+  #app { width: 100%; max-width: 230px; text-align: center; margin: auto; padding: 6px 0; }
   .clock {
     font-size: 30px;
     font-weight: 700;
@@ -102,6 +103,12 @@
   @keyframes float-up { to { transform: translateY(-46px) scale(1.5); opacity: 0; } }
   .offline { color: #d6323e; }
   .tiny { font-size: 8px; color: #9a86ab; margin-top: 6px; }
+  @media (max-height: 280px) {
+    /* postage-stamp viewports: shrink the star of the show so the buttons
+       keep their tap targets (!important because JS inlines the 112px) */
+    #slime-tap canvas { width: 88px !important; }
+    .pin { font-size: 34px; letter-spacing: 6px; }
+  }
 </style>
 </head>
 <body>
@@ -258,6 +265,9 @@
         LS.set('yosw-uid', numToUid(v));
         LS.set('yosw-pin', 0);
         LS.set('yosw-pin-ts', 0);
+        // wave back: +1 on the pin tells the desktop a REAL watch adopted —
+        // it won't declare PAIRED until this lands. one retry; it matters.
+        hit('wpair-' + pin).then(function (ok) { if (!ok) setTimeout(function () { hit('wpair-' + pin); }, 2000); });
         pairSplash(function () { showHome(true); });
       }
       function checkPair() {
@@ -484,9 +494,20 @@
 
     /* unpair: hold the clock */
     var holdT = null;
-    clock.addEventListener('touchstart', function () { holdT = setTimeout(function () { if (confirm('unpair this watch?')) { LS.set('yosw-uid', null); showPairing(); } }, 2000); });
+    function unpairNow() {
+      // the baskets empty too: queued pets/plucks belong to the save that
+      // earned them, not whoever pairs this wrist next — and the sprout
+      // replants so a ripe garden isn't gifted across saves either
+      LS.set('yosw-uid', null);
+      LS.set('yosw-pets-q', 0);
+      LS.set('yosw-plq', 0);
+      LS.set('yosw-planted', 0);
+      LS.set('yosw-grow', 0);
+      showPairing();
+    }
+    clock.addEventListener('touchstart', function () { holdT = setTimeout(function () { if (confirm('unpair this watch?')) unpairNow(); }, 2000); });
     clock.addEventListener('touchend', function () { if (holdT) clearTimeout(holdT); });
-    clock.addEventListener('mousedown', function () { holdT = setTimeout(function () { if (confirm('unpair this watch?')) { LS.set('yosw-uid', null); showPairing(); } }, 2000); });
+    clock.addEventListener('mousedown', function () { holdT = setTimeout(function () { if (confirm('unpair this watch?')) unpairNow(); }, 2000); });
     clock.addEventListener('mouseup', function () { if (holdT) clearTimeout(holdT); });
   }
 
