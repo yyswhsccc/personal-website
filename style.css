@@ -7635,8 +7635,13 @@ body.nm-melt-static::after {
 /* evolved sprites carry a 3px transparent apron (canvas 17 wide vs 11):
    widths are ×17/11 so the BODY renders at its intended size — the apron
    is where horns/halos/tails live, not a shrink ray (v161.1 size fix) */
-.desk-pik.pik-form2, .desk-pik.pik-form2 img { width: 60px; }
-.desk-pik.pik-form3, .desk-pik.pik-form3 img { width: 71px; }
+.desk-pik.pik-form2, .desk-pik.pik-form2 img { width: 52px; }
+.desk-pik.pik-form3, .desk-pik.pik-form3 img { width: 56px; }
+/* the APEX shine must NEVER eat the step-bob: walking evolved piks run
+   both animations side by side (the glide-drift bug, v161.2) */
+.desk-pik.walking.pik-form3 img { animation: pik-bob 0.42s steps(2) infinite, pik-apex-shine 1.6s ease-in-out infinite; }
+.pik-buddy.walking.pik-form3 img { animation: pik-bob 0.42s steps(2) infinite, pik-halo 1.8s ease-in-out infinite, pik-apex-shine 1.6s ease-in-out infinite; }
+html[data-theme="dark"] .pik-buddy.walking.pik-form3 img { animation: pik-bob 0.42s steps(2) infinite, pik-halo-dark 1.8s ease-in-out infinite, pik-apex-shine 1.6s ease-in-out infinite; }
 .pikdex-cell.pik-form2 img, .pikdex-cell.pik-form3 img { width: 53px; }
 .pikdex-squad-chip.pik-form2 img, .pikdex-squad-chip.pik-form3 img { width: 53px; }
 .pik-parade.pik-form2 img, .pik-parade.pik-form3 img { width: 65px; }

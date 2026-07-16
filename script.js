@@ -27115,171 +27115,180 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!solid(rx - 1, ry) || !solid(rx + 1, ry) || !solid(rx, ry + 1) || !solid(rx, ry - 1)) px(rx, ry, typeof col === 'function' ? col(rx, ry) : col);
       }
     };
-    /* ---- the twelve archetypes (hue kinds) ---- */
+    // a chunky plus-star — isolated 1px dots read as noise at walker scale
+    const star = (sx, sy, col) => { px(sx, sy, col); px(sx - 1, sy, col); px(sx + 1, sy, col); px(sx, sy - 1, col); px(sx, sy + 1, col); };
+    const blk = (sx, sy, col) => { px(sx, sy, col); px(sx + 1, sy, col); px(sx, sy + 1, col); px(sx + 1, sy + 1, col); }; // 2×2 block
+    /* ---- the thirteen archetypes (hue kinds) — BOLD cuts, v161.2 ---- */
     const ARCH = [
-      function horns() { // merge horns
-        const yT = bodyTop, l = edgeL(yT) + 1, r = edgeR(yT) - 1;
-        px(l, yT - 1, dark); px(r, yT - 1, dark);
-        if (epic) { px(l - 1, yT - 2, dark); px(r + 1, yT - 2, dark); px(l - 1, yT - 3, '#ffd400'); px(r + 1, yT - 3, '#ffd400'); }
+      function horns() { // merge horns: 2×2 stubs, gold tips at APEX
+        const yT = bodyTop, l = edgeL(yT), r = edgeR(yT);
+        blk(l, yT - 2, dark); blk(r - 1, yT - 2, dark);
+        if (epic) { px(l, yT - 3, '#ffd400'); px(r, yT - 3, '#ffd400'); }
       },
-      function wings() { // canary wings
+      function wings() { // canary wings: solid shoulder fans
         const yM = bodyTop + 3, l = edgeL(yM), r = edgeR(yM);
-        [0, 1].forEach((k) => { px(l - 1 - k, yM - k, '#ffffff'); px(r + 1 + k, yM - k, '#ffffff'); });
-        if (epic) [0, 1, 2].forEach((k) => { px(l - 1 - k, yM + 1, '#fff6c9'); px(r + 1 + k, yM + 1, '#fff6c9'); px(l - 2, yM - 2, '#ffd400'); px(r + 2, yM - 2, '#ffd400'); });
+        blk(l - 2, yM - 1, '#ffffff'); blk(r + 1, yM - 1, '#ffffff');
+        if (epic) { px(l - 3, yM, '#fff6c9'); px(r + 3, yM, '#fff6c9'); px(l - 2, yM - 2, '#ffd400'); px(r + 2, yM - 2, '#ffd400'); }
       },
-      function halo() { // uptime halo
-        const yH = -2;
-        [cx - 1, cx, cx + 1].forEach((rx) => px(rx, yH, '#ffd400'));
-        if (epic) { px(cx - 2, yH + 1, '#ffd400'); px(cx + 2, yH + 1, '#ffd400'); px(cx, yH - 1, '#fff6c9'); }
+      function halo() { // uptime halo: a real ring
+        [cx - 2, cx - 1, cx, cx + 1, cx + 2].forEach((rx) => px(rx, -2, '#ffd400'));
+        px(cx - 2, -1, '#ffd400'); px(cx + 2, -1, '#ffd400');
+        if (epic) [cx - 1, cx, cx + 1].forEach((rx) => px(rx, -3, '#fff6c9'));
       },
-      function antennae() { // full bars
-        px(cx - 3, -1, dark); px(cx - 3, -2, '#7cfc00'); px(cx + 3, -1, dark); px(cx + 3, -2, '#7cfc00');
-        if (epic) { px(cx, -2, dark); px(cx, -3, '#7cfc00'); px(cx - 4, -3, 'rgba(124,252,0,0.6)'); px(cx + 4, -3, 'rgba(124,252,0,0.6)'); }
+      function antennae() { // full bars: stalks with 2×2 signal balls
+        px(cx - 3, -1, dark); px(cx - 3, 0, dark); blk(cx - 4, -3, '#7cfc00');
+        px(cx + 3, -1, dark); px(cx + 3, 0, dark); blk(cx + 3, -3, '#7cfc00');
+        if (epic) { px(cx, -1, dark); blk(cx - 1, -3, '#7cfc00'); }
       },
-      function thirdEye() { // sees the bug coming
-        px(cx, bodyTop + 1, '#14020e');
-        if (epic) { px(cx, bodyTop, '#ffd400'); px(cx - 1, bodyTop + 1, 'rgba(255,212,0,0.5)'); px(cx + 1, bodyTop + 1, 'rgba(255,212,0,0.5)'); }
+      function thirdEye() { // sees the bug coming: a REAL extra eye
+        blk(cx - 1, bodyTop, '#14020e'); px(cx, bodyTop, '#ffffff');
+        if (epic) { [cx - 2, cx - 1, cx, cx + 1, cx + 2].forEach((rx) => px(rx, bodyTop - 1, '#ffd400')); }
       },
-      function mohawk() { // root mohawk
-        [cx - 1, cx + 1].forEach((rx) => px(rx, bodyTop - 1, dark));
-        px(cx, bodyTop - 2, dark);
-        if (epic) { px(cx - 2, bodyTop - 1, '#ff4d6d'); px(cx + 2, bodyTop - 1, '#ff4d6d'); px(cx, bodyTop - 3, '#ff4d6d'); }
+      function mohawk() { // root mohawk: thick spikes
+        blk(cx - 2, bodyTop - 2, dark); blk(cx + 1, bodyTop - 2, dark);
+        px(cx, bodyTop - 3, dark);
+        if (epic) { px(cx - 2, bodyTop - 3, '#ff4d6d'); px(cx + 2, bodyTop - 3, '#ff4d6d'); px(cx, bodyTop - 4 + 1, '#ff4d6d'); }
       },
-      function tail() { // daemon tail
+      function tail() { // daemon tail: 2px thick curl
         const yB = h - 3, r = edgeR(yB);
-        px(r + 1, yB, dark); px(r + 2, yB - 1, dark);
-        if (epic) { px(r + 2, yB - 2, dark); px(r + 3, yB - 3, '#ffd400'); }
+        px(r + 1, yB, dark); px(r + 1, yB - 1, dark); px(r + 2, yB - 1, dark); px(r + 2, yB - 2, dark);
+        if (epic) { blk(r + 2, yB - 4, '#ffd400'); }
       },
-      function fangs() { // debug fangs
+      function fangs() { // debug fangs: proper 1×2 teeth
         const yF = h - 4;
-        px(cx - 1, yF, '#ffffff'); px(cx + 1, yF, '#ffffff');
-        if (epic) { px(cx - 1, yF + 1, '#ffffff'); px(cx + 1, yF + 1, '#ffffff'); px(cx - 2, yF - 1, '#ff4d6d'); }
+        px(cx - 1, yF, '#ffffff'); px(cx - 1, yF + 1, '#ffffff');
+        px(cx + 1, yF, '#ffffff'); px(cx + 1, yF + 1, '#ffffff');
+        if (epic) { px(cx - 2, yF - 1, '#ff4d6d'); px(cx + 2, yF - 1, '#ff4d6d'); }
       },
-      function cape() { // hotfix cape
+      function cape() { // hotfix cape: 2px columns off the shoulders
         const yM = bodyTop + 2;
-        [0, 1, 2, 3].forEach((k) => { px(edgeL(yM + k) - 1, yM + k, '#ff4d6d'); px(edgeR(yM + k) + 1, yM + k, '#ff4d6d'); });
-        if (epic) { px(cx, bodyTop, '#ffd400'); [4, 5].forEach((k) => { px(edgeL(yM + k) - 1, yM + k, '#c9184a'); px(edgeR(yM + k) + 1, yM + k, '#c9184a'); }); }
+        [0, 1, 2, 3].forEach((k) => { const l = edgeL(yM + k), r = edgeR(yM + k); px(l - 1, yM + k, '#ff4d6d'); px(l - 2, yM + k, '#c9184a'); px(r + 1, yM + k, '#ff4d6d'); px(r + 2, yM + k, '#c9184a'); });
+        if (epic) star(cx, bodyTop, '#ffd400');
       },
-      function crown() { // monorepo crown
+      function crown() { // monorepo crown: base bar + teeth
         const yT = bodyTop - 1;
-        [cx - 2, cx, cx + 2].forEach((rx) => px(rx, yT, '#ffd400'));
-        [cx - 1, cx + 1].forEach((rx) => px(rx, yT + 1, '#ffd400'));
-        if (epic) { px(cx, yT - 1, '#ff4d6d'); px(cx - 2, yT - 1, '#41e0ff'); px(cx + 2, yT - 1, '#41e0ff'); }
+        [cx - 2, cx - 1, cx, cx + 1, cx + 2].forEach((rx) => px(rx, yT, '#ffd400'));
+        px(cx - 2, yT - 1, '#ffd400'); px(cx, yT - 1, '#ffd400'); px(cx + 2, yT - 1, '#ffd400');
+        if (epic) { px(cx, yT - 2, '#ff4d6d'); px(cx - 2, yT - 2, '#41e0ff'); px(cx + 2, yT - 2, '#41e0ff'); }
       },
-      function flameHair() { // prod fire
-        [cx - 2, cx + 2].forEach((rx) => px(rx, bodyTop - 1, '#ff8a5c'));
-        px(cx - 1, bodyTop - 2, '#ffd400'); px(cx + 1, bodyTop - 2, '#ffd400');
-        if (epic) { px(cx, bodyTop - 3, '#ff4d1f'); px(cx - 3, bodyTop - 2, '#ff8a5c'); px(cx + 3, bodyTop - 2, '#ff8a5c'); }
+      function flameHair() { // prod fire: a proper blaze
+        blk(cx - 2, bodyTop - 2, '#ff8a5c'); blk(cx + 1, bodyTop - 2, '#ff8a5c');
+        px(cx, bodyTop - 3, '#ffd400'); px(cx - 1, bodyTop - 1, '#ffd400'); px(cx + 1, bodyTop - 1, '#ffd400');
+        if (epic) { px(cx - 3, bodyTop - 1, '#ff4d1f'); px(cx + 3, bodyTop - 1, '#ff4d1f'); px(cx, bodyTop - 4 + 1, '#ff4d1f'); }
       },
-      function stardust() { // zero warnings
-        px(edgeL(bodyTop + 2) - 2, bodyTop + 1, '#fff6c9'); px(edgeR(bodyTop + 2) + 2, bodyTop + 3, '#fff6c9');
-        px(cx + 3, -1, '#ffd400');
-        if (epic) { px(cx - 3, -2, '#ffd400'); px(edgeR(bodyTop + 4) + 2, bodyTop - 1, '#fff6c9'); px(edgeL(bodyTop + 4) - 2, bodyTop + 4, '#ffd400'); }
+      function stardust() { // zero warnings: plus-shaped stars
+        star(edgeR(bodyTop + 2) + 2, bodyTop, '#ffd400');
+        if (epic) { star(edgeL(bodyTop + 3) - 2, bodyTop + 4, '#fff6c9'); star(cx + 3, -2, '#ffd400'); }
       },
-      function bowtie() { // conference speaker
+      function bowtie() { // conference speaker: a real bowtie
         const yB = h - 4;
-        px(cx - 1, yB, '#ff4d6d'); px(cx + 1, yB, '#ff4d6d'); px(cx, yB, '#c9184a');
-        if (epic) { px(cx - 2, yB, '#ff4d6d'); px(cx + 2, yB, '#ff4d6d'); px(cx, yB - 1, '#ffd400'); }
+        blk(cx - 2, yB, '#ff4d6d'); blk(cx + 1, yB, '#ff4d6d'); px(cx, yB, '#c9184a'); px(cx, yB + 1, '#c9184a');
+        if (epic) { px(cx, yB - 1, '#ffd400'); }
       }
     ];
-    /* ---- hand-fitted species evolutions (amplify the one joke) ---- */
+    /* ---- hand-fitted species evolutions — BOLD cuts (amplify the joke) ---- */
     const SP = {
-      glitch() { // rgb split creeps outward
-        const l = edgeL(bodyTop + 3), r = edgeR(bodyTop + 3);
-        px(l - 1, bodyTop + 3, '#ff2fae'); px(r + 1, bodyTop + 3, '#41e0ff');
-        px(l - 1, bodyTop + 5, '#41e0ff'); px(r + 1, bodyTop + 5, '#ff2fae');
-        if (epic) { px(l - 2, bodyTop + 4, '#ff2fae'); px(r + 2, bodyTop + 4, '#41e0ff'); rim((rx) => (rx % 2 ? '#ff2fae' : '#41e0ff')); }
+      glitch() { // rgb split: tall bars, not specks
+        const yM = bodyTop + 3, l = edgeL(yM), r = edgeR(yM);
+        [0, 1, 2].forEach((k) => { px(l - 1, yM + k, '#ff2fae'); px(r + 1, yM + k, '#41e0ff'); });
+        if (epic) { [0, 1, 2].forEach((k) => { px(l - 2, yM + k + 1, '#41e0ff'); px(r + 2, yM + k + 1, '#ff2fae'); }); rim((rx) => (rx % 2 ? '#ff2fae' : '#41e0ff')); }
       },
-      matrix() { // code rain drips off it
-        [-1, 1].forEach((k) => { px(cx + k * 3, h, '#2ea043'); });
-        px(cx, h, '#7ee787');
-        if (epic) { px(cx - 2, h, '#7ee787'); px(cx + 2, h, '#2ea043'); rim('#2ea043'); }
+      matrix() { // code rain: proper drips
+        [-3, 0, 3].forEach((k, i) => { px(cx + k, h, i === 1 ? '#7ee787' : '#2ea043'); px(cx + k, h + 0, '#2ea043'); });
+        if (epic) { px(cx - 2, h, '#7ee787'); px(cx + 2, h, '#7ee787'); rim('#2ea043'); }
       },
-      pointer() { // it multiplied
+      pointer() { // a REAL second cursor
         const r = edgeR(bodyTop + 1);
-        px(r + 2, bodyTop - 1, '#ffffff'); px(r + 2, bodyTop, '#ffffff'); px(r + 3, bodyTop, '#9aa0b4');
-        if (epic) { const l = edgeL(bodyTop + 1); px(l - 2, bodyTop - 2, '#ffffff'); px(l - 2, bodyTop - 1, '#ffffff'); px(l - 3, bodyTop - 1, '#9aa0b4'); }
+        px(r + 2, bodyTop - 2, '#ffffff'); px(r + 2, bodyTop - 1, '#ffffff'); px(r + 3, bodyTop - 1, '#ffffff'); px(r + 2, bodyTop, '#9aa0b4'); px(r + 3, bodyTop, '#9aa0b4');
+        if (epic) { const l = edgeL(bodyTop + 1); px(l - 2, bodyTop - 1, '#ffffff'); px(l - 2, bodyTop, '#ffffff'); px(l - 3, bodyTop, '#9aa0b4'); }
       },
-      wifi() { // bars everywhere
-        px(cx - 2, -1, '#4f9edb'); px(cx, -2, '#4f9edb'); px(cx + 2, -1, '#4f9edb');
-        if (epic) { px(cx, -3, '#7cfc00'); px(cx - 3, -3, 'rgba(79,158,219,0.6)'); px(cx + 3, -3, 'rgba(79,158,219,0.6)'); }
+      wifi() { // thick arcs
+        [cx - 1, cx, cx + 1].forEach((rx) => px(rx, -1, '#4f9edb'));
+        px(cx - 2, 0, '#4f9edb'); px(cx + 2, 0, '#4f9edb');
+        if (epic) { [cx - 1, cx, cx + 1].forEach((rx) => px(rx, -3, '#7cfc00')); px(cx, 0 - 2 + 1, '#7cfc00'); }
       },
-      lowbatt() { // IT FOUND A CHARGER
+      lowbatt() { // the charger: chunky plug
         const yB = h - 3, r = edgeR(yB);
-        px(r + 1, yB, '#2f2f2f'); px(r + 2, yB, '#2f2f2f'); px(r + 3, yB - 1, '#2f2f2f'); px(r + 3, yB + 0, '#2f2f2f');
-        if (epic) { px(cx, bodyTop + 2, '#7cfc00'); px(cx, bodyTop + 3, '#7cfc00'); px(cx + 1, bodyTop + 2, '#7cfc00'); rim('#7cfc00'); }
+        px(r + 1, yB, '#2f2f2f'); px(r + 2, yB, '#2f2f2f'); blk(r + 3, yB - 1, '#2f2f2f');
+        if (epic) { px(cx, bodyTop + 2, '#7cfc00'); px(cx + 1, bodyTop + 3, '#7cfc00'); px(cx, bodyTop + 4, '#7cfc00'); px(cx - 1, bodyTop + 3, '#7cfc00'); rim('#7cfc00'); }
       },
-      post() { // beep → melody
-        px(edgeR(bodyTop + 1) + 2, bodyTop - 1, '#14020e'); px(edgeR(bodyTop + 1) + 2, bodyTop, '#14020e'); px(edgeR(bodyTop + 1) + 3, bodyTop - 2, '#14020e');
-        if (epic) { px(edgeL(bodyTop + 1) - 2, bodyTop - 2, '#14020e'); px(edgeL(bodyTop + 1) - 2, bodyTop - 1, '#14020e'); px(edgeL(bodyTop + 1) - 3, bodyTop - 3, '#ffd400'); }
+      post() { // real music notes: head + stem
+        const r = edgeR(bodyTop + 1);
+        blk(r + 2, bodyTop, '#14020e'); px(r + 3, bodyTop - 1, '#14020e'); px(r + 3, bodyTop - 2, '#14020e');
+        if (epic) { const l = edgeL(bodyTop + 1); blk(l - 3, bodyTop - 1, '#ffd400'); px(l - 1, bodyTop - 2, '#ffd400'); px(l - 1, bodyTop - 3, '#ffd400'); }
       },
-      cumulus() { // it grew weather
-        px(edgeL(bodyTop + 2) - 2, bodyTop, '#ffffff'); px(edgeL(bodyTop + 2) - 3, bodyTop + 1, '#ffffff'); px(edgeR(bodyTop + 2) + 2, bodyTop, '#ffffff');
-        if (epic) { px(cx - 1, h, '#4f9edb'); px(cx + 2, h, '#4f9edb'); px(cx - 3, h, '#4f9edb'); }
+      cumulus() { // puffy 2×2 clouds
+        blk(edgeL(bodyTop + 2) - 3, bodyTop, '#ffffff'); blk(edgeR(bodyTop + 2) + 1, bodyTop - 1, '#ffffff');
+        if (epic) { px(cx - 2, h, '#4f9edb'); px(cx, h, '#4f9edb'); px(cx + 2, h, '#4f9edb'); }
       },
-      feature() { // two features now
+      feature() { // the second face: two REAL eyes on the back
         const l = edgeL(bodyTop + 2);
-        px(l - 1, bodyTop + 2, '#14020e'); px(l - 1, bodyTop + 4, '#14020e'); // a second face, looking back
-        if (epic) { px(l - 2, bodyTop + 3, '#7fae35'); px(l - 1, bodyTop + 6, '#c8f07e'); rim('#7fae35'); }
+        px(l - 1, bodyTop + 2, '#14020e'); px(l - 1, bodyTop + 3, '#14020e');
+        px(l - 1, bodyTop + 5, '#14020e'); px(l - 1, bodyTop + 6, '#14020e');
+        if (epic) { px(l - 2, bodyTop + 4, '#7fae35'); px(l - 2, bodyTop + 3, '#7fae35'); rim('#7fae35'); }
       },
-      latency() { // its echo arrived
+      latency() { // after-images: tall ghosts
         const l = edgeL(bodyTop + 3);
-        [1, 2].forEach((k) => px(l - k, bodyTop + 3, 'rgba(176,154,98,' + (0.7 - k * 0.25) + ')'));
-        if (epic) [1, 2, 3].forEach((k) => { px(l - k, bodyTop + 5, 'rgba(176,154,98,' + (0.8 - k * 0.2) + ')'); px(l - k, bodyTop + 1, 'rgba(176,154,98,' + (0.6 - k * 0.15) + ')'); });
+        [0, 1, 2].forEach((k) => { px(l - 2, bodyTop + 2 + k, 'rgba(176,154,98,0.65)'); });
+        if (epic) [0, 1, 2].forEach((k) => { px(l - 4 + 1, bodyTop + 3 + k, 'rgba(176,154,98,0.4)'); });
       },
-      aliased() { // resolution went DOWN
-        const yT = bodyTop; px(edgeL(yT) - 1, yT - 1, '#8e6cc9'); px(edgeR(yT) + 1, yT - 1, '#8e6cc9');
+      aliased() { // chunky corners
+        const yT = bodyTop;
+        blk(edgeL(yT) - 2, yT - 2, '#8e6cc9'); blk(edgeR(yT) + 1, yT - 2, '#8e6cc9');
         if (epic) rim((rx, ry) => ((rx + ry) % 2 ? '#8e6cc9' : '#cbb1f2'));
       },
-      darkmode() { // brought its own night
-        px(cx + 3, -2, '#fff6c9'); px(cx - 3, -1, '#fff6c9');
-        px(cx + 2, bodyTop + 1, '#fff6c9');
-        if (epic) { px(cx - 2, -3, '#ffd400'); rim('#241335'); px(cx + 4, bodyTop - 1, '#fff6c9'); }
+      darkmode() { // its own night: plus-stars
+        star(cx + 3, -2, '#fff6c9');
+        if (epic) { star(cx - 3, -1, '#ffd400'); rim('#241335'); }
       },
       gilded() { // more gold. obviously.
         rim('#ffd400');
-        if (epic) { px(edgeL(bodyTop + 3) - 1, bodyTop + 3, '#ffd400'); px(edgeR(bodyTop + 3) + 1, bodyTop + 3, '#ffd400'); px(cx, bodyTop - 1, '#fff6c9'); }
+        if (epic) { star(cx, bodyTop - 2, '#fff6c9'); px(edgeL(bodyTop + 3) - 1, bodyTop + 3, '#ffd400'); px(edgeR(bodyTop + 3) + 1, bodyTop + 3, '#ffd400'); }
       },
-      cacheghost() { // it levitates now
-        px(cx - 2, h, 'rgba(169,164,201,0.6)'); px(cx + 2, h, 'rgba(169,164,201,0.6)');
-        if (epic) { px(cx, h + 0, 'rgba(169,164,201,0.35)'); rim('rgba(233,230,245,0.8)'); }
+      cacheghost() { // levitation: a hover shadow gap
+        [cx - 2, cx, cx + 2].forEach((rx) => px(rx, h, 'rgba(169,164,201,0.7)'));
+        if (epic) { [cx - 3, cx - 1, cx + 1, cx + 3].forEach((rx) => px(rx, h + 0, 'rgba(169,164,201,0.45)')); rim('rgba(233,230,245,0.85)'); }
       },
-      cronjob() { // it grew a bell
-        px(cx, bodyTop - 2, '#ffd400'); px(cx - 1, bodyTop - 1, '#ffd400'); px(cx + 1, bodyTop - 1, '#ffd400');
-        if (epic) { px(cx, bodyTop - 3, '#c98a2e'); px(cx - 3, bodyTop - 2, '#ffd400'); px(cx + 3, bodyTop - 2, '#ffd400'); }
+      cronjob() { // the bell, properly cast
+        blk(cx - 1, bodyTop - 3, '#ffd400'); [cx - 2, cx - 1, cx, cx + 1, cx + 2].forEach((rx) => px(rx, bodyTop - 1, '#ffd400')); px(cx, bodyTop - 4 + 1, '#c98a2e');
+        if (epic) { px(cx - 3, bodyTop - 2, '#ffd400'); px(cx + 3, bodyTop - 2, '#ffd400'); }
       },
-      y2kbug() { // 19100 confetti
-        px(edgeL(bodyTop) - 1, bodyTop - 2, '#ff2fae'); px(edgeR(bodyTop) + 1, bodyTop - 1, '#41e0ff'); px(cx + 2, -1, '#ffd400');
-        if (epic) { px(cx - 3, -2, '#7cfc00'); px(edgeR(bodyTop + 4) + 2, bodyTop + 2, '#ff2fae'); px(edgeL(bodyTop + 4) - 2, bodyTop + 4, '#41e0ff'); }
+      y2kbug() { // party: plus-star confetti
+        star(edgeR(bodyTop) + 2, bodyTop - 2, '#ff2fae');
+        if (epic) { star(edgeL(bodyTop) - 2, bodyTop - 1, '#41e0ff'); star(cx, -2, '#ffd400'); }
       },
-      bitflip() { // half of it flipped
-        for (let ry = bodyTop; ry < h; ry++) { const r = edgeR(ry); if (solid(r, ry)) px(r, ry, '#1a1a1a'); }
+      bitflip() { // half of it flipped: 2px inverted stripe
+        for (let ry = bodyTop; ry < h; ry++) { const r = edgeR(ry); if (solid(r, ry)) px(r, ry, '#1a1a1a'); if (solid(r - 1, ry)) px(r - 1, ry, '#1a1a1a'); }
         if (epic) for (let ry = bodyTop; ry < h; ry += 2) { const l = edgeL(ry); if (solid(l, ry)) px(l, ry, '#f2f2f2'); }
       },
-      turbo() { // exhaust flames
-        const l = edgeL(bodyTop + 4);
-        px(l - 1, bodyTop + 4, '#ffd400'); px(l - 2, bodyTop + 4, '#ff8a5c');
-        if (epic) { px(l - 3, bodyTop + 4, '#ff4d1f'); px(l - 1, bodyTop + 2, '#ffd400'); px(l - 2, bodyTop + 6, '#ff8a5c'); rim('#ff8a5c'); }
+      turbo() { // exhaust: layered flame cone
+        const yM = bodyTop + 4, l = edgeL(yM);
+        px(l - 1, yM, '#ffd400'); px(l - 1, yM - 1, '#ffd400'); px(l - 1, yM + 1, '#ffd400');
+        px(l - 2, yM, '#ff8a5c'); px(l - 2, yM - 1, '#ff8a5c');
+        if (epic) { px(l - 3, yM, '#ff4d1f'); px(l - 2, yM + 1, '#ff4d1f'); px(l - 1, yM + 2, '#ff8a5c'); rim('#ff8a5c'); }
       },
-      dotmatrix() { // printing its own hi-scores
-        px(cx - 1, -1, '#ffffff'); px(cx, -1, '#ffffff'); px(cx + 1, -1, '#ffffff');
-        if (epic) { px(cx - 1, -2, '#ffffff'); px(cx, -2, '#7c8db0'); px(cx + 1, -2, '#ffffff'); px(cx - 2, -1, '#7c8db0'); }
+      dotmatrix() { // the printout: a real sheet
+        [cx - 1, cx, cx + 1].forEach((rx) => { px(rx, -1, '#ffffff'); px(rx, -2, '#ffffff'); });
+        px(cx - 2, -1, '#7c8db0'); px(cx + 2, -1, '#7c8db0');
+        if (epic) { px(cx - 1, -3, '#7c8db0'); px(cx + 1, -3, '#7c8db0'); }
       },
-      bsodjr() { // it frames the reports
-        px(cx - 1, bodyTop + 3, '#ffffff'); px(cx + 1, bodyTop + 3, '#ffffff'); px(cx, bodyTop + 4, '#ffffff'); // a tiny :(
+      bsodjr() { // the tiny :( properly drawn
+        px(cx - 1, bodyTop + 2, '#ffffff'); px(cx + 1, bodyTop + 2, '#ffffff');
+        px(cx - 1, bodyTop + 4, '#ffffff'); px(cx, bodyTop + 3, '#ffffff'); px(cx + 1, bodyTop + 4, '#ffffff');
         if (epic) rim('#2f5fd0');
       },
       rgbrig() { // the glow is real
         rim((rx, ry) => ['#ff4d6d', '#7cfc00', '#41e0ff'][(rx + ry) % 3]);
-        if (epic) { px(cx - 3, -1, '#ff4d6d'); px(cx, -2, '#7cfc00'); px(cx + 3, -1, '#41e0ff'); }
+        if (epic) { star(cx - 3, -1, '#ff4d6d'); star(cx + 3, -1, '#41e0ff'); }
       },
-      captcha() { // verified, twice
-        px(cx - 1, bodyTop + 3, '#7cba58'); px(cx, bodyTop + 4, '#7cba58'); px(cx + 1, bodyTop + 2, '#7cba58'); // a chest ✓
-        if (epic) { px(edgeR(bodyTop + 1) + 2, bodyTop - 1, '#7cba58'); px(edgeR(bodyTop + 1) + 3, bodyTop - 2, '#7cba58'); rim('#7cba58'); }
+      captcha() { // a 2px-thick chest checkmark
+        px(cx - 2, bodyTop + 3, '#7cba58'); px(cx - 1, bodyTop + 4, '#7cba58'); px(cx, bodyTop + 5, '#7cba58');
+        px(cx + 1, bodyTop + 4, '#7cba58'); px(cx + 2, bodyTop + 3, '#7cba58'); px(cx + 3, bodyTop + 2, '#7cba58');
+        if (epic) rim('#7cba58');
       },
-      kernelpg() { // penguin belly + flippers
-        for (let ry = bodyTop + 3; ry < h - 1; ry++) { px(cx, ry, '#ffffff'); if (epic) { px(cx - 1, ry, '#ffffff'); px(cx + 1, ry, '#ffffff'); } }
-        if (epic) { px(edgeL(bodyTop + 4) - 1, bodyTop + 4, '#14020e'); px(edgeR(bodyTop + 4) + 1, bodyTop + 4, '#14020e'); }
+      kernelpg() { // tux upgrades: red bowtie, then flippers
+        blk(cx - 2, bodyTop + 2, '#ff4d6d'); blk(cx + 1, bodyTop + 2, '#ff4d6d'); px(cx, bodyTop + 2, '#c9184a');
+        if (epic) { const yF = bodyTop + 5; px(edgeL(yF) - 1, yF, '#14020e'); px(edgeL(yF) - 1, yF + 1, '#14020e'); px(edgeR(yF) + 1, yF, '#14020e'); px(edgeR(yF) + 1, yF + 1, '#14020e'); }
       }
     };
     if (kind === 'ch') {
@@ -27568,7 +27577,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const img = document.createElement('img');
     img.src = pikSprite(color, stage, species ? species.id : null, false, gbForm, gbKey);
     img.alt = '';
-    img.style.width = gbForm === 3 ? '71px' : gbForm === 2 ? '60px' : '33px'; // apron-compensated (see v161.1)
+    img.style.width = gbForm === 3 ? '56px' : gbForm === 2 ? '52px' : '33px'; // apron-compensated, tempered (v161.2)
     if (gbForm >= 2) el.classList.add('pik-form' + gbForm);
     el.appendChild(img);
     if (species) { // the hat performs live, too
