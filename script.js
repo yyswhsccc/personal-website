@@ -7445,6 +7445,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // a classic dialog box, dream-flavored. buttons: [label, cb, keepOpen]
   function dreamDlg(optsOrBuild) {
     if (!dreamWorld) return null;
+    // geo showtime: while the repair ballet plays, the stage is CLOSED —
+    // no dialog of any kind may interrupt the crew (owner decree v153)
+    if (dreamWorld.flags.geoShowtime) return null;
     // v126: pass a BUILDER (() => ({...opts})) and the dialog becomes
     // live-translatable — the builder re-runs its trT calls on a language
     // toggle and the OPEN dialog re-inks itself in place (owner decree:
@@ -14792,7 +14795,7 @@ document.addEventListener('DOMContentLoaded', () => {
     { k: ['guestbook', 'livre', 'sign'],
       v: ['the guestbook is fixed. it was lonely. it will now ask for you by name.', 'le livre d\'or est réparé. il se sentait seul. il vous demandera désormais par votre nom.'],
       loop: ['a guestbook\'s only failure mode is emptiness.', 'le seul mode de panne d\'un livre d\'or, c\'est le vide.'],
-      fx() { if (dreamWorld && dreamWorld.flags.geoGuestbook) dT(() => { if (dreamWorld) dreamWorld.flags.geoGuestbook(true); }, 1400); } },
+      fx() { if (dreamWorld && dreamWorld.flags.geoGuestbook) dT(() => { if (dreamWorld) dreamWorld.flags.geoGuestbook(true); }, 8500); } }, // after the curtain — showtime bars all dialogs
     { k: ['slime'],
       v: ['the slime has been issued full protective equipment. morale: maximum.', 'le slime a reçu son équipement de protection complet. moral : maximal.'],
       loop: ['the slime was never broken. now it has a HAT.', 'le slime n\'a jamais été cassé. maintenant il a un CHAPEAU.'],
@@ -14805,13 +14808,13 @@ document.addEventListener('DOMContentLoaded', () => {
   // when no keyword lands (or the topic is spent), the crew honors the
   // request LITERALLY: it gets installed, staffed, or shipped
   const GEO_FIX_FALLBACKS = [
-    { v: ['your request has been INSTALLED: {q}. it hangs beautifully.', 'votre demande a été INSTALLÉE : {q}. elle est très bien accrochée.'],
+    { fb: 1, v: ['your request has been INSTALLED: {q}. it hangs beautifully.', 'votre demande a été INSTALLÉE : {q}. elle est très bien accrochée.'],
       loop: ['"fix" was never defined. display counts.', '« réparer » n\'a jamais été défini. l\'affichage compte.'],
       fx(q) { geoFixSign('“' + q.slice(0, 34) + '” — ' + trT('INSTALLED ✓', 'INSTALLÉ ✓')); } },
-    { v: ['the problem now has a full-time specialist. the specialist is NAMED after it.', 'le problème a désormais un spécialiste à temps plein. le spécialiste porte son NOM.'],
+    { fb: 1, v: ['the problem now has a full-time specialist. the specialist is NAMED after it.', 'le problème a désormais un spécialiste à temps plein. le spécialiste porte son NOM.'],
       loop: ['ownership solves everything, eventually.', 'la responsabilisation résout tout, à terme.'],
       fx(q) { geoFixSign('⛑ ' + trT('assigned to: ', 'assigné à : ') + '“' + q.slice(0, 26) + '”'); } },
-    { v: ['shipped as {q}_FINAL_v2.htm. it is on the desktop. do not open it.', 'livré sous {q}_FINAL_v2.htm. c\'est sur le bureau. ne l\'ouvrez pas.'],
+    { fb: 1, v: ['shipped as {q}_FINAL_v2.htm. it is on the desktop. do not open it.', 'livré sous {q}_FINAL_v2.htm. c\'est sur le bureau. ne l\'ouvrez pas.'],
       loop: ['FINAL_v2 always works. opening it was never specified.', 'FINAL_v2 marche toujours. l\'ouvrir n\'a jamais été spécifié.'],
       fx(q) { const word = (q.split(' ')[0] || 'fix').slice(0, 12); geoFixSign('💾 ' + word + '_FINAL_v2.htm — ' + trT('SHIPPED ✓', 'LIVRÉ ✓')); } }
   ];
@@ -15171,22 +15174,24 @@ document.addEventListener('DOMContentLoaded', () => {
       if (p >= 1) { clearInterval(iv); dT(geoWorkOrder, 700); }
     }, 60);
   }
-  // the construction ballet: while a request is "interpreted", the crew
-  // swarms the damage with tools, sparks fly, and heavy machinery rolls by
+  // the construction ballet — now THE headline act (owner decree v153):
+  // paperwork hides, popups are barred, and the crew owns the whole stage
   function geoCrewWork() {
     if (!dreamWorld) return;
-    [0, 1, 2, 3, 4].forEach((i) => playTone(i % 2 ? 240 : 320, 'square', 0.05, 0.25 + i * 0.5, 0.04));
+    [0, 1, 2, 3, 4, 5, 6].forEach((i) => playTone(i % 2 ? 240 : 320, 'square', 0.05, 0.25 + i * 0.5, 0.04));
     playTone(120, 'sawtooth', 0.35, 0.6, 0.03); // the chainsaw clears its throat
     playTone(95, 'sawtooth', 0.3, 1.7, 0.03);
+    playTone(110, 'sawtooth', 0.4, 3.1, 0.03);
     const gf = dreamWorld.flags.geoFix;
     if (gf && gf.bubble && document.body.contains(gf.bubble)) {
+      gf.bubble.textContent = trT('ROGER THAT. crew!! DEPLOY!!', 'BIEN REÇU. équipe !! DÉPLOIEMENT !!');
       const lines = [
         ['lift with the leaves!! read the request AS WRITTEN!!', 'soulevez avec les feuilles !! lisez la demande TELLE QUELLE !!'],
         ['do NOT fix anything that is not in the contract!!', 'ne réparez RIEN qui ne soit pas au contrat !!'],
         ['beautiful. technically perfect. morally? next question.', 'magnifique. techniquement parfait. moralement ? question suivante.'],
         ['chainsaw team, EASE UP. it\'s a homepage, not a forest.', 'équipe tronçonneuse, DOUCEMENT. c\'est une page perso, pas une forêt.']
       ];
-      gf.bubble.textContent = trT(...lines[Math.floor(Math.random() * lines.length)]);
+      dT(() => { if (gf.bubble && document.body.contains(gf.bubble)) gf.bubble.textContent = trT(...lines[Math.floor(Math.random() * lines.length)]); }, 2400);
     }
     if (REDUCED_MOTION) return;
     // workers pick spots on the wreckage (or a center pit if nothing shows)
@@ -15197,16 +15202,32 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     const iw = window.innerWidth || 1200, ih = window.innerHeight || 800;
     const cx = iw / 2, cy = Math.min(ih - 140, ih * 0.45);
-    const pool = GEO_TOOLS.slice();
-    const n = 5 + Math.floor(Math.random() * 2);
+    const pool = GEO_TOOLS.slice().concat(GEO_TOOLS.slice());
+    const n = 8 + Math.floor(Math.random() * 3); // headline act: the full brigade
     for (let i = 0; i < n; i++) {
       const spot = (spots.length && Math.random() < 0.6)
         ? spots[Math.floor(Math.random() * spots.length)]
-        : [cx - 170 + Math.random() * 340, cy - 60 + Math.random() * 170];
+        : [cx - 260 + Math.random() * 520, cy - 90 + Math.random() * 230];
       const tool = pool.length ? pool.splice(Math.floor(Math.random() * pool.length), 1)[0] : '🔨';
-      dT(() => geoWorkerAt(spot[0], spot[1], tool, 3200 + Math.random() * 700), i * 160);
+      dT(() => geoWorkerAt(spot[0], spot[1], tool, 4200 + Math.random() * 900), i * 140);
     }
-    if (Math.random() < 0.55) geoVehicle();
+    geoVehicle(); // machinery is mandatory at a headline show
+    if (Math.random() < 0.4) dT(geoVehicle, 1800); // sometimes the fleet
+    cheatFall(['🚧', '✦'], 6);
+  }
+  // no matter WHAT was asked: fresh visible comedy lands on the site —
+  // a random room gets flung open (if needed) and re-wrecked on the spot
+  function geoShowtimeWreck() {
+    if (!dreamWorld) return;
+    const g = dreamWorld.flags.geoFix;
+    if (!g) return;
+    const ids = Object.keys(g.wreckIds);
+    if (!ids.length) return;
+    const open = ids.filter((w) => { const el = document.getElementById(w); return el && !el.classList.contains('window-closed') && !el.classList.contains('window-minimized'); });
+    const wid = open.length ? open[Math.floor(Math.random() * open.length)] : ids[Math.floor(Math.random() * ids.length)];
+    const win = document.getElementById(wid);
+    if (win && win.classList.contains('window-closed')) { try { openWindow(wid); } catch (e) { return; } }
+    dT(() => geoWreckWindow(wid), 350);
   }
   // the 📋 badge brings a closed work order back
   function geoFixBadge() {
@@ -15269,31 +15290,53 @@ document.addEventListener('DOMContentLoaded', () => {
       think.textContent = trT('⛑ the crew reads your request… twice… grinning…', '⛑ l\'équipe lit votre demande… deux fois… en souriant…');
       body.appendChild(think);
       d.__dirty = 1;
+      // CURTAIN DOWN (owner decree v153): the paperwork hides, every other
+      // dialog leaves the stage, no new popup may open — the ballet plays
+      dreamWorld.flags.geoShowtime = 1;
+      const T_RESOLVE = REDUCED_MOTION ? 900 : 4800;
+      const T_CURTAIN = REDUCED_MOTION ? 1700 : 7200;
+      const hidden = [...document.querySelectorAll('.dream-dlg')].filter((x) => x.style.display !== 'none');
+      hidden.forEach((x) => { x.style.display = 'none'; });
       geoCrewWork();
       dT(() => {
-        if (!dreamWorld || !document.body.contains(d)) { gf.busy = 0; gf.dlgOpen = 0; return; }
+        if (!dreamWorld) return;
         const pick = geoFixMatch(q, gf);
         const qq = q.length > 26 ? q.slice(0, 25) + '…' : q;
         const v = [pick.v[0].split('{q}').join('“' + qq + '”'), pick.v[1].split('{q}').join('« ' + qq + ' »')];
         try { pick.fx(q); } catch (e) { /* the fix fixed itself */ }
+        geoShowtimeWreck(); // whatever they asked, fresh comedy MUST land
         playSparkleSound();
+        playFanfare();
         let crewName = '';
         try { const dex = pikdexGet(); if (dex.length) crewName = pikNameOf(dex, Math.floor(Math.random() * Math.min(dex.length, 6))) + ' — '; } catch (e) { /* anonymous professionals */ }
         think.textContent = crewName + trT('DONE ✓ ', 'FAIT ✓ ') + trT(...v);
         gf.contract.push({ q, v, loop: pick.loop });
         gf.round++;
+        // the hero calls it — tying the request back in, or proudly not
+        const announce = pick.fb
+          ? trT('…what did you even SAY? no idea. but we are PROFESSIONALS: it is FIXED now ✓', '…vous disiez QUOI au juste ? aucune idée. mais nous sommes des PROS : c\'est RÉPARÉ ✓')
+          : trT('REPAIRED!! “' + qq + '” — handled EXACTLY as written ✓', 'RÉPARÉ !! « ' + qq + ' » — traité EXACTEMENT comme écrit ✓');
+        if (gf.bubble && document.body.contains(gf.bubble)) gf.bubble.textContent = announce;
+        else showToast('⛑ ' + announce);
+      }, T_RESOLVE);
+      dT(() => {
+        if (!dreamWorld) return;
+        // CURTAIN UP: the stage reopens, the paperwork returns
+        dreamWorld.flags.geoShowtime = 0;
+        hidden.forEach((x) => { if (document.body.contains(x)) x.style.display = ''; });
+        if (!document.body.contains(d)) { gf.busy = 0; gf.dlgOpen = 0; return; }
         setMeter();
         d.__dirty = 1;
         gf.busy = 0;
         if (gf.round >= 3) {
-          dT(() => { try { d.remove(); } catch (e) {} gf.dlgOpen = 0; geoFixReveal(); }, 3400);
+          dT(() => { try { d.remove(); } catch (e) {} gf.dlgOpen = 0; geoFixReveal(); }, 2600);
         } else {
           inp.disabled = false; go.disabled = false; go.classList.remove('geo-fix-working');
           inp.value = '';
           inp.placeholder = trT('anything else?? (be SPECIFIC. or don\'t.)', 'autre chose ?? (soyez PRÉCIS. ou pas.)');
           try { inp.focus(); } catch (e) { /* the pen rolled away */ }
         }
-      }, 3600);
+      }, T_CURTAIN);
     };
     go.addEventListener('click', submit);
     inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); submit(); } });
