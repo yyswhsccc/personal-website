@@ -30126,6 +30126,7 @@ document.addEventListener('DOMContentLoaded', () => {
       el, img, hue: hue !== null ? hue : null, chameleon: !!chameleon, hueAt: 0, stage: stage || 0,
       party: spId === 'y2kbug' && form >= 2, partyMax: spId === 'y2kbug' && form >= 3, partyAt: 0, // evolved Y2K Bug: a walking celebration (the wake is APEX-only)
       starTrail: spId === 'pointer' && form >= 2, // the pointer family walks on stardust
+      starNebula: spId === 'pointer' && form >= 3, // APEX: the full glowing nebula
       weather: spId === 'cumulus' && form >= 2, apexWeather: spId === 'cumulus' && form >= 3, rainAt: 0, boltAt: 0,
       sp: species || null, spd: species && species.spd ? species.spd : 1, stepAt: 0,
       x: 40 + Math.random() * Math.max(120, r.width - 160),
@@ -31602,11 +31603,13 @@ document.addEventListener('DOMContentLoaded', () => {
         w.babyEl.style.left = w.babyX + 'px';
         w.babyEl.style.top = w.babyY + 'px';
         if (!stalled && now > w.babyStarAt && Math.hypot(bTx - w.babyX, bTy - w.babyY) > 3) {
-          w.babyStarAt = now + 300 + Math.random() * 260; // the baby's own stardust wake
+          w.babyStarAt = now + 260 + Math.random() * 220; // the baby's own GLOWING stardust wake
+          const bsi = Math.floor(Math.random() * 18);
           const bs = document.createElement('img');
           bs.className = 'pik-baby-star';
-          bs.src = trailStarSprite(Math.floor(Math.random() * 6));
+          bs.src = trailStarSprite(bsi);
           bs.alt = '';
+          bs.style.setProperty('--star-glow', trailStarGlow(bsi));
           bs.style.left = (w.babyX + 5) + 'px';
           bs.style.top = (w.babyY + 9) + 'px';
           DESK_PIK.layer.appendChild(bs);
@@ -31706,19 +31709,57 @@ document.addEventListener('DOMContentLoaded', () => {
           w.trailAt = now + 750 + Math.random() * 450; // airier cadence
           const n = 1 + Math.floor(Math.random() * 10);
           const cx = w.x + 14, cy = w.y + 34; // strictly below the sprite
-          if (w.starTrail) { // the pointer family walks on five-color stardust
-            for (let k = 0; k < 1 + Math.floor(Math.random() * 3); k++) {
+          if (w.starTrail) { // the pointer family walks on GLOWING stardust —
+            // nine nebula colorways, two star shapes, each twinkling on its
+            // own clock. APEX adds big stars + soft pixel nebula puffs (v162)
+            const deep = w.starNebula;
+            w.trailAt = now + 520 + Math.random() * 380; // a denser field
+            for (let k = 0; k < (deep ? 2 : 1) + Math.floor(Math.random() * 3); k++) {
+              const si = Math.floor(Math.random() * 18);
               const s = document.createElement('img');
               s.className = 'pik-trail pik-star-trail';
-              s.src = trailStarSprite(Math.floor(Math.random() * 6));
+              s.src = trailStarSprite(si);
               s.alt = '';
-              const sz = 8 + Math.random() * 8;
+              const sz = (deep && Math.random() < 0.22) ? 17 + Math.random() * 7 : 8 + Math.random() * 8;
               s.style.width = sz + 'px';
-              s.style.left = (cx + Math.random() * 24 - 12 - sz / 2) + 'px';
+              s.style.setProperty('--star-glow', trailStarGlow(si));
+              s.style.setProperty('--tw', (1.1 + Math.random() * 1.6).toFixed(2) + 's');
+              s.style.setProperty('--twd', (-Math.random() * 2).toFixed(2) + 's');
+              s.style.left = (cx + Math.random() * 28 - 14 - sz / 2) + 'px';
               s.style.top = (cy + Math.random() * 8) + 'px';
               DESK_PIK.layer.appendChild(s);
               setTimeout(() => s.classList.add('fading'), 10500);
               setTimeout(() => s.remove(), 12000);
+            }
+            // stardust: tiny glowing motes scattered between the stars
+            for (let k = 0; k < 2 + Math.floor(Math.random() * (deep ? 4 : 2)); k++) {
+              const gi = Math.floor(Math.random() * 9);
+              const d = document.createElement('span');
+              d.className = 'pik-trail pik-star-dust';
+              d.style.background = trailStarGlow(gi);
+              d.style.setProperty('--star-glow', trailStarGlow(gi));
+              d.style.setProperty('--tw', (0.9 + Math.random() * 1.4).toFixed(2) + 's');
+              d.style.setProperty('--twd', (-Math.random() * 2).toFixed(2) + 's');
+              d.style.left = (cx + Math.random() * 36 - 18) + 'px';
+              d.style.top = (cy - 2 + Math.random() * 12) + 'px';
+              DESK_PIK.layer.appendChild(d);
+              setTimeout(() => d.classList.add('fading'), 9000);
+              setTimeout(() => d.remove(), 10500);
+            }
+            // APEX only: soft pixel nebula puffs — the "cloud" in star-cloud
+            if (deep && Math.random() < 0.5) {
+              const p = document.createElement('img');
+              p.className = 'pik-trail pik-neb-puff';
+              p.src = trailNebPuffSprite(Math.floor(Math.random() * 3));
+              p.alt = '';
+              const pw = 22 + Math.random() * 14;
+              p.style.width = pw + 'px';
+              p.style.setProperty('--star-glow', ['#c9a7f5', '#ff8fc7', '#41e0ff'][Math.floor(Math.random() * 3)]);
+              p.style.left = (cx + Math.random() * 30 - 15 - pw / 2) + 'px';
+              p.style.top = (cy - 2 + Math.random() * 10) + 'px';
+              DESK_PIK.layer.appendChild(p);
+              setTimeout(() => p.classList.add('fading'), 7000);
+              setTimeout(() => p.remove(), 8600);
             }
             const trailsS = DESK_PIK.layer.querySelectorAll('.pik-trail');
             for (let k = 0; k < trailsS.length - 120; k++) trailsS[k].remove();
@@ -31772,24 +31813,56 @@ document.addEventListener('DOMContentLoaded', () => {
   // six SOFT pastel bloom sprites — powder pink / milk lilac /
   // custard / powder blue / mint cream / peach milk. gentle on
   // the eyes, unmistakably Y2K NSO.
-  // five-color pixel stars for the pointer family's wake
+  // the pointer family's nebula: nine colorways x two pixel star shapes
+  // (plus-star and diamond sparkle). glow color rides along for CSS halos.
   var trailStarCache = null;
+  var TRAIL_STAR_COLS = [
+    ['#ff8fc7', '#ffd9ec'], ['#ffd400', '#fff6c9'], ['#41e0ff', '#d9f6ff'],
+    ['#c9a7f5', '#efe4fd'], ['#7cfc00', '#e0ffd1'], ['#ff8a5c', '#ffe3d6'],
+    ['#8a6cf0', '#e4dbff'], ['#ff5fa8', '#ffd0e6'], ['#eaf6ff', '#ffffff']
+  ];
   function trailStarSprite(i) {
     if (!trailStarCache) {
-      const COLS = [['#ff8fc7', '#ffd9ec'], ['#ffd400', '#fff6c9'], ['#41e0ff', '#d9f6ff'], ['#c9a7f5', '#efe4fd'], ['#7cfc00', '#e0ffd1'], ['#ff8a5c', '#ffe3d6']];
-      trailStarCache = COLS.map((cc) => {
+      trailStarCache = [];
+      for (let sh = 0; sh < 2; sh++) {
+        for (const cc of TRAIL_STAR_COLS) {
+          const c = document.createElement('canvas');
+          c.width = 7; c.height = 7;
+          const x = c.getContext('2d');
+          x.fillStyle = cc[0];
+          if (sh === 0) { // plus-star
+            x.fillRect(3, 0, 1, 7); x.fillRect(0, 3, 7, 1);
+            x.fillRect(2, 2, 3, 3);
+          } else { // diamond sparkle
+            for (let d = 0; d < 7; d++) { const half = 3 - Math.abs(3 - d); x.fillRect(3 - half, d, half * 2 + 1, 1); }
+          }
+          x.fillStyle = cc[1];
+          x.fillRect(3, 3, 1, 1);
+          if (sh === 0) { x.fillRect(1, 1, 1, 1); x.fillRect(5, 5, 1, 1); }
+          else { x.fillRect(3, 2, 1, 1); x.fillRect(3, 4, 1, 1); }
+          trailStarCache.push(c.toDataURL());
+        }
+      }
+    }
+    return trailStarCache[i % trailStarCache.length];
+  }
+  function trailStarGlow(i) { return TRAIL_STAR_COLS[i % TRAIL_STAR_COLS.length][0]; }
+  // soft pixel nebula puffs, three cosmic colorways (violet / rose / ice)
+  var trailNebCache = null;
+  function trailNebPuffSprite(i) {
+    if (!trailNebCache) {
+      trailNebCache = [['#c9a7f5', '#8a6cf0'], ['#ffb3dd', '#ff5fa8'], ['#9be8ff', '#41b8e8']].map(([a, b]) => {
         const c = document.createElement('canvas');
-        c.width = 7; c.height = 7;
+        c.width = 9; c.height = 5;
         const x = c.getContext('2d');
-        x.fillStyle = cc[0];
-        x.fillRect(3, 0, 1, 7); x.fillRect(0, 3, 7, 1);
-        x.fillRect(2, 2, 3, 3);
-        x.fillStyle = cc[1];
-        x.fillRect(3, 3, 1, 1); x.fillRect(1, 1, 1, 1); x.fillRect(5, 5, 1, 1);
+        x.fillStyle = b; // deeper underlayer
+        x.fillRect(2, 2, 6, 2); x.fillRect(1, 3, 7, 1);
+        x.fillStyle = a; // bright crown
+        x.fillRect(1, 1, 5, 2); x.fillRect(3, 0, 4, 2); x.fillRect(6, 1, 2, 2);
         return c.toDataURL();
       });
     }
-    return trailStarCache[i % trailStarCache.length];
+    return trailNebCache[i % trailNebCache.length];
   }
   var trailBloomCache = null;
   function trailBloomSprite(i) {
