@@ -14221,7 +14221,7 @@ document.addEventListener('DOMContentLoaded', () => {
       try {
         im.src = cast.kind === 'slime'
           ? ((OUTFIT_FRAMES && typeof OUTFIT_FRAMES.base === 'string' && OUTFIT_FRAMES.base) || 'assets/slime_pet_cutout.png')
-          : pikSprite(hueColor(cast.hue), 2, null);
+          : pikSprite(hueColor(cast.hue), 2, null, false, (typeof pikFormOfKind === 'function' && typeof pikSegOfHue === 'function') ? pikFormOfKind('w:' + pikSegOfHue(cast.hue)) : 1);
       } catch (e) { spriteOk = false; ava.textContent = pi === 2 ? '🍮' : '🌸'; }
       if (spriteOk) ava.appendChild(im);
       const label = document.createElement('small');
@@ -22847,7 +22847,7 @@ document.addEventListener('DOMContentLoaded', () => {
         do { c = Math.floor(Math.random() * 16); } while (takenCells.has(c));
         takenCells.add(c);
         const p = cast.length ? cast[i % cast.length] : null;
-        piks.push({ cell: c, caught: false, src: p ? pikSprite(pikEntryColor(p), p.s || 0, p.sp || null) : pikSprite(hueColor(Math.floor(Math.random() * 360)), 1, null) });
+        piks.push({ cell: c, caught: false, src: p ? pikSprite(pikEntryColor(p), p.s || 0, p.sp || null, false, typeof pikFormOf === 'function' ? pikFormOf(p) : 1) : pikSprite(hueColor(Math.floor(Math.random() * 360)), 1, null) });
       }
       const draw = () => {
         cells.forEach((cell, ci) => {
@@ -23135,7 +23135,7 @@ document.addEventListener('DOMContentLoaded', () => {
     bars.className = 'nm-cage-bars';
     bars.textContent = '▮▮▮▮▮';
     const img = document.createElement('img');
-    img.src = pikSprite(pikEntryColor(p), p.s || 0, p.sp || null);
+    img.src = pikSprite(pikEntryColor(p), p.s || 0, p.sp || null, false, typeof pikFormOf === 'function' ? pikFormOf(p) : 1);
     img.alt = '';
     cage.append(img, bars);
     let hits = 0;
@@ -27005,8 +27005,9 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
-  function pikSprite(color, stage, spId, silhouette) {
-    const key = color.body + '/' + stage + '/' + (spId || '') + '/' + (silhouette ? 1 : 0);
+  function pikSprite(color, stage, spId, silhouette, form) {
+    form = form && form > 1 ? form : 1;
+    const key = color.body + '/' + stage + '/' + (spId || '') + '/' + (silhouette ? 1 : 0) + '/' + form;
     if (pikSpriteCache[key]) return pikSpriteCache[key];
     let rows;
     if (spId && PIK_SPECIES_TPLS[spId]) {
@@ -27027,8 +27028,52 @@ document.addEventListener('DOMContentLoaded', () => {
       S: '#57c689', L: '#7ddba4', Y: '#ffd400', P: '#ff8fc7'
     };
     pikDrawTpl(x, rows, pal);
+    if (!silhouette && form >= 2) pikDrawForm(x, rows, form);
     pikSpriteCache[key] = c.toDataURL();
     return pikSpriteCache[key];
+  }
+  // v156: evolution you can SEE at sprite level — ★★ pins a gold medal on
+  // the chest; the APEX (★★★) additionally walks in a full golden rim.
+  // drawn into the pixels, so every venue (desk, dex, garden, parade,
+  // boot screen, card table, cages) shows the form for free
+  function pikDrawForm(x, rows, form) {
+    const w = rows[0].length, h = rows.length;
+    const solid = (rx, ry) => ry >= 0 && ry < h && rx >= 0 && rx < w && rows[ry][rx] !== '.';
+    if (form >= 3) {
+      x.fillStyle = '#ffd400';
+      for (let ry = Math.max(0, h - 9); ry < h; ry++) {
+        for (let rx = 0; rx < w; rx++) {
+          if (!solid(rx, ry)) continue;
+          if (!solid(rx - 1, ry) || !solid(rx + 1, ry) || !solid(rx, ry + 1) || !solid(rx, ry - 1)) x.fillRect(rx, ry, 1, 1);
+        }
+      }
+    }
+    const cx = Math.floor(w / 2), cy = h - 5;
+    x.fillStyle = '#ffd400';
+    [[0, -1], [-1, 0], [1, 0], [0, 1]].forEach((d) => x.fillRect(cx + d[0], cy + d[1], 1, 1));
+    x.fillStyle = form >= 3 ? '#fff6c9' : '#ffffff';
+    x.fillRect(cx, cy, 1, 1);
+  }
+  // form lookup for buddy/walker shapes (sp is the OBJECT there, not the id)
+  function pikFormOfLive(o) {
+    try {
+      return pikFormOfKind(o.chameleon || o.ch ? 'ch' : (o.sp ? 's:' + (o.sp.id || o.sp) : 'w:' + pikSegOfHue(o.hue != null ? o.hue : (o.h != null ? o.h : 300))));
+    } catch (e) { return 1; }
+  }
+  // the moment a kind crosses a form threshold: fanfare, confetti, and the
+  // meadow re-dresses INSTANTLY (v156 — evolution must be SEEN, not implied)
+  function pikEvolveCelebrate(kk, cnt) {
+    const th = pikThresholds(kk);
+    if (cnt !== th[0] && cnt !== th[1]) return false;
+    const apex = cnt === th[1];
+    playFanfare();
+    cheatFall(apex ? ['👑', '✨', '⭐'] : ['✨', '⭐'], 14);
+    showBubble(apex
+      ? trT('APEX FORM!!! that kind walks in GOLD now — go look!!', 'FORME APEX !!! cette espèce marche en OR maintenant — va voir !!')
+      : trT('IT EVOLVED!! ★★ gold medal, bigger stride — go look!!', 'ÉVOLUTION !! ★★ médaille d\'or, plus grande foulée — va voir !!'), 3600);
+    try { deskPikResync(); } catch (e) { /* the meadow re-dresses on respawn */ }
+    try { if (typeof renderPikdex === 'function') renderPikdex(); } catch (e) { /* dex repaints on open */ }
+    return true;
   }
 
   // richly saturated bloom clusters — the meadow should look like a party
@@ -27174,11 +27219,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (species) color = species.body;
     const el = document.createElement('div');
     el.className = 'pik-buddy' + (species && species.fx ? ' pikfx-' + species.fx : '');
-    const img = document.createElement('img');
-    img.src = pikSprite(color, stage, species ? species.id : null);
-    img.alt = '';
     const gbKey = ch ? 'ch' : (species ? 's:' + species.id : (hue != null ? 'w:' + pikSegOfHue(hue) : null));
     const gbForm = gbKey && typeof pikFormOfKind === 'function' ? pikFormOfKind(gbKey) : 1;
+    const img = document.createElement('img');
+    img.src = pikSprite(color, stage, species ? species.id : null, false, gbForm);
+    img.alt = '';
     img.style.width = gbForm === 3 ? '46px' : gbForm === 2 ? '39px' : '33px';
     if (gbForm >= 2) el.classList.add('pik-form' + gbForm);
     el.appendChild(img);
@@ -27236,7 +27281,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const cnt = pikCounts()[kk] || 1;
       const th = pikThresholds(kk);
       const nxt = cnt >= th[1] ? null : (cnt >= th[0] ? th[1] : th[0]);
-      showBubble(nxt
+      if (!pikEvolveCelebrate(kk, cnt)) showBubble(nxt
         ? trT(`+1 of that kind!! ${cnt}/${nxt} toward its next form ♡`, `+1 de cette espèce !! ${cnt}/${nxt} vers sa prochaine forme ♡`)
         : trT('+1 for an APEX legend — pure leaderboard fuel ♡', '+1 pour une légende APEX — pur carburant de classement ♡'), 2600);
       gainFollowers(1);
@@ -27277,7 +27322,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function pikSetStage(b, stage) {
     b.stage = stage;
-    b.img.src = pikSprite(b.color, stage, b.sp ? b.sp.id : null);
+    b.img.src = pikSprite(b.color, stage, b.sp ? b.sp.id : null, false, pikFormOfLive(b));
     b.img.classList.remove('pik-pluck');
     void b.img.offsetWidth;
     b.img.classList.add('pik-pluck');
@@ -27312,7 +27357,7 @@ document.addEventListener('DOMContentLoaded', () => {
         b.hueAt = now + 480;
         b.h = ((b.h || 5) + 30) % 360 || 5;
         b.color = hueColor(b.h);
-        b.img.src = pikSprite(b.color, b.stage);
+        b.img.src = pikSprite(b.color, b.stage, null, false, pikFormOfLive(b));
       }
       // SQUASHED?! the slime (re)appeared on top — wriggle out, loudly
       if (!b.carry && !gathering && slimeW > 40 && Math.abs(b.x + 16 - sx) < slimeW * 0.32 && now > (b.escapeCd || 0)) {
@@ -29623,13 +29668,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const el = document.createElement('div');
     el.className = 'desk-pik' + (species && species.fx ? ' pikfx-' + species.fx : '');
     el.setAttribute('aria-hidden', 'true');
-    const img = document.createElement('img');
-    img.src = pikSprite(color, stage || 0, spId || null);
-    img.alt = '';
-    el.appendChild(img);
-    // evolved forms walk taller (★★) and the apex wears the crown (★★★)
+    // evolved forms walk taller (★★) and the apex wears the crown (★★★) —
+    // and since v156 the SPRITE itself carries the medal/golden rim
     const formKey = chameleon ? 'ch' : (species ? 's:' + species.id : (hue !== null ? 'w:' + pikSegOfHue(hue) : null));
     const form = formKey && typeof pikFormOfKind === 'function' ? pikFormOfKind(formKey) : 1;
+    const img = document.createElement('img');
+    img.src = pikSprite(color, stage || 0, spId || null, false, form);
+    img.alt = '';
+    el.appendChild(img);
     if (form >= 2) el.classList.add('pik-form' + form);
     if (form === 3 && !species) {
       const crown = document.createElement('span');
@@ -30251,7 +30297,7 @@ document.addEventListener('DOMContentLoaded', () => {
         holder.className = 'loader-pik';
         holder.style.animationDelay = (i * 0.13) + 's';
         const img = document.createElement('img');
-        img.src = pikSprite(sp ? sp.body : ((r.h != null) ? hueColor(r.h) : (PIK_COLORS[r.c] || PIK_COLORS[0])), r.s || 0, r.sp || null);
+        img.src = pikSprite(sp ? sp.body : ((r.h != null) ? hueColor(r.h) : (PIK_COLORS[r.c] || PIK_COLORS[0])), r.s || 0, r.sp || null, false, typeof pikFormOf === 'function' ? pikFormOf(r) : 1);
         img.alt = '';
         holder.appendChild(img);
         if (sp) {
@@ -30333,10 +30379,11 @@ document.addEventListener('DOMContentLoaded', () => {
     for (let i = 0; i < n; i++) {
       const p = cast[i % cast.length];
       const sp = p.sp ? pikSpecies(p.sp) : null;
+      const pform = typeof pikFormOf === 'function' ? pikFormOf(p) : 1;
       const el = document.createElement('div');
-      el.className = 'pik-parade' + (sp && sp.fx ? ' pikfx-' + sp.fx : '') + (p.ch ? ' pikfx-rgbcycle' : '');
+      el.className = 'pik-parade' + (sp && sp.fx ? ' pikfx-' + sp.fx : '') + (p.ch ? ' pikfx-rgbcycle' : '') + (pform >= 2 ? ' pik-form' + pform : '');
       const img = document.createElement('img');
-      img.src = pikSprite(pikEntryColor(p), p.s || 0, p.sp || null);
+      img.src = pikSprite(pikEntryColor(p), p.s || 0, p.sp || null, false, pform);
       img.alt = '';
       el.appendChild(img);
       if (sp) {
@@ -30602,7 +30649,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const name = pikNameOf(dex, dexIx);
       cell.title = name;
       const img = document.createElement('img');
-      img.src = pikSprite(p.sp ? pikEntryColor(p) : hueColor(pikHueOf(p)), p.s || 0, p.sp || null);
+      img.src = pikSprite(p.sp ? pikEntryColor(p) : hueColor(pikHueOf(p)), p.s || 0, p.sp || null, false, typeof pikFormOf === 'function' ? pikFormOf(p) : 1);
       img.alt = '';
       const nm = document.createElement('span');
       nm.className = 'pikdex-cell-name';
@@ -30732,7 +30779,7 @@ document.addEventListener('DOMContentLoaded', () => {
     port.className = 'pik-card-portrait';
     const big = document.createElement('img');
     big.alt = '';
-    big.src = pikSprite(pikEntryColor(p), p.s || 0, p.sp || null);
+    big.src = pikSprite(pikEntryColor(p), p.s || 0, p.sp || null, false, typeof pikFormOf === 'function' ? pikFormOf(p) : 1);
     port.appendChild(big);
     const pSpecies = p.sp ? pikSpecies(p.sp) : null;
     if (pSpecies) {
@@ -30744,7 +30791,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (p.ch) {
       let hh = pikHueOf(p);
-      pikProfileTimer = setInterval(() => { hh = (hh + 24) % 360; big.src = pikSprite(hueColor(hh), p.s || 0); }, 300);
+      pikProfileTimer = setInterval(() => { hh = (hh + 24) % 360; big.src = pikSprite(hueColor(hh), p.s || 0, null, false, typeof pikFormOfKind === 'function' ? pikFormOfKind('ch') : 1); }, 300);
     }
     const info = document.createElement('div');
     info.className = 'pik-card-info';
@@ -30903,7 +30950,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const th = pikThresholds(kk);
         const nxt = cnt >= th[1] ? null : (cnt >= th[0] ? th[1] : th[0]);
         achvBump('plucks');
-        if (!pet.sleeping) showBubble(nxt
+        if (!pikEvolveCelebrate(kk, cnt) && !pet.sleeping) showBubble(nxt
           ? trT(`+1 of that kind!! ${cnt}/${nxt} toward its next form ♡`, `+1 de cette espèce !! ${cnt}/${nxt} vers sa prochaine forme ♡`)
           : trT('+1 for an APEX legend — pure leaderboard fuel ♡', '+1 pour une légende APEX — pur carburant de classement ♡'), 2600);
         return;
@@ -30949,7 +30996,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (w.chameleon && now > w.hueAt) {
         w.hueAt = now + 480;
         w.hue = ((w.hue || 5) + 30) % 360 || 5;
-        w.img.src = pikSprite(hueColor(w.hue), w.stage);
+        w.img.src = pikSprite(hueColor(w.hue), w.stage, null, false, pikFormOfLive(w));
       }
       if (now < w.restUntil) return;
       const dx = w.tx - w.x, dy = w.ty - w.y;
