@@ -15196,27 +15196,38 @@ document.addEventListener('DOMContentLoaded', () => {
       if (p >= 1) { clearInterval(iv); dT(geoWorkOrder, 700); }
     }, 60);
   }
-  // the construction ballet — now THE headline act (owner decree v153):
-  // paperwork hides, popups are barred, and the crew owns the whole stage
-  function geoCrewWork() {
-    if (!dreamWorld) return;
-    [0, 1, 2, 3, 4, 5, 6].forEach((i) => playTone(i % 2 ? 240 : 320, 'square', 0.05, 0.25 + i * 0.5, 0.04));
-    playTone(120, 'sawtooth', 0.35, 0.6, 0.03); // the chainsaw clears its throat
-    playTone(95, 'sawtooth', 0.3, 1.7, 0.03);
-    playTone(110, 'sawtooth', 0.4, 3.1, 0.03);
-    const gf = dreamWorld.flags.geoFix;
-    if (gf && gf.bubble && document.body.contains(gf.bubble)) {
-      gf.bubble.textContent = trT('ROGER THAT. crew!! DEPLOY!!', 'BIEN REÇU. équipe !! DÉPLOIEMENT !!');
-      const lines = [
-        ['lift with the leaves!! read the request AS WRITTEN!!', 'soulevez avec les feuilles !! lisez la demande TELLE QUELLE !!'],
-        ['do NOT fix anything that is not in the contract!!', 'ne réparez RIEN qui ne soit pas au contrat !!'],
-        ['beautiful. technically perfect. morally? next question.', 'magnifique. techniquement parfait. moralement ? question suivante.'],
-        ['chainsaw team, EASE UP. it\'s a homepage, not a forest.', 'équipe tronçonneuse, DOUCEMENT. c\'est une page perso, pas une forêt.']
-      ];
-      dT(() => { if (gf.bubble && document.body.contains(gf.bubble)) gf.bubble.textContent = trT(...lines[Math.floor(Math.random() * lines.length)]); }, 2400);
-    }
-    if (REDUCED_MOTION) return;
-    // workers pick spots on the wreckage (or a center pit if nothing shows)
+  // ---- the construction ballet: a 15-25s composed show. every run draws
+  // a different set of acts from the repertoire (owner decree v155:
+  // "give them time to actually BUILD") ----
+  function geoChirp(x, y, txt) {
+    if (!dreamWorld || REDUCED_MOTION) return;
+    const s = document.createElement('span');
+    s.className = 'geo-chirp';
+    s.textContent = txt;
+    s.style.left = Math.max(6, x) + 'px';
+    s.style.top = Math.max(30, y) + 'px';
+    document.body.appendChild(s);
+    dN(s);
+    playTone(1200 + Math.random() * 400, 'triangle', 0.05, 0, 0.02);
+    dT(() => { try { s.remove(); } catch (e) { /* popped */ } }, 1500);
+  }
+  function geoLerp(el, x0, y0, x1, y1, ms, onDone) {
+    const t0 = Date.now();
+    const iv = dI(() => {
+      if (!document.body.contains(el)) { clearInterval(iv); return; }
+      const p = Math.min(1, (Date.now() - t0) / ms);
+      el.style.left = (x0 + (x1 - x0) * p) + 'px';
+      el.style.top = (y0 + (y1 - y0) * p) + 'px';
+      if (p >= 1) { clearInterval(iv); if (onDone) onDone(); }
+    }, 50);
+  }
+  function geoSaySite(l) {
+    const gf = dreamWorld && dreamWorld.flags.geoFix;
+    if (gf && gf.bubble && document.body.contains(gf.bubble)) gf.bubble.textContent = trT(...l);
+  }
+  // a wave of workers fanning out over the wreckage (or a center pit)
+  function geoWave(n, workMs) {
+    if (!dreamWorld || REDUCED_MOTION) return;
     const spots = [];
     document.querySelectorAll('.geo-wreck-host').forEach((b) => {
       const r = b.getBoundingClientRect();
@@ -15225,17 +15236,200 @@ document.addEventListener('DOMContentLoaded', () => {
     const iw = window.innerWidth || 1200, ih = window.innerHeight || 800;
     const cx = iw / 2, cy = Math.min(ih - 140, ih * 0.45);
     const pool = GEO_TOOLS.slice().concat(GEO_TOOLS.slice());
-    const n = 8 + Math.floor(Math.random() * 3); // headline act: the full brigade
     for (let i = 0; i < n; i++) {
       const spot = (spots.length && Math.random() < 0.6)
         ? spots[Math.floor(Math.random() * spots.length)]
         : [cx - 260 + Math.random() * 520, cy - 90 + Math.random() * 230];
       const tool = pool.length ? pool.splice(Math.floor(Math.random() * pool.length), 1)[0] : '🔨';
-      dT(() => geoWorkerAt(spot[0], spot[1], tool, 4200 + Math.random() * 900), i * 140);
+      dT(() => geoWorkerAt(spot[0], spot[1], tool, workMs + Math.random() * 900), i * 160);
     }
-    geoVehicle(); // machinery is mandatory at a headline show
-    if (Math.random() < 0.4) dT(geoVehicle, 1800); // sometimes the fleet
-    cheatFall(['🚧', '✦'], 6);
+  }
+  /* ---- the repertoire: little jobsite scenes, drawn at random ---- */
+  function geoActMeasure() { // two piks measure everything, conclude nothing
+    const iw = window.innerWidth || 1200, ih = window.innerHeight || 800;
+    const x = 90 + Math.random() * Math.max(200, iw - 420), y = ih * (0.3 + Math.random() * 0.3);
+    geoWorkerAt(x, y, '📏', 5600);
+    geoWorkerAt(x + 60, y, '📐', 5600);
+    dT(() => geoChirp(x + 30, y - 40, 'pik…?'), 2400);
+    dT(() => geoChirp(x + 66, y - 40, '?!'), 3800);
+  }
+  function geoActCoffee() { // union-mandated five seconds
+    geoSaySite(['BREAK!! union rules. five seconds.', 'PAUSE !! règles du syndicat. cinq secondes.']);
+    const iw = window.innerWidth || 1200, ih = window.innerHeight || 800;
+    geoWorkerAt(iw / 2 - 60 + Math.random() * 40, ih * 0.5, '☕', 3600);
+    geoWorkerAt(iw / 2 + 30 + Math.random() * 40, ih * 0.5, '☕', 3600);
+    dT(() => {
+      geoSaySite(['BREAK OVER!! double speed!!', 'PAUSE FINIE !! double vitesse !!']);
+      [0, 1, 2, 3, 4, 5].forEach((i) => playTone(i % 2 ? 260 : 340, 'square', 0.05, i * 0.14, 0.045));
+      geoWave(3, 4200);
+    }, 3600);
+  }
+  function geoActCrane() { // the crane lifts one (1) cone, majestically
+    if (REDUCED_MOTION) return;
+    const iw = window.innerWidth || 1200, ih = window.innerHeight || 800;
+    const cx = iw * (0.3 + Math.random() * 0.4);
+    const rig = document.createElement('span');
+    rig.className = 'geo-crew-rig-fixed';
+    rig.textContent = '🏗️';
+    rig.style.left = cx + 'px';
+    rig.style.top = (ih - 130) + 'px';
+    document.body.appendChild(rig);
+    dN(rig);
+    const cone = document.createElement('span');
+    cone.className = 'geo-crew-rig-fixed';
+    cone.textContent = '🚧';
+    cone.style.left = (cx + 12) + 'px';
+    cone.style.top = (ih - 138) + 'px';
+    document.body.appendChild(cone);
+    dN(cone);
+    [0, 1, 2].forEach((i) => playTone(740, 'square', 0.06, i * 0.8, 0.02));
+    geoLerp(cone, cx + 12, ih - 138, cx + 12, ih * 0.25, 2800, () => {
+      dT(() => {
+        geoLerp(cone, cx + 12, ih * 0.25, cx + 40, ih - 150, 600, () => {
+          playTone(160, 'square', 0.12, 0, 0.05);
+          document.body.classList.add('rescue-quake-sm');
+          dT(() => document.body.classList.remove('rescue-quake-sm'), 280);
+          geoChirp(cx + 40, ih - 190, '✓');
+          dT(() => { try { cone.remove(); } catch (e) {} try { rig.remove(); } catch (e) {} }, 1400);
+        });
+      }, 900);
+    });
+  }
+  function geoActJackhammer() { // the percussion section
+    const iw = window.innerWidth || 1200, ih = window.innerHeight || 800;
+    const x = 120 + Math.random() * Math.max(200, iw - 420), y = ih * 0.6;
+    [0, 1, 2].forEach((k) => geoWorkerAt(x + k * 46, y, '⛏️', 4800));
+    [0, 1].forEach((burst) => dT(() => {
+      if (!dreamWorld) return;
+      for (let i = 0; i < 6; i++) playTone(300 + (i % 2) * 60, 'square', 0.04, i * 0.09, 0.05);
+      document.body.classList.add('rescue-quake-sm');
+      dT(() => document.body.classList.remove('rescue-quake-sm'), 260);
+    }, 900 + burst * 2000));
+  }
+  function geoActDynamite() { // absolutely not. we TALKED about this.
+    if (REDUCED_MOTION) return;
+    const iw = window.innerWidth || 1200, ih = window.innerHeight || 800;
+    const x = iw * (0.35 + Math.random() * 0.3), y = ih * 0.45;
+    const dyn = document.createElement('span');
+    dyn.className = 'geo-crew-rig-fixed';
+    dyn.textContent = '🧨';
+    dyn.style.left = x + 'px';
+    dyn.style.top = y + 'px';
+    document.body.appendChild(dyn);
+    dN(dyn);
+    const fizz = dI(() => {
+      const s = document.createElement('span');
+      s.className = 'trail-sparkle';
+      s.textContent = '✦';
+      s.style.left = (x + 8 + Math.random() * 8) + 'px';
+      s.style.top = (y - 10) + 'px';
+      s.style.color = '#ffd23f';
+      document.body.appendChild(s);
+      s.addEventListener('animationend', () => s.remove());
+      playTone(900 + Math.random() * 500, 'sawtooth', 0.03, 0, 0.015);
+    }, 240);
+    dT(() => {
+      clearInterval(fizz);
+      geoWorkerAt(x - 80, y + 8, '🧯', 2400);
+      dT(() => {
+        try { dyn.remove(); } catch (e) { /* confiscated */ }
+        geoChirp(x, y - 34, 'NO.');
+        geoSaySite(['…we TALKED about this. no dynamite on HOMEPAGES.', '…on en avait PARLÉ. pas de dynamite sur les PAGES PERSO.']);
+      }, 1000);
+    }, 2200);
+  }
+  function geoActBlueprint() { // the plans are for a different website
+    if (REDUCED_MOTION) return;
+    geoSaySite(['these are the blueprints for a DIFFERENT website. use them anyway.', 'ce sont les plans d\'un AUTRE site. utilisez-les quand même.']);
+    const iw = window.innerWidth || 1200, ih = window.innerHeight || 800;
+    const grp = document.createElement('div');
+    grp.className = 'geo-crew-worker';
+    const mk = (t) => { const s = document.createElement('span'); s.style.fontSize = '1.2rem'; s.textContent = t; return s; };
+    const im1 = document.createElement('img');
+    const im2 = document.createElement('img');
+    try { im1.src = pikSprite(hueColor(322), 1, null); im2.src = pikSprite(hueColor(328), 2, null); } catch (e) { return; }
+    im1.style.width = '26px'; im2.style.width = '28px';
+    grp.appendChild(im1); grp.appendChild(mk('📜')); grp.appendChild(im2);
+    grp.style.top = (ih * 0.55) + 'px';
+    document.body.appendChild(grp);
+    dN(grp);
+    geoLerp(grp, -110, ih * 0.55, iw + 110, ih * 0.55, 6200, () => { try { grp.remove(); } catch (e) { /* filed */ } });
+  }
+  function geoActConeParade() { // cone delivery, single file, very proud
+    [0, 1, 2, 3].forEach((i) => dT(() => {
+      if (!dreamWorld) return;
+      dreamCritter({ emoji: '🚧', hop: 3, ms: 6500, label: [['cone delivery', 'livraison de cônes'], ['cone №2', 'cône nº2'], ['cone №3', 'cône nº3'], ['management', 'la direction']][i] });
+    }, i * 420));
+  }
+  function geoActPaint() { // fresh coat on the nearest disaster
+    if (REDUCED_MOTION) return;
+    const hosts = [...document.querySelectorAll('.geo-wreck-host')].map((b) => b.getBoundingClientRect()).filter((r) => r.width);
+    const iw = window.innerWidth || 1200, ih = window.innerHeight || 800;
+    const r = hosts.length ? hosts[Math.floor(Math.random() * hosts.length)] : { left: iw * 0.25, top: ih * 0.35, width: iw * 0.4 };
+    geoWorkerAt(r.left - 24, r.top + 6, '🖌️', 3400);
+    for (let i = 0; i < 10; i++) {
+      dT(() => {
+        const s = document.createElement('span');
+        s.className = 'trail-sparkle';
+        s.textContent = '✦';
+        s.style.left = (r.left + (r.width / 10) * i) + 'px';
+        s.style.top = (r.top - 4) + 'px';
+        s.style.color = ['#ff8fc7', '#ffd23f', '#41e0ff'][i % 3];
+        document.body.appendChild(s);
+        s.addEventListener('animationend', () => s.remove());
+      }, 300 + i * 150);
+    }
+  }
+  const GEO_FOREMAN_LINES = [
+    ['lift with the leaves!! read the request AS WRITTEN!!', 'soulevez avec les feuilles !! lisez la demande TELLE QUELLE !!'],
+    ['do NOT fix anything that is not in the contract!!', 'ne réparez RIEN qui ne soit pas au contrat !!'],
+    ['beautiful. technically perfect. morally? next question.', 'magnifique. techniquement parfait. moralement ? question suivante.'],
+    ['chainsaw team, EASE UP. it\'s a homepage, not a forest.', 'équipe tronçonneuse, DOUCEMENT. c\'est une page perso, pas une forêt.'],
+    ['the cones go WHERE? no. the cones go EVERYWHERE.', 'les cônes vont OÙ ? non. les cônes vont PARTOUT.'],
+    ['measure twice!! cut— we lost the measuring pik.', 'mesurez deux fois !! coupez— on a perdu le pik-mètre.'],
+    ['if it looks broken, it is ART. if it looks like art, START OVER.', 'si ça a l\'air cassé, c\'est de l\'ART. si ça a l\'air d\'art, RECOMMENCEZ.'],
+    ['half of you dig!! the other half, fill it back in!! GO!!', 'la moitié creuse !! l\'autre moitié rebouche !! ALLEZ !!'],
+    ['does anyone remember what we were fixing? …doesn\'t matter. FASTER.', 'quelqu\'un se souvient de ce qu\'on réparait ? …peu importe. PLUS VITE.'],
+    ['that beam is load-bearing!! that word means nothing to me!!', 'cette poutre est porteuse !! ce mot ne veut rien dire pour moi !!'],
+    ['invoice every spark!! the sparkles are BILLABLE!!', 'facturez chaque étincelle !! les paillettes sont FACTURABLES !!']
+  ];
+  // the conductor: schedules waves, machinery, acts and foreman lines
+  // across the whole 15-25s window — a different programme every night
+  function geoCrewWork(showMs) {
+    if (!dreamWorld) return;
+    const S = Math.max(4000, showMs || 16000);
+    geoSaySite(['ROGER THAT. crew!! DEPLOY!!', 'BIEN REÇU. équipe !! DÉPLOIEMENT !!']);
+    // the percussion score: hammer clusters + chainsaw, all show long
+    for (let t = 400; t < S - 2200; t += 2600 + Math.random() * 1500) {
+      dT(() => { if (dreamWorld) [0, 1, 2].forEach((i) => playTone(i % 2 ? 240 : 320, 'square', 0.05, i * 0.22, 0.035)); }, t);
+    }
+    for (let t = 1100; t < S - 3200; t += 5200 + Math.random() * 2800) {
+      dT(() => { if (dreamWorld) playTone(90 + Math.random() * 45, 'sawtooth', 0.4, 0, 0.03); }, t);
+    }
+    // foreman keeps shouting the whole time (shuffled, no repeats)
+    const bank = GEO_FOREMAN_LINES.slice();
+    for (let i = bank.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = bank[i]; bank[i] = bank[j]; bank[j] = t; }
+    for (let i = 0, t = 2800; t < S - 3400 && i < bank.length; i++, t += 4200) {
+      const ln = bank[i];
+      dT(() => { geoSaySite(ln); playTone(660 + Math.random() * 120, 'triangle', 0.05, 0, 0.02); }, t);
+    }
+    if (REDUCED_MOTION) return;
+    // wave one + mandatory machinery
+    geoWave(4 + Math.floor(Math.random() * 2), S * 0.5);
+    geoVehicle();
+    if (Math.random() < 0.6) dT(geoVehicle, S * 0.5);
+    // draw tonight's programme from the repertoire
+    const ACTS = [geoActMeasure, geoActCoffee, geoActCrane, geoActJackhammer, geoActDynamite, geoActBlueprint, geoActConeParade, geoActPaint];
+    for (let i = ACTS.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = ACTS[i]; ACTS[i] = ACTS[j]; ACTS[j] = t; }
+    const nActs = S > 20000 ? 4 : 3;
+    const slots = [0.18, 0.42, 0.62, 0.8];
+    for (let i = 0; i < nActs; i++) {
+      const act = ACTS[i];
+      dT(() => { try { act(); } catch (e) { /* the act missed its cue */ } }, S * slots[i]);
+    }
+    // late reinforcements + closing flourish before the announcement
+    dT(() => geoWave(3, Math.max(2600, S * 0.16)), S * 0.72);
+    dT(() => { cheatFall(['🚧', '✦', '🔨'], 10); }, Math.max(0, S - 3200));
   }
   // no matter WHAT was asked: fresh visible comedy lands on the site —
   // a random room gets flung open (if needed) and re-wrecked on the spot
@@ -15313,13 +15507,15 @@ document.addEventListener('DOMContentLoaded', () => {
       body.appendChild(think);
       d.__dirty = 1;
       // CURTAIN DOWN (owner decree v153): the paperwork hides, every other
-      // dialog leaves the stage, no new popup may open — the ballet plays
+      // dialog leaves the stage, no new popup may open — the ballet plays.
+      // v155: the show runs a proper 15-25s — construction takes TIME
       dreamWorld.flags.geoShowtime = 1;
-      const T_RESOLVE = REDUCED_MOTION ? 900 : 4800;
-      const T_CURTAIN = REDUCED_MOTION ? 1700 : 7200;
+      const T_SHOW = REDUCED_MOTION ? 1700 : 15000 + Math.floor(Math.random() * 10000);
+      const T_RESOLVE = REDUCED_MOTION ? 900 : T_SHOW - 2400;
+      const T_CURTAIN = T_SHOW;
       const hidden = [...document.querySelectorAll('.dream-dlg')].filter((x) => x.style.display !== 'none');
       hidden.forEach((x) => { x.style.display = 'none'; });
-      geoCrewWork();
+      geoCrewWork(T_SHOW);
       dT(() => {
         if (!dreamWorld) return;
         const pick = geoFixMatch(q, gf);

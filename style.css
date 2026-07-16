@@ -9439,6 +9439,27 @@ html[data-theme="dark"].dream-geo .geo-broken {
 .geo-wreck-lworker { position: absolute; bottom: 8px; left: 10px; display: flex; align-items: flex-end; }
 .geo-wreck-lworker img { image-rendering: pixelated; animation: bsod-hero-bob 0.4s steps(2) infinite; }
 .geo-wreck-lworker-r { left: auto; right: 10px; }
+/* jobsite speech blips + free-standing props (crane, dynamite, cargo) */
+.geo-chirp {
+  position: fixed;
+  z-index: 2691;
+  font-family: var(--font-pixel);
+  font-size: 0.72rem;
+  color: #1c0230;
+  background: #fffbe6;
+  border: 2px solid #1c0230;
+  padding: 2px 6px;
+  pointer-events: none;
+  animation: bsod-chirp-pop 1.4s ease forwards;
+}
+.geo-crew-rig-fixed {
+  position: fixed;
+  z-index: 2687;
+  font-size: 1.7rem;
+  line-height: 1;
+  pointer-events: none;
+  filter: drop-shadow(0 0 5px #ffd23f);
+}
 .geo-broken-cone {
   position: absolute;
   /* INSIDE the corner — poking above the element hid the top-row icons'
