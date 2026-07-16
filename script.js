@@ -30612,6 +30612,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (squadRow) {
       squadRow.innerHTML = ''; // rebuilt below — every string goes through textContent
+      const rowTitle = document.createElement('div');
+      rowTitle.className = 'pikdex-squadrow-title';
+      rowTitle.textContent = trT('⭐ ACTIVE_SQUAD.SYS — tap a member for its dossier', '⭐ ESCOUADE_ACTIVE.SYS — touche un membre pour son dossier');
+      squadRow.appendChild(rowTitle);
+      const chipsWrap = document.createElement('div');
+      chipsWrap.className = 'pikdex-squadrow-chips';
+      squadRow.appendChild(chipsWrap);
       dex.forEach((p, ix) => {
         if (!p.a) return;
         const chip = document.createElement('button');
@@ -30619,6 +30626,10 @@ document.addEventListener('DOMContentLoaded', () => {
         chip.className = 'pikdex-squad-chip' + (p.ch ? ' is-chameleon' : '');
         const nm = pikNameOf(dex, ix);
         chip.title = nm + ' — ' + trT('open dossier', 'ouvrir le dossier');
+        const star = document.createElement('span');
+        star.className = 'pikdex-squad-star';
+        star.textContent = '⭐';
+        chip.appendChild(star);
         const im = document.createElement('img');
         im.src = pikSprite(p.sp ? pikEntryColor(p) : hueColor(pikHueOf(p)), p.s || 0, p.sp || null, false, typeof pikFormOf === 'function' ? pikFormOf(p) : 1);
         im.alt = '';
@@ -30632,7 +30643,7 @@ document.addEventListener('DOMContentLoaded', () => {
         tag.textContent = nm;
         chip.appendChild(tag);
         chip.addEventListener('click', () => pikProfileShow(ix));
-        squadRow.appendChild(chip);
+        chipsWrap.appendChild(chip);
       });
       for (let i = pikdexActives(dex).length; i < PIK_MAX; i++) {
         const slot = document.createElement('div');
@@ -30642,7 +30653,11 @@ document.addEventListener('DOMContentLoaded', () => {
         z.className = 'pikdex-squad-zz';
         z.textContent = '💤';
         slot.appendChild(z);
-        squadRow.appendChild(slot);
+        const zt = document.createElement('span');
+        zt.className = 'pikdex-squad-name';
+        zt.textContent = trT('(open)', '(libre)');
+        slot.appendChild(zt);
+        chipsWrap.appendChild(slot);
       }
     }
     // float-mode picker: exactly how high the squad hovers over the OS
