@@ -4255,7 +4255,8 @@ document.addEventListener('DOMContentLoaded', () => {
     { id: 'wallfamous', icon: '🌍', n: ['Framed Worldwide', 'Encadré·e Mondialement'], d: ['hung a selfie on the REAL worldwide wall. publicly, proudly, consensually.', 'a accroché un selfie sur le VRAI mur mondial. publiquement, fièrement, avec consentement.'], t: ['the wall is real now. it has a bouncer and everything.', 'le mur est réel désormais. il a même un videur.'] },
     { id: 'rescued', icon: '🛟', n: ['Plot Armor', 'Armure Scénaristique'], d: ['got trapped in the digital cage — and was personally rescued by the slime of legend.', 'piégé·e dans la cage numérique — et personnellement sauvé·e par le slime légendaire.'], t: ['the villain is fine. mostly. his ego returned a 500.', 'le méchant va bien. presque. son ego a renvoyé un 500.'] },
     // appended LAST on purpose: cloud saves pack achievements by array index
-    { id: 'dreamgeo', icon: '🚧', n: ['You Stopped The MIDI', 'Tu As Arrêté Le MIDI'], d: ['out-stubborned the unstoppable 1998 midi. it said "(fine.)" — a webmaster first.', 'a été plus têtu·e que le midi inarrêtable de 1998. il a dit « (bon, d\'accord.) » — une première pour un webmestre.'], t: ['inside the 1998 dream, the midi cannot be stopped. stop it anyway.', 'dans le rêve de 1998, le midi ne peut pas être arrêté. arrête-le quand même.'] }
+    { id: 'dreamgeo', icon: '🚧', n: ['You Stopped The MIDI', 'Tu As Arrêté Le MIDI'], d: ['out-stubborned the unstoppable 1998 midi. it said "(fine.)" — a webmaster first.', 'a été plus têtu·e que le midi inarrêtable de 1998. il a dit « (bon, d\'accord.) » — une première pour un webmestre.'], t: ['inside the 1998 dream, the midi cannot be stopped. stop it anyway.', 'dans le rêve de 1998, le midi ne peut pas être arrêté. arrête-le quand même.'] },
+    { id: 'goblinfix', icon: '🔨', n: ['Delivered As Specified', 'Livré Comme Spécifié'], d: ['hired slime & sons for three repairs. every word of the contract was honored. every. single. word.', 'a embauché slime & sons pour trois réparations. chaque mot du contrat a été respecté. chaque. mot.'], t: ['on renovation night, break three things — then choose your words carefully.', 'la nuit des rénovations, casse trois choses — puis choisis bien tes mots.'] }
   ];
 
   // ---- metric engine: count things, achievements pop themselves ----
@@ -8217,7 +8218,13 @@ document.addEventListener('DOMContentLoaded', () => {
           ]
         }));
       };
+      if (dreamWorld) dreamWorld.flags.geoGuestbook = geoGuestbook; // the repair crew can summon it
       dT(() => geoGuestbook(false), resumed ? 30000 : 80000);
+      // v148: RENOVATION NIGHT — half the site closes for repairs; find
+      // three broken things and SLIME & SONS arrive to take your order.
+      // failsafe: if nobody pokes the rubble, the crew shows up anyway.
+      dT(() => { try { geoOutageStart(); } catch (e) { /* the permit expired */ } }, resumed ? 12000 : 20000);
+      dT(() => { const g = dreamWorld && dreamWorld.flags.geoFix; if (g && !g.crewHere && !g.done) { g.crewHere = 1; geoCrewArrive(); } }, 200000);
       // the sacred geocities cursor trail (mouse AND finger; reduced-motion exempt)
       if (!REDUCED_MOTION) {
         let lastTrail = 0;
@@ -8308,6 +8315,7 @@ document.addEventListener('DOMContentLoaded', () => {
     exit() {
       if (dreamWorld && dreamWorld.flags.geoTrail) document.removeEventListener('mousemove', dreamWorld.flags.geoTrail);
       if (dreamWorld && dreamWorld.flags.geoTrailTouch) document.removeEventListener('touchmove', dreamWorld.flags.geoTrailTouch);
+      try { geoFixTeardown(); } catch (e) { /* the site wakes up repaired anyway */ }
     }
   };
 
@@ -14662,6 +14670,464 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  /* ================================================================
+     v148: RENOVATION NIGHT — geo's construction theme becomes gameplay.
+     half the site closes for repairs; after the visitor discovers three
+     broken things, SLIME & SONS CONSTRUCTION (the hero slime + the
+     visitor's own pik crew, bsod parade lineage) arrives and fixes
+     EXACTLY what the visitor asks for. exactly. unfortunately.
+     three change requests, one cumulative contract, one final invoice.
+     ================================================================ */
+
+  // the foreman: the bsod hero's 14×14 grid, re-inked in 1998 neon
+  // (the slime BODY is never recolored — this is a separate costume canvas,
+  // same rule as the blue hero)
+  function geoCrewCanvas() {
+    const cv = document.createElement('canvas');
+    cv.width = 112; cv.height = 112;
+    const x = cv.getContext('2d');
+    const ROWS = [
+      '......FF......', '.....F..F.....', '......FF......', '......S.......',
+      '....PPPPPP....', '..PPPPPPPPPP..', '.PwwPPPPPPPPP.', '.PwPPPPPPPPPP.',
+      'PPPeePPPPeePPP', 'PPbPPPPPPPPbPP', 'PPPPPPmmPPPPPP', 'PPPPPmmmmPPPPP',
+      '.PPPPPPPPPPPP.', '..DDDDDDDDDD..'];
+    const PAL = { P: '#ff8fc7', D: '#d4147f', w: '#ffe9ff', e: '#1c0230', m: '#c2447e', b: '#ffd23f', S: '#ffd23f', F: '#41e0ff' };
+    ROWS.forEach((row, ry) => { for (let rx = 0; rx < row.length; rx++) { const ch = row[rx]; if (ch === '.') continue; x.fillStyle = PAL[ch] || PAL.P; x.fillRect(rx * 8, ry * 8, 8, 8); } });
+    return cv;
+  }
+  const GEO_CREW_LINES = [
+    ['SLIME & SONS CONSTRUCTION — you break it, we make it… better!!', 'SLIME & SONS CONSTRUCTION — vous cassez, on répare… en mieux !!'],
+    ['we got 21 reports of a broken website. we counted. it is THIS one.', 'on a reçu 21 signalements de site cassé. on a compté. c\'est CELUI-CI.'],
+    ['crew!! helmets on!! the customer describes, WE interpret!!', 'équipe !! casques !! le client décrit, NOUS on interprète !!']
+  ];
+  const GEO_FIX_EXCUSES = [
+    ['this feature is UNDER CONSTRUCTION!! (est. 1998 — ETA: soon™)', 'cette fonction est EN CONSTRUCTION !! (dep. 1998 — livraison : bientôt™)'],
+    ['⚠ wet HTML. do not touch.', '⚠ HTML frais. ne pas toucher.'],
+    ['error 909: the webmaster is aware. the webmaster is also asleep.', 'erreur 909 : le webmaster est au courant. le webmaster dort aussi.'],
+    ['closed for renovations — every pixel is being polished individually', 'fermé pour rénovations — chaque pixel est poli individuellement']
+  ];
+  // the misinterpretation library: every entry honors the visitor's words
+  // TO THE LETTER. {q} is replaced with their quoted request.
+  const GEO_FIX_TOPICS = [
+    { k: ['music', 'midi', 'song', 'sound', 'audio', 'musique', 'chanson', 'son'],
+      v: ['the music is fixed: louder, faster, and it FOLLOWS you now.', 'la musique est réparée : plus forte, plus rapide, et elle vous SUIT maintenant.'],
+      loop: ['you never said WHERE the music should stay.', 'vous n\'avez jamais dit OÙ la musique devait rester.'],
+      fx() { [659.25, 783.99, 880, 783.99, 659.25, 523.25, 659.25, 880].forEach((f, i) => playTone(f, 'square', 0.14, i * 0.11, 0.035)); geoFollower('🎵'); } },
+    { k: ['color', 'colour', 'colors', 'colours', 'ugly', 'pink', 'couleur', 'couleurs', 'moche', 'rose'],
+      v: ['restored ALL the colors. simultaneously. saturation: 1998.', 'toutes les couleurs sont restaurées. simultanément. saturation : 1998.'],
+      loop: ['you never said HOW MANY colors at once.', 'vous n\'avez jamais dit COMBIEN de couleurs à la fois.'],
+      fx() { document.documentElement.classList.add('geo-fix-sat'); } },
+    { k: ['button', 'buttons', 'click', 'clicks', 'bouton', 'boutons', 'cliquer', 'clic'],
+      v: ['every button now announces its success. loudly. forever.', 'chaque bouton annonce désormais son succès. fort. pour toujours.'],
+      loop: ['you asked for working buttons — not QUIET ones.', 'vous vouliez des boutons qui marchent — pas des boutons DISCRETS.'],
+      fx() {
+        if (!dreamWorld || dreamWorld.flags.geoLoudBtns) return;
+        dreamWorld.flags.geoLoudBtns = 1;
+        let lastBrag = 0;
+        const loud = (e) => {
+          if (!e.target || !e.target.closest) return;
+          const b = e.target.closest('button');
+          if (!b || b.closest('.geo-fix-dlg')) return;
+          playTone(880, 'square', 0.07, 0, 0.03); playTone(1174.66, 'square', 0.08, 0.09, 0.03);
+          const now = Date.now();
+          if (now - lastBrag > 9000) { lastBrag = now; showToast(trT('✅ BUTTON CLICKED SUCCESSFULLY!! (you\'re welcome)', '✅ BOUTON CLIQUÉ AVEC SUCCÈS !! (de rien)')); }
+        };
+        document.addEventListener('click', loud);
+        dreamWorld.flags.removers.push(() => document.removeEventListener('click', loud));
+      } },
+    { k: ['slow', 'fast', 'faster', 'speed', 'lag', 'laggy', 'lent', 'lente', 'vite', 'rapide'],
+      v: ['the site is faster now. every part of it that moves, moves faster.', 'le site est plus rapide. chaque partie qui bouge, bouge plus vite.'],
+      loop: ['"faster" was never scoped to LOADING.', '« plus vite » n\'a jamais été limité au CHARGEMENT.'],
+      fx() { const sp = document.querySelector('.dream-geo-marquee span'); if (sp) sp.style.animationDuration = '4s'; cheatFall(['💨'], 6); } },
+    { k: ['counter', 'count', 'number', 'numbers', 'visitor', 'visitors', 'compteur', 'chiffre', 'chiffres', 'visiteur'],
+      v: ['the counter is recalibrated. it now counts EVERYTHING: dreams, ghosts, you (twice).', 'le compteur est recalibré. il compte TOUT désormais : les rêves, les fantômes, vous (deux fois).'],
+      loop: ['you never said WHAT it should count.', 'vous n\'avez jamais dit ce qu\'il devait compter.'],
+      fx() { const gh = dreamWorld && dreamWorld.flags.geoHits; if (!gh) return; dI(() => { if (dreamWorld && !document.hidden) gh.spoof(Math.floor(Math.random() * 9999999), 1300); }, 1600); } },
+    { k: ['cone', 'cones', 'construction', 'chantier', 'cône', 'cônes'],
+      v: ['we heard "cones". the crew is VERY excited. inventory: doubled.', 'on a entendu « cônes ». l\'équipe est TRÈS emballée. inventaire : doublé.'],
+      loop: ['ambiguous plurality. we chose MORE.', 'pluriel ambigu. on a choisi PLUS.'],
+      fx() { cheatFall(['🚧', '⚠️'], 14); dreamCritter({ emoji: '🚧', hop: 4, ms: 9000, label: ['new hire', 'nouvelle recrue'] }); } },
+    { k: ['window', 'windows', 'fenêtre', 'fenetre', 'fenêtres', 'fenetres'],
+      v: ['all windows structurally reinforced with premium tape.', 'toutes les fenêtres sont renforcées structurellement au ruban premium.'],
+      loop: ['"reinforce" was never defined. tape is structural SOMEWHERE.', '« renforcer » n\'a jamais été défini. le ruban est porteur QUELQUE PART.'],
+      fx() {
+        document.querySelectorAll('.window:not(.window-closed):not(.window-minimized)').forEach((w) => {
+          w.classList.add('geo-fix-tilt');
+          const r = w.getBoundingClientRect();
+          if (!r.width) return;
+          const tape = document.createElement('div');
+          tape.className = 'dream-geo-tape';
+          tape.textContent = trT('🚧 REINFORCED 🚧', '🚧 RENFORCÉ 🚧');
+          tape.style.left = (r.left + r.width / 2 - 90) + 'px';
+          tape.style.top = (r.top + r.height / 2 - 10) + 'px';
+          document.body.appendChild(tape);
+          dN(tape);
+        });
+      } },
+    { k: ['remove', 'delete', 'rid', 'enlever', 'supprimer', 'retirer', 'enlevez', 'supprimez'],
+      v: ['REMOVED: the word itself. a sign now certifies its absence.', 'SUPPRIMÉ : le mot lui-même. un panneau certifie désormais son absence.'],
+      loop: ['you named a WORD. words are removable. things are load-bearing.', 'vous avez nommé un MOT. les mots s\'enlèvent. les choses sont porteuses.'],
+      fx(q) { const word = (q.split(' ').filter((w) => w.length > 2).pop() || q).slice(0, 18); geoFixSign('❌ “' + word + '” — ' + trT('REMOVED ✓', 'SUPPRIMÉ ✓')); } },
+    { k: ['cursor', 'mouse', 'pointer', 'souris', 'curseur'],
+      v: ['your cursor now has a certified safety escort. hard hat included.', 'votre curseur a désormais une escorte de sécurité certifiée. casque inclus.'],
+      loop: ['you said fix the cursor. it is now OSHA compliant, not obedient.', 'vous avez dit réparer le curseur. il est désormais aux normes, pas obéissant.'],
+      fx() { geoFollower('⛑'); } },
+    { k: ['text', 'font', 'read', 'readable', 'police', 'texte', 'lire', 'lisible'],
+      v: ['readability restored to 1998 factory settings: everything important BLINKS.', 'lisibilité restaurée aux réglages d\'usine 1998 : tout ce qui est important CLIGNOTE.'],
+      loop: ['1998 readability standards were never un-adopted.', 'les normes de lisibilité de 1998 n\'ont jamais été abrogées.'],
+      fx() { document.documentElement.classList.add('ds-blink'); } },
+    { k: ['everything', 'whole', 'entire', 'tout', 'entier', 'ensemble'],
+      v: ['we fixed EVERYTHING. "Everything" is the name of this cone. it is fully operational.', 'on a réparé TOUT. « Tout » est le nom de ce cône. il est pleinement opérationnel.'],
+      loop: ['you capitalized nothing. we chose the cone.', 'vous n\'avez rien précisé. on a choisi le cône.'],
+      fx() { geoFixSign('🚧 “Everything” — ' + trT('FULLY OPERATIONAL ✓', 'PLEINEMENT OPÉRATIONNEL ✓')); } },
+    { k: ['guestbook', 'livre', 'sign'],
+      v: ['the guestbook is fixed. it was lonely. it will now ask for you by name.', 'le livre d\'or est réparé. il se sentait seul. il vous demandera désormais par votre nom.'],
+      loop: ['a guestbook\'s only failure mode is emptiness.', 'le seul mode de panne d\'un livre d\'or, c\'est le vide.'],
+      fx() { if (dreamWorld && dreamWorld.flags.geoGuestbook) dT(() => { if (dreamWorld) dreamWorld.flags.geoGuestbook(true); }, 1400); } },
+    { k: ['slime'],
+      v: ['the slime has been issued full protective equipment. morale: maximum.', 'le slime a reçu son équipement de protection complet. moral : maximal.'],
+      loop: ['the slime was never broken. now it has a HAT.', 'le slime n\'a jamais été cassé. maintenant il a un CHAPEAU.'],
+      fx() { try { wearOutfit(DREAM_OUTFITS.geo[0], true); } catch (e) { /* the locker jammed */ } } },
+    { k: ['love', 'heart', 'hearts', 'cute', 'aime', 'coeur', 'cœur', 'mignon', 'mignonne'],
+      v: ['requirement: love. delivered: love. units: 40.', 'exigence : de l\'amour. livraison : de l\'amour. unités : 40.'],
+      loop: ['quantity unspecified. we invoiced generously.', 'quantité non précisée. on a facturé généreusement.'],
+      fx() { cheatFall(['💖', '♡', '✦'], 20); geoFollower('♡'); } }
+  ];
+  // when no keyword lands (or the topic is spent), the crew honors the
+  // request LITERALLY: it gets installed, staffed, or shipped
+  const GEO_FIX_FALLBACKS = [
+    { v: ['your request has been INSTALLED: {q}. it hangs beautifully.', 'votre demande a été INSTALLÉE : {q}. elle est très bien accrochée.'],
+      loop: ['"fix" was never defined. display counts.', '« réparer » n\'a jamais été défini. l\'affichage compte.'],
+      fx(q) { geoFixSign('“' + q.slice(0, 34) + '” — ' + trT('INSTALLED ✓', 'INSTALLÉ ✓')); } },
+    { v: ['the problem now has a full-time specialist. the specialist is NAMED after it.', 'le problème a désormais un spécialiste à temps plein. le spécialiste porte son NOM.'],
+      loop: ['ownership solves everything, eventually.', 'la responsabilisation résout tout, à terme.'],
+      fx(q) { geoFixSign('⛑ ' + trT('assigned to: ', 'assigné à : ') + '“' + q.slice(0, 26) + '”'); } },
+    { v: ['shipped as {q}_FINAL_v2.htm. it is on the desktop. do not open it.', 'livré sous {q}_FINAL_v2.htm. c\'est sur le bureau. ne l\'ouvrez pas.'],
+      loop: ['FINAL_v2 always works. opening it was never specified.', 'FINAL_v2 marche toujours. l\'ouvrir n\'a jamais été spécifié.'],
+      fx(q) { const word = (q.split(' ')[0] || 'fix').slice(0, 12); geoFixSign('💾 ' + word + '_FINAL_v2.htm — ' + trT('SHIPPED ✓', 'LIVRÉ ✓')); } }
+  ];
+  function geoFixMatch(q, gf) {
+    const low = q.toLowerCase();
+    const used = (gf.used = gf.used || {});
+    let best = null, bi = -1, bs = 0;
+    GEO_FIX_TOPICS.forEach((t, i) => {
+      if (used['t' + i]) return;
+      let s = 0;
+      t.k.forEach((kw) => {
+        const esc = kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        if (new RegExp('(^|[^a-zà-ÿ0-9])' + esc + '([^a-zà-ÿ0-9]|$)').test(low)) s += Math.max(3, kw.length);
+      });
+      if (s > bs) { bs = s; best = t; bi = i; }
+    });
+    if (best && bs >= 3) { used['t' + bi] = 1; return best; }
+    return GEO_FIX_FALLBACKS[gf.round % GEO_FIX_FALLBACKS.length];
+  }
+  // a wooden certification sign, nailed wherever the crew felt like it
+  function geoFixSign(text) {
+    const s = document.createElement('div');
+    s.className = 'geo-fix-sign';
+    s.textContent = text;
+    s.style.left = (8 + Math.random() * 55) + '%';
+    s.style.top = (14 + Math.random() * 38) + '%';
+    s.addEventListener('click', () => { playDreamPop(); showToast(trT('the sign is load-bearing now.', 'le panneau est porteur maintenant.')); });
+    document.body.appendChild(s);
+    dN(s);
+    return s;
+  }
+  // a repair that follows the visitor around (mouse AND finger)
+  function geoFollower(emoji) {
+    if (!dreamWorld) return;
+    const s = document.createElement('span');
+    s.className = 'geo-fix-follower';
+    s.textContent = emoji;
+    s.style.left = (window.innerWidth / 2) + 'px';
+    s.style.top = (window.innerHeight / 2) + 'px';
+    document.body.appendChild(s);
+    dN(s);
+    const mv = (e) => { s.style.left = (e.clientX + 16) + 'px'; s.style.top = (e.clientY + 18) + 'px'; };
+    const tv = (e) => { const t = e.touches && e.touches[0]; if (t) { s.style.left = (t.clientX + 16) + 'px'; s.style.top = (t.clientY + 18) + 'px'; } };
+    document.addEventListener('mousemove', mv);
+    document.addEventListener('touchmove', tv, { passive: true });
+    dreamWorld.flags.removers.push(() => { document.removeEventListener('mousemove', mv); document.removeEventListener('touchmove', tv); });
+  }
+  // phase 1: THE GREAT OUTAGE — half the site closes for renovations
+  function geoOutageStart() {
+    if (!dreamWorld || dreamWorld.id !== 'geo' || dreamWorld.flags.geoFix) return;
+    const gf = dreamWorld.flags.geoFix = { broken: [], found: 0, round: 0, contract: [], crewHere: 0, done: 0, dlgOpen: 0, busy: 0 };
+    const cands = [];
+    document.querySelectorAll('.desktop-icon-btn[data-window], .start-menu-item, .pet-action-btn, #btn-like-site, .quest-btn[data-window]').forEach((el) => {
+      const wid = el.getAttribute('data-window') || el.getAttribute('data-target') || '';
+      if (wid === 'win-terminal' || wid === 'win-dreamlog') return; // the escape hatch and the collection stay sacred
+      cands.push(el);
+    });
+    for (let i = cands.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = cands[i]; cands[i] = cands[j]; cands[j] = t; }
+    cands.slice(0, Math.max(3, Math.ceil(cands.length * 0.5))).forEach((el) => {
+      el.classList.add('geo-broken');
+      const cone = document.createElement('span');
+      cone.className = 'geo-broken-cone';
+      cone.textContent = '🚧';
+      el.appendChild(cone);
+      dN(cone);
+      gf.broken.push(el);
+    });
+    if (!gf.broken.length) return;
+    // capture-phase interception: broken things apologize instead of working
+    const block = (e) => {
+      if (!dreamWorld || !dreamWorld.flags.geoFix) return;
+      const g = dreamWorld.flags.geoFix;
+      if (g.done) return;
+      const hit = e.target && e.target.closest ? e.target.closest('.geo-broken') : null;
+      if (!hit) return;
+      e.preventDefault();
+      e.stopPropagation();
+      playTone(196, 'square', 0.09, 0, 0.05); playTone(147, 'square', 0.11, 0.1, 0.05);
+      document.body.classList.add('rescue-quake-sm');
+      dT(() => document.body.classList.remove('rescue-quake-sm'), 300);
+      const ex = GEO_FIX_EXCUSES[Math.floor(Math.random() * GEO_FIX_EXCUSES.length)];
+      showToast('🚧 ' + trT(...ex));
+      if (!hit.__geoBrokenSeen) { hit.__geoBrokenSeen = 1; g.found++; }
+      if (g.found === 2) dreamSay(["zzz… yes… the site is… slightly under construction… tonight…", "zzz… oui… le site est… légèrement en travaux… ce soir…"], 3800);
+      if (g.found >= 3 && !g.crewHere) { g.crewHere = 1; dT(geoCrewArrive, 1100); }
+    };
+    document.addEventListener('click', block, true);
+    dreamWorld.flags.removers.push(() => document.removeEventListener('click', block, true));
+    playGlitchSound();
+    showToast(trT('🚧 RENOVATION NIGHT — 50% of the site is now under construction. probably fine.', '🚧 NUIT DE RÉNOVATION — 50 % du site est maintenant en travaux. tout va bien. sans doute.'), { scroll: true });
+    dreamSay(["zzz… renovation night… I closed half the site… for polishing…", "zzz… nuit de rénovation… j'ai fermé la moitié du site… pour le polissage…"], 4600);
+  }
+  // phase 2: the crew arrives (hero foreman + the visitor's own piks)
+  function geoCrewArrive() {
+    if (!dreamWorld) return;
+    const gf = dreamWorld.flags.geoFix;
+    if (!gf || gf.par) return;
+    gf.crewHere = 1;
+    playFanfare();
+    showToast(trT('⛑ SLIME & SONS CONSTRUCTION has arrived — with your entire pik crew ♡', '⛑ SLIME & SONS CONSTRUCTION est arrivée — avec toute votre équipe de piks ♡'), { scroll: true });
+    const par = document.createElement('div');
+    par.className = 'geo-crew-parade';
+    let cast = [];
+    try { cast = (pikEnsureCast() || []).slice(0, 6); } catch (e) { cast = []; }
+    while (cast.length < 5) cast.push({ h: [325, 48, 187][cast.length % 3], s: cast.length % 3, sp: null });
+    cast.forEach((p, i) => {
+      const mem = document.createElement('div');
+      mem.className = 'geo-crew-mem';
+      const img = document.createElement('img');
+      img.className = 'geo-crew-pik';
+      img.alt = '';
+      try { img.src = pikSprite(pikEntryColor(p), p.s || 0, p.sp || null); } catch (e) { return; }
+      img.style.width = (34 + (i % 3) * 6) + 'px';
+      img.style.animationDelay = (i * 0.09) + 's, ' + (i * 0.13) + 's';
+      mem.appendChild(img);
+      try { const spec = p.sp && pikSpecies(p.sp); if (spec && spec.hat) { const hat = document.createElement('span'); hat.className = 'geo-crew-hat'; hat.textContent = spec.hat; mem.appendChild(hat); } } catch (e) { /* bare heads work too */ }
+      par.appendChild(mem);
+    });
+    const hero = geoCrewCanvas();
+    hero.className = 'geo-crew-hero';
+    par.appendChild(hero);
+    const bubble = document.createElement('div');
+    bubble.className = 'geo-crew-bubble';
+    bubble.textContent = trT(...GEO_CREW_LINES[0]);
+    par.appendChild(bubble);
+    par.style.top = Math.round(window.innerHeight * 0.56) + 'px';
+    document.body.appendChild(par);
+    dN(par);
+    gf.par = par; gf.bubble = bubble;
+    GEO_CREW_LINES.forEach((ln, i) => {
+      if (!i) return;
+      dT(() => { if (document.body.contains(bubble)) { bubble.textContent = trT(...ln); playTone(660 + i * 60, 'triangle', 0.06, 0, 0.03); } }, 3400 * i);
+    });
+    const W0 = Math.max(320, par.getBoundingClientRect().width);
+    const x1 = 18;
+    // re-assert top every frame — something one-shot zeroed the inline top
+    // during the first field test, and a marching crew heals itself cheaply
+    const topPx = Math.max(80, Math.round(window.innerHeight * 0.56)) + 'px';
+    par.style.top = topPx;
+    if (REDUCED_MOTION) { par.style.left = x1 + 'px'; dT(geoWorkOrder, 1400); return; }
+    const x0 = -W0 - 40, DUR = 8000, t0 = Date.now();
+    par.style.left = x0 + 'px';
+    let lastBeep = 0;
+    const iv = dI(() => {
+      const p = Math.min(1, (Date.now() - t0) / DUR);
+      par.style.left = (x0 + (x1 - x0) * p) + 'px';
+      par.style.top = topPx;
+      const now = Date.now();
+      if (now - lastBeep > 320) { lastBeep = now; playTone(430 + p * 320, 'triangle', 0.04, 0, 0.02); }
+      if (p >= 1) { clearInterval(iv); dT(geoWorkOrder, 700); }
+    }, 60);
+  }
+  // the porters hop out and hammer while a request is "interpreted"
+  function geoCrewWork() {
+    if (!dreamWorld) return;
+    [0, 1, 2, 3, 4].forEach((i) => playTone(i % 2 ? 240 : 320, 'square', 0.05, 0.25 + i * 0.5, 0.04));
+    const gf = dreamWorld.flags.geoFix;
+    if (gf && gf.bubble && document.body.contains(gf.bubble)) {
+      const lines = [
+        ['lift with the leaves!! read the request AS WRITTEN!!', 'soulevez avec les feuilles !! lisez la demande TELLE QUELLE !!'],
+        ['do NOT fix anything that is not in the contract!!', 'ne réparez RIEN qui ne soit pas au contrat !!'],
+        ['beautiful. technically perfect. morally? next question.', 'magnifique. techniquement parfait. moralement ? question suivante.']
+      ];
+      gf.bubble.textContent = trT(...lines[Math.floor(Math.random() * lines.length)]);
+    }
+    if (REDUCED_MOTION) return;
+    [0, 1].forEach((k) => {
+      const img = document.createElement('img');
+      img.className = 'geo-crew-porter';
+      try { img.src = pikSprite(hueColor([325, 48, 187][Math.floor(Math.random() * 3)]), Math.floor(Math.random() * 3), null); } catch (e) { return; }
+      img.style.width = '30px';
+      img.style.left = (window.innerWidth / 2 - 70 + k * 100 + Math.random() * 30) + 'px';
+      img.style.top = (Math.min(window.innerHeight - 80, window.innerHeight * 0.16 + 200) + Math.random() * 40) + 'px';
+      document.body.appendChild(img);
+      dN(img);
+      dT(() => { try { img.remove(); } catch (e) { /* clocked out */ } }, 3300);
+    });
+  }
+  // the 📋 badge brings a closed work order back
+  function geoFixBadge() {
+    if (!dreamWorld) return;
+    const gf = dreamWorld.flags.geoFix;
+    if (!gf || gf.done || gf.badge) return;
+    const b = dreamBadge('📋 ' + trT('WORK ORDER', 'BON DE TRAVAUX') + ' — ' + (3 - gf.round) + '/3', 'geo-fix-badgebtn');
+    b.addEventListener('click', () => { if (gf.badge) { try { gf.badge.remove(); } catch (e) {} gf.badge = null; } geoWorkOrder(); });
+    gf.badge = b;
+  }
+  // phase 3: the contract game — three requests, honored to the letter
+  function geoWorkOrder() {
+    if (!dreamWorld) return;
+    const gf = dreamWorld.flags.geoFix;
+    if (!gf || gf.done || gf.dlgOpen) return;
+    if (gf.badge) { try { gf.badge.remove(); } catch (e) {} gf.badge = null; }
+    const d = dreamDlg(() => ({
+      title: trT('🔨 work_order.cgi — SLIME & SONS', '🔨 bon_de_travaux.cgi — SLIME & SONS'),
+      force: true, cls: 'geo-fix-dlg',
+      x: Math.max(12, window.innerWidth / 2 - 170), y: Math.max(56, Math.round(window.innerHeight * 0.14)),
+      lines: [
+        trT('"we fix EXACTLY what you say." — slime & sons, est. 1998', '« on répare EXACTEMENT ce que vous dites. » — slime & sons, dep. 1998'),
+        trT('describe the problem. choose your words carefully.', 'décrivez le problème. choisissez bien vos mots.')
+      ],
+      buttons: [],
+      onX: (dlg) => { dlg.remove(); gf.dlgOpen = 0; geoFixBadge(); }
+    }));
+    if (!d) { dT(geoWorkOrder, 5000); return; }
+    d.__dirty = 1; // live input + appended verdicts must survive a language toggle
+    gf.dlgOpen = 1;
+    const body = d.querySelector('.dream-dlg-body');
+    const meter = document.createElement('p');
+    meter.className = 'geo-fix-meter';
+    const setMeter = () => { meter.textContent = trT('change requests: ', 'demandes de modification : ') + '[' + '■'.repeat(gf.round) + '□'.repeat(Math.max(0, 3 - gf.round)) + '] ' + gf.round + '/3'; };
+    setMeter();
+    body.appendChild(meter);
+    const inp = document.createElement('input');
+    inp.type = 'text';
+    inp.maxLength = 90;
+    inp.className = 'geo-fix-input';
+    inp.placeholder = trT('e.g. "fix the music"', 'ex. « réparez la musique »');
+    body.appendChild(inp);
+    const row = document.createElement('div');
+    row.className = 'dream-dlg-row';
+    const go = document.createElement('button');
+    go.type = 'button';
+    go.className = 'dream-dlg-btn';
+    go.textContent = trT('submit request 📠', 'envoyer la demande 📠');
+    row.appendChild(go);
+    d.appendChild(row);
+    const submit = () => {
+      if (!dreamWorld || gf.busy) return;
+      const raw = (inp.value || '').replace(/[\x00-\x1f\x7f]+/g, ' ').replace(/\s+/g, ' ').trim();
+      if (!raw) { inp.focus(); return; }
+      gf.busy = 1;
+      inp.disabled = true; go.disabled = true; go.classList.add('geo-fix-working');
+      const q = raw.slice(0, 80);
+      const think = document.createElement('p');
+      think.textContent = trT('⛑ the crew reads your request… twice… grinning…', '⛑ l\'équipe lit votre demande… deux fois… en souriant…');
+      body.appendChild(think);
+      d.__dirty = 1;
+      geoCrewWork();
+      dT(() => {
+        if (!dreamWorld || !document.body.contains(d)) { gf.busy = 0; gf.dlgOpen = 0; return; }
+        const pick = geoFixMatch(q, gf);
+        const qq = q.length > 26 ? q.slice(0, 25) + '…' : q;
+        const v = [pick.v[0].split('{q}').join('“' + qq + '”'), pick.v[1].split('{q}').join('« ' + qq + ' »')];
+        try { pick.fx(q); } catch (e) { /* the fix fixed itself */ }
+        playSparkleSound();
+        let crewName = '';
+        try { const dex = pikdexGet(); if (dex.length) crewName = pikNameOf(dex, Math.floor(Math.random() * Math.min(dex.length, 6))) + ' — '; } catch (e) { /* anonymous professionals */ }
+        think.textContent = crewName + trT('DONE ✓ ', 'FAIT ✓ ') + trT(...v);
+        gf.contract.push({ q, v, loop: pick.loop });
+        gf.round++;
+        setMeter();
+        d.__dirty = 1;
+        gf.busy = 0;
+        if (gf.round >= 3) {
+          dT(() => { try { d.remove(); } catch (e) {} gf.dlgOpen = 0; geoFixReveal(); }, 3400);
+        } else {
+          inp.disabled = false; go.disabled = false; go.classList.remove('geo-fix-working');
+          inp.value = '';
+          inp.placeholder = trT('anything else?? (be SPECIFIC. or don\'t.)', 'autre chose ?? (soyez PRÉCIS. ou pas.)');
+          try { inp.focus(); } catch (e) { /* the pen rolled away */ }
+        }
+      }, 3600);
+    };
+    go.addEventListener('click', submit);
+    inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); submit(); } });
+    dT(() => { try { inp.focus(); } catch (e) { /* keyboard shy */ } }, 150);
+  }
+  // phase 4: THE REVEAL — the contract, clause by clause, loophole by loophole
+  function geoFixReveal() {
+    if (!dreamWorld) return;
+    const gf = dreamWorld.flags.geoFix;
+    if (!gf || gf.revealed) return;
+    gf.revealed = 1; gf.done = 1;
+    geoFixRestore(); // the cones come off: the REAL site reopens
+    playFanfare();
+    cheatFall(['🚧', '🔨', '✨'], 18);
+    gainFollowers(2);
+    achvUnlock('goblinfix');
+    if (gf.bubble && document.body.contains(gf.bubble)) gf.bubble.textContent = trT('PROJECT COMPLETE. read the invoice. ESPECIALLY the fine print ♡', 'CHANTIER TERMINÉ. lisez la facture. SURTOUT les petites lignes ♡');
+    dreamDlg(() => {
+      const lines = [trT('SLIME & SONS — FINAL INVOICE (paid in exposure)', 'SLIME & SONS — FACTURE FINALE (payée en visibilité)')];
+      gf.contract.forEach((c, i) => {
+        lines.push('§' + (i + 1) + ' ' + trT('you said: ', 'vous avez dit : ') + '“' + (c.q.length > 34 ? c.q.slice(0, 33) + '…' : c.q) + '”');
+        lines.push('→ ' + trT(...c.v));
+        lines.push('⚖ ' + trT('loophole: ', 'faille : ') + trT(...c.loop));
+      });
+      lines.push(trT('ALL REQUIREMENTS MET. the site is REOPENED — the fixes stay until you wake ♡', 'TOUTES LES EXIGENCES RESPECTÉES. le site est ROUVERT — les réparations restent jusqu\'au réveil ♡'));
+      return {
+        title: trT('📠 invoice_FINAL_v2.htm', '📠 facture_FINAL_v2.htm'),
+        force: true, cls: 'geo-fix-dlg', lines,
+        buttons: [
+          [trT('it\'s perfect ♡', 'c\'est parfait ♡'), () => { playSparkleSound(); gainFollowers(1); showToast(trT('the crew frames your signature. it goes on the wall of the van.', 'l\'équipe encadre votre signature. elle ira sur le mur du fourgon.')); }],
+          [trT('(read the fine print)', '(lire les petites lignes)'), () => { showToast(trT('fine print: “no refunds. the cones were never ours. love, s&s ♡”', 'petites lignes : « aucun remboursement. les cônes n\'ont jamais été à nous. bisous, s&s ♡ »')); }, true]
+        ]
+      };
+    });
+    dT(geoCrewExit, 4200);
+  }
+  function geoCrewExit() {
+    if (!dreamWorld) return;
+    const gf = dreamWorld.flags.geoFix;
+    const par = gf && gf.par;
+    if (!par || !document.body.contains(par)) return;
+    if (REDUCED_MOTION) { try { par.remove(); } catch (e) {} return; }
+    const x0 = parseFloat(par.style.left) || 18, t0 = Date.now(), DUR = 6000;
+    const W = par.getBoundingClientRect().width + 80;
+    const iv = dI(() => {
+      const p = Math.min(1, (Date.now() - t0) / DUR);
+      par.style.left = (x0 - (x0 + W) * p) + 'px';
+      if (p >= 1) { clearInterval(iv); try { par.remove(); } catch (e) { /* already in the van */ } }
+    }, 60);
+  }
+  // undo the outage (cones + interception targets); effects stay until wake
+  function geoFixRestore() {
+    document.querySelectorAll('.geo-broken-cone').forEach((n) => { try { n.remove(); } catch (e) { /* pocketed */ } });
+    document.querySelectorAll('.geo-broken').forEach((el) => { el.classList.remove('geo-broken'); try { delete el.__geoBrokenSeen; } catch (e) { /* sticky note stays */ } });
+  }
+  // full wake teardown: outage undone AND every lingering "repair" stripped
+  function geoFixTeardown() {
+    geoFixRestore();
+    document.documentElement.classList.remove('geo-fix-sat', 'ds-blink');
+    document.querySelectorAll('.geo-fix-tilt').forEach((el) => el.classList.remove('geo-fix-tilt'));
+  }
+
   /* v98: bsod's signature beat used to replay the same error dialog
      every 48s — a nag, not a crash. now it's the ERROR CASCADE: the
      reporter crashes, the reports about the report crash, everything
@@ -15434,7 +15900,7 @@ document.addEventListener('DOMContentLoaded', () => {
     try { if (typeof dwcClose === 'function') dwcClose(); } catch (e) { /* already folded */ }
     try { fwDreamDress(null); } catch (e) { /* the wall wakes on its own */ }
     dreamWorld.nodes.forEach((n) => { try { n.remove(); } catch (e) { /* already gone */ } });
-    document.querySelectorAll('.dream-dlg, .scp-lock, .dream-geo-tape, .dream-slippy, .dream-gb-tetro, .dream-amber-slip').forEach((n) => n.remove());
+    document.querySelectorAll('.dream-dlg, .scp-lock, .dream-geo-tape, .dream-slippy, .dream-gb-tetro, .dream-amber-slip, .geo-fix-sign, .geo-crew-parade, .geo-fix-follower, .geo-crew-porter, .geo-broken-cone').forEach((n) => n.remove());
     // the dream journal exists only inside dreams — it closes with the world
     try {
       const dlWin = document.getElementById('win-dreamlog');

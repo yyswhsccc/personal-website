@@ -9393,6 +9393,150 @@ html[data-theme="dark"].dream-geo .window-title { color: #1c0230; }
 .dream-geo-ring button { text-decoration: underline; color: #41e0ff; background: none; border: none; box-shadow: none; }
 .dream-geo-ring span { color: var(--text-soft); }
 
+/* — v148 RENOVATION NIGHT: the outage, the crew, the contract — */
+.geo-broken { position: relative; }
+html[data-theme="dark"].dream-geo .geo-broken {
+  outline: 2px dashed #ffd23f;
+  outline-offset: -2px;
+  opacity: 0.82;
+  cursor: not-allowed;
+}
+.geo-broken-cone {
+  position: absolute;
+  top: -7px;
+  right: -5px;
+  font-size: 0.85rem;
+  z-index: 5;
+  pointer-events: none;
+  filter: drop-shadow(0 0 3px #ffd23f);
+  animation: geo-cone-wob 1.6s ease-in-out infinite;
+}
+@keyframes geo-cone-wob { 50% { transform: rotate(-10deg) translateY(-2px); } }
+/* the crew rides the bsod parade skeleton, re-inked in 1998 neon */
+.geo-crew-parade {
+  position: fixed;
+  left: -700px;
+  z-index: 2620; /* over the critters, under the dialogs */
+  pointer-events: none;
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+}
+.geo-crew-mem { position: relative; display: flex; align-items: flex-end; }
+.geo-crew-hat { position: absolute; top: -14px; left: 50%; transform: translateX(-50%); font-size: 0.8rem; }
+.geo-crew-hero {
+  width: 112px;
+  height: 112px;
+  image-rendering: pixelated;
+  filter:
+    drop-shadow(0 0 2px #ffffff)
+    drop-shadow(0 0 7px #ff62c5)
+    drop-shadow(0 0 13px rgba(255, 98, 197, 0.95));
+  animation: bsod-hero-bob 0.42s steps(2) infinite, geo-crew-halo 1.8s ease-in-out infinite;
+}
+.geo-crew-pik {
+  image-rendering: pixelated;
+  filter:
+    drop-shadow(0 0 2px #ffffff)
+    drop-shadow(0 0 7px #ff62c5)
+    drop-shadow(0 0 13px rgba(255, 98, 197, 0.95));
+  animation: bsod-hero-bob 0.42s steps(2) infinite, geo-crew-halo 1.8s ease-in-out infinite;
+}
+@keyframes geo-crew-halo {
+  50% {
+    filter:
+      drop-shadow(0 0 3px #ffffff)
+      drop-shadow(0 0 10px #ffd23f)
+      drop-shadow(0 0 20px rgba(255, 210, 63, 1));
+  }
+}
+.geo-crew-bubble {
+  position: absolute;
+  right: -10px;
+  top: -92px;
+  width: max-content;
+  max-width: 300px;
+  font-family: var(--font-pixel);
+  font-size: 0.78rem;
+  color: #1c0230;
+  background: #fffbe6;
+  border: 2px solid #1c0230;
+  padding: 5px 9px;
+  box-shadow: 3px 3px 0 rgba(28, 2, 48, 0.45);
+}
+.geo-crew-bubble::after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  right: 48px;
+  border: 8px solid transparent;
+  border-top-color: #fffbe6;
+  border-bottom: 0;
+}
+.geo-crew-porter {
+  position: fixed;
+  z-index: 2688;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 0 6px #ffd23f);
+  animation: bsod-hero-bob 0.3s steps(2) infinite;
+}
+.geo-fix-dlg .dream-dlg-bar {
+  background: linear-gradient(90deg, #ff2fae, #ffd23f, #41e0ff);
+  color: #1c0230;
+}
+.geo-fix-meter { font-family: monospace; color: #7cfc00; background: #000; padding: 2px 6px; }
+.geo-fix-input {
+  width: 100%;
+  margin-top: 8px;
+  box-sizing: border-box;
+  font-family: var(--font-pixel);
+  font-size: 16px; /* prevents iOS zoom-on-focus */
+  padding: 6px 8px;
+  background: #05010f;
+  color: #7cfc00;
+  border: 2px ridge #c0c0c0;
+}
+.geo-fix-working { opacity: 0.55; }
+.geo-fix-badgebtn { cursor: pointer; animation: ds-blinky 1.4s steps(1) infinite; }
+.geo-fix-sign {
+  position: fixed;
+  z-index: 2590;
+  background: #fffbe6;
+  color: #1c0230;
+  border: 3px solid #1c0230;
+  box-shadow: 3px 3px 0 rgba(28, 2, 48, 0.5);
+  font-family: var(--font-pixel);
+  font-size: 0.78rem;
+  padding: 6px 9px;
+  max-width: min(300px, 70vw);
+  transform: rotate(-2deg);
+  cursor: help;
+}
+.geo-fix-sign::after { content: '🔨'; position: absolute; right: -10px; top: -14px; }
+.geo-fix-follower {
+  position: fixed;
+  z-index: 2699;
+  pointer-events: none;
+  font-size: 1.1rem;
+  transition: left 0.18s linear, top 0.18s linear;
+  filter: drop-shadow(0 0 4px #ffd23f);
+}
+.geo-fix-tilt { transform: rotate(0.5deg); }
+/* "all the colors, simultaneously" — saturate the leaf layers, never body
+   (a body filter would re-anchor every position:fixed child) */
+html.geo-fix-sat .window-header,
+html.geo-fix-sat .desktop-icon-btn,
+html.geo-fix-sat .profile-card { filter: saturate(1.8); }
+html[data-theme="dark"].dream-geo.geo-fix-sat { --dream-grade: saturate(2.1) contrast(1.15); }
+@media (max-width: 760px) {
+  .geo-crew-hero { width: 84px; height: 84px; }
+  .geo-crew-bubble { max-width: 200px; top: -78px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .geo-broken-cone, .geo-crew-hero, .geo-crew-pik, .geo-crew-porter, .geo-fix-badgebtn { animation: none; }
+  .geo-fix-follower { transition: none; }
+}
+
 /* =====================================================
    dream 6/7 — the BLUE DREAM OF DEATH
    ===================================================== */
