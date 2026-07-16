@@ -726,6 +726,15 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
+  // the dream badge rail yields while the START menu is open — a
+  // body:has(.start-menu.show) rule refused to re-evaluate in the field,
+  // so a tiny observer stamps a body class instead (v154 occlusion fix)
+  if (startMenu) {
+    new MutationObserver(() => {
+      document.body.classList.toggle('start-menu-open', startMenu.classList.contains('show'));
+    }).observe(startMenu, { attributes: true, attributeFilter: ['class'] });
+  }
+
   // Start Menu Links
   document.querySelectorAll('.start-menu-item').forEach((item) => {
     item.addEventListener('click', () => {
@@ -8129,22 +8138,35 @@ document.addEventListener('DOMContentLoaded', () => {
     wakeAlt: ["*yawn* I dreamed I had a GUESTBOOK… one entry just says 'a mysterious lurker ♡'… wait. was that YOU??", "*bâille* j'ai rêvé que j'avais un LIVRE D'OR… une entrée dit juste « un·e rôdeur·se mystérieux·se ♡ »… attends. c'était TOI ??"],
     wakePick(fl) { return (fl && fl.geoSigned) ? this.wake : this.wakeAlt; },
     build(resumed) {
-      const mq = document.createElement('div');
-      mq.className = 'dream-geo-marquee';
-      mq.innerHTML = '<span>★·.·´¯`·.·★ WELCOME TO SLIME\'S HOMEPAGE!!! best viewed in SLIMESCAPE 4.0 at 800×600 ★ sign the guestbook ★ no right-click!! (jk) ★·.·´¯`·.·★</span>';
-      // the banner hangs at the TOP OF THE DESKTOP CONTENT, never over the
-      // browser's own tab bar / address bar (a fixed top:0 used to cover them)
-      (document.querySelector('.desktop-area') || document.body).appendChild(mq);
-      dN(mq);
-      // owner decree v150: the marquee says it ONCE, then leaves the stage
-      // for good (it was covering the desktop's top row all night)
-      const mqSpan = mq.querySelector('span');
-      const mqBye = () => { mq.classList.add('dream-geo-marquee-out'); dT(() => { try { mq.remove(); } catch (e) { /* already gone */ } }, 900); };
-      if (mqSpan && !REDUCED_MOTION) {
-        mqSpan.style.animationIterationCount = '1';
-        mqSpan.addEventListener('animationend', mqBye, { once: true });
-        dT(mqBye, 26000); // idempotent failsafe — hidden tabs pause CSS animations
-      } else dT(mqBye, 9000);
+      // owner decree v154: NO banner over the desktop. the WELCOME text
+      // scrolls ONCE through the fake browser's address bar instead, then
+      // the real URL comes back like nothing happened
+      const addr = document.getElementById('address-input');
+      if (addr && !REDUCED_MOTION) {
+        const MSG = '★·.·´¯`·.·★ WELCOME TO SLIME\'S HOMEPAGE!!! best viewed in SLIMESCAPE 4.0 at 800×600 ★ sign the guestbook ★ no right-click!! (jk) ★·.·´¯`·.·★   ';
+        const savedUrl = addr.value;
+        let mqIv = null, mqDone = 0;
+        const mqStop = () => {
+          if (mqDone) return;
+          mqDone = 1;
+          if (mqIv) clearInterval(mqIv);
+          addr.removeEventListener('focus', mqStop);
+          if (document.activeElement !== addr) {
+            try { addr.value = navCurrent().url; } catch (e) { addr.value = savedUrl; }
+          }
+        };
+        addr.addEventListener('focus', mqStop); // the visitor wants to type — the banner yields
+        // time-driven, not tick-driven: throttled background tabs still
+        // finish the lap in ~12s instead of stretching it to minutes
+        const mqT0 = Date.now();
+        mqIv = dI(() => {
+          if (!dreamWorld || document.activeElement === addr) { mqStop(); return; }
+          const off = Math.floor((Date.now() - mqT0) / 85);
+          if (off >= MSG.length) { mqStop(); return; } // one full lap, then normal service
+          addr.value = MSG.slice(off) + MSG.slice(0, off);
+        }, 85);
+        dreamWorld.flags.removers.push(mqStop);
+      }
       let hits = 337 + Math.floor(Math.random() * 3);
       let hitsSpoofUntil = 0;
       const counter = dreamBadge('', 'dream-geo-counter');
@@ -14750,7 +14772,7 @@ document.addEventListener('DOMContentLoaded', () => {
     { k: ['slow', 'fast', 'faster', 'speed', 'lag', 'laggy', 'lent', 'lente', 'vite', 'rapide'],
       v: ['the site is faster now. every part of it that moves, moves faster.', 'le site est plus rapide. chaque partie qui bouge, bouge plus vite.'],
       loop: ['"faster" was never scoped to LOADING.', '« plus vite » n\'a jamais été limité au CHARGEMENT.'],
-      fx() { const sp = document.querySelector('.dream-geo-marquee span'); if (sp) sp.style.animationDuration = '4s'; cheatFall(['💨'], 6); } },
+      fx() { const gh = dreamWorld && dreamWorld.flags.geoHits; if (gh) { let k = 0; const iv = dI(() => { gh.bump(7); playTone(1318 + k * 40, 'sine', 0.03, 0, 0.02); if (++k >= 10) clearInterval(iv); }, 180); } cheatFall(['💨'], 6); } },
     { k: ['counter', 'count', 'number', 'numbers', 'visitor', 'visitors', 'compteur', 'chiffre', 'chiffres', 'visiteur'],
       v: ['the counter is recalibrated. it now counts EVERYTHING: dreams, ghosts, you (twice).', 'le compteur est recalibré. il compte TOUT désormais : les rêves, les fantômes, vous (deux fois).'],
       loop: ['you never said WHAT it should count.', 'vous n\'avez jamais dit ce qu\'il devait compter.'],

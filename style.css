@@ -9349,32 +9349,12 @@ html[data-theme="dark"].dream-geo .window-header {
   color: #1c0230;
 }
 html[data-theme="dark"].dream-geo .window-title { color: #1c0230; }
-.dream-geo-marquee {
-  /* absolute inside .desktop-area (position:relative) so the banner rides
-     the TOP OF THE CONTENT, never over the browser's tab/address bar */
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 2555;
-  background: #000;
-  border-bottom: 3px ridge #ff62c5;
-  overflow: hidden;
-  pointer-events: none;
-  padding: 3px 0;
-}
-.dream-geo-marquee span {
-  display: inline-block;
-  white-space: nowrap;
-  font-family: var(--font-pixel);
-  font-size: 0.9rem;
-  color: #7cfc00;
-  animation: dream-geo-marquee 24s linear infinite;
-}
-@keyframes dream-geo-marquee {
-  from { transform: translateX(100vw); }
-  to { transform: translateX(-100%); }
-}
+/* v154: the WELCOME banner element is gone — the greeting scrolls once
+   through the fake browser's address bar instead (see DREAM_GEO.build) */
+/* the START menu outranks the souvenirs: while it's open, the badge
+   rail steps aside instead of papering over the menu items (class is
+   stamped by a MutationObserver — :has() would not re-evaluate here) */
+body.start-menu-open #dream-badges { opacity: 0; transition: opacity 0.15s ease; }
 .dream-geo-counter { font-family: monospace; background: #000 !important; color: #7cfc00 !important; border: 2px ridge #c0c0c0 !important; }
 .dream-geo-tape {
   position: fixed;
@@ -9401,7 +9381,6 @@ html[data-theme="dark"].dream-geo .geo-broken {
   cursor: help; /* v150: everything still opens — the damage is INSIDE */
 }
 /* the marquee says its piece once, then bows out for the night */
-.dream-geo-marquee-out { opacity: 0; transition: opacity 0.8s ease; }
 /* v150: wrecked interiors — every room fails its own way */
 .geo-wreck-host { position: relative; overflow: hidden; }
 .geo-wreck-loading {
