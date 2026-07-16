@@ -1195,6 +1195,7 @@ html[data-theme="dark"].dreaming .follower-star { color: var(--lite, var(--yello
   width: 92%;
   max-width: 800px;
   min-height: 380px;
+  max-height: min(540px, calc(100vh - var(--taskbar-avoid-bottom, 68px) - 96px)); /* fallback: old Chrome/Edge/FF w/o dvh */
   max-height: min(540px, calc(100dvh - var(--taskbar-avoid-bottom, 68px) - 96px));
   transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.15), opacity 0.2s ease;
 }
@@ -2628,6 +2629,7 @@ html.dreaming .start-menu-item:focus .item-icon { filter: none; }
     width: min(94vw, 520px) !important;
     max-width: 94vw;
     min-height: 0;
+    max-height: calc(100vh - var(--taskbar-avoid-bottom, 68px) - 78px); /* fallback: old Chrome/Edge/FF w/o dvh */
     max-height: calc(100dvh - var(--taskbar-avoid-bottom, 68px) - 78px);
   }
 
@@ -2670,6 +2672,7 @@ html.dreaming .start-menu-item:focus .item-icon { filter: none; }
   .window-chat,
   .window-ama,
   .window-terminal {
+    min-height: min(430px, calc(100vh - 190px)); /* fallback: old Chrome/Edge/FF w/o dvh */
     min-height: min(430px, calc(100dvh - 190px));
   }
 
@@ -3782,6 +3785,24 @@ html.is-booting body {
 .tray-icon { font-size: 0.78rem; }
 .tray-fans { font-size: 0.85rem; }
 .tray-time { font-size: 0.88rem; }
+
+/* touch targets: phones AND touch tablets (641-991px) get finger-sized hit
+   areas. taskbar/fan-wall glyphs stay pixel-tiny — a transparent ::before
+   halo does the catching, so nothing in those tight rows actually resizes.
+   the d-pad and window buttons, which have room, grow for real. */
+@media (pointer: coarse) {
+  .win-btn { width: 30px; height: 30px; font-size: 1.05rem; }
+  .tray-btn, .fan-wall-toggle { position: relative; }
+  .tray-btn::before, .fan-wall-toggle::before {
+    content: '';
+    position: absolute;
+    left: 50%; top: 50%;
+    width: 40px; height: 40px;
+    transform: translate(-50%, -50%);
+  }
+  /* .dl-gb-pad's coarse bump lives beside its base rule far below — same
+     specificity, so it MUST come later in the file to win the cascade */
+}
 .btn-start-menu {
   padding: 3px 12px;
   font-size: 1.02rem;
@@ -7636,6 +7657,7 @@ body.terminal-only .night-sky,
 body.terminal-only .mini-danmaku, /* the chat ticker kept broadcasting over the DOOR (and the rescue cage) — backstage means backstage */
 body.terminal-only .window:not(#win-terminal) { display: none !important; }
 body.terminal-only .desktop-area {
+  min-height: 100vh; /* fallback: old Chrome/Edge/FF w/o dvh */
   min-height: 100dvh;
   background:
     radial-gradient(circle at 20% 15%, rgba(57, 211, 83, 0.12), transparent 45%),
@@ -8047,7 +8069,7 @@ body.rescue-quake-big { animation: rescue-quake-big 1s; }
 .live-beam-x { background: transparent; color: #14020e; border: 0; font-family: var(--font-pixel); cursor: var(--cursor-heart); }
 /* landscape phones: shrink the stage so the GRASS stays on screen */
 @media (orientation: landscape) and (max-height: 520px) {
-  .live-stage { min-height: min(300px, calc(100dvh - 150px)); }
+  .live-stage { min-height: min(300px, calc(100vh - 150px)); min-height: min(300px, calc(100dvh - 150px)); }
   .live-stage .slime-pet { width: 120px; height: 106px; left: calc(50% - 60px); top: auto; bottom: 14px; }
   .live-stage .tamagotchi-bubble { bottom: 138px; }
 }
@@ -8168,11 +8190,20 @@ body.rescue-quake-big { animation: rescue-quake-big 1s; }
   padding: 1px 5px;
   cursor: var(--cursor-heart);
   opacity: 0;
+  /* invisible must mean untappable — an opacity:0 button still fired phantom
+     taps on phones, silently deleting a photo aimed at the washi-tape */
+  pointer-events: none;
   transition: opacity 0.2s;
 }
 .album-save { right: 30px; background: var(--mint); }
 .album-del { right: 4px; background: var(--pink-hot); color: #fff; }
-.album-card:hover .album-save, .album-card:hover .album-del { opacity: 1; }
+.album-del.album-del-armed { background: var(--ink); color: var(--pink-hot); } /* first tap arms, second tap deletes */
+.album-card:hover .album-save, .album-card:hover .album-del { opacity: 1; pointer-events: auto; }
+/* touch screens have no hover: reveal the controls always, with finger-sized
+   hit areas, so 💾 is discoverable and ✕ can't be hit by accident-then-gone */
+@media (hover: none) {
+  .album-save, .album-del { opacity: 1; pointer-events: auto; padding: 6px 10px; }
+}
 .selfie-pip {
   position: absolute;
   right: 10px;
@@ -9319,7 +9350,9 @@ html[data-theme="dark"].dream-geo .window-header {
 }
 html[data-theme="dark"].dream-geo .window-title { color: #1c0230; }
 .dream-geo-marquee {
-  position: fixed;
+  /* absolute inside .desktop-area (position:relative) so the banner rides
+     the TOP OF THE CONTENT, never over the browser's tab/address bar */
+  position: absolute;
   top: 0;
   left: 0;
   right: 0;
@@ -9841,6 +9874,13 @@ html[data-theme="dark"].dream-amber .window-title { color: #ffd23f; text-shadow:
 /* the endless-receipt gag: this slip unrolls much, much further */
 .dream-amber-longroll { animation: dream-amber-longroll 4.2s steps(30) forwards !important; }
 @keyframes dream-amber-longroll { from { max-height: 0; } to { max-height: 460px; } }
+/* …and still gets its fly-away exit (this must outrank the !important
+   unroll above, or the long roll hangs on the printer forever) */
+.dream-amber-longroll.dream-amber-slip-fly { animation: dream-amber-fly-long 2.4s ease-in forwards !important; }
+@keyframes dream-amber-fly-long {
+  0% { transform: rotate(0deg); opacity: 1; max-height: 460px; }
+  100% { transform: translate(120px, -240px) rotate(24deg); opacity: 0; max-height: 460px; }
+}
 .dream-amber-slip {
   position: absolute;
   bottom: 85%;
@@ -9873,7 +9913,11 @@ html[data-theme="dark"].dream-amber .window-title { color: #ffd23f; text-shadow:
 /* ---- small screens: the dream travels light ---- */
 @media (max-width: 760px) {
   .dream-badge { font-size: 0.74rem; padding: 4px 8px; }
-  .dream-geo-ring, .dream-bsod-qr { display: none; }
+  .dream-bsod-qr { display: none; }
+  /* the webring rides along now (compact) — hiding it cost small screens
+     the whole circle-of-one joke */
+  .dream-geo-ring { font-size: 0.68rem; padding: 3px 5px; }
+  .dream-geo-ring button { font-size: 0.68rem; padding: 0 2px; }
   .dream-bsod-face { font-size: 3.2rem; }
   .dream-slippy { width: 180px; }
   .scp-keypad-grid { grid-template-columns: repeat(3, 46px); }
@@ -11214,7 +11258,14 @@ html.dreaming #icon-dreamlog .icon-visual-emoji {
 /* — geo: 1998 guestbook, dotted and proud — */
 .dl-geo { background: #fffbe6; color: #333; }
 .dl-geo .dl-row { border-style: dotted; border-color: #ff62c5; background: #fff; }
-.dl-geo .dl-geo-soon { animation: ds-blinky 1s steps(1) infinite; }
+/* a GENTLE loading shimmer — never a hard on/off blink. the old
+   `ds-blinky 1s steps(1)` strobed a whole column of rows to full-black in
+   unison (a photosensitivity hazard); this fades softly and staggers so
+   the rows never pulse together. */
+.dl-geo .dl-geo-soon { animation: dl-geo-soft 2.6s ease-in-out infinite; }
+.dl-geo .dl-row:nth-child(even) .dl-geo-soon { animation-delay: -1.3s; }
+.dl-geo .dl-row:nth-child(3n) .dl-geo-soon { animation-delay: -0.65s; }
+@keyframes dl-geo-soft { 0%, 100% { opacity: 0.92; } 50% { opacity: 0.55; } }
 .dl-geo .dl-got .dl-t { font-style: italic; }
 /* — bsod: recovered dump, blue and brave — (same blue family as the
    world's --bg #0a23a8 / --panel #1136c8, no third blue on the screen) */
@@ -11366,7 +11417,8 @@ html.dreaming .live-stage .wx-sprite { display: none; }
   box-shadow: 1px 1px 0 var(--shadow);
 }
 #mini-danmaku.dm-hidden .dm-hush { display: inline-block; }
-#mini-danmaku:has(.dm-line) .dm-hush { display: inline-block; }
+#mini-danmaku.dm-live .dm-hush { display: inline-block; } /* JS-driven mirror of :has() for pre-:has browsers (Chrome/Edge<105, FF<121) */
+#mini-danmaku:has(.dm-line) .dm-hush { display: inline-block; } /* progressive enhancement */
 #mini-danmaku.dm-hidden .dm-line { display: none !important; }
 
 /* ==== v103: the console SHELL dreams too — the handheld body wears each
@@ -11460,6 +11512,9 @@ html[data-theme="dark"].dream-geo .window-game.window-game-big.game-console {
   user-select: none;
 }
 .dl-gb-pad:active { transform: translateY(2px); box-shadow: 0 1px 0 #306230; }
+/* touch: the primary steering pad is held+mashed during tetris/snake/frogger,
+   and a thumb slid off a 30px-tall pad mid-hold at the worst moment */
+@media (pointer: coarse) { .dl-gb-pad { width: 42px; height: 40px; } }
 .dl-gb-ar-a { position: static !important; }
 @media (prefers-reduced-motion: reduce) {
   .dl-gb-ar-screen { box-shadow: 0 0 0 3px #8bac0f; }
@@ -11934,18 +11989,27 @@ html.dream-matrix .fan-avatar canvas.fa-derez { animation: fw-derez 1.2s ease-in
 /* …and the white rabbit crosses the wall. follow it. obviously. */
 html.dream-matrix .fan-wall-grid { position: relative; }
 .fw-rabbit {
+  /* container-wide strip riding translateX (compositor) — the hop and
+     the click surface live on the inner span so the strip stays inert */
   position: absolute;
   left: -26px;
+  width: 100%;
   z-index: 3;
+  pointer-events: none;
+  animation: fw-rabbit-x 4.2s linear forwards;
+}
+.fw-rabbit-hop {
+  display: inline-block;
   font-size: 15px;
   cursor: var(--cursor-heart, pointer);
+  pointer-events: auto;
   filter: drop-shadow(0 0 6px rgba(61, 255, 124, 0.85)) grayscale(1) brightness(1.6);
-  animation: fw-rabbit-x 4.2s linear forwards, fw-rabbit-hop 0.42s ease-in-out 10 alternate;
+  animation: fw-rabbit-hop 0.42s ease-in-out 10 alternate;
 }
-@keyframes fw-rabbit-x { to { left: calc(100% + 6px); } }
+@keyframes fw-rabbit-x { to { transform: translateX(calc(100% + 32px)); } }
 @keyframes fw-rabbit-hop { from { transform: translateY(0); } to { transform: translateY(-8px); } }
 @media (prefers-reduced-motion: reduce) {
-  html.dream-matrix .fan-avatar canvas.fa-derez, .fw-rabbit { animation: none; }
+  html.dream-matrix .fan-avatar canvas.fa-derez, .fw-rabbit, .fw-rabbit-hop { animation: none; }
 }
 /* gameboy: TRUE-hue fans (the pikmin decree extends to the wall) on a
    DMG cartridge tile — with the classic 2-frame idle bounce */
@@ -11998,21 +12062,22 @@ html.dream-amber .fan-avatar::before {
   pointer-events: none;
 }
 html.dream-amber .fan-avatar:nth-child(2n)::before { animation-delay: -2.5s; }
-/* …and the refresh beam actually SHOWS: bright head, warm trail */
+/* …and the refresh beam actually SHOWS: bright head, warm trail.
+   the beam is a full-height sliver painted in its top fifth so the
+   sweep rides translateY (compositor) instead of top (layout ×tiles) */
 html.dream-amber .fan-avatar::after {
   content: '';
   position: absolute;
-  left: 0; right: 0;
-  height: 9px;
-  background: linear-gradient(180deg, rgba(255, 220, 120, 0.9), rgba(255, 176, 0, 0.35) 40%, transparent);
-  box-shadow: 0 0 6px rgba(255, 176, 0, 0.8);
+  top: 0; left: 0; right: 0;
+  height: 100%;
+  background: linear-gradient(180deg, rgba(255, 220, 120, 0.9), rgba(255, 176, 0, 0.55) 8%, rgba(255, 176, 0, 0.22) 14%, transparent 22%);
   animation: dfw-scan 2.1s linear infinite;
   z-index: 2;
   pointer-events: none;
 }
 html.dream-amber .fan-avatar:nth-child(2n)::after { animation-delay: -0.7s; }
 html.dream-amber .fan-avatar:nth-child(3n)::after { animation-delay: -1.4s; animation-duration: 2.7s; }
-@keyframes dfw-scan { from { top: -14%; } to { top: 112%; } }
+@keyframes dfw-scan { from { transform: translateY(-100%); } to { transform: translateY(112%); } }
 @media (prefers-reduced-motion: reduce) {
   html.dreaming .fan-avatar::before, html.dreaming .fan-avatar::after, html.dreaming .fan-avatar canvas { animation: none !important; }
 }

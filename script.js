@@ -16,6 +16,34 @@ document.addEventListener('DOMContentLoaded', () => {
     return audioCtx;
   }
 
+  // iOS Safari treats HTMLMediaElement.volume as READ-ONLY (stuck at 1.0), so
+  // every whisper-volume loop — the weather bed, the goose flock, the honk
+  // spell — would blast at full on iPhone. routing each element once through a
+  // WebAudio GainNode fixes it: gain.value DOES obey on iOS, and the shared
+  // (gesture-unlocked) context lets the timer-driven geese sound at all.
+  // assets are same-origin, so createMediaElementSource never taints.
+  var _yosMediaGain = null;
+  function setMediaVolume(el, v) {
+    if (!el) return;
+    try {
+      const ctx = getAudioContext();
+      if (ctx && ctx.createMediaElementSource) {
+        if (!_yosMediaGain) _yosMediaGain = new WeakMap();
+        let g = _yosMediaGain.get(el);
+        if (!g) {
+          const src = ctx.createMediaElementSource(el);
+          g = ctx.createGain();
+          src.connect(g); g.connect(ctx.destination);
+          _yosMediaGain.set(el, g);
+        }
+        g.gain.value = v;
+        el.volume = 1; // the element is a source node now — gain owns loudness
+        return;
+      }
+    } catch (e) { /* old engine / already-routed → fall through to el.volume */ }
+    el.volume = v;
+  }
+
   // tab away → the whole OS goes silent. tab back → sound returns.
   // nobody gets serenaded by a hidden window.
   function yosAutoMute() {
@@ -222,6 +250,56 @@ document.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('resize', syncViewportChromeVars);
   window.addEventListener('scroll', syncViewportChromeVars, { passive: true });
 
+  // rotating into phone-sheet territory: the fresh-open landscape caps are
+  // inline styles, so the sheet CSS can't beat them — clear them ourselves
+  window.addEventListener('resize', () => {
+    if (window.innerWidth > 640) return;
+    document.querySelectorAll('.window').forEach((w) => {
+      if (w.style.maxHeight) w.style.maxHeight = '';
+      if (w.style.minHeight) w.style.minHeight = '';
+      w.__capMaxH = ''; w.__capMinH = '';
+    });
+  });
+
+  /* ---------- iOS keyboard: keep a sheet's input in view ----------
+     Mobile windows are position:fixed sheets whose height is 100dvh-based,
+     and dvh does NOT shrink for the on-screen keyboard — so the keyboard
+     covers the bottom input row (terminal / chat / AMA / fan wall) and Safari
+     pans the whole page, sliding the title bar + ✕ off the top. visualViewport
+     lets us cap the focused sheet to the space the keyboard leaves and scroll
+     the caret into view, so Safari never needs to pan. ~15 lines, no redesign. */
+  (function keyboardAwareSheets() {
+    const vv = window.visualViewport;
+    if (!vv) return; // desktop / old engine: the dvh clamp already fits
+    let activeWin = null;
+    const isSheet = () => window.matchMedia('(max-width: 640px)').matches;
+    function fitSheet() {
+      if (!activeWin || !isSheet()) return;
+      const top = activeWin.getBoundingClientRect().top; // ~66px from the sheet CSS
+      const avail = vv.height - Math.max(top, 8) - 10; // a hair above the keyboard
+      if (avail > 120) activeWin.style.maxHeight = avail + 'px';
+    }
+    document.addEventListener('focusin', (e) => {
+      const el = e.target;
+      if (!(el instanceof Element) || !el.matches('input, textarea')) return;
+      const win = el.closest('.window');
+      if (!win || !isSheet()) return;
+      activeWin = win;
+      // let the keyboard actually resize the visual viewport first
+      setTimeout(() => { fitSheet(); try { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (e2) {} }, 250);
+    });
+    document.addEventListener('focusout', (e) => {
+      const el = e.target;
+      if (!(el instanceof Element) || !el.matches('input, textarea')) return;
+      const leaving = activeWin;
+      activeWin = null;
+      // if focus jumped to another input the focusin re-arms activeWin first
+      setTimeout(() => { if (!activeWin && leaving) leaving.style.maxHeight = ''; }, 60);
+    });
+    vv.addEventListener('resize', fitSheet);
+    vv.addEventListener('scroll', fitSheet);
+  })();
+
   function focusWindow(win) {
     highestZ++;
     if (highestZ > 1800) {
@@ -422,6 +500,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (win.id === 'win-game' && swRejectUntil && Date.now() < swRejectUntil && GAME.state === 'idle') swArcadeRejected();
     // a chameleon dossier left open would keep hue-cycling behind a closed window
     if (win.id === 'win-pikdex' && typeof pikProfileTimer !== 'undefined' && pikProfileTimer) { clearInterval(pikProfileTimer); pikProfileTimer = null; }
+    // an abandoned BONUS ARCADE cart would keep its 60fps loop (and its
+    // game-over jingle) running behind the closed journal — and every dream
+    // end closes the journal via this exact path, so nothing else ever stops it
+    if (win.id === 'win-dreamlog' && typeof dlGbArcadeStop === 'function') { try { dlGbArcadeStop(); } catch (e) { /* nothing spun up */ } }
     playCloseSound();
     win.classList.add('window-closed');
     win.classList.remove('window-active');
@@ -472,12 +554,28 @@ document.addEventListener('DOMContentLoaded', () => {
     if (typeof applyPikFloat === 'function') applyPikFloat(); // squad altitude re-check
   }
 
+  // same reachability rule as dragMove: ≥40px of width and the title bar
+  // stay on the desk (a stored position can be stale after a resize)
+  function keepWindowOnScreen(win) {
+    const parent = win.offsetParent;
+    const pw = parent ? parent.clientWidth : window.innerWidth;
+    const ph = parent ? parent.clientHeight : window.innerHeight;
+    const left = parseFloat(win.style.left);
+    const top = parseFloat(win.style.top);
+    if (Number.isFinite(left)) win.style.left = `${Math.max(40 - win.offsetWidth, Math.min(left, pw - 40))}px`;
+    if (Number.isFinite(top)) win.style.top = `${Math.max(0, Math.min(top, ph - 48))}px`;
+  }
+
   function toggleMaximizeWindow(win, btn) {
     playClickSound();
     syncViewportChromeVars();
     win.classList.toggle('window-maximized');
     if (win.classList.contains('window-maximized')) {
       btn.textContent = '❐';
+      // remember where the window sat so unmaximize can put it BACK
+      // (it used to teleport everything to a hardcoded 100/50)
+      win.__preMaxTop = win.style.top;
+      win.__preMaxLeft = win.style.left;
       win.style.top = '';
       win.style.left = '';
       // the fresh-open fit-above-the-taskbar cap is an INLINE style — it
@@ -489,10 +587,11 @@ document.addEventListener('DOMContentLoaded', () => {
       win.style.minHeight = '';
     } else {
       btn.textContent = '⛶';
-      win.style.top = '100px';
-      win.style.left = '50px';
+      win.style.top = win.__preMaxTop || '100px';
+      win.style.left = win.__preMaxLeft || '50px';
       if (win.__capMaxH) win.style.maxHeight = win.__capMaxH;
       if (win.__capMinH) win.style.minHeight = win.__capMinH;
+      keepWindowOnScreen(win);
     }
   }
 
@@ -537,6 +636,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (header) {
       let isDragging = false;
       let startX, startY, initialLeft, initialTop;
+      let dragBoundW, dragBoundH, dragWinW; // measured once per grab, not per pixel
 
       header.addEventListener('mousedown', dragStart);
       document.addEventListener('mousemove', dragMove);
@@ -569,6 +669,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         initialLeft = rect.left - parentRect.left;
         initialTop = rect.top - parentRect.top;
+        // clamp bounds are measured HERE, once — reading them per-move right
+        // after the previous frame's left/top write reflowed the whole desk
+        dragBoundW = pEl ? pEl.clientWidth : window.innerWidth;
+        dragBoundH = pEl ? pEl.clientHeight : window.innerHeight;
+        dragWinW = win.offsetWidth;
       }
 
       function dragMove(e) {
@@ -580,13 +685,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // clamp: at least 40px of width and the top 48px (the title bar)
         // always stay reachable — no window ever escapes the desk
-        const parent = win.offsetParent;
-        const pw = parent ? parent.clientWidth : window.innerWidth;
-        const ph = parent ? parent.clientHeight : window.innerHeight;
+        // (bounds come from the dragStart cache — zero layout reads per move)
         let nl = initialLeft + (clientX - startX);
         let nt = initialTop + (clientY - startY);
-        nl = Math.max(40 - win.offsetWidth, Math.min(nl, pw - 40));
-        nt = Math.max(0, Math.min(nt, ph - 48));
+        nl = Math.max(40 - dragWinW, Math.min(nl, dragBoundW - 40));
+        nt = Math.max(0, Math.min(nt, dragBoundH - 48));
         win.style.left = `${nl}px`;
         win.style.top = `${nt}px`;
       }
@@ -630,6 +733,10 @@ document.addEventListener('DOMContentLoaded', () => {
       if (winId) openWindow(winId);
       startMenu.classList.remove('show');
       startBtn.setAttribute('aria-expanded', 'false');
+      // without this the taskbar stays lifted at z:2800 and the mini-danmaku
+      // ticker stays hidden for the rest of the session (opening an app from
+      // START is the most common close path, and it was the one left unsynced)
+      syncDanmakuSuppression();
     });
   });
 
@@ -670,6 +777,9 @@ document.addEventListener('DOMContentLoaded', () => {
           // same story for the arcade: minimize sent the reaction cam home,
           // so the handheld's companion screen needs its slime re-seated
           if (win.id === 'win-game' && typeof gameCamEnter === 'function') setTimeout(gameCamEnter, 120);
+          // the scheduler dropped its modal costume on minimize — restoring
+          // it as a plain window strands it uncentered with no veil
+          if (win.id === 'win-interview' && typeof openWindow === 'function') openWindow('win-interview');
         }
       });
 
@@ -708,7 +818,13 @@ document.addEventListener('DOMContentLoaded', () => {
       focusWindow(win);
       // phones: the welcome note opens FULL SCREEN — applied HERE, after the
       // classList.remove above, so the cascade can never strip it again
-      if (!isDesktop && id === 'win-start-here') win.classList.add('window-maximized');
+      if (!isDesktop && id === 'win-start-here') {
+        win.classList.add('window-maximized');
+        // …and the header button must agree, or the first tap "restores"
+        // a window the visitor never maximized
+        const mx = win.querySelector('.win-btn-maximize');
+        if (mx) mx.textContent = '❐';
+      }
     });
   }, 1900);
 
@@ -1239,6 +1355,10 @@ document.addEventListener('DOMContentLoaded', () => {
     currentOutfit = outfit;
     OUTFIT_FRAMES = frames;
     setSlimeFrame(currentFrame, true);
+    // scp dream: every bubble reroutes to the entity, and IT already
+    // announced "tonight's fit" — the hidden slime's rotation stays
+    // off the record (the entity must not claim a d-class beanie)
+    if (typeof dreamWorld !== 'undefined' && dreamWorld && dreamWorld.id === 'scp') announce = false;
     if (announce && !pet.sleeping && !pet.busy && typeof ghostHidden === 'function' && !ghostHidden()) {
       showBubble(trT(`today's fit: ${outfit.n[0]} ♡`, `tenue du jour : ${outfit.n[1]} ♡`), 2400);
     }
@@ -2373,6 +2493,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function clearDanmaku() {
     if (danmakuBox) danmakuBox.querySelectorAll('.dm-line').forEach((l) => l.remove());
+    dmSyncLive();
+  }
+  // JS mirror of `:has(.dm-line)` — pre-:has browsers (Chrome/Edge<105, FF<121)
+  // can't see the CSS rule, so we toggle .dm-live to keep the ✕ hush chip reachable.
+  function dmSyncLive() {
+    if (danmakuBox) danmakuBox.classList.toggle('dm-live', !!danmakuBox.querySelector('.dm-line'));
   }
 
   // Chat command buttons
@@ -2598,7 +2724,7 @@ document.addEventListener('DOMContentLoaded', () => {
     },
     {
       k: ['education', 'degree', 'university', 'school', 'gpa', 'master', 'study', '学历', '学校', '大学', '硕士', 'études', 'diplôme', 'école'],
-      a: 'MSc in Artificial Intelligence, NTU Singapore (GPA 4.21/5.0) + BSc Computer Science with a Science Psychology minor, University of Alberta — graduated with Distinction, top 5% of class, with a 4-year international scholarship.',
+      a: 'MSc in Artificial Intelligence, NTU Singapore (GPA 4.21/5.0) + BSc Computer Science with a Psychology minor, University of Alberta — graduated with Distinction, top 5% of class, with a 4-year international scholarship.',
       zh: '新加坡南洋理工大学 AI 硕士（GPA 4.21/5.0）+ 阿尔伯塔大学计算机科学学士（辅修科学心理学）——以 Distinction 毕业，全班前 5%，还拿了四年国际学生奖学金。',
       fr: 'MSc en Intelligence Artificielle, NTU Singapour (GPA 4,21/5,0) + BSc en informatique avec mineure en psychologie, University of Alberta — diplômée avec Distinction, top 5 % de la promotion, avec une bourse internationale de 4 ans.'
     },
@@ -2988,7 +3114,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const timedOut = e && e.name === 'AbortError';
       termLine(timedOut
         ? trT('✘ GitHub took longer than 8s — giving up politely. cached copy:', '✘ GitHub a dépassé 8 s — on abandonne poliment. copie en cache :')
-        : '✘ GitHub API unreachable (rate limit?) — cached copy:', 't-err');
+        : trT('✘ GitHub API unreachable (rate limit?) — cached copy:', '✘ API GitHub injoignable (limite atteinte ?) — copie en cache :'), 't-err');
       GITHUB_FALLBACK_REPOS.forEach(([n, d]) => termLine(`  ${n} — ${d}`, 't-accent'));
       termLink('  ↗ github.com/yyswhsccc', 'https://github.com/yyswhsccc');
     } finally {
@@ -3418,7 +3544,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (s === ':q!' || s === ':wq' || s === ':x' || s === 'ZZ') {
       termVimActive = false;
       const promptEl = document.querySelector('.term-prompt');
-      if (promptEl && promptEl.dataset.old) promptEl.textContent = promptEl.dataset.old;
+      // escaping vim mid-dream must not clobber the dialect prompt
+      if (promptEl && promptEl.dataset.old) promptEl.textContent = (dreamWorld && DS_PS1[dreamWorld.id]) || promptEl.dataset.old;
       termLine(trT('you ESCAPED vim. the shell erects a statue in your honour.', 'vous êtes SORTI·E de vim. le shell vous érige une statue.'), 't-ok');
       achvUnlock('vimescape');
       if (typeof pikParade === 'function') pikParade(); // the squad celebrates survivors
@@ -3559,7 +3686,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (soundEnabled && !document.hidden && document.hasFocus() && honkLive < 3) {
           honkLive++;
           const hk = new Audio('assets/goose_c.mp3');
-          hk.volume = (resolvedTheme() === 'dark') ? 0.08 : 0.55;
+          setMediaVolume(hk, (resolvedTheme() === 'dark') ? 0.08 : 0.55);
           const honkDone = () => { honkLive = Math.max(0, honkLive - 1); };
           hk.addEventListener('ended', honkDone);
           hk.addEventListener('error', honkDone);
@@ -4126,7 +4253,9 @@ document.addEventListener('DOMContentLoaded', () => {
     { id: 'paparazzi', icon: '📸', n: ['Meadow Paparazzi', 'Paparazzi de la Prairie'], d: ['shot the slime on stage — 3, 2, 1, flash, framed, timestamped.', 'a photographié le slime sur scène — 3, 2, 1, flash, encadré, horodaté.'], t: ['gift a 📷 in the live room. the slime has a good side. all sides.', 'offre un 📷 au salon live. le slime a un bon profil. tous.'] },
     { id: 'selfiestar', icon: '🤳', n: ['Framed Together', 'Encadrés Ensemble'], d: ['took a selfie WITH the slime. it photobombed with honor. never uploaded.', 'a pris un selfie AVEC le slime. photobomb honorable. jamais téléversé.'], t: ['sometimes after a photo, the slime asks a question.', 'parfois après une photo, le slime pose une question.'] },
     { id: 'wallfamous', icon: '🌍', n: ['Framed Worldwide', 'Encadré·e Mondialement'], d: ['hung a selfie on the REAL worldwide wall. publicly, proudly, consensually.', 'a accroché un selfie sur le VRAI mur mondial. publiquement, fièrement, avec consentement.'], t: ['the wall is real now. it has a bouncer and everything.', 'le mur est réel désormais. il a même un videur.'] },
-    { id: 'rescued', icon: '🛟', n: ['Plot Armor', 'Armure Scénaristique'], d: ['got trapped in the digital cage — and was personally rescued by the slime of legend.', 'piégé·e dans la cage numérique — et personnellement sauvé·e par le slime légendaire.'], t: ['the villain is fine. mostly. his ego returned a 500.', 'le méchant va bien. presque. son ego a renvoyé un 500.'] }
+    { id: 'rescued', icon: '🛟', n: ['Plot Armor', 'Armure Scénaristique'], d: ['got trapped in the digital cage — and was personally rescued by the slime of legend.', 'piégé·e dans la cage numérique — et personnellement sauvé·e par le slime légendaire.'], t: ['the villain is fine. mostly. his ego returned a 500.', 'le méchant va bien. presque. son ego a renvoyé un 500.'] },
+    // appended LAST on purpose: cloud saves pack achievements by array index
+    { id: 'dreamgeo', icon: '🚧', n: ['You Stopped The MIDI', 'Tu As Arrêté Le MIDI'], d: ['out-stubborned the unstoppable 1998 midi. it said "(fine.)" — a webmaster first.', 'a été plus têtu·e que le midi inarrêtable de 1998. il a dit « (bon, d\'accord.) » — une première pour un webmestre.'], t: ['inside the 1998 dream, the midi cannot be stopped. stop it anyway.', 'dans le rêve de 1998, le midi ne peut pas être arrêté. arrête-le quand même.'] }
   ];
 
   // ---- metric engine: count things, achievements pop themselves ----
@@ -4142,6 +4271,7 @@ document.addEventListener('DOMContentLoaded', () => {
   var achvCounts = null;
   var achvCountsAt = 0;
   var achvCountsPending = null; // one census at a time, please
+  var achvCensusOffline = false; // #67: the census settled as offline — cards show a terminal note, not a forever spinner
   var achvToastTimer = null;
 
   function achvToastShow(a) {
@@ -4249,6 +4379,13 @@ document.addEventListener('DOMContentLoaded', () => {
     return achvCountsPending;
   }
 
+  function achvCensusRetry() {
+    // #67: the net came back — drop the terminal 'offline' state and re-poll
+    achvCensusOffline = false;
+    achvCounts = null;
+    const lb = document.getElementById('win-leaderboard');
+    if (lb && !lb.classList.contains('window-closed')) renderAchievements();
+  }
   function renderAchievements() {
     const grid = document.getElementById('lb-achv-grid');
     const note = document.getElementById('lb-achv-note');
@@ -4279,13 +4416,26 @@ document.addEventListener('DOMContentLoaded', () => {
         const c = achvCounts && achvCounts[a.id];
         gl.textContent = (typeof c === 'number' && c > 0)
           ? trT(`🌍 ${c} slimer${c === 1 ? '' : 's'} worldwide ${c === 1 ? 'has' : 'have'} this`, `🌍 ${c} slimer${c > 1 ? 's' : ''} dans le monde ${c > 1 ? "l'ont" : "l'a"}`)
-          : trT('🌍 counting fellow slimers…', '🌍 recensement des slimers…');
+          // #67: a SETTLED census (offline, or this counter's read missed →
+          // c===0) earns a terminal note, not the perpetual counting spinner
+          : (achvCounts || achvCensusOffline)
+            ? trT('🌍 worldwide census offline', '🌍 recensement mondial hors-ligne')
+            : trT('🌍 counting fellow slimers…', '🌍 recensement des slimers…');
         body.appendChild(gl);
       }
       card.append(ic, body);
       grid.appendChild(card);
     });
-    if (!achvCounts) achvFetchCounts().then((c) => { if (c) renderAchievements(); });
+    // #67: fetch the census once. a null resolution (offline / every read
+    // missed) flips the cards from the counting spinner to a terminal
+    // 'offline' note and arms a one-shot retry for when the net returns —
+    // instead of spinning forever. the guard stops the re-render from looping.
+    if (!achvCounts && !achvCensusOffline) {
+      achvFetchCounts().then((c) => {
+        if (c) renderAchievements();
+        else { achvCensusOffline = true; renderAchievements(); window.addEventListener('online', achvCensusRetry, { once: true }); }
+      });
+    }
     renderSpellbook(); // the MEGA grimoire lives right under the trophies
     cloudRenderPanel();
   }
@@ -4440,9 +4590,17 @@ document.addEventListener('DOMContentLoaded', () => {
   // instead of re-asking on every sync (sv2-* only — wpair pins must stay
   // live probes, their 409 IS the stale-pin hijack guard)
   var cloudLocked = store.get('yos-cloud-locked', {});
+  // a freshly-minted admin_key is IRREVERSIBLE — its /create 409s forever — so
+  // the instant one is born we stash it in memory, which no quota-full store.set
+  // can silently drop. without this a dropped persist made the next sync re-/create
+  // → 409 → the counter locks and its bits never reach the cloud again.
+  var cloudKeyMem = {};
   function cloudKeyFor(name) {
     const keys = store.get('yos-cloud-keys', {});
     if (keys[name]) return Promise.resolve(keys[name]);
+    // a live key minted this session but not durably persisted still counts —
+    // never re-/create while we hold one, or we'd 409-lock our own counter
+    if (cloudKeyMem[name]) return Promise.resolve(cloudKeyMem[name]);
     if (cloudLocked[name]) { const e = new Error('exists'); e.exists = true; return Promise.reject(e); }
     return fetch(`${ACHV_API}/create/${ACHV_NS}/${name}`, { method: 'POST' })
       .then((r) => {
@@ -4455,6 +4613,9 @@ document.addEventListener('DOMContentLoaded', () => {
       })
       .then((d) => {
         if (!d || !d.admin_key) throw new Error('no key');
+        // remember the mint in memory BEFORE trusting disk: store.set can drop
+        // the write silently (quota / private mode), and the key is unrecoverable.
+        cloudKeyMem[name] = d.admin_key;
         keys[name] = d.admin_key;
         store.set('yos-cloud-keys', keys);
         return d.admin_key;
@@ -4468,11 +4629,13 @@ document.addEventListener('DOMContentLoaded', () => {
       // of the save chain (including counters this browser CAN mint) flows on
       .catch((e) => { if (e && e.exists) return null; throw e; });
   }
-  function cloudGet(name) {
+  function cloudGet(name, strict) {
+    // strict callers get null on a failed read — a consume ledger must never
+    // mistake "rate-limited / offline" for "zero, replay the whole history"
     return fetch(`${ACHV_API}/get/${ACHV_NS}/${name}`)
       .then((r) => (r.ok ? r.json() : null))
-      .then((d) => (d && typeof d.value === 'number' ? d.value : 0))
-      .catch(() => 0);
+      .then((d) => (d && typeof d.value === 'number' ? d.value : (strict ? null : 0)))
+      .catch(() => (strict ? null : 0));
   }
   function achvBitsRange(from, to) {
     const got = store.get('yos-achv', {});
@@ -4631,15 +4794,19 @@ document.addEventListener('DOMContentLoaded', () => {
     // longer list wins the tail; local duty picks are always respected
     if (!remote.length) return;
     const dex = pikdexGet();
-    if (remote.length <= dex.length) return;
+    // the wire never carries loaners (encode filters them), so the shared
+    // prefix must be measured loaner-free too — else borrowed pikmin shift
+    // the offset and real remote kinds get skipped or deduped into thin air
+    const own = dex.filter((p) => !p.loan);
+    if (remote.length <= own.length) return;
     const before = pikdexWheelPct(dex);
     // diverged devices produce tails that re-contain kinds we already own —
     // appending those would pad the deck with duplicates (and eat slots),
     // so only genuinely new kinds ride in. identity: hue segment / species.
-    const ownedSegs = pikdexWheelSegs(dex);
-    const ownedSp = new Set(dex.filter((p) => p.sp != null).map((p) => p.sp));
-    const hasCh = dex.some((p) => p.ch);
-    remote.slice(dex.length).forEach((r) => {
+    const ownedSegs = pikdexWheelSegs(own);
+    const ownedSp = new Set(own.filter((p) => p.sp != null).map((p) => p.sp));
+    const hasCh = own.some((p) => p.ch);
+    remote.slice(own.length).forEach((r) => {
       if (r && r.ch) { if (hasCh) return; dex.push(r); return; }
       if (r && r.sp != null) { if (ownedSp.has(r.sp)) return; ownedSp.add(r.sp); dex.push(r); return; }
       const seg = Math.floor(pikHueOf(r) / WHEEL_STEP) % WHEEL_SEGS;
@@ -4678,11 +4845,14 @@ document.addEventListener('DOMContentLoaded', () => {
       .then(() => cloudSet(`sv2-${u}-b3`, payload[1]))
       .then(() => cloudSet(`sv2-${u}-b4`, payload[2]))
       .then(() => cloudSet(`sv2-${u}-b5`, achvBitsRange(168, 218)))
-      .then(() => cloudSet(`sv2-${u}-spn`, spells.length))
-      .then(() => cloudSet(`sv2-${u}-pkn`, piks.n))
-      .then(() => cloudSet(`sv2-${u}-pkv`, 3)); // wire-format version (v3 = 24-skill pack)
+      .then(() => cloudSet(`sv2-${u}-spn`, spells.length));
     spells.forEach((v, j) => { p = p.then(() => cloudSet(`sv2-${u}-sp${j}`, v)); });
+    // write the pk chunks BEFORE their count+version, so a reader mid-write never
+    // sees a fresh pkn pointing at chunks that haven't landed yet (the strict
+    // pull would abort, and older clients would decode a short/stale deck)
     piks.chunks.forEach((v, j) => { p = p.then(() => cloudSet(`sv2-${u}-pk${j}`, v)); });
+    p = p.then(() => cloudSet(`sv2-${u}-pkn`, piks.n))
+      .then(() => cloudSet(`sv2-${u}-pkv`, 3)); // wire-format version (v3 = 24-skill pack)
     p = p.then(() => cloudSet(`sv2-${u}-pcn`, pcs.length));
     pcs.forEach((v, j) => { p = p.then(() => cloudSet(`sv2-${u}-pc${j}`, v)); });
     p = p.then(() => cloudSet(`sv2-${u}-wst`, wst));
@@ -4715,8 +4885,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (pkn > 0) {
           const nChunks = Math.ceil(Math.min(pkn, 78) / (pkv >= 2 ? 2 : 3));
-          jobs.push(Promise.all(Array.from({ length: nChunks }, (_, j) => cloudGet(`sv2-${u}-pk${j}`)))
-            .then((vals) => pikdexMergeRemote(pkv >= 3 ? pikdexDecodeV3(pkn, vals) : (pkv >= 2 ? pikdexDecodeV2(pkn, vals) : pikdexDecodeV1(pkn, vals)))));
+          // strict reads: a failed/absent chunk comes back null instead of 0
+          jobs.push(Promise.all(Array.from({ length: nChunks }, (_, j) => cloudGet(`sv2-${u}-pk${j}`, true)))
+            .then((vals) => {
+              // a real encoded chunk is ALWAYS >= 1 (encode offsets by +1), so a
+              // null (read failed / raced the writer) or <1 value is never a real
+              // chunk. decoding it as 0 fabricates hue-0 ghosts that claim wheel
+              // segment 0 and permanently corrupt the deck — bail and let the
+              // next pull retry rather than merge a poisoned collection.
+              if (vals.some((v) => v == null || v < 1)) return;
+              pikdexMergeRemote(pkv >= 3 ? pikdexDecodeV3(pkn, vals) : (pkv >= 2 ? pikdexDecodeV2(pkn, vals) : pikdexDecodeV1(pkn, vals)));
+            }));
         }
         return Promise.all(jobs);
       })
@@ -4725,7 +4904,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function cloudStatusLine() {
     if (!navigator.onLine || cloudState === 'offline') return trT('📡 offline — will sync when the internet returns', '📡 hors-ligne — synchro au retour d\'internet');
-    if (cloudState === 'synced') return trT('☁ saved to the backend ♡ (achievements · hi-score · cheats · fans · pikdex)', '☁ sauvegardé côté serveur ♡ (succès · record · codes · fans · pikdex)');
+    if (cloudState === 'synced') {
+      // adopted slot: the pikdex annex admin keys were minted in the FIRST
+      // browser (the 409 lock is the anti-hijack design, not a bug), so this
+      // device reads the pikdex but can never write it — say so honestly
+      const pkHomed = cloudSlot && Object.keys(cloudLocked).some((k) =>
+        k.indexOf(`sv2-${cloudSlot.uid}-pk`) === 0 || k.indexOf(`sv2-${cloudSlot.uid}-pc`) === 0);
+      if (pkHomed) return trT('☁ saved to the backend ♡ (achievements · hi-score · cheats · fans — pikdex is homed to your first device)', '☁ sauvegardé côté serveur ♡ (succès · record · codes · fans — le pikdex habite ton premier appareil)');
+      return trT('☁ saved to the backend ♡ (achievements · hi-score · cheats · fans · pikdex)', '☁ sauvegardé côté serveur ♡ (succès · record · codes · fans · pikdex)');
+    }
     if (cloudState === 'creating') return trT('☁ reserving your save slot…', '☁ réservation de ton emplacement…');
     if (cloudState === 'error') return trT('☁ backend unreachable — retrying on the next change', '☁ serveur injoignable — nouvel essai au prochain changement');
     return trT('☁ cloud save armed', '☁ sauvegarde cloud armée');
@@ -4823,6 +5010,16 @@ document.addEventListener('DOMContentLoaded', () => {
     if (stages.length < 2 || stages.length > 4) {
       termLine(trT('pipeline: 2-4 stages, this is a boutique shell', 'pipeline : 2-4 étages, c\'est un shell de boutique'), 't-err');
       return;
+    }
+    // these print on their own clock (fetch/setTimeout) — the capture window
+    // has already closed when their output lands, so mid-pipe it would leak
+    // straight past the `|`. last stage is fine: its stdout goes to the DOM.
+    for (let i = 0; i < stages.length - 1; i++) {
+      const head = stages[i].split(/\s+/)[0].toLowerCase();
+      if (['repos', 'ping', 'hack', 'npm', 'pip', 'brew'].indexOf(head) !== -1) {
+        termLine(trT('pipeline: `' + head + '` streams its output live — a boutique pipe can\'t bottle that. run it bare, or as the last stage', 'pipeline : `' + head + '` diffuse sa sortie en direct — un tuyau de boutique ne peut pas embouteiller ça. lancez-la seule, ou en dernier étage'), 't-err');
+        return;
+      }
     }
     let stdin = null;
     for (let i = 0; i < stages.length; i++) {
@@ -5404,6 +5601,7 @@ document.addEventListener('DOMContentLoaded', () => {
         termLine(trT(`⌚ pairing with code ${pinArg}…`, `⌚ appairage avec le code ${pinArg}…`), 't-accent');
         watchPair(pinArg).then((res) => {
           if (res === 'ok') { termLine(trT('⌚ PAIRED!! the device showing that code just became your wrist slime — pet it, pluck it ♡', '⌚ APPAIRÉE !! l\'appareil qui affichait ce code vient de devenir ton slime de poignet — caresse-le, cueille ♡'), 't-ok'); playFanfare(); }
+          else if (res === 'sent') termLine(trT('⌚ code sent — the watch hasn\'t waved back yet. if it doesn\'t splash PAIRED, double-check the digits (i\'ll keep an ear out ~2 min ♡)', '⌚ code envoyé — la montre n\'a pas encore fait signe. si PAIRED n\'apparaît pas, revérifie les chiffres (je garde une oreille ouverte ~2 min ♡)'), 't-accent');
           else if (res === 'taken') termLine(trT('that code is already burned (rare!!) — tap NEW CODE on the watch and try the fresh one', 'ce code est déjà grillé (rare !!) — touche NEW CODE sur la montre et réessaie avec le nouveau'), 't-err');
           else if (res === 'nocloud') termLine(trT('cloud unreachable — try again in a moment', 'cloud injoignable — réessaie dans un instant'), 't-err');
           else termLine(trT('that needs to be the 4 digits shown on the watch', 'il faut les 4 chiffres affichés sur la montre'), 't-err');
@@ -5952,7 +6150,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (typeof amaRenderChips === 'function' && document.querySelector('.ama-chip')) {
       amaRenderChips();        // suggestion chips follow the language
     }
-    if (typeof updateTaskbarAppButtons === 'function') updateTaskbarAppButtons();
     // a visible ad popup rebuilds itself in the new language on the spot
     if (typeof refreshGameInvite === 'function') refreshGameInvite();
     // live search results re-rank in the new language too
@@ -5966,6 +6163,19 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     } catch (e) { /* pre-boot */ }
 
+    // #68: an open hall_of_slime.exe re-inks in place too. lbRenderHall strips
+    // data-i18n from the worldwide heading and the census/note/achievement
+    // lines are built with trT at render time, so the blanket [data-i18n] pass
+    // can't reach them — a re-render replays every string in the new language
+    // (same live-retranslate decree the pikdex above follows).
+    try {
+      const lbWin = document.getElementById('win-leaderboard');
+      if (lbWin && !lbWin.classList.contains('window-closed')) {
+        if (typeof renderLeaderboard === 'function') renderLeaderboard();
+        if (typeof renderAchievements === 'function') renderAchievements();
+      }
+    } catch (e) { /* pre-boot */ }
+
     // mid-dream: the blanket [data-i18n] pass just reverted every retitled
     // window to its awake name — restore the dream titles, and refresh the
     // backup so the eventual wake speaks the CURRENT language
@@ -5973,8 +6183,11 @@ document.addEventListener('DOMContentLoaded', () => {
       if (dreamWorld && DREAM_TITLES[dreamWorld.id]) {
         if (dreamTitleBackup) {
           Object.keys(dreamTitleBackup).forEach((winId) => {
+            // only refresh titles the [data-i18n] pass actually reverted —
+            // a title without the attribute (dreamlog) still wears its
+            // DREAM name here, and capturing that poisons the wake restore
             const el = document.querySelector('#' + winId + ' .window-title');
-            if (el) dreamTitleBackup[winId] = el.textContent;
+            if (el && el.hasAttribute('data-i18n')) dreamTitleBackup[winId] = el.textContent;
           });
         }
         dreamApplyTitles(DREAM_TITLES[dreamWorld.id]);
@@ -5999,6 +6212,9 @@ document.addEventListener('DOMContentLoaded', () => {
         try { if (el.__reink) el.__reink(); } catch (e2) { /* stays in old ink */ }
       });
     } catch (e) { /* pre-boot */ }
+    // taskbar labels mirror .window-title — synced HERE, after the dream
+    // titles went back up, or mid-dream buttons would flash awake names
+    if (typeof updateTaskbarAppButtons === 'function') updateTaskbarAppButtons();
     // the cam button label is stateful — the blanket pass wrote the OFF
     // label over a camera that is visibly still streaming
     try {
@@ -6914,7 +7130,7 @@ document.addEventListener('DOMContentLoaded', () => {
      a random deep dream at the 2-minute mark, no paperwork. */
   var swForceGame = false;   // one-shot: the next walk aims at the arcade, dice waived
   // v113: deep dreams keep their distance — after ANY dream world visit,
-  // AUTO entries wait a full ACTIVE hour (parked tabs don't serve time;
+  // AUTO entries wait 15 ACTIVE minutes (parked tabs don't serve time;
   // the `dream <name>` command remains a free door — explicit wish wins)
   // v126: fifteen-minute cooldown — clamp any legacy hour-long ledger on
   // sight AND heal it in storage so returning visitors aren't stuck waiting
@@ -7172,7 +7388,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function dreamWorldEligible() {
     return !dreamWorld
-      && dreamAcdLeft <= 0                                  // one ACTIVE hour between dream worlds
+      && dreamAcdLeft <= 0                                  // 15 ACTIVE minutes between dream worlds
       && resolvedTheme() === 'dark'
       && !document.body.classList.contains('terminal-only') // the door is sacred
       && !swCurfewOn()                                      // curfew = quiet dreams, promised
@@ -7274,6 +7490,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (build) {
       d.__rebuild = () => {
         try {
+          // a handler that rewrote the dialog mid-scene (BUG battle HP,
+          // the dodged send button, the granted-bar ceremony…) sets
+          // d.__dirty — replaying the opening script over live state
+          // would reset the scene, so a dirty dialog keeps its ink
+          if (d.__dirty) return;
           const fresh = build(); // trT re-resolves in the CURRENT language
           tt.textContent = fresh.title || 'dream.exe';
           const ps = body.querySelectorAll('p');
@@ -7893,19 +8114,43 @@ document.addEventListener('DOMContentLoaded', () => {
     flavor: [
       ["zzz… under construction… since 1998… almost done…", "zzz… en construction… depuis 1998… bientôt fini…"],
       ["mmh… my hit counter… only counts friends…", "mmh… mon compteur de visites… ne compte que les amis…"],
-      ["zzz… the webring is a circle… of one… me…", "zzz… le webring est un cercle… d'une personne… moi…"]
+      ["zzz… the webring is a circle… of one… me…", "zzz… le webring est un cercle… d'une personne… moi…"],
+      ["zzz… the terminal is my cgi-bin tonight… it answers to 21 secret words…", "zzz… le terminal est mon cgi-bin ce soir… il répond à 21 mots secrets…"],
+      ["mmh… I renamed all my pages… skills_FINAL_v2.htm… my finest filename…", "mmh… j'ai renommé toutes mes pages… skills_FINAL_v2.htm… mon plus beau nom de fichier…"],
+      ["zzz… petz_page.htm is open somewhere… the petz miss you…", "zzz… petz_page.htm est ouverte quelque part… les petz s'ennuient de toi…"]
     ],
     wake: ["*yawn* I dreamed I had a GUESTBOOK and YOU signed it. wait. you DID?? best dream ever ♡", "*bâille* j'ai rêvé que j'avais un LIVRE D'OR et que TU l'avais signé. attends. tu l'as FAIT ?? meilleur rêve du monde ♡"],
+    // the wake line only claims a signature that actually happened — lurkers
+    // and X-clickers get the mysterious-entry version instead
+    wakeAlt: ["*yawn* I dreamed I had a GUESTBOOK… one entry just says 'a mysterious lurker ♡'… wait. was that YOU??", "*bâille* j'ai rêvé que j'avais un LIVRE D'OR… une entrée dit juste « un·e rôdeur·se mystérieux·se ♡ »… attends. c'était TOI ??"],
+    wakePick(fl) { return (fl && fl.geoSigned) ? this.wake : this.wakeAlt; },
     build(resumed) {
       const mq = document.createElement('div');
       mq.className = 'dream-geo-marquee';
       mq.innerHTML = '<span>★·.·´¯`·.·★ WELCOME TO SLIME\'S HOMEPAGE!!! best viewed in SLIMESCAPE 4.0 at 800×600 ★ sign the guestbook ★ no right-click!! (jk) ★·.·´¯`·.·★</span>';
-      document.body.appendChild(mq);
+      // the banner hangs at the TOP OF THE DESKTOP CONTENT, never over the
+      // browser's own tab bar / address bar (a fixed top:0 used to cover them)
+      (document.querySelector('.desktop-area') || document.body).appendChild(mq);
       dN(mq);
       let hits = 337 + Math.floor(Math.random() * 3);
+      let hitsSpoofUntil = 0;
       const counter = dreamBadge('', 'dream-geo-counter');
-      const drawHits = () => { counter.textContent = trT('you are visitor № ', 'tu es le visiteur nº ') + String(hits).padStart(6, '0'); };
+      const drawHits = () => {
+        if (Date.now() < hitsSpoofUntil) return; // the terminal's million holds the stage
+        counter.textContent = trT('you are visitor № ', 'tu es le visiteur nº ') + String(hits).padStart(6, '0');
+      };
       drawHits();
+      // the shell's `hits` command (and the ambient beat) can reach the badge
+      // now — the terminal's "counter now reads 01000xxx" used to be a lie
+      // the badge never backed up
+      if (dreamWorld) dreamWorld.flags.geoHits = {
+        bump(n) { hits += n; drawHits(); },
+        spoof(v, ms) {
+          hitsSpoofUntil = Date.now() + (ms || 8000);
+          counter.textContent = trT('you are visitor № ', 'tu es le visiteur nº ') + String(v).padStart(8, '0');
+          dT(() => { hitsSpoofUntil = 0; drawHits(); }, ms || 8000);
+        }
+      };
       dI(() => {
         if (Math.random() < 0.5) return;
         hits++;
@@ -7919,48 +8164,86 @@ document.addEventListener('DOMContentLoaded', () => {
         tape.className = 'dream-geo-tape';
         tape.textContent = trT('🚧 UNDER CONSTRUCTION 🚧', '🚧 EN CONSTRUCTION 🚧');
         tape.title = trT("(they've been 'almost done' since 1998)", '(c\'est « presque fini » depuis 1998)');
-        const r = tapeTarget.getBoundingClientRect();
-        tape.style.left = (r.left + r.width / 2 - 110) + 'px';
-        tape.style.top = (r.top + 14) + 'px';
+        // the punchline used to live in a hover-only tooltip; a tap works too now
+        tape.addEventListener('click', () => {
+          playDreamPop();
+          showToast(trT("(they've been 'almost done' since 1998)", '(c\'est « presque fini » depuis 1998)'));
+        });
+        // the tape FOLLOWS its window — a fixed one-shot position used to
+        // keep guarding thin air after the window was dragged or closed
+        const tapePin = () => {
+          const gone = !document.body.contains(tapeTarget)
+            || tapeTarget.classList.contains('window-closed')
+            || tapeTarget.classList.contains('window-minimized');
+          const r = gone ? null : tapeTarget.getBoundingClientRect();
+          if (!r || !r.width) { tape.style.display = 'none'; return; }
+          tape.style.display = '';
+          tape.style.left = (r.left + r.width / 2 - 110) + 'px';
+          tape.style.top = (r.top + 14) + 'px';
+        };
+        tapePin();
+        dI(tapePin, 900);
         document.body.appendChild(tape);
         dN(tape);
       }
-      dT(() => {
+      const geoGuestbook = (retry) => {
         dreamDlg(() => ({
           title: trT('📖 guestbook.cgi', '📖 livredor.cgi'),
           force: true,
-          lines: [trT('sign my guestbook?? pretty please?? everyone cool from 1998 did', 'tu signes mon livre d\'or ?? s\'il te plaîîît ?? tous les gens cool de 1998 l\'ont fait')],
+          lines: [retry
+            ? trT('the guestbook waited politely. it even refreshed itself. sign?? for real this time??', 'le livre d\'or a attendu poliment. il s\'est même rafraîchi tout seul. tu signes ?? pour de vrai cette fois ??')
+            : trT('sign my guestbook?? pretty please?? everyone cool from 1998 did', 'tu signes mon livre d\'or ?? s\'il te plaîîît ?? tous les gens cool de 1998 l\'ont fait')],
+          // X-ing the plea away no longer kills the storyline: the book asks
+          // ONE more time later, and the wake line stops claiming a signature
+          // that never happened (see wakePick)
+          onX: (d) => {
+            d.remove();
+            if (!dreamWorld || dreamWorld.flags.geoGuestbookDone || dreamWorld.flags.geoGuestbookRetry) return;
+            dreamWorld.flags.geoGuestbookRetry = 1;
+            dT(() => { if (dreamWorld && !dreamWorld.flags.geoGuestbookDone) geoGuestbook(true); }, 90000);
+          },
           buttons: [
             [trT('sign ♡', 'signer ♡'), () => {
+              if (dreamWorld) { dreamWorld.flags.geoSigned = 1; dreamWorld.flags.geoGuestbookDone = 1; }
               playSparkleSound();
               gainFollowers(2);
               cheatFall(['✒️', '♡', '✦'], 12);
               showToast(trT('guestbook entry #341: "cool site!! how do I stop the music" (you can\'t)', 'entrée nº 341 : « super site !! comment on coupe la musique » (impossible)'));
             }],
             [trT('lurk', 'rôder'), () => {
+              if (dreamWorld) dreamWorld.flags.geoGuestbookDone = 1;
               showToast(trT('noted in the guestbook anyway: "a mysterious lurker ♡"', 'noté quand même dans le livre d\'or : « un·e rôdeur·se mystérieux·se ♡ »'));
             }]
           ]
         }));
-      }, resumed ? 30000 : 80000);
-      // the sacred geocities cursor trail (mouse only; reduced-motion exempt)
-      if (!REDUCED_MOTION && window.matchMedia('(pointer: fine)').matches) {
+      };
+      dT(() => geoGuestbook(false), resumed ? 30000 : 80000);
+      // the sacred geocities cursor trail (mouse AND finger; reduced-motion exempt)
+      if (!REDUCED_MOTION) {
         let lastTrail = 0;
-        const trail = (e) => {
+        const trailAt = (x, y) => {
           const now = Date.now();
           if (now - lastTrail < 90) return;
           lastTrail = now;
           const s = document.createElement('span');
           s.className = 'trail-sparkle';
           s.textContent = Math.random() < 0.6 ? '✦' : '♡';
-          s.style.left = (e.clientX + 6) + 'px';
-          s.style.top = (e.clientY + 8) + 'px';
+          s.style.left = (x + 6) + 'px';
+          s.style.top = (y + 8) + 'px';
           s.style.color = ['#ff8fc7', '#6cc4f5', '#ffe98a'][Math.floor(Math.random() * 3)];
           document.body.appendChild(s);
           s.addEventListener('animationend', () => s.remove());
         };
-        document.addEventListener('mousemove', trail);
-        if (dreamWorld) dreamWorld.flags.geoTrail = trail;
+        if (window.matchMedia('(pointer: fine)').matches) {
+          const trail = (e) => trailAt(e.clientX, e.clientY);
+          document.addEventListener('mousemove', trail);
+          if (dreamWorld) dreamWorld.flags.geoTrail = trail;
+        } else {
+          // 1998 never saw a touchscreen coming, but the sparkles adapt
+          const touchTrail = (e) => { const t = e.touches && e.touches[0]; if (t) trailAt(t.clientX, t.clientY); };
+          document.addEventListener('touchmove', touchTrail, { passive: true });
+          if (dreamWorld) dreamWorld.flags.geoTrailTouch = touchTrail;
+        }
       }
       // the midi that cannot be stopped (twice)
       const midi = dreamBadge('', 'dream-geo-midi');
@@ -7989,6 +8272,8 @@ document.addEventListener('DOMContentLoaded', () => {
           clearInterval(midiIv);
           title.textContent = trT('♬ (fine.)', '♬ (bon, d\'accord.)');
           playTone(262, 'sine', 0.4, 0, 0.03);
+          // "the midi stops YOU" — except it didn't. that's the geo feat.
+          achvUnlock('dreamgeo');
         }
       });
       const ring = dreamBadge('', 'dream-geo-ring');
@@ -8001,9 +8286,28 @@ document.addEventListener('DOMContentLoaded', () => {
         el.textContent = tx;
         ring.appendChild(el);
       });
+      // the 14-outfit rack used to dress the slime in total silence — one
+      // proud webmaster announcement per dream fixes the exposure math
+      dT(() => {
+        if (!dreamWorld || !currentOutfit) return;
+        dreamSay([
+          "zzz… tonight's webmaster fit: " + currentOutfit.n[0] + "… (the rack holds 14)…",
+          "zzz… tenue de webmestre du soir : " + currentOutfit.n[1] + "… (le portant en a 14)…"
+        ], 4800);
+      }, 12000);
+      // one explicit signpost toward the shell — the 21-word dialect used to
+      // have zero inbound roads from the rest of the dream
+      dT(() => {
+        if (!dreamWorld) return;
+        dreamSay([
+          "zzz… psst… open the terminal… it's my cgi-bin tonight… 21 secret pages…",
+          "zzz… psst… ouvre le terminal… c'est mon cgi-bin ce soir… 21 pages secrètes…"
+        ], 5600);
+      }, 120000);
     },
     exit() {
       if (dreamWorld && dreamWorld.flags.geoTrail) document.removeEventListener('mousemove', dreamWorld.flags.geoTrail);
+      if (dreamWorld && dreamWorld.flags.geoTrailTouch) document.removeEventListener('touchmove', dreamWorld.flags.geoTrailTouch);
     }
   };
 
@@ -8285,10 +8589,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ---- dream 7/7: SLIME/370 — the mainframe dream (est. 1970) ----
   const DW_AMBER_SLIPS = [
-    'JOB \'CUDDLE\' — COMPLETE · CPU TIME: 0.03s · HUGS OUT: 3',
-    'PAYROLL RUN: 1 slime · 47 merged PRs · paid in boba',
-    'BATCH #341: dreams processed. results by morning.',
-    'SYSLOG: 56 years uptime. one (1) nap. this one.'
+    ['JOB \'CUDDLE\' — COMPLETE · CPU TIME: 0.03s · HUGS OUT: 3', 'JOB « CÂLIN » — TERMINÉ · TEMPS CPU : 0,03 s · CÂLINS ÉMIS : 3'],
+    ['PAYROLL RUN: 1 slime · 47 merged PRs · paid in boba', 'PAIE : 1 slime · 47 PR fusionnées · payée en boba'],
+    ['BATCH #341: dreams processed. results by morning.', 'BATCH #341 : rêves traités. résultats au matin.'],
+    ['SYSLOG: 56 years uptime. one (1) nap. this one.', 'SYSLOG : 56 ans de service. une (1) sieste. celle-ci.']
   ];
   /* ---- the receipt portrait: the REAL pixel slime — the exact 14×14
      grid the rescue cast is drawn from — printed in dot-matrix sepia ink
@@ -8315,7 +8619,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const slip = document.createElement('div');
     slip.className = 'dream-amber-slip';
     const line = document.createElement('div');
-    line.textContent = DW_AMBER_SLIPS[Math.floor(Math.random() * DW_AMBER_SLIPS.length)];
+    const pick = DW_AMBER_SLIPS[Math.floor(Math.random() * DW_AMBER_SLIPS.length)];
+    line.textContent = trT(pick[0], pick[1]);
+    slip.__rebuild = () => { line.textContent = trT(pick[0], pick[1]); }; // v126 decree: paper follows the switch
     slip.appendChild(amberSlimeCanvas()); slip.appendChild(line);
     p.appendChild(slip);
     setTimeout(() => slip.classList.add('dream-amber-slip-fly'), 4200);
@@ -8659,7 +8965,9 @@ document.addEventListener('DOMContentLoaded', () => {
     else if (id === 'scp') dwBeatAnomaly();
     else if (id === 'matrix') dwBeatDejavu();
     else if (id === 'gameboy') dwBeatWildBug();
-    else if (id === 'geo') dwBeatMillionth();
+    // geo's prize banner plays twice, tops (v98 precedent: bsod's cascade
+    // is once-per-dream) — later beats fall through to small street theatre
+    else if (id === 'geo') { if ((dreamWorld.flags.millionthRuns || 0) >= 2) dwGeoAmbient(); else dwBeatMillionth(); }
     else if (id === 'bsod') dwBeatErrorReport();
     else if (id === 'amber') dwBeatFortune();
   }
@@ -9191,7 +9499,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // v83: the shell falls asleep too — dialect prompt on, waking words sealed
     const pr = document.querySelector('.term-prompt');
     if (pr && DS_PS1[w.id]) {
-      if (dreamPromptBackup === null) dreamPromptBackup = pr.textContent;
+      // vim wears the prompt as a costume — back up the REAL prompt
+      // underneath it, or waking would restore '-- INSERT --' forever
+      if (dreamPromptBackup === null) dreamPromptBackup = (termVimActive && pr.dataset.old) ? pr.dataset.old : pr.textContent;
       pr.textContent = DS_PS1[w.id];
     }
     // v84.1: terminal already open when the dream lands? it types its
@@ -9210,7 +9520,11 @@ document.addEventListener('DOMContentLoaded', () => {
     dreamAmaDecor = null;
     dreamSearchFlavor = null;
     const pr = document.querySelector('.term-prompt');
-    if (pr && dreamPromptBackup !== null) { pr.textContent = dreamPromptBackup; dreamPromptBackup = null; }
+    if (pr && dreamPromptBackup !== null) {
+      pr.textContent = dreamPromptBackup; dreamPromptBackup = null;
+      // still trapped in vim from before the dream? the costume goes back on
+      if (termVimActive) { pr.dataset.old = pr.textContent; pr.textContent = '-- INSERT --'; }
+    }
     (document.querySelectorAll('.scp-acc, .scp-statue, .scp-pricetag')).forEach((n) => n.remove());
     G_DREAM_IDS.forEach((id) => document.documentElement.classList.remove('scp-form-999', 'scp-form-173', 'scp-form-914', 'scp-form-055', 'scp-form-426', 'scp-form-3008', 'scp-form-2521'));
   }
@@ -9412,15 +9726,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const bag = store.get('yos-dream-shell', {});
     bag[world] = bag[world] || {};
     const first = !bag[world][name];
-    const before = Object.keys(bag[world]).length;
+    // fluency = every word THIS world understands (21 everywhere but scp's 2)
+    const words = Object.keys(DREAM_SHELL[world].cmds);
+    const before = words.filter((k) => bag[world][k]).length;
     bag[world][name] = 1;
     store.set('yos-dream-shell', bag);
     achvUnlock('dreamshell');
-    if (Object.keys(bag[world]).length >= 21 && before < 21) {
+    if (words.filter((k) => bag[world][k]).length >= words.length && before < words.length) {
       achvUnlock('dreamroot');
       cheatFall(['👑', '✦', '♡'], 18);
       playFanfare();
-      dsL('👑 all 21 words of this dream spoken. the world considers you a local now.', '👑 les 21 mots de ce rêve prononcés. le monde te considère comme quelqu\'un du coin.', 't-ok');
+      dsL('👑 all ' + words.length + ' words of this dream spoken. the world considers you a local now.', '👑 les ' + words.length + ' mots de ce rêve prononcés. le monde te considère comme quelqu\'un du coin.', 't-ok');
     }
     return first;
   }
@@ -9433,7 +9749,8 @@ document.addEventListener('DOMContentLoaded', () => {
       termLine('  ' + (used[k] ? '✓' : '·') + ' ' + k.padEnd(11) + ' — ' + trT(c.d[0], c.d[1]), used[k] ? 't-ok' : 't-dim');
     });
     const n = Object.keys(used).filter((k) => sh.cmds[k]).length;
-    dsL('spoken: ' + n + '/21' + (n >= 21 ? ' — fluent ♡' : ''), 'prononcés : ' + n + '/21' + (n >= 21 ? ' — courant ♡' : ''), n >= 21 ? 't-ok' : 't-dim');
+    const all = Object.keys(sh.cmds).length;
+    dsL('spoken: ' + n + '/' + all + (n >= all ? ' — fluent ♡' : ''), 'prononcés : ' + n + '/' + all + (n >= all ? ' — courant ♡' : ''), n >= all ? 't-ok' : 't-dim');
   }
   function dreamShellDeny(sh, cmd) {
     const pick = sh.deny[Math.floor(Math.random() * sh.deny.length)];
@@ -9441,8 +9758,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const f = dreamWorld.flags;
     f.dsDenied = (f.dsDenied || 0) + 1;
     if (f.dsDenied <= 3 || Math.random() < 0.4) {
-      dsL('(the waking shell sleeps during dreams — `help` explains, `' + sh.list + '` lists the 21 words this world understands)',
-        '(le shell éveillé dort pendant les rêves — `help` explique, `' + sh.list + '` liste les 21 mots que ce monde comprend)', 't-dim');
+      // scp's `o5` convenes rather than lists — that world hands in its own hint
+      if (sh.hint) { dsL(sh.hint[0], sh.hint[1], 't-dim'); return; }
+      const n = Object.keys(sh.cmds).length;
+      dsL('(the waking shell sleeps during dreams — `help` explains, `' + sh.list + '` lists the ' + n + ' words this world understands)',
+        '(le shell éveillé dort pendant les rêves — `help` explique, `' + sh.list + '` liste les ' + n + ' mots que ce monde comprend)', 't-dim');
     }
   }
   // `help` (and its waking synonyms) gets a REAL themed answer: the world
@@ -9617,10 +9937,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const first = dsMark(dreamWorld.id, cmd);
     try { c.fx(first); } catch (e) { dsL('…the dream stuttered. say it again.', '…le rêve a bégayé. redis-le.', 't-err'); }
     // v108: the dream NOTICES repetition — run the same word again and the
-    // world reacts differently each time, escalating (2nd/3rd/4th+ tiers)
+    // world reacts differently each time, escalating (2nd/3rd/4th+ tiers).
+    // the counter lives in localStorage now, not the dream session: nobody
+    // types one word 4 times in a single dream, but return visitors climb
+    // the ladder naturally, night after night (1998 quietly keeps a cookie)
     try {
-      const runs = (dreamWorld.flags.dsRuns = dreamWorld.flags.dsRuns || {});
-      runs[cmd] = (runs[cmd] || 0) + 1;
+      const runsBag = store.get('yos-dream-runs', {});
+      const runs = (runsBag[dreamWorld.id] = runsBag[dreamWorld.id] || {});
+      runs[cmd] = Math.min(9, (runs[cmd] || 0) + 1);
+      store.set('yos-dream-runs', runsBag);
       if (runs[cmd] >= 2) {
         const bank = DS_REPEATS[dreamWorld.id] && DS_REPEATS[dreamWorld.id][cmd];
         if (bank && bank.length) {
@@ -9682,7 +10007,7 @@ document.addEventListener('DOMContentLoaded', () => {
     scp: { ms: 16, freq: 1300, lines: [
       { t: ['SITE-19 CONSOLE — MEMETIC LOCKDOWN ENGAGED.', 'CONSOLE SITE-19 — VERROUILLAGE MÉMÉTIQUE ENCLENCHÉ.'], cls: 't-err' },
       { t: ['notice: this terminal is INSIDE the dream with you. your waking commands have been [DATA EXPUNGED] for your own safety.', 'avis : ce terminal est DANS le rêve avec toi. tes commandes éveillées ont été [DONNÉES SUPPRIMÉES] pour ta propre sécurité.'] },
-      { t: ['type `help` — your clearance covers exactly 21 words.', 'tape `help` — ton habilitation couvre exactement 21 mots.'], cls: 't-ok' }
+      { t: ['type `help` — your clearance covers exactly 2 words. one of them holds plenary powers.', 'tape `help` — ton habilitation couvre exactement 2 mots. l\'un d\'eux détient les pleins pouvoirs.'], cls: 't-ok' }
     ] },
     matrix: { ms: 22, freq: 1150, lines: [
       { t: ['wake up… no. wait. don\'t. the shell fell asleep INSIDE the Matrix.', 'réveille-toi… non. attends. surtout pas. le shell s\'est endormi DANS la Matrice.'] },
@@ -9860,6 +10185,7 @@ document.addEventListener('DOMContentLoaded', () => {
     /* ---- SCP: site19@scp:~# — one verb, plenary powers (v99.1) ---- */
     scp: {
       list: 'o5',
+      hint: ['(the waking shell sleeps during dreams — tonight holds exactly two words: `o5` convenes the council, `decommission` ends the dream)', '(le shell éveillé dort pendant les rêves — cette nuit ne compte que deux mots : `o5` convoque le conseil, `decommission` achève le rêve)'],
       deny: [
         ['`{c}` requires level 5 clearance. you have: level ♡ — petition the council: `o5`', '`{c}` requiert une habilitation niveau 5. tu as : niveau ♡ — saisis le conseil : `o5`'],
         ['command [REDACTED] by order of O5-🍮. the council hears everything: `o5`', 'commande [CAVIARDÉE] sur ordre de O5-🍮. le conseil entend tout : `o5`'],
@@ -10145,10 +10471,11 @@ document.addEventListener('DOMContentLoaded', () => {
           dsL('(the webmaster will read this 40 times and smile every time.)', '(le webmaster relira ça 40 fois et sourira à chaque fois.)', 't-dim');
         } },
         hits: { d: ['inspect the hit counter (it lies beautifully)', 'inspecter le compteur de visites (il ment magnifiquement)'], fx() {
-          let n = 0;
-          const el = dsBar('hit counter recalibrating', 1600, () => {
+          dsBar('hit counter recalibrating', 1600, () => {
             const target = 1000000 + Math.floor(Math.random() * 337);
             dsL('☆ counter now reads: ' + String(target).padStart(8, '0') + ' — technically true if you count dreams.', '☆ le compteur affiche : ' + String(target).padStart(8, '0') + ' — techniquement vrai si on compte les rêves.', 't-ok');
+            // the badge in the corner backs the story up for a few seconds
+            if (dreamWorld && dreamWorld.flags.geoHits) dreamWorld.flags.geoHits.spoof(target, 8000);
           });
         } },
         midi: { d: ['play the autoplay midi (the neighbors know it)', 'jouer le midi automatique (les voisins le connaissent)'], fx() {
@@ -10783,7 +11110,7 @@ document.addEventListener('DOMContentLoaded', () => {
     tapper: ['send boba down their lane: [◄]=top [A]=mid [►]=low', 'envoie le boba sur leur voie : [◄]=haut [A]=milieu [►]=bas']
   };
 
-  /* ---- the 12 mechanics. each: init(s,p) / tick(s,p,inp) / draw(s,p,g2)
+  /* ---- the 24 mechanic templates. each: init(s,p) / tick(s,p,inp) / draw(s,p,g2)
      s.win / s.lose end the round; s.t counts frames (60/s). ---- */
   const AR_TPLS = {
     timing: {
@@ -10857,7 +11184,7 @@ document.addEventListener('DOMContentLoaded', () => {
       tick(s, p, inp) {
         // the world holds its breath until the FIRST flap — the old version
         // dropped you (and marched the walls) the instant the countdown hit 0
-        if (!s.armed) { if (!inp.a) { s.y = 44 + Math.sin(s.t * 0.08) * 3; return; } s.armed = true; }
+        if (!s.armed) { if (!inp.a) { s.t = 0; s.bob = (s.bob || 0) + 1; s.y = 44 + Math.sin(s.bob * 0.08) * 3; return; } s.armed = true; } // held breath ≠ burned clock: the 25s cartridge timeout only starts at launch
         if (inp.a) { s.vy = -2.1; playTone(760, 'square', 0.04, 0, 0.02); } // rise ≈13.8px — always fits the tightest gap
         s.vy += 0.16; s.y += s.vy;
         const v = 0.8 + p.speed * 0.4;
@@ -10870,7 +11197,7 @@ document.addEventListener('DOMContentLoaded', () => {
       draw(s, p, g2) {
         s.gates.forEach((g) => { g2.fillStyle = AR_G[1]; g2.fillRect(Math.round(g.x), 0, 8, Math.round(g.gy)); g2.fillRect(Math.round(g.x), Math.round(g.gy + (p.gap || 32)), 8, AR_H); });
         arDrawGlyph(g2, p.player, 20, s.y, 13);
-        if (!s.armed && s.t % 50 < 32) arText(g2, trT('[A] to launch!!', '[A] pour décoller !!'), 46, 30, 0, 10);
+        if (!s.armed && (s.bob || 0) % 50 < 32) arText(g2, trT('[A] to launch!!', '[A] pour décoller !!'), 46, 30, 0, 10);
         arText(g2, s.passed + '/' + p.gates, 143, 10);
       }
     },
@@ -11365,10 +11692,13 @@ document.addEventListener('DOMContentLoaded', () => {
       init(s, p) {
         s.x = AR_W / 2; s.y = AR_H / 2; s.vx = 0; s.vy = 0; s.ang = -Math.PI / 2;
         s.shots = []; s.cool = 0; s.kills = 0;
+        // speed param = how much grudge the rocks hold (deluxe: more)
+        const sp = 0.7 + (p.speed || 2) * 0.15;
+        s.rockSp = sp;
         s.rocks = [];
         for (let i = 0; i < 3; i++) {
           const a = Math.random() * 6.28;
-          s.rocks.push({ x: (AR_W / 2 + Math.cos(a) * 58 + AR_W) % AR_W, y: (AR_H / 2 + Math.sin(a) * 36 + AR_H) % AR_H, vx: (Math.random() - 0.5) * 0.8, vy: (Math.random() - 0.5) * 0.6, r: 9 });
+          s.rocks.push({ x: (AR_W / 2 + Math.cos(a) * 58 + AR_W) % AR_W, y: (AR_H / 2 + Math.sin(a) * 36 + AR_H) % AR_H, vx: (Math.random() - 0.5) * 0.8 * sp, vy: (Math.random() - 0.5) * 0.6 * sp, r: 9 });
         }
       },
       tick(s, p, inp) {
@@ -11387,7 +11717,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const rk = s.rocks.splice(i, 1)[0];
           s.kills++;
           playTone(300 + Math.random() * 200, 'square', 0.06, 0, 0.04);
-          if (rk.r > 6) for (let k = 0; k < 2; k++) s.rocks.push({ x: rk.x, y: rk.y, vx: (Math.random() - 0.5) * 1.4, vy: (Math.random() - 0.5) * 1.1, r: 5 });
+          if (rk.r > 6) for (let k = 0; k < 2; k++) s.rocks.push({ x: rk.x, y: rk.y, vx: (Math.random() - 0.5) * 1.4 * (s.rockSp || 1), vy: (Math.random() - 0.5) * 1.1 * (s.rockSp || 1), r: 5 });
           return false;
         });
         if (!s.rocks.length) { s.win = true; return; }
@@ -11571,7 +11901,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  // the cartridge shelf: 35 microgames, authored one batch at a time
+  // the cartridge shelf: 59 microgames, authored one batch at a time
   var DL_GB_GAMES = [
     { id: "cart_slot_ritual", tpl: "timing", name: ["CART SLOT HERO", "CLIC PARFAIT"], prompt: ["press A when the cart meets the slot", "appuie sur A quand la cartouche s'aligne"], win: ["click. it boots first try. no blowing needed ♡", "clic. ça démarre du premier coup, sans souffler ♡"], lose: ["no boot. blow on it and try again (tradition)", "rien. souffle dessus et réessaie (tradition)"], params: {"rounds": 3, "speed": 2, "zone": 16, "glyph": "📼"} },
     { id: "aa_battery_harvest", tpl: "catch", name: ["AA HARVEST", "RÉCOLTE DE PILES"], prompt: ["catch fresh AAs, dodge the dead ones", "attrape les piles neuves, évite les mortes"], win: ["fully charged: two whole hours of playtime ♡", "chargé à bloc : deux heures entières de jeu ♡"], lose: ["the screen fades mid-save... so 1989 of it", "l'écran s'éteint en pleine sauvegarde... très 1989"], params: {"need": 7, "speed": 2, "good": "🔋", "bad": "🪫", "badRatio": 0.35} },
@@ -11676,12 +12006,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const keymap = (code) => code === 'Space' || code === 'Enter' || code === 'KeyA' ? 'a' : code === 'ArrowLeft' ? 'left' : code === 'ArrowRight' ? 'right' : null;
     const onKey = (e) => {
       const w = document.getElementById('win-dreamlog');
-      if (!w || w.classList.contains('window-closed') || w.classList.contains('window-minimized')) return;
+      if (!w) return;
+      const k = keymap(e.code);
+      if (!k) return;
+      if (w.classList.contains('window-closed') || w.classList.contains('window-minimized')) {
+        // a key released while the journal is tucked away still counts —
+        // otherwise it comes back latched-down after a restore
+        if (e.type === 'keyup') press(k, false);
+        return;
+      }
+      // the arcade only owns the keys while the journal owns the desk:
+      // active window, or focus somewhere inside it (Tab-ing to the fan
+      // wall's submit button must not rotate a piece instead)
+      if (!w.classList.contains('window-active') && !(document.activeElement && w.contains(document.activeElement))) {
+        if (e.type === 'keyup') press(k, false);
+        return;
+      }
       // someone typing in the terminal (or any field) keeps their letters —
       // the arcade only owns the keys when nothing text-shaped has focus
       if (e.target instanceof Element && e.target.closest('input, textarea, [contenteditable="true"]')) return;
-      const k = keymap(e.code);
-      if (!k) return;
       e.preventDefault();
       press(k, e.type === 'keydown');
     };
@@ -11713,7 +12056,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let lastT = 0;
     const frame = (now) => {
-      if (!document.body.contains(cv)) { dlGbArcadeStop(); return; }
+      // bail on a detached canvas OR a merely-closed (hidden-in-DOM) journal —
+      // rAF only throttles hidden tabs, not hidden elements, so a closed window
+      // would otherwise burn 60fps forever
+      const dlWin = document.getElementById('win-dreamlog');
+      if (!document.body.contains(cv) || !dlWin || dlWin.classList.contains('window-closed')) { dlGbArcadeStop(); return; }
       // wall-clock catch-up: throttled tabs still serve honest seconds
       const steps = lastT ? Math.max(1, Math.min(4, Math.round((now - lastT) / 16.7))) : 1;
       lastT = now;
@@ -14246,6 +14593,7 @@ document.addEventListener('DOMContentLoaded', () => {
       buttons: [
         [trT('🐛 SQUASH', '🐛 ÉCRASER'), (d) => {
           hp--;
+          d.__dirty = 1; // battle state on screen — a language toggle must not reset the fight
           playTone(880, 'square', 0.06, 0, 0.05);
           const body = d.querySelector('.dream-dlg-body');
           if (hp > 0) { if (body) body.children[0].textContent = trT('BUG lv.404  ' + '♥'.repeat(hp), 'BUG niv.404  ' + '♥'.repeat(hp)); }
@@ -14268,17 +14616,50 @@ document.addEventListener('DOMContentLoaded', () => {
   // geo: the 1,000,000th visitor prize (it's you, it's always you)
   function dwBeatMillionth() {
     if (document.querySelector('.dream-dlg')) return;
+    const again = !!(dreamWorld && dreamWorld.flags.millionthRuns);
     const d = dreamDlg(() => ({
-      title: trT('🎉 CONGRATULATIONS!!!', '🎉 FÉLICITATIONS !!!'),
+      title: again ? trT('🎉 CONGRATULATIONS!!! (again)', '🎉 FÉLICITATIONS !!! (encore)') : trT('🎉 CONGRATULATIONS!!!', '🎉 FÉLICITATIONS !!!'),
       cls: 'dream-geo-flashdlg', force: true,
-      lines: [trT('you are visitor № 1,000,000!!!', 'tu es le visiteur nº 1 000 000 !!!'), trT('claim your FREE pixel trophy (100% real)', 'réclame ton trophée pixel GRATUIT (100 % réel)')],
+      lines: again
+        ? [trT('you are STILL visitor № 1,000,000!!!', 'tu es TOUJOURS le visiteur nº 1 000 000 !!!'), trT('the counter refuses to move past you. claim a second trophy?? (the first was lonely)', 'le compteur refuse de te dépasser. un deuxième trophée ?? (le premier s\'ennuyait)')]
+        : [trT('you are visitor № 1,000,000!!!', 'tu es le visiteur nº 1 000 000 !!!'), trT('claim your FREE pixel trophy (100% real)', 'réclame ton trophée pixel GRATUIT (100 % réel)')],
       buttons: [
-        [trT('CLAIM ✨', 'RÉCLAMER ✨'), () => { cheatFall(['🏆', '✨', '🎊'], 22); playFanfare(); gainFollowers(3); showToast(trT('🏆 trophy claimed!! it is worth exactly 0 coins and infinite joy', '🏆 trophée réclamé !! il vaut exactement 0 pièce et une joie infinie')); }],
-        [trT('(suspicious)', '(suspect)'), () => { showToast(trT('smart. it was a banner. but the trophy was real ♡', 'malin. c\'était une bannière. mais le trophée était réel ♡')); gainFollowers(1); }]
+        [trT('CLAIM ✨', 'RÉCLAMER ✨'), () => {
+          cheatFall(['🏆', '✨', '🎊'], 22); playFanfare(); gainFollowers(3);
+          showToast(again
+            ? trT('🏆 second trophy claimed!! they blink at each other. a collection begins', '🏆 deuxième trophée réclamé !! ils se clignotent dessus. une collection commence')
+            : trT('🏆 trophy claimed!! it is worth exactly 0 coins and infinite joy', '🏆 trophée réclamé !! il vaut exactement 0 pièce et une joie infinie'));
+          // same gag, same page of the guestbook — the journal finally agrees
+          try { dreamlogAdd('geo', 'million'); } catch (e) { /* the page stuck */ }
+        }],
+        [trT('(suspicious)', '(suspect)'), () => {
+          showToast(trT('smart. it was a banner. but the trophy was real ♡', 'malin. c\'était une bannière. mais le trophée était réel ♡'));
+          gainFollowers(1);
+          try { dreamlogAdd('geo', 'million'); } catch (e) { /* the page stuck */ }
+        }]
       ]
     }));
-    if (d) playTone(1318, 'square', 0.1, 0, 0.04);
+    if (!d) return; // clutter law won — don't spend a run on a dialog nobody saw
+    if (dreamWorld) dreamWorld.flags.millionthRuns = (dreamWorld.flags.millionthRuns || 0) + 1;
+    playTone(1318, 'square', 0.1, 0, 0.04);
     dreamSay(["zzz… a MILLION visitors… and the millionth is… you… again…", "zzz… un MILLION de visiteurs… et le millionième c'est… toi… encore…"], 4000);
+  }
+
+  // geo, after the banner retires: small 1998 street theatre so long dreams
+  // keep moving without re-serving the same prize popup
+  function dwGeoAmbient() {
+    if (!dreamWorld) return;
+    const pick = Math.floor(Math.random() * 3);
+    if (pick === 0 && dreamWorld.flags.geoHits) {
+      dreamWorld.flags.geoHits.bump(3);
+      playTone(1318.51, 'sine', 0.05, 0, 0.025);
+      showToast(trT('the hit counter jumped +3: a dream, a ghost, and you (it counts friends twice)', 'le compteur a bondi de +3 : un rêve, un fantôme et toi (il compte les amis deux fois)'));
+    } else if (pick === 1) {
+      dreamCritter({ emoji: '🚧', hop: 4, ms: 9000, label: ['pardon our pixels', 'excusez nos pixels'] });
+      dreamSay(["zzz… a cone on patrol… the construction never sleeps… only I do…", "zzz… un cône en patrouille… le chantier ne dort jamais… il n'y a que moi…"], 4200);
+    } else {
+      dreamSay(["zzz… rotating the banner ads… all three are for my own page…", "zzz… je fais tourner les bannières pub… les trois sont pour ma propre page…"], 4600);
+    }
   }
 
   /* v98: bsod's signature beat used to replay the same error dialog
@@ -14319,6 +14700,7 @@ document.addEventListener('DOMContentLoaded', () => {
           // the button believes in the report. it dodges once.
           if (!dlg.__dodged) {
             dlg.__dodged = 1;
+            dlg.__dirty = 1; // the doubled-down label survives a language toggle
             playGlitchSound();
             dlg.style.transition = 'left 0.25s ease, top 0.25s ease';
             dlg.style.left = Math.max(12, Math.min(window.innerWidth - 320, (parseFloat(dlg.style.left) || 0) + (Math.random() < 0.5 ? -1 : 1) * 150)) + 'px';
@@ -14602,6 +14984,7 @@ document.addEventListener('DOMContentLoaded', () => {
     dT(() => {
       if (!d || !document.body.contains(d)) return;
       d.classList.add('bsod-e-granted');
+      d.__dirty = 1; // ceremony state — the granted bar must survive a language toggle
       const st = document.createElement('span'); st.className = 'bsod-stamp bsod-stamp-ok'; st.textContent = trT('EXEMPT ♡', 'EXEMPTÉ ♡'); d.appendChild(st);
       const bar = d.querySelector('.dream-dlg-bar span'); if (bar) bar.textContent = trT(...s.grant);
       playFanfare(); cheatFall(['💙', '✦'], 10);
@@ -15037,6 +15420,11 @@ document.addEventListener('DOMContentLoaded', () => {
     dreamEnding = true;
     document.documentElement.classList.remove('dream-collapse');
     const w = dreamWorld.w;
+    // some worlds pick their wake line from what actually happened (geo:
+    // no claiming a guestbook signature nobody made) — decided while the
+    // flags still exist, spoken after teardown
+    let wakeLine = w.wake;
+    try { if (typeof w.wakePick === 'function') wakeLine = w.wakePick(dreamWorld.flags) || w.wake; } catch (e) { /* the memory blurred */ }
     (dreamWorld.flags.removers || []).forEach((fn) => { try { fn(); } catch (e) { /* already unplugged */ } });
     try { dreamAdaptOff(); } catch (e) { /* the theme leaves anyway */ }
     dreamWorld.timers.forEach((t) => { clearTimeout(t); clearInterval(t); });
@@ -15065,7 +15453,7 @@ document.addEventListener('DOMContentLoaded', () => {
       cheatFall(['💭', '✦', '♡'], 16);
       playStartupChime();
       ghostAppear(0, false);
-      showBubble(trT(...w.wake), 6800);
+      showBubble(trT(...wakeLine), 6800);
       try {
         const r = slimeBody.getBoundingClientRect();
         swProp(r.left + r.width / 2 - 66, Math.max(8, r.top - 46), trT('DREAM — COMPLETE 💭', 'RÊVE — TERMINÉ 💭'), true);
@@ -15429,7 +15817,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (darkMQ.addEventListener) darkMQ.addEventListener('change', onSystemThemeChange);
   else if (darkMQ.addListener) darkMQ.addListener(onSystemThemeChange);
 
-  // midnight starfield (stars + pixel moon + occasional shooting star)
+  // midnight starfield (stars + occasional shooting star; the moon is retired)
   function buildNightSky() {
     // owner decrees, reconciled: the moon stays retired (v121), the STARS
     // twinkle, and the shooting stars are BACK by popular demand (v123)
@@ -15460,6 +15848,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!sky) return;
     nsShootTimer = setInterval(() => {
       if (document.documentElement.getAttribute('data-theme') !== 'dark') return;
+      // a hidden sky (dreams, terminal door) mints no meteors — display:none
+      // never fires animationend, so they'd pile up and all replay at once
+      if (!sky.getClientRects().length) return;
       if (Math.random() < 0.45) return;
       const shoot = document.createElement('span');
       shoot.className = 'ns-shoot';
@@ -15753,7 +16144,7 @@ document.addEventListener('DOMContentLoaded', () => {
   ];
 
   const SEARCH_LOCAL = [
-    { title: 'career_quest.exe — 7 quests, 2 main story arcs', url: 'yongshan.dev/career_quest.exe', desc: 'RustChain agent engineering, the ARC Moodle LMS, HyperGAI data ops, and four research dungeons.', win: 'win-career', k: 'career job work experience resume cv quest rustchain druid agent moodle lms aws lead history emploi carrière' },
+    { title: 'career_quest.exe — 8 quests, 2 main story arcs', url: 'yongshan.dev/career_quest.exe', desc: 'RustChain agent engineering, the ARC Moodle LMS, HyperGAI data ops, and four research dungeons.', win: 'win-career', k: 'career job work experience resume cv quest rustchain druid agent moodle lms aws lead history emploi carrière' },
     { title: 'inventory.sav — skills & stats', url: 'yongshan.dev/inventory.sav', desc: 'Python, AWS, AgentOps, PyTorch/TF, Nginx, SQL/NoSQL, security, WCAG accessibility. Fully equipped.', win: 'win-skills', k: 'skills stack tech python aws ml ai pytorch tensorflow nginx sql security wcag a11y compétences' },
     { title: 'ask_me.chat — the slime knows everything', url: 'yongshan.dev/ask_me.chat', desc: 'A 100% client-side Q&A bot. Ask about Druid, the LMS, hiring, or restaurants. Works offline.', win: 'win-ama', k: 'ama ask question bot chat slime hire hiring recruit contact email restaurant food boba 餐厅 吃 美食 question embauche' },
     { title: 'stream_chat.log — live viewers', url: 'yongshan.dev/stream_chat.log', desc: 'The chat has opinions about her mAP50-95 scores. Donations keep coming in.', win: 'win-chat', k: 'chat stream live viewers twitch' },
@@ -15763,7 +16154,7 @@ document.addEventListener('DOMContentLoaded', () => {
     { title: 'fan_wall.exe — people who ♥ this site', url: 'yongshan.dev/fan_wall.exe', desc: 'The avatar wall of everyone who clicked like. You could be on it in one click.', k: 'fan wall like heart love avatar popular 点赞 喜欢', go() { if (!wallOpen) toggleWall(); const el = document.getElementById('fan-wall'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } },
     { title: 'the slime — a production-grade virtual pet', url: 'yongshan.dev/slime.pet', desc: 'State machine, combo detection, drag physics, sprite frames, auto-nap health protocol. Also: adorable.', win: 'win-start-here', k: 'slime pet cute tamagotchi mascot 史莱姆 宠物 mignon' },
     { title: 'hall_of_slime.exe — global leaderboard', url: 'yongshan.dev/hall_of_slime.exe', desc: 'Local arcade top-10 plus a worldwide tier census. Where does your run rank?', win: 'win-leaderboard', k: 'leaderboard hiscore high score rank top hall record classement 排行榜 排名' },
-    { title: 'pikdex.exe — the pikmin collection deck', url: 'yongshan.dev/pikdex.exe', desc: 'Every plucked buddy archived forever: tech names, CS techniques, and a 24-segment hue wheel to complete.', win: 'win-pikdex', k: 'pikdex pikmin collection deck hue wheel colour color roue chromatique collection 图鉴 收集' },
+    { title: 'pikdex.exe — the pikmin collection deck', url: 'yongshan.dev/pikdex.exe', desc: 'Every plucked buddy archived forever: tech names, CS techniques, and a 50-segment hue wheel to complete.', win: 'win-pikdex', k: 'pikdex pikmin collection deck hue wheel colour color roue chromatique collection 图鉴 收集' },
     { title: 'interview_scheduler.exe — book time with Yongshan', url: 'yongshan.dev/interview_scheduler.exe', desc: 'See her availability, pick a slot, both sides get emails. The HR fairy approves.', win: 'win-interview', k: 'interview hire schedule calendar meeting book entretien embauche 面试 日历 约' }
   ];
 
@@ -16371,7 +16762,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!grid || !wall || wall.classList.contains('is-collapsed') || grid.querySelector('.fw-rabbit')) return;
         const r = document.createElement('span');
         r.className = 'fw-rabbit';
-        r.textContent = '🐇';
+        // the hop lives on an inner span so the crossing can ride
+        // transform on the outer one (left-animation = layout per frame)
+        const hopper = document.createElement('span');
+        hopper.className = 'fw-rabbit-hop';
+        hopper.textContent = '🐇';
+        r.appendChild(hopper);
         r.style.top = (6 + Math.random() * Math.max(10, grid.clientHeight - 30)) + 'px';
         r.title = trT('follow the white rabbit', 'suis le lapin blanc');
         r.addEventListener('click', () => {
@@ -16619,7 +17015,10 @@ document.addEventListener('DOMContentLoaded', () => {
      is that a first-timer trips over one inside the first minute and
      texts a friend. debug: window.__yosGMK.force() */
   function gSlimeBox() {
-    return { x: GAME.nm ? GAME.nmPx : G_SLIME_X, y: G_GROUND - G_SLIME_S - GAME.y, w: G_SLIME_S, h: G_SLIME_S };
+    // CHONK et al.: the sprite only grows in HEIGHT (squash * size), so the
+    // box grows the same way — set-pieces must catch what the eye sees
+    const sz = modVal('size');
+    return { x: GAME.nm ? GAME.nmPx : G_SLIME_X, y: G_GROUND - G_SLIME_S * sz - GAME.y, w: G_SLIME_S, h: G_SLIME_S * sz };
   }
   const G_GIMMICKS = {
     win95: ['w95cards', 'w95hang', 'w95defrag'],
@@ -17004,6 +17403,10 @@ document.addEventListener('DOMContentLoaded', () => {
         else gToast(['🌟 the code faded… the old ways demand 6 glyphs', '🌟 le code s\'efface… l\'ancienne méthode exige 6 glyphes'], 170);
       } else if (g.kind === 'geomidi') {
         if (g.notes >= 5) { fxFever(3); gMarkJoy(); [0, 4, 7, 12, 7, 12].forEach((n, i) => playTone(523 * Math.pow(2, n / 12), 'square', 0.14, i * 0.12, 0.05)); gToast(['🎼 SONG COMPLETE!! the page midi plays at FULL volume, as intended', '🎼 CHANSON FINIE !! le midi de la page joue à PLEIN volume, comme prévu'], 220); }
+      } else if (g.kind === 'geobaby') {
+        // the headliner finally pays like one: boop all four, get the bow
+        if ((g.gotCount || 0) >= 4) { fxScore(48); gainFollowers(2); gMarkJoy(); playFanfare(); gToast(['👶👶👶👶 FULL STAMPEDE BOOPED!! the babies line-dance a bow — BEST OF THE WEB 1998, baby division ♡', '👶👶👶👶 RUÉE ENTIÈREMENT BOOPÉE !! les bébés saluent en ligne — BEST OF THE WEB 1998, catégorie bébés ♡'], 230); }
+        else if (g.gotCount) gToast(['👶 the un-booped babies dance into the sunset. they will be back. they are ALWAYS back', '👶 les bébés non boopés dansent vers le couchant. ils reviendront. ils reviennent TOUJOURS'], 180);
       } else if (g.kind === 'bscad') {
         if (g.keys >= 3) { fxClearBugs(); fxFever(5); gMarkJoy(); gToast(['⌨ TASK MANAGER: bugs.exe → END TASK ♡', '⌨ GESTIONNAIRE : bugs.exe → FIN DE TÂCHE ♡'], 220); playFanfare(); }
         else if (g.keys > 0) gToast(['⌨ two-finger salute… it needs all THREE keys, always has', '⌨ salut à deux doigts… il faut les TROIS touches, depuis toujours'], 180);
@@ -17634,13 +18037,13 @@ document.addEventListener('DOMContentLoaded', () => {
       const ph = Math.floor(GAME.scrollPhase || 0);
       let tuft = Math.floor(ph / 18);
       for (let gx = -(ph % 18); gx < G_W; gx += 18, tuft++) {
-        g2.fillStyle = tuft % 2 ? gLite('#57c689') : gDreamColor('#306230');
+        g2.fillStyle = tuft % 2 ? gDreamColor('#57c689') : gDreamColor('#306230'); // both tufts ride the DMG ramp — gLite would hand back raw mint
         g2.fillRect(gx, G_GROUND - 8, 4, 8);
         g2.fillRect(gx + 7, G_GROUND - 12, 3, 12);
       }
       GAME.obs.forEach((o) => {
         if (o._pop > 0) {
-          g2.fillStyle = '#ffffff';
+          g2.fillStyle = gDreamColor('#ffffff'); // the '!' snaps to the bright DMG green — no white on a DMG-01
           g2.font = "13px 'Jersey 25', 'VT323', monospace";
           g2.fillText('!', o.x + o.w / 2 - 2, G_GROUND - o.h - 8 - o._pop / 3);
         }
@@ -17802,7 +18205,9 @@ document.addEventListener('DOMContentLoaded', () => {
       g2.fillRect(0, 0, G_W, 5); g2.fillRect(0, G_H - 5, G_W, 5);
     }
     if (g.dim) {
-      g2.fillStyle = 'rgba(15, 56, 15, ' + Math.min(0.42, g.t / 400) + ')';
+      // each world dims in its own dark: DMG's deep green for the dead
+      // battery, a deep navy for bsod's SAFE MODE (green reads as a glitch there)
+      g2.fillStyle = (gDreamSkin === 'bsod' ? 'rgba(4, 10, 60, ' : 'rgba(15, 56, 15, ') + Math.min(0.42, g.t / 400) + ')';
       g2.fillRect(0, 0, G_W, G_H);
     }
     if (g.kind === 'mxbullet') {
@@ -18369,7 +18774,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     if (o.hidden) { // route 1: it's in the tall grass. you'll know soon.
-      g2.fillStyle = gLite('#57c689');
+      g2.fillStyle = gDreamColor('#57c689'); // route 1 grass is DMG green, even the suspicious tuft
       const bx = o.x + (o.w || 20) / 2;
       g2.fillRect(bx - 4, G_GROUND - 10 + Math.sin((GAME.frame + o.x) * 0.2) * 2, 3, 10);
       g2.fillRect(bx + 2, G_GROUND - 13, 3, 13);
@@ -18382,7 +18787,7 @@ document.addEventListener('DOMContentLoaded', () => {
       g2.fillStyle = skin === 'scp' ? '#141414' : skin === 'bsod' ? '#051a86' : gTheme.purple;
       g2.fillRect(o.x, yTop, o.w, 16);
       if (skin === 'scp') { g2.strokeStyle = '#ffd23f'; g2.lineWidth = 1; g2.strokeRect(o.x + 0.5, yTop + 0.5, o.w - 1, 15); }
-      g2.fillStyle = skin === 'matrix' ? '#3dff7c' : '#ffffff';
+      g2.fillStyle = skin === 'matrix' ? '#3dff7c' : skin === 'gameboy' ? gDreamColor('#ffffff') : '#ffffff'; // DMG has no white — the tag snaps to the bright green
       g2.font = "11px 'Jersey 25', 'VT323', monospace";
       g2.fillText(G_FLY_LABELS[skin] || '404', o.x + 4, yTop + 12);
     } else if (skin === 'win95') {
@@ -18481,15 +18886,25 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function gTick(manual) {
-    if (manual !== true) requestAnimationFrame(gTick); // manual test-steps must not fork the loop
-    if (!gCanvas || !gWin) return;
-    if (gWin.classList.contains('window-closed') || gWin.classList.contains('window-minimized')) return;
+    // while win-game is closed/minimized nothing below runs anyway, so the
+    // loop naps at 4Hz instead of billing a rAF every single display frame
+    const gAsleep = !gCanvas || !gWin
+      || gWin.classList.contains('window-closed') || gWin.classList.contains('window-minimized');
+    if (manual !== true) { // manual test-steps must not fork the loop
+      if (gAsleep) { setTimeout(gTick, 250); return; }
+      requestAnimationFrame(gTick);
+    }
+    if (gAsleep) return;
 
     if (GAME.frame % 90 === 0) gFitCanvas();
     const g2 = gCanvas.getContext('2d');
     g2.setTransform(G_SCALE, 0, 0, G_SCALE, 0, 0);
     g2.imageSmoothingEnabled = false;
-    GAME.frame++;
+    // Esc / interview pause freezes the whole clock. every deadline in here is
+    // frame-relative (nightmare melt + summon drains, mod & invincibility
+    // timers), so a ticking frame behind the pause veil would silently expire
+    // them and burst the instant the player resumes — freezing frame holds them.
+    if (!(GAME.state === 'run' && (GAME.itvPause || GAME.escPause))) GAME.frame++;
     // the world's scroll phase: frame*speed is only linear while speed is
     // constant — with the ramp it made ground dashes and puddles jitter and
     // occasionally lurch backwards. an accumulator scrolls honestly.
@@ -18733,7 +19148,7 @@ document.addEventListener('DOMContentLoaded', () => {
       GAME.score += 0.16 * gSpeed() * (GAME.fever > 0 ? 2 : 1) * modVal('luck');
       GAME.speed = Math.min(9.5, GAME.speed + 0.0016);
       gPiksTick();
-    } else if (GAME.state === 'run' && GAME.nm && !GAME.event) {
+    } else if (GAME.state === 'run' && GAME.nm && !GAME.event && !GAME.escPause && !GAME.itvPause) {
       // nightmare arena: scroll, spawns and score hold their breath —
       // only jump physics and the boss itself keep moving.
       // /DEV/NULL stays on shift though: gPiksTick never runs in here, yet
@@ -18761,7 +19176,7 @@ document.addEventListener('DOMContentLoaded', () => {
       gGimmickTick(); // the world's own set-pieces run between bosses
       gStageTick(); // and every ~90s the world's ICON becomes the level
       if (GAME.frame % 30 === 0) gMilestoneTick(); // and it comments on your form
-      if (!GAME.boss && !GAME.nm && GAME.score >= GAME.nextBossAt) {
+      if (!GAME.boss && !GAME.nm && !GAME.stage && GAME.score >= GAME.nextBossAt) { // one headliner at a time — the boss waits in the wings until STAGE CLEAR
         const kinds = [
           { kind: 'kaiju', hp: 5, name: ['!! 404 KAIJU !!  grab the wand ♥', '!! KAIJU 404 !!  prends la baguette ♥'] },
           { kind: 'conflict', hp: 7, name: ['!! MERGE CONFLICT !!  resolve it ♥', '!! CONFLIT DE MERGE !!  résous-le ♥'] },
@@ -20832,7 +21247,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // the equipped weapon bobs along behind its slime, like a proud pet
   function gDrawWeaponBuddy(g2) {
-    if (!GAME.weapon || !WEAPON_PIX[GAME.weapon.id]) return;
+    // pack weapons (all 35 dream keepsakes) live in G_PACK_PIX, not WEAPON_PIX
+    if (!GAME.weapon || !(WEAPON_PIX[GAME.weapon.id] || G_PACK_PIX[GAME.weapon.id])) return;
     const bob = Math.sin(GAME.frame * 0.09) * 4;
     const wy = G_GROUND - G_SLIME_S - 26 - GAME.y * 0.6 + bob;
     gDrawWeaponIcon(g2, GAME.weapon.id, G_SLIME_X - 24, wy, 1.6);
@@ -21810,7 +22226,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }, 2400);
     }
-    setTimeout(() => { if (GAME.nm) gToast(['tutorial: WASD to move!! your weapon AUTO-FIRES hearts ♡', 'tuto : WASD pour bouger !! ton arme tire des cœurs TOUTE SEULE ♡'], 230); }, 4600);
+    setTimeout(() => {
+      if (!GAME.nm) return;
+      // a phone has no WASD — tell touch players the real controls
+      const touch = (navigator.maxTouchPoints || 0) > 0 || 'ontouchstart' in window;
+      gToast(touch
+        ? ['tutorial: tap/drag LEFT & RIGHT to move!! your weapon AUTO-FIRES hearts ♡', 'tuto : touche/glisse à GAUCHE & à DROITE pour bouger !! ton arme tire des cœurs TOUTE SEULE ♡']
+        : ['tutorial: WASD to move!! your weapon AUTO-FIRES hearts ♡', 'tuto : WASD pour bouger !! ton arme tire des cœurs TOUTE SEULE ♡'], 230);
+    }, 4600);
     setTimeout(() => { if (GAME.nm) gToast(['RAM the big glowing heart for CRITS. its sleep-talk COMES TRUE', 'FONCE dans le grand cœur qui brille : CRITIQUES. ses paroles de sommeil SE RÉALISENT'], 230); }, 7400);
     if (typeof liveAway === 'function') liveAway(true); // the streamer has… somewhere to be
   }
@@ -23479,13 +23902,18 @@ document.addEventListener('DOMContentLoaded', () => {
     // used to come back as '???'), digits, and the house glyphs.
     // \p{M} rides along: Thai vowels, Devanagari matras, Arabic harakat
     // are combining MARKS, not letters — dropping them mangled क्षि to कष.
-    const kept = Array.from(String(str)).filter((ch) => /[\p{L}\p{M}\p{N}♡★]/u.test(ch)).join('');
+    // #70: uppercase FIRST, exactly like the worker (index.js) — ß→SS and
+    // ﬁ→FI expand BEFORE the 3-grapheme cut, or the local board sprouts a 4th
+    // cell ('FUSS') while the worker stored three ('FUS') and the two boards
+    // show two signatures for the same run.
+    const up = String(str).toUpperCase();
+    const kept = Array.from(up).filter((ch) => /[\p{L}\p{M}\p{N}♡★]/u.test(ch)).join('');
     // three GRAPHEMES, not three code points — a mark must never be
     // beheaded from its base letter by the slice
     const clean = (typeof Intl !== 'undefined' && Intl.Segmenter)
       ? Array.from(new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(kept), (seg) => seg.segment).slice(0, 3).join('')
       : Array.from(kept).slice(0, 3).join('');
-    return (clean.toUpperCase() || 'YOU');
+    return (clean || 'YOU'); // already uppercased above
   }
   function lbPendingGet() {
     const raw = store.get('yos-lb-pending', 0);
@@ -23511,7 +23939,9 @@ document.addEventListener('DOMContentLoaded', () => {
      top-10 list shows the one shared board every visitor sees; the
      local board stays on as the offline fallback. ---- */
   var lbHallFreshUntil = 0; // a just-signed board outranks cache-stale GETs
+  var lbLastHall = null;   // #65: last worldwide board we painted — repaint IT when a GET is skipped/fails, not a mislabeled local list
   function lbRenderHall(hall) {
+    lbLastHall = hall;
     const listEl = document.getElementById('lb-local-list');
     if (!listEl) return;
     const head = listEl.previousElementSibling;
@@ -23545,17 +23975,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const keepEl = document.getElementById('lb-keepsake');
     if (!listEl) return;
 
-    // worldwide board, when reachable (local render below stands in
-    // instantly and stays if the visitor is offline). a fresh POST /hall
-    // response outranks GET for 15s — the GET rides a 10s edge cache and
-    // would repaint the pre-signature list right over the new entry.
-    if (wallApi && Date.now() >= lbHallFreshUntil) {
-      fetch(wallApi + '/hall')
-        .then((r) => (r.ok ? r.json() : null))
-        .then((b) => { if (b && b.ok && Array.isArray(b.hall) && Date.now() >= lbHallFreshUntil) lbRenderHall(b.hall); })
-        .catch(() => { /* offline: the local board holds the fort */ });
-    }
-
+    // #65: paint the LOCAL board first as the always-available baseline, and
+    // RESTORE its 'LOCAL TOP 10' heading — a prior worldwide render stripped
+    // the data-i18n and left 'WORLDWIDE TOP 10' hanging over this local list.
+    // the worldwide block AFTER the paint repaints (heading and all) the
+    // instant a remembered or freshly-fetched hall is available.
+    const localHead = listEl.previousElementSibling;
+    if (localHead) { localHead.setAttribute('data-i18n', 'lb.local'); localHead.textContent = t('lb.local'); }
     const board = store.get('yos-lb', []);
     listEl.innerHTML = '';
     if (!board.length) {
@@ -23577,6 +24003,20 @@ document.addEventListener('DOMContentLoaded', () => {
       li.append(rank, ' ', name, ' ', score);
       listEl.appendChild(li);
     });
+
+    // worldwide board, when reachable. #65: repaint the LAST worldwide board
+    // immediately (correct heading + entries) so a reopen never strands the
+    // local list under the worldwide banner while the GET is skipped (the 15s
+    // fresh window) or fails offline. a fresh POST /hall response outranks GET
+    // for 15s — the GET rides a 10s edge cache and would repaint the
+    // pre-signature list right over the new entry.
+    if (lbLastHall) lbRenderHall(lbLastHall);
+    if (wallApi && Date.now() >= lbHallFreshUntil) {
+      fetch(wallApi + '/hall')
+        .then((r) => (r.ok ? r.json() : null))
+        .then((b) => { if (b && b.ok && Array.isArray(b.hall) && Date.now() >= lbHallFreshUntil) lbRenderHall(b.hall); })
+        .catch(() => { /* offline: the remembered worldwide board (or local baseline) holds the fort */ });
+    }
 
     // signing a pending top-10 run
     if (signEl) {
@@ -23633,13 +24073,19 @@ document.addEventListener('DOMContentLoaded', () => {
     if (globalEl) {
       globalEl.textContent = trT('contacting the global hall…', 'contact du panthéon mondial…');
       const myBest = store.get('yos-runner-hi', 0);
+      let missed = false; // a blocked/failed read is NOT an empty hall (404 = truly zero)
       Promise.all(
         Array.from({ length: LB_TIERS.length + 1 }, (_, i) =>
-          fetch(`${LIKE_API}/get/${LIKE_NS}/lb-t${i}`).then((r) => (r.ok ? r.json() : { value: 0 })).then((d) => Math.max(0, Number(d.value) || 0)).catch(() => 0)
+          fetch(`${LIKE_API}/get/${LIKE_NS}/lb-t${i}`).then((r) => { if (!r.ok && r.status !== 404) missed = true; return r.ok ? r.json() : { value: 0 }; }).then((d) => Math.max(0, Number(d.value) || 0)).catch(() => { missed = true; return 0; })
         )
       ).then((counts) => {
         const total = counts.reduce((a, b) => a + b, 0);
-        if (!total) { globalEl.textContent = trT('the global hall is empty — your run could be first!!', 'le panthéon mondial est vide — ta run pourrait être la première !!'); return; }
+        if (!total) {
+          globalEl.textContent = missed
+            ? trT('global hall unreachable (offline?)', 'panthéon mondial injoignable (hors-ligne ?)')
+            : trT('the global hall is empty — your run could be first!!', 'le panthéon mondial est vide — ta run pourrait être la première !!');
+          return;
+        }
         const myTier = lbTierIndex(myBest);
         const below = counts.slice(0, myTier).reduce((a, b) => a + b, 0);
         const topPct = Math.max(1, Math.round(100 - (below / total) * 100));
@@ -24137,6 +24583,13 @@ document.addEventListener('DOMContentLoaded', () => {
   var yosStats = null;
   var yosStatsAt = 0;
   var yosBumpGuard = {}; // key → {at, v}: bump-confirmed values outrank stale polls
+  // #64: bumps that never reached the cloud (offline runner — the 'Airplane
+  // Mode Athlete' flow — or the worker's 120/hr cap) wait HERE and replay.
+  // until they land they ride on top of every poll (see statsApply), so the
+  // HUD never yanks back a fan/like gain we still owe the worldwide counter
+  // (nor boots high then drops seconds later).
+  var yosBumpPending = store.get('yos-bump-pending', {}) || {};
+  var yosBumpReplaying = {}; // key → true while a replay caravan is in flight (no double-flush)
   function statsApply(stats) {
     if (!stats) return;
     // GET /stats rides a 30s edge cache — a poll can hand back a snapshot
@@ -24147,6 +24600,13 @@ document.addEventListener('DOMContentLoaded', () => {
       const g2 = yosBumpGuard[k];
       if (Date.now() - g2.at > 70000) { delete yosBumpGuard[k]; return; }
       if (typeof stats[k] === 'number' && stats[k] < g2.v) stats[k] = g2.v;
+    });
+    // #64: still-unconfirmed bumps ride ON TOP of the polled truth — the gain
+    // is owed to the cloud and WILL replay, so showing cloud+pending keeps the
+    // poll from yanking the counter back down between the action and the flush.
+    Object.keys(yosBumpPending).forEach((k) => {
+      const p = yosBumpPending[k];
+      if (p > 0 && typeof stats[k] === 'number') stats[k] += p;
     });
     yosStats = stats;
     yosStatsAt = Date.now();
@@ -24164,6 +24624,10 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   function statsRefresh() {
     if (!wallApi) return;
+    // hidden tab: skip the hop — the visibilitychange wake-sync below
+    // refetches the moment anyone is actually looking again
+    if (document.hidden) return;
+    statBumpFlush(); // #64: replay any bumps that never reached the cloud
     fetch(wallApi + '/stats')
       .then((r) => (r.ok ? r.json() : null))
       .then((b) => { if (b && b.stats) statsApply(b.stats); })
@@ -24183,7 +24647,7 @@ document.addEventListener('DOMContentLoaded', () => {
     })
       .then((r) => (r.ok ? r.json() : null))
       .then((b) => {
-        if (!b || !b.ok) return;
+        if (!b || !b.ok) { statBumpQueue(key, n); return; } // 429/refusal: owe it to the cloud, replay later (#64)
         yosBumpGuard[b.key] = { at: Date.now(), v: b.value };
         if (yosStats) yosStats[b.key] = b.value;
         if (b.key === 'fans' && pet && typeof b.value === 'number' && b.value !== pet.followers && !rest) {
@@ -24197,7 +24661,58 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (rest > 0) statBump(key, rest); // next wagon of the caravan
       })
-      .catch(() => { /* the bump stays local; the next sync reconciles */ });
+      .catch(() => { statBumpQueue(key, n); }); // #64: network drop — the gain waits in the queue for the next flush
+  }
+  function statBumpQueue(key, n) {
+    if (!(n > 0)) return; // only positive gains replay; a -1 like-undo isn't worth chasing
+    // cap the backlog: a marathon offline session can't storm the worker later
+    yosBumpPending[key] = Math.min(500, (yosBumpPending[key] || 0) + n);
+    store.set('yos-bump-pending', yosBumpPending);
+  }
+  function statBumpFlush() {
+    if (!wallApi || document.hidden) return;
+    Object.keys(yosBumpPending).forEach((k) => {
+      if (yosBumpReplaying[k]) return;      // a caravan for this key is already in flight
+      const n = yosBumpPending[k];
+      if (!(n > 0)) return;
+      yosBumpReplaying[k] = true;
+      statBumpReplay(k, n);
+    });
+  }
+  // #64: replay owed bumps WITHOUT clearing pending up front — each hop only
+  // leaves the pending pile the instant it confirms (and sets the guard in the
+  // same breath), so a poll racing the flush still sees cloud+owed and never
+  // dips. a failed hop keeps the debt and a later flush retries it.
+  function statBumpReplay(key, n) {
+    const hop = Math.max(-1, Math.min(5, n));
+    const rest = n > 5 ? n - 5 : 0;
+    fetch(wallApi + '/bump', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key: key, n: hop })
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((b) => {
+        if (!b || !b.ok) { delete yosBumpReplaying[key]; return; } // still owed — retry next flush
+        yosBumpGuard[b.key] = { at: Date.now(), v: b.value };
+        if (yosStats) yosStats[b.key] = b.value;
+        // this hop landed: subtract exactly it from the owed pile
+        yosBumpPending[key] = Math.max(0, (yosBumpPending[key] || 0) - Math.max(0, hop));
+        if (!yosBumpPending[key]) delete yosBumpPending[key];
+        store.set('yos-bump-pending', yosBumpPending);
+        if (b.key === 'fans' && pet && typeof b.value === 'number' && b.value !== pet.followers && !rest) {
+          pet.followers = b.value;
+          updateSlimeHud();
+        }
+        if (b.key === 'likes' && typeof b.value === 'number' && typeof syncLikeBtn === 'function') {
+          remoteLikes = b.value;
+          syncLikeBtn();
+          syncAnonFans();
+        }
+        if (rest > 0) statBumpReplay(key, rest); // next wagon; the latch stays set
+        else delete yosBumpReplaying[key];        // caravan done
+      })
+      .catch(() => { delete yosBumpReplaying[key]; }); // still owed — retry next flush
   }
   // boot: wait for wall-config, fetch once, then a heartbeat + wake refresh
   (function statsBoot(tries) {
@@ -24208,6 +24723,8 @@ document.addEventListener('DOMContentLoaded', () => {
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden && Date.now() - yosStatsAt > 5000) statsRefresh();
   });
+  // #64: the net just came back — flush the owed bumps, then resync
+  window.addEventListener('online', () => { statBumpFlush(); statsRefresh(); });
   var albumVideos = []; // session-only: blobs don't fit localStorage
   function albumGet() { const a = store.get('yos-album', []); return Array.isArray(a) ? a : []; }
   function albumAdd(entry) {
@@ -24582,7 +25099,12 @@ document.addEventListener('DOMContentLoaded', () => {
         fetch(`${ACHV_API}/hit/${ACHV_NS}/selfie-wall`).then((r) => (r.ok ? r.json() : null)).then((d) => {
           const n = d && d.value ? d.value : '?';
           fxBanner('🌍 SELFIE #' + n, trT('you + the slime, counted worldwide ♡', 'toi + le slime, comptés dans le monde ♡'));
-        }).catch(() => {});
+        }).catch(() => {
+          // counter-only mode: a network-level reject used to die here in
+          // silence, so 'hang it ♡' looked like a dead button. mirror the
+          // publicMode sibling and tell the visitor it still counted.
+          showToast(trT('🌍 the wall is unreachable — counted in spirit ♡', '🌍 le mur est injoignable — compté en esprit ♡'));
+        });
       }),
       mk(trT('keep it private', 'garder privé'), () => { panel.remove(); showBubble(trT('a private legend. even better.', 'une légende privée. encore mieux.'), 2200); })
     );
@@ -24599,16 +25121,23 @@ document.addEventListener('DOMContentLoaded', () => {
     shell.append(note, grid);
     let wallSeen = 0;
     const gen = albumGen; // a tab switch re-renders the shell; late fetches must not touch the new render
-    const load = (cursor) => wallList(cursor).then((res) => {
+    const load = (cursor, trigger) => wallList(cursor).then((res) => {
       if (gen !== albumGen) return;
       if (!res) {
         // a FAILED page-2+ fetch must not rewrite the count note into the
         // empty-wall greeting — the photos already on screen say otherwise
-        if (cursor) { note.textContent = trT(`🌍 THE WORLDWIDE WALL — ${wallSeen}+ framed visitors (more are shy — try again in a minute ♡)`, `🌍 LE MUR MONDIAL — ${wallSeen}+ visiteurs encadrés (les autres sont timides — réessaie dans une minute ♡)`); return; }
+        if (cursor) {
+          note.textContent = trT(`🌍 THE WORLDWIDE WALL — ${wallSeen}+ framed visitors (more are shy — try again in a minute ♡)`, `🌍 LE MUR MONDIAL — ${wallSeen}+ visiteurs encadrés (les autres sont timides — réessaie dans une minute ♡)`);
+          // #69: revive the 'more' button so 'try again' is a real retry, not
+          // a dead end — it removed itself on click before this fetch resolved
+          if (trigger) { trigger.disabled = false; trigger.textContent = trT('retry ♡', 'réessayer ♡'); }
+          return;
+        }
         note.textContent = trT('🌍 the wall is warming up — hang the first photo from a selfie ♡', '🌍 le mur chauffe — accroche la première photo depuis un selfie ♡');
         albumDeco(shell, 0);
         return;
       }
+      if (trigger) trigger.remove(); // #69: this page landed — the button that fired it has done its job
       wallSeen += res.photos.length;
       if (!cursor) albumDeco(shell, wallSeen); // deco density follows the REAL wall size
       albumSetHits(shell, wallSeen);
@@ -24635,7 +25164,14 @@ document.addEventListener('DOMContentLoaded', () => {
         more.type = 'button';
         more.className = 'wp-btn';
         more.textContent = trT('more ♡', 'plus ♡');
-        more.addEventListener('click', () => { more.remove(); load(res.cursor); });
+        // #69: keep the button through the fetch — disable + loading label, and
+        // load() re-enables it on failure (or the next page removes it on
+        // success), so a network blip is retryable in place.
+        more.addEventListener('click', () => {
+          more.disabled = true;
+          more.textContent = trT('loading…', 'chargement…');
+          load(res.cursor, more);
+        });
         grid.after(more);
       }
     });
@@ -24923,7 +25459,26 @@ document.addEventListener('DOMContentLoaded', () => {
       del.className = 'album-del';
       del.textContent = '✕';
       del.setAttribute('aria-label', trT('delete photo', 'supprimer'));
-      del.addEventListener('click', (ev) => { ev.stopPropagation(); const a = albumGet(); a.splice(ix, 1); store.set('yos-album', a); renderAlbum(); });
+      del.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        // a naked ✕ on a touch screen is one thumb-slip from erasing a photo
+        // forever (no trash, no undo). first tap arms → second tap deletes.
+        if (del.dataset.armed !== '1') {
+          del.dataset.armed = '1';
+          del.textContent = '?';
+          del.classList.add('album-del-armed');
+          del.setAttribute('aria-label', trT('tap again to delete', 'retape pour supprimer'));
+          clearTimeout(del.__disarm);
+          del.__disarm = setTimeout(() => {
+            del.dataset.armed = ''; del.textContent = '✕';
+            del.classList.remove('album-del-armed');
+            del.setAttribute('aria-label', trT('delete photo', 'supprimer'));
+          }, 2200);
+          return;
+        }
+        clearTimeout(del.__disarm);
+        const a = albumGet(); a.splice(ix, 1); store.set('yos-album', a); renderAlbum();
+      });
       card.append(img, cap, save, del);
       grid.appendChild(card);
     });
@@ -25712,13 +26267,17 @@ document.addEventListener('DOMContentLoaded', () => {
   function gardenTick() {
     if (!liveOpen || !liveStage) return;
     const now = Date.now();
+    // all layout reads happen HERE, in one batch, before any DOM writes —
+    // three rects sprinkled between style writes cost ~11 forced reflows/s
+    const stageRect = liveStage.getBoundingClientRect();
+    const slimeRect = slimeBody ? slimeBody.getBoundingClientRect() : null;
+    const sx = slimeRect ? slimeRect.left + slimeRect.width / 2 - stageRect.left : 0;
+    const slimeW = slimeRect ? slimeRect.width : 0;
     if (now > GARDEN.nextSprout) {
       gardenSpawnSprout();
       GARDEN.nextSprout = now + 7000 + Math.random() * 8000;
     }
-    const sx = slimeStageX();
     const gathering = now < GARDEN.gatherUntil;
-    const slimeW = slimeBody ? slimeBody.getBoundingClientRect().width : 0;
     GARDEN.buddies.forEach((b) => {
       // bloom: leaf → bud → flower, pikmin-style maturity
       if (b.stage === 0 && now - b.born > 45000) pikSetStage(b, 1);
@@ -25826,7 +26385,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const list = WX_SFX[kind];
     if (!list || !liveOpen || !soundEnabled) { try { wxAudioEl.pause(); } catch (e) {} wxSfxKind = null; return; }
     const wxCoarse = window.matchMedia('(pointer: coarse)').matches; // phones: whisper, not noise
-    wxAudioEl.volume = (resolvedTheme() === 'dark' ? 0.06 : 0.13) * (wxCoarse ? 0.3 : 1) * (window.__vibeOn ? 0.15 : 1);
+    setMediaVolume(wxAudioEl, (resolvedTheme() === 'dark' ? 0.06 : 0.13) * (wxCoarse ? 0.3 : 1) * (window.__vibeOn ? 0.15 : 1));
     // same weather, still playing → volume refresh only. the 60s forecast
     // check used to reroll the track and restart it from zero every minute
     if (!(wxSfxKind === kind && !wxAudioEl.paused)) {
@@ -26058,7 +26617,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // the weather bed (headphones on = the geese respect the playlist)
     const peak = ((resolvedTheme() === 'dark') ? 0.07 : 0.55) * (window.__vibeOn ? 0.15 : 1);
     try { a.currentTime = startAt; } catch (e) { /* not seekable yet */ }
-    a.volume = 0;
+    setMediaVolume(a, 0);
     a.play().catch(() => { /* autoplay gate — geese stay polite */ });
     const t0 = Date.now();
     const FADE_IN = 4500;
@@ -26066,10 +26625,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const HOLD_END = Math.max(FADE_IN + 2000, TOTAL - 8000);
     gooseFadeTimer = setInterval(() => {
       const el = Date.now() - t0;
-      if (document.hidden || !document.hasFocus()) a.volume = 0; // away = silent
-      else if (el < FADE_IN) a.volume = peak * (el / FADE_IN);
-      else if (el < HOLD_END) a.volume = peak;
-      else a.volume = Math.max(0, peak * (1 - (el - HOLD_END) / (TOTAL - HOLD_END)));
+      if (document.hidden || !document.hasFocus()) setMediaVolume(a, 0); // away = silent
+      else if (el < FADE_IN) setMediaVolume(a, peak * (el / FADE_IN));
+      else if (el < HOLD_END) setMediaVolume(a, peak);
+      else setMediaVolume(a, Math.max(0, peak * (1 - (el - HOLD_END) / (TOTAL - HOLD_END))));
       if (el >= TOTAL) {
         clearInterval(gooseFadeTimer);
         gooseFadeTimer = null;
@@ -26117,6 +26676,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function spawnGeese() {
     if (!liveStage || !liveOpen) return;
+    if (dreamWorld) return; // dreams have their own sky — the geese (and their honks) stand down with the rest of the weather
     if (['rain', 'snow', 'thunder'].indexOf(wxCurrent) !== -1) return; // geese have standards
     const flock = document.createElement('div');
     flock.className = 'wx-geese';
@@ -27199,6 +27759,20 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => { if (typeof gFitCanvas === 'function') gFitCanvas(); }, 120);
       }
     }
+    // ...and rotating BACK to portrait must re-lock landscape. otherwise
+    // gameFitBig re-runs and the phone-sheet CSS pins the window at
+    // left:50% with no centering transform — its ✕/minimize buttons end up
+    // shoved off the right edge, unreachable. re-lock instantly (no 3-2-1;
+    // the visitor already sat through it once), and never while the initial
+    // countdown overlay is still on screen.
+    else if (!gameRotated && gameNeedsRotate() && !document.getElementById('rotate-cd')) {
+      const w = document.getElementById('win-game');
+      if (w && w.classList.contains('window-game-big') && !w.classList.contains('window-closed')) {
+        gameRotated = true;
+        w.classList.add('game-rotated');
+        setTimeout(() => { if (typeof gFitCanvas === 'function') gFitCanvas(); }, 120);
+      }
+    }
   });
 
   /* ---------- the Y2K handheld console ----------
@@ -27866,12 +28440,37 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
       if (GAME.state === 'over' && !GAME.adUsed && !GAME.event) {
-        // tapping the ad-offer line starts the ad; anywhere else retries
+        // tapping the ad-offer line starts the ad; anywhere else retries.
+        // the chip renders ~14 CSS-px tall on a phone, so a coarse pointer
+        // gets a much taller band — a thumb-miss there permanently forfeits
+        // the one-shot revive, which is a lousy way to lose it.
         const r = gCanvas.getBoundingClientRect();
         const ly = (e.clientY - r.top) * (G_H / r.height);
-        if (ly > 74 && ly < 96) { gAdStart(); return; }
+        const coarse = window.matchMedia('(pointer: coarse)').matches;
+        if (coarse ? (ly > 58 && ly < 112) : (ly > 74 && ly < 96)) { gAdStart(); return; }
+      }
+      // nightmare arena has no keyboard on a phone: the canvas itself steers.
+      // tap the left/right third to nudge 16px (mirrors WASD); middle taps jump.
+      // a drag (see pointermove) chases your finger so touch players can RAM the
+      // weak heart and dodge instead of being pinned at x=46.
+      if (GAME.nm && GAME.state === 'run') {
+        const r = gCanvas.getBoundingClientRect();
+        const tx = (e.clientX - r.left) * (G_W / r.width);
+        if (tx < G_W / 3) { GAME.nmPx = Math.max(14, GAME.nmPx - 16); return; }
+        if (tx > (G_W * 2) / 3) { GAME.nmPx = Math.min(G_W - 60, GAME.nmPx + 16); return; }
+        gJump(); return; // middle third leaps
       }
       gJump();
+    });
+    // drag-steer for the nightmare on touch (or mouse-held): the slime chases
+    // the finger horizontally so ramming the weak heart is actually reachable
+    gCanvas.addEventListener('pointermove', (e) => {
+      if (!GAME.nm || GAME.state !== 'run' || GAME.event) return;
+      if (!(e.buttons & 1)) return; // only while held / mid-drag
+      e.preventDefault();
+      const r = gCanvas.getBoundingClientRect();
+      const tx = (e.clientX - r.left) * (G_W / r.width) - G_SLIME_S / 2;
+      GAME.nmPx = Math.max(14, Math.min(G_W - 60, tx));
     });
     gCanvas.addEventListener('blur', () => gCanvas.classList.remove('ring-on'));
     // the ring lights up ONLY when Tab genuinely lands focus on the canvas
@@ -28216,9 +28815,11 @@ document.addEventListener('DOMContentLoaded', () => {
      so 50 hues + 22 species really can occupy all 72 slots. */
   function pikRollSprout() {
     const dex = pikdexGet();
-    const nonCh = dex.filter((p) => !p.ch).length;
     const hasCh = dex.some((p) => p.ch);
-    const complete = nonCh >= PIKDEX_CAP;
+    // fullness = distinct KIND count, matching every other check (the dup gate,
+    // the endless-meadow / TRUE COLOR gates). counting raw non-chameleon
+    // ENTRIES flipped completion early on saves holding duplicate-kind pikmin.
+    const complete = pikdexKindCount(dex) >= PIKDEX_CAP;
     // the chameleon lives outside the 72 — post-completion it gets generous
     if (!hasCh && Math.random() < (complete ? 0.06 : 0.01)) return { type: 'chameleon' };
     if (complete) {
@@ -28286,12 +28887,21 @@ document.addEventListener('DOMContentLoaded', () => {
   function pikCountTotal() { const c = pikCounts(); let t = 0; Object.keys(c).forEach((k) => { t += c[k] || 0; }); return t; }
   const PIKLB_TIERS = [10, 30, 72, 100, 140, 200, 300];
   function pikLbTier(total) { let ix = 0; PIKLB_TIERS.forEach((t, i) => { if (total >= t) ix = i + 1; }); return ix; }
+  var pikLbInflight = {};
   function pikLbMaybeHit() {
     const tier = pikLbTier(pikCountTotal());
     const sent = store.get('yos-piklb-sent', 0);
     if (tier > sent && navigator.onLine) {
-      store.set('yos-piklb-sent', tier);
-      for (let i = sent + 1; i <= tier; i++) fetch(`${ACHV_API}/hit/${ACHV_NS}/piklb-t${i}`).catch(() => {});
+      // the mark advances only when the abacus ANSWERS: a hit lost mid-flight
+      // retries on the next pluck instead of ghosting the gardener forever
+      for (let i = sent + 1; i <= tier; i++) {
+        if (pikLbInflight[i]) continue; // one balloon per tier per flight
+        pikLbInflight[i] = true;
+        fetch(`${ACHV_API}/hit/${ACHV_NS}/piklb-t${i}`)
+          .then((r) => { if (r.ok) store.set('yos-piklb-sent', Math.max(store.get('yos-piklb-sent', 0), i)); })
+          .catch(() => {})
+          .then(() => { delete pikLbInflight[i]; });
+      }
     }
   }
   function pikEvolveCelebrate(entry, key, form) {
@@ -30572,25 +31182,51 @@ document.addEventListener('DOMContentLoaded', () => {
     for (let i = uid.length - 1; i >= 0; i--) v = v * 31 + Math.max(0, WATCH_ABC.indexOf(uid[i]));
     return v + 1;
   }
+  // PAIRED must be EARNED: /set only proves the cloud took dictation — a
+  // typo'd code writes into the void. the watch waves back by /hit-ing the
+  // pin (+1) the moment it adopts, and THAT is what we poll for here.
+  function watchAckPoll(pin, above, tries) {
+    return cloudGet(`wpair-${pin}`).then((cur) => {
+      if (cur > above) return true;
+      if (tries <= 1) return false;
+      return new Promise((ok) => setTimeout(ok, 2600)).then(() => watchAckPoll(pin, above, tries - 1));
+    });
+  }
   function watchPair(pin) {
     pin = String(pin || '').replace(/\D/g, '').slice(0, 4);
     if (pin.length !== 4) return Promise.resolve('badpin');
     return cloudEnsure().then((cs) => {
       if (!cs) return 'nocloud';
       const v = watchUidToNum(cs.uid);
-      // v86: go through cloudKeyFor — it CACHES the counter's admin key,
-      // so re-pairing with a pin this browser already burned still works
-      // (the old direct-create path failed with 'taken' on every retry)
-      return cloudKeyFor(`wpair-${pin}`)
-        .then((key) => fetch(`${ACHV_API}/set/${ACHV_NS}/wpair-${pin}?value=${v}`, { method: 'POST', headers: { Authorization: `Bearer ${key}` } }))
-        .then((r) => {
-          if (!r.ok) throw new Error('set failed');
-          store.set('yos-watch-paired', Date.now());
-          achvUnlock('wristslime');
-          watchPullArm();
-          return 'ok';
-        })
-        .catch(() => 'taken'); // someone else's stale pin squats that counter — new code, please
+      const finish = () => { store.set('yos-watch-paired', Date.now()); achvUnlock('wristslime'); watchPullArm(); };
+      return cloudGet(`wpair-${pin}`).then((pre) => {
+        // exactly v+1 on the counter = a watch already adopted THIS save's
+        // code (our value + its ack). re-typing the code must not stomp the
+        // ack back to v and then wait forever for a wave that already came.
+        if (pre === v + 1) { finish(); return 'ok'; }
+        // v86: go through cloudKeyFor — it CACHES the counter's admin key,
+        // so re-pairing with a pin this browser already burned still works
+        // (the old direct-create path failed with 'taken' on every retry)
+        return cloudKeyFor(`wpair-${pin}`)
+          .then((key) => fetch(`${ACHV_API}/set/${ACHV_NS}/wpair-${pin}?value=${v}`, { method: 'POST', headers: { Authorization: `Bearer ${key}` } }))
+          .then((r) => {
+            if (!r.ok) throw new Error('set failed');
+            return watchAckPoll(pin, v, 9).then((acked) => {
+              if (acked) { finish(); return 'ok'; }
+              // no wave yet — wrist screens sleep hard. keep one patient ear
+              // open (~2 more minutes) and only celebrate when it's real.
+              watchAckPoll(pin, v, 45).then((late) => {
+                if (!late || store.get('yos-watch-paired', 0)) return;
+                finish();
+                showToast(trT('⌚ the watch waved back — PAIRED for real ♡', '⌚ la montre a fait signe — APPAIRÉE pour de vrai ♡'));
+              });
+              return 'sent';
+            });
+          })
+          // only a real 409 means a stranger's pin squats that counter —
+          // network/5xx hiccups read as 'try again', never 'code burned'
+          .catch((e) => (e && e.exists ? 'taken' : 'nocloud'));
+      });
     });
   }
   function watchPanelOpen() { openWindow('win-watch'); } // the panel grew up into a desktop app
@@ -30677,6 +31313,7 @@ document.addEventListener('DOMContentLoaded', () => {
       watchPair(inp.value).then((res) => {
         btn.disabled = false;
         if (res === 'ok') { status.textContent = trT('⌚ PAIRED!! the device that showed the code just BECAME your wrist slime — keep it open, pet it, pluck it ♡', '⌚ APPAIRÉE !! l\'appareil qui affichait le code vient de DEVENIR ton slime de poignet — garde-le ouvert, caresse-le ♡'); playFanfare(); setTimeout(renderWatchWin, 2000); }
+        else if (res === 'sent') status.textContent = trT('⌚ code sent — the watch hasn\'t waved back yet. if it doesn\'t splash PAIRED, double-check the digits (i\'ll keep an ear out for ~2 min ♡)', '⌚ code envoyé — la montre n\'a pas encore fait signe. si PAIRED n\'apparaît pas, revérifie les chiffres (je garde une oreille ouverte ~2 min ♡)');
         else if (res === 'badpin') status.textContent = trT('that needs to be 4 digits', 'il faut 4 chiffres');
         else if (res === 'taken') status.textContent = trT('code collision (rare!!) — tap the watch for a fresh code and retry', 'collision de code (rare !!) — nouveau code sur la montre et réessaie');
         else status.textContent = trT('cloud unreachable — try again in a moment', 'cloud injoignable — réessaie dans un instant');
@@ -30708,10 +31345,19 @@ document.addEventListener('DOMContentLoaded', () => {
   var watchPullBusy = false;
   function watchPullSync() {
     if (watchPullBusy || !navigator.onLine || !cloudSlot || !store.get('yos-watch-paired', 0)) return;
+    // cross-tab lock: watchPullBusy only guards THIS tab — two tabs of the
+    // same save reading the ledger in the same breath each granted the same
+    // plucks twice. localStorage has no compare-and-swap, so a same-instant
+    // tie is still possible, but the window shrinks from a minute to a blink.
+    if (Date.now() - store.get('yos-wpull-lock', 0) < 30000) return;
+    store.set('yos-wpull-lock', Date.now());
     watchPullBusy = true;
     const u = cloudSlot.uid;
-    Promise.all([cloudGet(`sv2-${u}-wgp`), cloudGet(`sv2-${u}-wgs`), cloudGet(`sv2-${u}-wpt`), cloudGet(`sv2-${u}-wps`)])
+    Promise.all([cloudGet(`sv2-${u}-wgp`, true), cloudGet(`sv2-${u}-wgs`, true), cloudGet(`sv2-${u}-wpt`, true), cloudGet(`sv2-${u}-wps`, true)])
       .then(([wgp, wgs, wpt, wps]) => {
+        // any failed read ABORTS the pull: a wgs/wps that "reads" 0 on a
+        // freshly re-paired device would replay all consumed history as new
+        if (wgp === null || wgs === null || wpt === null || wps === null) return;
         const seenP = Math.max(store.get('yos-wgp-seen', 0), wgs || 0);
         const deltaP = Math.max(0, (wgp || 0) - seenP);
         const newPlucks = Math.min(deltaP, 12);
@@ -30727,7 +31373,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!roll) break;
             const sp = roll.type === 'hidden' ? roll.sp : null;
             const hue = roll.type === 'normal' ? roll.hue : 5 + Math.floor(Math.random() * 355);
-            pikdexAdd({ h: hue, ch: roll.type === 'chameleon' ? 1 : 0, s: 0, k: PIK_SKILLS[Math.floor(Math.random() * PIK_SKILLS.length)].id, sp: sp ? sp.id : null });
+            const verdict = pikdexAdd({ h: hue, ch: roll.type === 'chameleon' ? 1 : 0, s: 0, k: PIK_SKILLS[Math.floor(Math.random() * PIK_SKILLS.length)].id, sp: sp ? sp.id : null });
+            // a wrist pull is still a pull: without the badge firing here,
+            // hasCh walls off The Impossible Shade on every meadow forever
+            if (verdict !== 'dup' && roll.type === 'chameleon') { achvUnlock('chameleon'); chameleonCelebrate(); }
+            else if (verdict !== 'dup' && sp) pikHiddenCelebrate(sp);
             added++;
           }
           achvUnlock('wristfarmer');
