@@ -14221,7 +14221,7 @@ document.addEventListener('DOMContentLoaded', () => {
       try {
         im.src = cast.kind === 'slime'
           ? ((OUTFIT_FRAMES && typeof OUTFIT_FRAMES.base === 'string' && OUTFIT_FRAMES.base) || 'assets/slime_pet_cutout.png')
-          : pikSprite(hueColor(cast.hue), 2, null, false, (typeof pikFormOfKind === 'function' && typeof pikSegOfHue === 'function') ? pikFormOfKind('w:' + pikSegOfHue(cast.hue)) : 1);
+          : pikSprite(hueColor(cast.hue), 2, null, false, (typeof pikFormOfKind === 'function' && typeof pikSegOfHue === 'function') ? pikFormOfKind('w:' + pikSegOfHue(cast.hue)) : 1, (typeof pikSegOfHue === 'function') ? 'w:' + pikSegOfHue(cast.hue) : '');
       } catch (e) { spriteOk = false; ava.textContent = pi === 2 ? '🍮' : '🌸'; }
       if (spriteOk) ava.appendChild(im);
       const label = document.createElement('small');
@@ -22847,7 +22847,7 @@ document.addEventListener('DOMContentLoaded', () => {
         do { c = Math.floor(Math.random() * 16); } while (takenCells.has(c));
         takenCells.add(c);
         const p = cast.length ? cast[i % cast.length] : null;
-        piks.push({ cell: c, caught: false, src: p ? pikSprite(pikEntryColor(p), p.s || 0, p.sp || null, false, typeof pikFormOf === 'function' ? pikFormOf(p) : 1) : pikSprite(hueColor(Math.floor(Math.random() * 360)), 1, null) });
+        piks.push({ cell: c, caught: false, src: p ? pikSprite(pikEntryColor(p), p.s || 0, p.sp || null, false, typeof pikFormOf === 'function' ? pikFormOf(p) : 1, pikKindKey(p)) : pikSprite(hueColor(Math.floor(Math.random() * 360)), 1, null) });
       }
       const draw = () => {
         cells.forEach((cell, ci) => {
@@ -23135,7 +23135,7 @@ document.addEventListener('DOMContentLoaded', () => {
     bars.className = 'nm-cage-bars';
     bars.textContent = '▮▮▮▮▮';
     const img = document.createElement('img');
-    img.src = pikSprite(pikEntryColor(p), p.s || 0, p.sp || null, false, typeof pikFormOf === 'function' ? pikFormOf(p) : 1);
+    img.src = pikSprite(pikEntryColor(p), p.s || 0, p.sp || null, false, typeof pikFormOf === 'function' ? pikFormOf(p) : 1, pikKindKey(p));
     img.alt = '';
     cage.append(img, bars);
     let hits = 0;
@@ -27005,9 +27005,10 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
-  function pikSprite(color, stage, spId, silhouette, form) {
+  function pikSprite(color, stage, spId, silhouette, form, kk) {
     form = form && form > 1 ? form : 1;
-    const key = color.body + '/' + stage + '/' + (spId || '') + '/' + (silhouette ? 1 : 0) + '/' + form;
+    const kind = form >= 2 ? (kk || (spId ? 's:' + spId : 'w:' + pikSegOfHue(pikHueFromColor(color)))) : '';
+    const key = color.body + '/' + stage + '/' + (spId || '') + '/' + (silhouette ? 1 : 0) + '/' + form + '/' + kind;
     if (pikSpriteCache[key]) return pikSpriteCache[key];
     let rows;
     if (spId && PIK_SPECIES_TPLS[spId]) {
@@ -27018,8 +27019,11 @@ document.addEventListener('DOMContentLoaded', () => {
       const plant = PIK_PLANT_TPLS[(h * 13) % PIK_PLANT_TPLS.length][Math.min(stage || 0, 2)];
       rows = plant.concat(body);
     }
+    // evolved sprites get a 3px stage apron: horns, wings, halos and tails
+    // need room OUTSIDE the template (v160 — every kind evolves its own way)
+    const pad = (!silhouette && form >= 2) ? 3 : 0;
     const c = document.createElement('canvas');
-    c.width = rows[0].length; c.height = rows.length;
+    c.width = rows[0].length + pad * 2; c.height = rows.length + pad + (pad ? 1 : 0);
     const x = c.getContext('2d');
     const pal = silhouette ? PIK_SIL_COLORS : {
       B: color.body, D: color.dark,
@@ -27027,87 +27031,281 @@ document.addEventListener('DOMContentLoaded', () => {
       e: '#14020e', u: 'rgba(255,120,180,0.65)',
       S: '#57c689', L: '#7ddba4', Y: '#ffd400', P: '#ff8fc7'
     };
+    x.save();
+    x.translate(pad, pad);
     pikDrawTpl(x, rows, pal);
-    if (!silhouette && form >= 2) pikDrawForm(x, rows, form);
+    if (!silhouette && form >= 2) pikDrawForm(x, rows, form, kind, color);
+    x.restore();
     pikSpriteCache[key] = c.toDataURL();
     return pikSpriteCache[key];
   }
-  // v159: evolution as CHARACTER DEVELOPMENT (owner decree — gold alone
-  // was boring). the forms tell a career:
-  //   ★★  NERD GLASSES 🤓 — it read the documentation. ALL of it.
-  //   ★★★ THE GREYBEARD 🧙 — moustache + full beard + golden aura. it
-  //        maintains a package nobody dares fork.
-  // both are drawn ALGORITHMICALLY: the glasses anchor on the template's
-  // 'e' (eye) pixels and the beard on its 'm' (mouth) pixels, so all 35
-  // head-plants × 8 bodies × 22 hidden species get fitted automatically
-  function pikDrawForm(x, rows, form) {
+  /* =================================================================
+     v160 (owner decree): EVERY KIND EVOLVES ITS OWN WAY. no uniforms.
+     - 50 hue kinds draw from a 12-archetype wardrobe (horns, wings,
+       halo, antennae, third eye, mohawk, tail, fangs, cape, crown,
+       flame hair, stardust) — seg picks the archetype, the kind's own
+       colors tint it, ★★ is the mild cut and APEX the epic one
+     - all 22 hidden species get HAND-FITTED evolutions that amplify
+       their one joke (Low Batt finds a charger. Overclock catches fire.)
+     - the chameleon refuses gold entirely: APEX = full rainbow rim
+     ================================================================= */
+  const PIK_EVO_LORE = [
+    ['MERGE HORNS — survived a rebase onto main', 'CORNES DE MERGE — a survécu à un rebase sur main', 'APEX WARHORNS — force-pushes with consent', 'CORNES DE GUERRE APEX — force-push consenti'],
+    ['CANARY WINGS — deploys on fridays, unafraid', 'AILES CANARI — déploie le vendredi, sans peur', 'APEX WINGSPAN — production holds its breath', 'ENVERGURE APEX — la prod retient son souffle'],
+    ['UPTIME HALO — 99.9% holy', 'AURÉOLE D\'UPTIME — sacré à 99,9 %', 'FIVE-NINES HALO — 99.999% divine', 'AURÉOLE CINQ-NEUFS — divin à 99,999 %'],
+    ['FULL-BARS ANTENNAE — it hears the wifi', 'ANTENNES PLEINES BARRES — il entend le wifi', 'APEX ARRAY — it IS the router now', 'RÉSEAU APEX — c\'est LUI le routeur maintenant'],
+    ['THIRD EYE — sees the bug before it\'s written', 'TROISIÈME ŒIL — voit le bug avant qu\'il soit écrit', 'ALL-SEEING BUILD — reviews code by staring', 'BUILD OMNISCIENT — review le code du regard'],
+    ['ROOT MOHAWK — has sudo at home', 'CRÊTE ROOT — a sudo à la maison', 'KERNEL CREST — the mohawk runs ring 0', 'CRÊTE NOYAU — la crête tourne en ring 0'],
+    ['DAEMON TAIL — runs in the background', 'QUEUE DAEMON — tourne en arrière-plan', 'APEX PROCESS — cannot be killed, only loved', 'PROCESSUS APEX — intuable, seulement aimable'],
+    ['DEBUG FANGS — bites exactly one bug at a time', 'CROCS DE DEBUG — croque un bug à la fois', 'APEX PREDATOR — the bugs filed a restraining order', 'PRÉDATEUR APEX — les bugs ont porté plainte'],
+    ['HOTFIX CAPE — arrives at 3am', 'CAPE HOTFIX — arrive à 3 h du matin', 'APEX CAPE — the pager fears IT now', 'CAPE APEX — c\'est le bipeur qui a peur maintenant'],
+    ['MONOREPO CROWN — rules three packages', 'COURONNE MONOREPO — règne sur trois paquets', 'APEX SOVEREIGN — all dependencies bow', 'SOUVERAIN APEX — toutes les dépendances s\'inclinent'],
+    ['PROD-FIRE HAIR — fixed it live', 'CHEVEUX FEU-DE-PROD — réparé en direct', 'APEX INFERNO — this is fine. it really is', 'BRASIER APEX — tout va bien. vraiment'],
+    ['STARDUST BUILD — compiles with zero warnings', 'BUILD POUSSIÈRE D\'ÉTOILES — compile sans warnings', 'APEX CONSTELLATION — the linter applauds', 'CONSTELLATION APEX — le linter applaudit'],
+    ['CONFERENCE BOWTIE — has spoken at three meetups', 'NŒUD PAP DE CONF — a parlé à trois meetups', 'KEYNOTE BOWTIE — the wifi password is named after it', 'NŒUD PAP KEYNOTE — le mot de passe wifi porte son nom']
+  ];
+  const PIK_EVO_SP_LORE = {
+    glitch: ['the render error is SPREADING', 'l\'erreur de rendu se PROPAGE'],
+    matrix: ['the green rain follows it home', 'la pluie verte le suit jusque chez lui'],
+    pointer: ['it multiplied. do not double-click it', 'il s\'est multiplié. ne double-cliquez pas dessus'],
+    wifi: ['signal upgraded: it gets bars in the basement', 'signal amélioré : il capte à la cave'],
+    lowbatt: ['IT FOUND A CHARGER. everything changes', 'IL A TROUVÉ UN CHARGEUR. tout change'],
+    post: ['one beep became a melody. all is VERY well', 'un bip est devenu mélodie. tout va TRÈS bien'],
+    cumulus: ['local sky now includes weather', 'le ciel local inclut désormais la météo'],
+    feature: ['it\'s TWO features now. still not a bug', 'c\'est DEUX fonctionnalités maintenant. toujours pas un bug'],
+    latency: ['it arrives with its own echo… eventually', 'il arrive avec son propre écho… éventuellement'],
+    aliased: ['the resolution went DOWN. confidence went UP', 'la résolution a BAISSÉ. la confiance a MONTÉ'],
+    darkmode: ['it brought its own night', 'il a apporté sa propre nuit'],
+    gilded: ['gold master, now with MORE gold', 'version or, avec ENCORE plus d\'or'],
+    cacheghost: ['cleared twice. returned twice. now it levitates', 'vidé deux fois. revenu deux fois. maintenant il lévite'],
+    cronjob: ['it grew a bell. every minute, LOUDLY', 'il a poussé une cloche. chaque minute, FORT'],
+    y2kbug: ['partying like it\'s 19100, professionally', 'fait la fête comme en 19100, professionnellement'],
+    bitflip: ['half of it flipped. the other half is thinking about it', 'sa moitié a basculé. l\'autre y réfléchit'],
+    turbo: ['the warranty is EXTREMELY void', 'la garantie est EXTRÊMEMENT annulée'],
+    dotmatrix: ['it prints its own hi-scores now', 'il imprime ses propres records maintenant'],
+    bsodjr: ['it collects crash reports AND frames them', 'il collectionne les rapports de plantage ET les encadre'],
+    rgbrig: ['the FPS are still cosmetic. the GLOW is real', 'les FPS restent cosmétiques. le HALO est réel'],
+    captcha: ['it is DEFINITELY not a robot (verified twice)', 'il n\'est VRAIMENT pas un robot (vérifié deux fois)'],
+    kernelpg: ['it\'s free, it\'s open, it has FLIPPERS', 'il est libre, il est ouvert, il a des NAGEOIRES']
+  };
+  function pikEvoLore(kk, form) {
+    if (kk === 'ch') return trT(form >= 3 ? 'PRISM FORM — it chose ALL the colors' : 'DOUBLE RAINBOW — twice the indecision', form >= 3 ? 'FORME PRISME — il a choisi TOUTES les couleurs' : 'DOUBLE ARC-EN-CIEL — deux fois plus d\'indécision');
+    if (kk && kk[0] === 's') {
+      const l = PIK_EVO_SP_LORE[kk.slice(2)];
+      return l ? trT(...l) : trT('its legend grows', 'sa légende grandit');
+    }
+    const seg = parseInt((kk || 'w:0').slice(2), 10) || 0;
+    const L = PIK_EVO_LORE[seg % PIK_EVO_LORE.length];
+    return form >= 3 ? trT(L[2], L[3]) : trT(L[0], L[1]);
+  }
+  function pikDrawForm(x, rows, form, kind, color) {
     const w = rows[0].length, h = rows.length;
     const solid = (rx, ry) => ry >= 0 && ry < h && rx >= 0 && rx < w && rows[ry][rx] !== '.';
-    const at = (ch) => { const out = []; for (let ry = 0; ry < h; ry++) for (let rx = 0; rx < w; rx++) if (rows[ry][rx] === ch) out.push([rx, ry]); return out; };
-    const eyes = at('e');
-    let eyeRow, exL, exR;
-    if (eyes.length) {
-      eyeRow = Math.min(...eyes.map((p) => p[1]));
-      const xs = eyes.filter((p) => p[1] === eyeRow).map((p) => p[0]);
-      exL = Math.min(...xs); exR = Math.max(...xs);
-    } else { eyeRow = h - 6; exL = Math.floor(w / 2) - 2; exR = Math.floor(w / 2) + 2; }
-    if (form >= 3) {
-      // the APEX aura — seniority glows even from behind the beard
-      x.fillStyle = '#ffd400';
-      for (let ry = Math.max(0, h - 9); ry < h; ry++) {
-        for (let rx = 0; rx < w; rx++) {
-          if (!solid(rx, ry)) continue;
-          if (!solid(rx - 1, ry) || !solid(rx + 1, ry) || !solid(rx, ry + 1) || !solid(rx, ry - 1)) x.fillRect(rx, ry, 1, 1);
-        }
-      }
-    }
-    // ★★ the NERD GLASSES: square frames around each eye (the eye itself
-    // stays visible), a bridge, little temple arms, one proud glint
-    const FRAME = '#221a30';
-    x.fillStyle = FRAME;
-    [exL, exR].forEach((ex) => {
-      for (let dx = -1; dx <= 1; dx++) {
-        for (let dy = -1; dy <= 1; dy++) {
-          if (dx === 0 && dy === 0) continue;
-          const px = ex + dx, py = eyeRow + dy;
-          if (px >= 0 && px < w && py >= 0 && py < h && rows[py][px] !== 'e') x.fillRect(px, py, 1, 1);
-        }
-      }
-    });
-    if (exR - exL >= 4) for (let px = exL + 2; px <= exR - 2; px++) { if (rows[eyeRow][px] !== 'e') x.fillRect(px, eyeRow, 1, 1); }
-    if (exL - 2 >= 0) x.fillRect(exL - 2, eyeRow, 1, 1); // temple arms
-    if (exR + 2 < w) x.fillRect(exR + 2, eyeRow, 1, 1);
-    x.fillStyle = '#ffffff';
-    if (exR + 1 < w && eyeRow - 1 >= 0) x.fillRect(exR + 1, eyeRow - 1, 1, 1); // the glint of knowledge
-    if (form < 3) return;
-    // ★★★ the GREYBEARD: moustache wings + full beard with a jagged hem.
-    // the mouth keeps breathing through it (important for code review)
-    const mouths = at('m');
-    const mTop = mouths.length ? Math.min(...mouths.map((p) => p[1])) : eyeRow + 3;
-    const mBot = mouths.length ? Math.max(...mouths.map((p) => p[1])) : eyeRow + 3;
-    const bl = Math.max(0, exL - 1), br = Math.min(w - 1, exR + 1);
-    const hem = Math.min(h - 2, mBot + 2);
-    x.fillStyle = '#f0edf8';
-    for (let ry = mTop; ry <= hem; ry++) {
-      for (let rx = bl; rx <= br; rx++) {
+    const px = (rx, ry, col) => { x.fillStyle = col; x.fillRect(rx, ry, 1, 1); };
+    const bodyTop = h - 9;                 // first body row (plant above)
+    const cx = Math.floor(w / 2);
+    const epic = form >= 3;
+    const dark = color.dark || '#5a3d6e';
+    // find left/right silhouette edges at a body row (for side-mounted gear)
+    const edgeL = (ry) => { for (let rx = 0; rx < w; rx++) if (solid(rx, ry)) return rx; return 0; };
+    const edgeR = (ry) => { for (let rx = w - 1; rx >= 0; rx--) if (solid(rx, ry)) return rx; return w - 1; };
+    const rim = (col) => {
+      for (let ry = Math.max(0, bodyTop); ry < h; ry++) for (let rx = 0; rx < w; rx++) {
         if (!solid(rx, ry)) continue;
-        if (rows[ry][rx] === 'm') continue;
-        if (ry === hem && (rx + ry) % 2 === 0) continue; // jagged hem — beards are not rectangles
-        x.fillRect(rx, ry, 1, 1);
+        if (!solid(rx - 1, ry) || !solid(rx + 1, ry) || !solid(rx, ry + 1) || !solid(rx, ry - 1)) px(rx, ry, typeof col === 'function' ? col(rx, ry) : col);
       }
+    };
+    /* ---- the twelve archetypes (hue kinds) ---- */
+    const ARCH = [
+      function horns() { // merge horns
+        const yT = bodyTop, l = edgeL(yT) + 1, r = edgeR(yT) - 1;
+        px(l, yT - 1, dark); px(r, yT - 1, dark);
+        if (epic) { px(l - 1, yT - 2, dark); px(r + 1, yT - 2, dark); px(l - 1, yT - 3, '#ffd400'); px(r + 1, yT - 3, '#ffd400'); }
+      },
+      function wings() { // canary wings
+        const yM = bodyTop + 3, l = edgeL(yM), r = edgeR(yM);
+        [0, 1].forEach((k) => { px(l - 1 - k, yM - k, '#ffffff'); px(r + 1 + k, yM - k, '#ffffff'); });
+        if (epic) [0, 1, 2].forEach((k) => { px(l - 1 - k, yM + 1, '#fff6c9'); px(r + 1 + k, yM + 1, '#fff6c9'); px(l - 2, yM - 2, '#ffd400'); px(r + 2, yM - 2, '#ffd400'); });
+      },
+      function halo() { // uptime halo
+        const yH = -2;
+        [cx - 1, cx, cx + 1].forEach((rx) => px(rx, yH, '#ffd400'));
+        if (epic) { px(cx - 2, yH + 1, '#ffd400'); px(cx + 2, yH + 1, '#ffd400'); px(cx, yH - 1, '#fff6c9'); }
+      },
+      function antennae() { // full bars
+        px(cx - 3, -1, dark); px(cx - 3, -2, '#7cfc00'); px(cx + 3, -1, dark); px(cx + 3, -2, '#7cfc00');
+        if (epic) { px(cx, -2, dark); px(cx, -3, '#7cfc00'); px(cx - 4, -3, 'rgba(124,252,0,0.6)'); px(cx + 4, -3, 'rgba(124,252,0,0.6)'); }
+      },
+      function thirdEye() { // sees the bug coming
+        px(cx, bodyTop + 1, '#14020e');
+        if (epic) { px(cx, bodyTop, '#ffd400'); px(cx - 1, bodyTop + 1, 'rgba(255,212,0,0.5)'); px(cx + 1, bodyTop + 1, 'rgba(255,212,0,0.5)'); }
+      },
+      function mohawk() { // root mohawk
+        [cx - 1, cx + 1].forEach((rx) => px(rx, bodyTop - 1, dark));
+        px(cx, bodyTop - 2, dark);
+        if (epic) { px(cx - 2, bodyTop - 1, '#ff4d6d'); px(cx + 2, bodyTop - 1, '#ff4d6d'); px(cx, bodyTop - 3, '#ff4d6d'); }
+      },
+      function tail() { // daemon tail
+        const yB = h - 3, r = edgeR(yB);
+        px(r + 1, yB, dark); px(r + 2, yB - 1, dark);
+        if (epic) { px(r + 2, yB - 2, dark); px(r + 3, yB - 3, '#ffd400'); }
+      },
+      function fangs() { // debug fangs
+        const yF = h - 4;
+        px(cx - 1, yF, '#ffffff'); px(cx + 1, yF, '#ffffff');
+        if (epic) { px(cx - 1, yF + 1, '#ffffff'); px(cx + 1, yF + 1, '#ffffff'); px(cx - 2, yF - 1, '#ff4d6d'); }
+      },
+      function cape() { // hotfix cape
+        const yM = bodyTop + 2;
+        [0, 1, 2, 3].forEach((k) => { px(edgeL(yM + k) - 1, yM + k, '#ff4d6d'); px(edgeR(yM + k) + 1, yM + k, '#ff4d6d'); });
+        if (epic) { px(cx, bodyTop, '#ffd400'); [4, 5].forEach((k) => { px(edgeL(yM + k) - 1, yM + k, '#c9184a'); px(edgeR(yM + k) + 1, yM + k, '#c9184a'); }); }
+      },
+      function crown() { // monorepo crown
+        const yT = bodyTop - 1;
+        [cx - 2, cx, cx + 2].forEach((rx) => px(rx, yT, '#ffd400'));
+        [cx - 1, cx + 1].forEach((rx) => px(rx, yT + 1, '#ffd400'));
+        if (epic) { px(cx, yT - 1, '#ff4d6d'); px(cx - 2, yT - 1, '#41e0ff'); px(cx + 2, yT - 1, '#41e0ff'); }
+      },
+      function flameHair() { // prod fire
+        [cx - 2, cx + 2].forEach((rx) => px(rx, bodyTop - 1, '#ff8a5c'));
+        px(cx - 1, bodyTop - 2, '#ffd400'); px(cx + 1, bodyTop - 2, '#ffd400');
+        if (epic) { px(cx, bodyTop - 3, '#ff4d1f'); px(cx - 3, bodyTop - 2, '#ff8a5c'); px(cx + 3, bodyTop - 2, '#ff8a5c'); }
+      },
+      function stardust() { // zero warnings
+        px(edgeL(bodyTop + 2) - 2, bodyTop + 1, '#fff6c9'); px(edgeR(bodyTop + 2) + 2, bodyTop + 3, '#fff6c9');
+        px(cx + 3, -1, '#ffd400');
+        if (epic) { px(cx - 3, -2, '#ffd400'); px(edgeR(bodyTop + 4) + 2, bodyTop - 1, '#fff6c9'); px(edgeL(bodyTop + 4) - 2, bodyTop + 4, '#ffd400'); }
+      },
+      function bowtie() { // conference speaker
+        const yB = h - 4;
+        px(cx - 1, yB, '#ff4d6d'); px(cx + 1, yB, '#ff4d6d'); px(cx, yB, '#c9184a');
+        if (epic) { px(cx - 2, yB, '#ff4d6d'); px(cx + 2, yB, '#ff4d6d'); px(cx, yB - 1, '#ffd400'); }
+      }
+    ];
+    /* ---- hand-fitted species evolutions (amplify the one joke) ---- */
+    const SP = {
+      glitch() { // rgb split creeps outward
+        const l = edgeL(bodyTop + 3), r = edgeR(bodyTop + 3);
+        px(l - 1, bodyTop + 3, '#ff2fae'); px(r + 1, bodyTop + 3, '#41e0ff');
+        px(l - 1, bodyTop + 5, '#41e0ff'); px(r + 1, bodyTop + 5, '#ff2fae');
+        if (epic) { px(l - 2, bodyTop + 4, '#ff2fae'); px(r + 2, bodyTop + 4, '#41e0ff'); rim((rx) => (rx % 2 ? '#ff2fae' : '#41e0ff')); }
+      },
+      matrix() { // code rain drips off it
+        [-1, 1].forEach((k) => { px(cx + k * 3, h, '#2ea043'); });
+        px(cx, h, '#7ee787');
+        if (epic) { px(cx - 2, h, '#7ee787'); px(cx + 2, h, '#2ea043'); rim('#2ea043'); }
+      },
+      pointer() { // it multiplied
+        const r = edgeR(bodyTop + 1);
+        px(r + 2, bodyTop - 1, '#ffffff'); px(r + 2, bodyTop, '#ffffff'); px(r + 3, bodyTop, '#9aa0b4');
+        if (epic) { const l = edgeL(bodyTop + 1); px(l - 2, bodyTop - 2, '#ffffff'); px(l - 2, bodyTop - 1, '#ffffff'); px(l - 3, bodyTop - 1, '#9aa0b4'); }
+      },
+      wifi() { // bars everywhere
+        px(cx - 2, -1, '#4f9edb'); px(cx, -2, '#4f9edb'); px(cx + 2, -1, '#4f9edb');
+        if (epic) { px(cx, -3, '#7cfc00'); px(cx - 3, -3, 'rgba(79,158,219,0.6)'); px(cx + 3, -3, 'rgba(79,158,219,0.6)'); }
+      },
+      lowbatt() { // IT FOUND A CHARGER
+        const yB = h - 3, r = edgeR(yB);
+        px(r + 1, yB, '#2f2f2f'); px(r + 2, yB, '#2f2f2f'); px(r + 3, yB - 1, '#2f2f2f'); px(r + 3, yB + 0, '#2f2f2f');
+        if (epic) { px(cx, bodyTop + 2, '#7cfc00'); px(cx, bodyTop + 3, '#7cfc00'); px(cx + 1, bodyTop + 2, '#7cfc00'); rim('#7cfc00'); }
+      },
+      post() { // beep → melody
+        px(edgeR(bodyTop + 1) + 2, bodyTop - 1, '#14020e'); px(edgeR(bodyTop + 1) + 2, bodyTop, '#14020e'); px(edgeR(bodyTop + 1) + 3, bodyTop - 2, '#14020e');
+        if (epic) { px(edgeL(bodyTop + 1) - 2, bodyTop - 2, '#14020e'); px(edgeL(bodyTop + 1) - 2, bodyTop - 1, '#14020e'); px(edgeL(bodyTop + 1) - 3, bodyTop - 3, '#ffd400'); }
+      },
+      cumulus() { // it grew weather
+        px(edgeL(bodyTop + 2) - 2, bodyTop, '#ffffff'); px(edgeL(bodyTop + 2) - 3, bodyTop + 1, '#ffffff'); px(edgeR(bodyTop + 2) + 2, bodyTop, '#ffffff');
+        if (epic) { px(cx - 1, h, '#4f9edb'); px(cx + 2, h, '#4f9edb'); px(cx - 3, h, '#4f9edb'); }
+      },
+      feature() { // two features now
+        const l = edgeL(bodyTop + 2);
+        px(l - 1, bodyTop + 2, '#14020e'); px(l - 1, bodyTop + 4, '#14020e'); // a second face, looking back
+        if (epic) { px(l - 2, bodyTop + 3, '#7fae35'); px(l - 1, bodyTop + 6, '#c8f07e'); rim('#7fae35'); }
+      },
+      latency() { // its echo arrived
+        const l = edgeL(bodyTop + 3);
+        [1, 2].forEach((k) => px(l - k, bodyTop + 3, 'rgba(176,154,98,' + (0.7 - k * 0.25) + ')'));
+        if (epic) [1, 2, 3].forEach((k) => { px(l - k, bodyTop + 5, 'rgba(176,154,98,' + (0.8 - k * 0.2) + ')'); px(l - k, bodyTop + 1, 'rgba(176,154,98,' + (0.6 - k * 0.15) + ')'); });
+      },
+      aliased() { // resolution went DOWN
+        const yT = bodyTop; px(edgeL(yT) - 1, yT - 1, '#8e6cc9'); px(edgeR(yT) + 1, yT - 1, '#8e6cc9');
+        if (epic) rim((rx, ry) => ((rx + ry) % 2 ? '#8e6cc9' : '#cbb1f2'));
+      },
+      darkmode() { // brought its own night
+        px(cx + 3, -2, '#fff6c9'); px(cx - 3, -1, '#fff6c9');
+        px(cx + 2, bodyTop + 1, '#fff6c9');
+        if (epic) { px(cx - 2, -3, '#ffd400'); rim('#241335'); px(cx + 4, bodyTop - 1, '#fff6c9'); }
+      },
+      gilded() { // more gold. obviously.
+        rim('#ffd400');
+        if (epic) { px(edgeL(bodyTop + 3) - 1, bodyTop + 3, '#ffd400'); px(edgeR(bodyTop + 3) + 1, bodyTop + 3, '#ffd400'); px(cx, bodyTop - 1, '#fff6c9'); }
+      },
+      cacheghost() { // it levitates now
+        px(cx - 2, h, 'rgba(169,164,201,0.6)'); px(cx + 2, h, 'rgba(169,164,201,0.6)');
+        if (epic) { px(cx, h + 0, 'rgba(169,164,201,0.35)'); rim('rgba(233,230,245,0.8)'); }
+      },
+      cronjob() { // it grew a bell
+        px(cx, bodyTop - 2, '#ffd400'); px(cx - 1, bodyTop - 1, '#ffd400'); px(cx + 1, bodyTop - 1, '#ffd400');
+        if (epic) { px(cx, bodyTop - 3, '#c98a2e'); px(cx - 3, bodyTop - 2, '#ffd400'); px(cx + 3, bodyTop - 2, '#ffd400'); }
+      },
+      y2kbug() { // 19100 confetti
+        px(edgeL(bodyTop) - 1, bodyTop - 2, '#ff2fae'); px(edgeR(bodyTop) + 1, bodyTop - 1, '#41e0ff'); px(cx + 2, -1, '#ffd400');
+        if (epic) { px(cx - 3, -2, '#7cfc00'); px(edgeR(bodyTop + 4) + 2, bodyTop + 2, '#ff2fae'); px(edgeL(bodyTop + 4) - 2, bodyTop + 4, '#41e0ff'); }
+      },
+      bitflip() { // half of it flipped
+        for (let ry = bodyTop; ry < h; ry++) { const r = edgeR(ry); if (solid(r, ry)) px(r, ry, '#1a1a1a'); }
+        if (epic) for (let ry = bodyTop; ry < h; ry += 2) { const l = edgeL(ry); if (solid(l, ry)) px(l, ry, '#f2f2f2'); }
+      },
+      turbo() { // exhaust flames
+        const l = edgeL(bodyTop + 4);
+        px(l - 1, bodyTop + 4, '#ffd400'); px(l - 2, bodyTop + 4, '#ff8a5c');
+        if (epic) { px(l - 3, bodyTop + 4, '#ff4d1f'); px(l - 1, bodyTop + 2, '#ffd400'); px(l - 2, bodyTop + 6, '#ff8a5c'); rim('#ff8a5c'); }
+      },
+      dotmatrix() { // printing its own hi-scores
+        px(cx - 1, -1, '#ffffff'); px(cx, -1, '#ffffff'); px(cx + 1, -1, '#ffffff');
+        if (epic) { px(cx - 1, -2, '#ffffff'); px(cx, -2, '#7c8db0'); px(cx + 1, -2, '#ffffff'); px(cx - 2, -1, '#7c8db0'); }
+      },
+      bsodjr() { // it frames the reports
+        px(cx - 1, bodyTop + 3, '#ffffff'); px(cx + 1, bodyTop + 3, '#ffffff'); px(cx, bodyTop + 4, '#ffffff'); // a tiny :(
+        if (epic) rim('#2f5fd0');
+      },
+      rgbrig() { // the glow is real
+        rim((rx, ry) => ['#ff4d6d', '#7cfc00', '#41e0ff'][(rx + ry) % 3]);
+        if (epic) { px(cx - 3, -1, '#ff4d6d'); px(cx, -2, '#7cfc00'); px(cx + 3, -1, '#41e0ff'); }
+      },
+      captcha() { // verified, twice
+        px(cx - 1, bodyTop + 3, '#7cba58'); px(cx, bodyTop + 4, '#7cba58'); px(cx + 1, bodyTop + 2, '#7cba58'); // a chest ✓
+        if (epic) { px(edgeR(bodyTop + 1) + 2, bodyTop - 1, '#7cba58'); px(edgeR(bodyTop + 1) + 3, bodyTop - 2, '#7cba58'); rim('#7cba58'); }
+      },
+      kernelpg() { // penguin belly + flippers
+        for (let ry = bodyTop + 3; ry < h - 1; ry++) { px(cx, ry, '#ffffff'); if (epic) { px(cx - 1, ry, '#ffffff'); px(cx + 1, ry, '#ffffff'); } }
+        if (epic) { px(edgeL(bodyTop + 4) - 1, bodyTop + 4, '#14020e'); px(edgeR(bodyTop + 4) + 1, bodyTop + 4, '#14020e'); }
+      }
+    };
+    if (kind === 'ch') {
+      // the chameleon: double rainbow at ★★, full PRISM at APEX
+      const RB = ['#ff4d6d', '#ff8a5c', '#ffd400', '#7cfc00', '#41e0ff', '#c9a7f5'];
+      RB.forEach((col, i) => px(cx - 3 + i, -2, col));
+      if (epic) rim((rx, ry) => RB[(rx + ry) % RB.length]);
+      return;
     }
-    x.fillStyle = '#d9d2ea'; // moustache wings, slightly shaded
-    if (mouths.length) {
-      const mxL = Math.min(...mouths.map((p) => p[0])), mxR = Math.max(...mouths.map((p) => p[0]));
-      if (solid(mxL - 1, mTop)) x.fillRect(mxL - 1, mTop, 1, 1);
-      if (solid(mxR + 1, mTop)) x.fillRect(mxR + 1, mTop, 1, 1);
+    if (kind && kind[0] === 's') {
+      const fn = SP[kind.slice(2)];
+      if (fn) fn(); else if (epic) rim('#ffd400');
+      return;
     }
+    const seg = parseInt((kind || 'w:0').slice(2), 10) || 0;
+    ARCH[seg % ARCH.length]();
+    if (epic) rim('#ffd400'); // APEX still glows — on top of its OWN gear
   }
-  // form lookup for buddy/walker shapes (sp is the OBJECT there, not the id)
-  function pikFormOfLive(o) {
+  // kind/form lookup for buddy/walker shapes (sp is the OBJECT there, not the id)
+  function pikKindOfLive(o) {
     try {
-      return pikFormOfKind(o.chameleon || o.ch ? 'ch' : (o.sp ? 's:' + (o.sp.id || o.sp) : 'w:' + pikSegOfHue(o.hue != null ? o.hue : (o.h != null ? o.h : 300))));
-    } catch (e) { return 1; }
+      return (o.chameleon || o.ch) ? 'ch' : (o.sp ? 's:' + (o.sp.id || o.sp) : 'w:' + pikSegOfHue(o.hue != null ? o.hue : (o.h != null ? o.h : 300)));
+    } catch (e) { return 'w:0'; }
+  }
+  function pikFormOfLive(o) {
+    try { return pikFormOfKind(pikKindOfLive(o)); } catch (e) { return 1; }
   }
   // the moment a kind crosses a form threshold: fanfare, confetti, and the
   // meadow re-dresses INSTANTLY (v156 — evolution must be SEEN, not implied)
@@ -27118,9 +27316,9 @@ document.addEventListener('DOMContentLoaded', () => {
     playFanfare();
     cheatFall(apex ? ['👑', '✨', '⭐'] : ['✨', '⭐'], 14);
     try { pikEvolveCinema(kk, apex); } catch (e) { /* the ceremony is optional; the gold is not */ }
-    showBubble(apex
-      ? trT('🧙 APEX!!! the beard came in!! a GREYBEARD walks the desktop — go look!!', '🧙 APEX !!! la barbe a poussé !! un BARBE-GRISE arpente le bureau — va voir !!')
-      : trT('🤓 IT EVOLVED!! it put on glasses — it read the DOCS!! go look!!', '🤓 ÉVOLUTION !! il a mis des lunettes — il a lu la DOC !! va voir !!'), 3600);
+    showBubble((apex
+      ? trT('★★★ APEX!!! ', '★★★ APEX !!! ')
+      : trT('✨ IT EVOLVED!! ', '✨ ÉVOLUTION !! ')) + pikEvoLore(kk, apex ? 3 : 2) + trT(' — go look!!', ' — va voir !!'), 3800);
     try { deskPikResync(); } catch (e) { /* the meadow re-dresses on respawn */ }
     try { if (typeof renderPikdex === 'function') renderPikdex(); } catch (e) { /* dex repaints on open */ }
     return true;
@@ -27149,7 +27347,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const img = document.createElement('img');
     img.className = 'pik-evo-sprite';
     img.alt = '';
-    img.src = pikSprite(pikEntryColor(p), p.s || 0, p.sp || null, false, newForm - 1);
+    img.src = pikSprite(pikEntryColor(p), p.s || 0, p.sp || null, false, newForm - 1, kk);
     port.appendChild(img);
     const sp = p.sp ? pikSpecies(p.sp) : null;
     if (sp) {
@@ -27166,12 +27364,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     const title = document.createElement('div');
     title.className = 'pik-evo-title';
-    title.textContent = apex ? trT('🧙 APEX EVOLUTION 👑', '🧙 ÉVOLUTION APEX 👑') : trT('🤓 EVOLUTION!! ✨', '🤓 ÉVOLUTION !! ✨');
+    title.textContent = apex ? trT('👑 APEX EVOLUTION 👑', '👑 ÉVOLUTION APEX 👑') : trT('✨ EVOLUTION!! ✨', '✨ ÉVOLUTION !! ✨');
     const sub = document.createElement('div');
     sub.className = 'pik-evo-sub';
-    sub.textContent = name + (apex
-      ? trT(' · the beard came in · ★★ → 🧙', ' · la barbe a poussé · ★★ → 🧙')
-      : trT(' · it read the docs · ★ → 🤓', ' · il a lu la doc · ★ → 🤓'));
+    sub.textContent = name + ' · ' + pikEvoLore(kk, newForm) + (apex ? ' · ★★ → ★★★' : ' · ★ → ★★');
     const hint = document.createElement('div');
     hint.className = 'pik-evo-hint';
     hint.textContent = trT('(tap to continue)', '(touche pour continuer)');
@@ -27213,7 +27409,7 @@ document.addEventListener('DOMContentLoaded', () => {
     timers.push(setTimeout(() => { // THE REVEAL
       ov.classList.remove('flashing');
       ov.classList.add('revealed');
-      img.src = pikSprite(pikEntryColor(p), p.s || 0, p.sp || null, false, newForm);
+      img.src = pikSprite(pikEntryColor(p), p.s || 0, p.sp || null, false, newForm, kk);
       clearInterval(dust);
       playFanfare();
       playSparkleSound();
@@ -27368,7 +27564,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const gbKey = ch ? 'ch' : (species ? 's:' + species.id : (hue != null ? 'w:' + pikSegOfHue(hue) : null));
     const gbForm = gbKey && typeof pikFormOfKind === 'function' ? pikFormOfKind(gbKey) : 1;
     const img = document.createElement('img');
-    img.src = pikSprite(color, stage, species ? species.id : null, false, gbForm);
+    img.src = pikSprite(color, stage, species ? species.id : null, false, gbForm, gbKey);
     img.alt = '';
     img.style.width = gbForm === 3 ? '46px' : gbForm === 2 ? '39px' : '33px';
     if (gbForm >= 2) el.classList.add('pik-form' + gbForm);
@@ -27468,7 +27664,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function pikSetStage(b, stage) {
     b.stage = stage;
-    b.img.src = pikSprite(b.color, stage, b.sp ? b.sp.id : null, false, pikFormOfLive(b));
+    b.img.src = pikSprite(b.color, stage, b.sp ? b.sp.id : null, false, pikFormOfLive(b), pikKindOfLive(b));
     b.img.classList.remove('pik-pluck');
     void b.img.offsetWidth;
     b.img.classList.add('pik-pluck');
@@ -27503,7 +27699,7 @@ document.addEventListener('DOMContentLoaded', () => {
         b.hueAt = now + 480;
         b.h = ((b.h || 5) + 30) % 360 || 5;
         b.color = hueColor(b.h);
-        b.img.src = pikSprite(b.color, b.stage, null, false, pikFormOfLive(b));
+        b.img.src = pikSprite(b.color, b.stage, null, false, pikFormOfLive(b), 'ch');
       }
       // SQUASHED?! the slime (re)appeared on top — wriggle out, loudly
       if (!b.carry && !gathering && slimeW > 40 && Math.abs(b.x + 16 - sx) < slimeW * 0.32 && now > (b.escapeCd || 0)) {
@@ -29819,7 +30015,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const formKey = chameleon ? 'ch' : (species ? 's:' + species.id : (hue !== null ? 'w:' + pikSegOfHue(hue) : null));
     const form = formKey && typeof pikFormOfKind === 'function' ? pikFormOfKind(formKey) : 1;
     const img = document.createElement('img');
-    img.src = pikSprite(color, stage || 0, spId || null, false, form);
+    img.src = pikSprite(color, stage || 0, spId || null, false, form, formKey);
     img.alt = '';
     el.appendChild(img);
     if (form >= 2) el.classList.add('pik-form' + form);
@@ -30443,7 +30639,7 @@ document.addEventListener('DOMContentLoaded', () => {
         holder.className = 'loader-pik';
         holder.style.animationDelay = (i * 0.13) + 's';
         const img = document.createElement('img');
-        img.src = pikSprite(sp ? sp.body : ((r.h != null) ? hueColor(r.h) : (PIK_COLORS[r.c] || PIK_COLORS[0])), r.s || 0, r.sp || null, false, typeof pikFormOf === 'function' ? pikFormOf(r) : 1);
+        img.src = pikSprite(sp ? sp.body : ((r.h != null) ? hueColor(r.h) : (PIK_COLORS[r.c] || PIK_COLORS[0])), r.s || 0, r.sp || null, false, typeof pikFormOf === 'function' ? pikFormOf(r) : 1, typeof pikKindKey === 'function' ? pikKindKey(r) : '');
         img.alt = '';
         holder.appendChild(img);
         if (sp) {
@@ -30529,7 +30725,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const el = document.createElement('div');
       el.className = 'pik-parade' + (sp && sp.fx ? ' pikfx-' + sp.fx : '') + (p.ch ? ' pikfx-rgbcycle' : '') + (pform >= 2 ? ' pik-form' + pform : '');
       const img = document.createElement('img');
-      img.src = pikSprite(pikEntryColor(p), p.s || 0, p.sp || null, false, pform);
+      img.src = pikSprite(pikEntryColor(p), p.s || 0, p.sp || null, false, pform, pikKindKey(p));
       img.alt = '';
       el.appendChild(img);
       if (sp) {
@@ -30777,7 +30973,7 @@ document.addEventListener('DOMContentLoaded', () => {
         star.textContent = '⭐';
         chip.appendChild(star);
         const im = document.createElement('img');
-        im.src = pikSprite(p.sp ? pikEntryColor(p) : hueColor(pikHueOf(p)), p.s || 0, p.sp || null, false, typeof pikFormOf === 'function' ? pikFormOf(p) : 1);
+        im.src = pikSprite(p.sp ? pikEntryColor(p) : hueColor(pikHueOf(p)), p.s || 0, p.sp || null, false, typeof pikFormOf === 'function' ? pikFormOf(p) : 1, pikKindKey(p));
         im.alt = '';
         chip.appendChild(im);
         if (p.sp) {
@@ -30855,7 +31051,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const name = pikNameOf(dex, dexIx);
       cell.title = name;
       const img = document.createElement('img');
-      img.src = pikSprite(p.sp ? pikEntryColor(p) : hueColor(pikHueOf(p)), p.s || 0, p.sp || null, false, typeof pikFormOf === 'function' ? pikFormOf(p) : 1);
+      img.src = pikSprite(p.sp ? pikEntryColor(p) : hueColor(pikHueOf(p)), p.s || 0, p.sp || null, false, typeof pikFormOf === 'function' ? pikFormOf(p) : 1, pikKindKey(p));
       img.alt = '';
       const nm = document.createElement('span');
       nm.className = 'pikdex-cell-name';
@@ -30985,7 +31181,7 @@ document.addEventListener('DOMContentLoaded', () => {
     port.className = 'pik-card-portrait';
     const big = document.createElement('img');
     big.alt = '';
-    big.src = pikSprite(pikEntryColor(p), p.s || 0, p.sp || null, false, typeof pikFormOf === 'function' ? pikFormOf(p) : 1);
+    big.src = pikSprite(pikEntryColor(p), p.s || 0, p.sp || null, false, typeof pikFormOf === 'function' ? pikFormOf(p) : 1, pikKindKey(p));
     port.appendChild(big);
     const pSpecies = p.sp ? pikSpecies(p.sp) : null;
     if (pSpecies) {
@@ -30997,7 +31193,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (p.ch) {
       let hh = pikHueOf(p);
-      pikProfileTimer = setInterval(() => { hh = (hh + 24) % 360; big.src = pikSprite(hueColor(hh), p.s || 0, null, false, typeof pikFormOfKind === 'function' ? pikFormOfKind('ch') : 1); }, 300);
+      pikProfileTimer = setInterval(() => { hh = (hh + 24) % 360; big.src = pikSprite(hueColor(hh), p.s || 0, null, false, typeof pikFormOfKind === 'function' ? pikFormOfKind('ch') : 1, 'ch'); }, 300);
     }
     const info = document.createElement('div');
     info.className = 'pik-card-info';
@@ -31026,9 +31222,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const kTh = pikThresholds(kk);
     const kForm = pikFormOfCount(kCnt, kk);
     line(trT('FORM', 'FORME'), kForm === 3
-      ? trT(`🧙 APEX GREYBEARD — ×${kCnt}. it maintains a package nobody dares fork.`, `🧙 BARBE-GRISE APEX — ×${kCnt}. il maintient un paquet que personne n'ose forker.`)
+      ? `★★★ ${pikEvoLore(kk, 3)} · ×${kCnt}`
       : kForm === 2
-        ? trT(`🤓 ★★ — it read the docs. ALL of them · ${kCnt}/${kTh[1]} to APEX (dupes count!)`, `🤓 ★★ — il a lu la doc. TOUTE la doc · ${kCnt}/${kTh[1]} vers APEX (les doublons comptent !)`)
+        ? `★★ ${pikEvoLore(kk, 2)} · ${kCnt}/${kTh[1]}` + trT(' to APEX (dupes count!)', ' vers APEX (les doublons comptent !)')
         : trT(`★ base · ${kCnt}/${kTh[0]} to evolve (dupes count!)`, `★ base · ${kCnt}/${kTh[0]} pour évoluer (les doublons comptent !)`));
     line('UPTIME', pikAgeOf(p));
     line(trT('DUTY', 'SERVICE'), p.a
@@ -31202,7 +31398,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (w.chameleon && now > w.hueAt) {
         w.hueAt = now + 480;
         w.hue = ((w.hue || 5) + 30) % 360 || 5;
-        w.img.src = pikSprite(hueColor(w.hue), w.stage, null, false, pikFormOfLive(w));
+        w.img.src = pikSprite(hueColor(w.hue), w.stage, null, false, pikFormOfLive(w), pikKindOfLive(w));
       }
       if (now < w.restUntil) return;
       const dx = w.tx - w.x, dy = w.ty - w.y;
