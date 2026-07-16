@@ -6500,6 +6500,24 @@ html[data-theme="dark"] .pikdex-squad-chip {
 }
 html[data-theme="dark"] .pikdex-squad-chip:hover { box-shadow: 2px 5px 0 #1c0f2e, 0 0 10px var(--purple-dark), inset 0 0 0 1px rgba(201, 167, 245, 0.25); }
 @media (prefers-reduced-motion: reduce) { .pikdex-squad-chip { transition: none; } }
+/* the dossier's appearance picker: lock any earned form, purely cosmetic */
+.pik-card-formpick {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 6px 10px;
+  border-top: 2px dashed var(--purple);
+}
+.pik-card-formpick-label {
+  font-family: var(--font-pixel);
+  font-size: 0.85rem;
+  letter-spacing: 0.5px;
+  color: var(--text);
+  margin-right: 2px;
+}
+.pik-card-formpick-hint { font-size: 0.62rem; color: var(--text-soft, #8a7d9e); width: 100%; }
+
 /* ---- the EVOLUTION CEREMONY: spotlight, charge, flash, gold ---- */
 .pik-evo {
   position: fixed;

@@ -30295,8 +30295,14 @@ document.addEventListener('DOMContentLoaded', () => {
     return [t2, t2 + 5 + ((seg * 11) % 7)];         // +5-11 more for APEX
   }
   function pikFormOfCount(n, key) { const t = pikThresholds(key); return n >= t[1] ? 3 : n >= t[0] ? 2 : 1; }
-  function pikFormOf(e) { const k = pikKindKey(e); return pikFormOfCount(pikCounts()[k] || 1, k); }
-  function pikFormOfKind(key) { return pikFormOfCount(pikCounts()[key] || 1, key); }
+  // v161: the visitor may PREFER the rookie look — a per-kind appearance
+  // lock caps the rendered form (progress keeps counting underneath).
+  // clamped here, at the single choke point every render venue uses
+  function pikFormLockGet() { const l = store.get('yos-pik-formlock', null); return l && typeof l === 'object' && !Array.isArray(l) ? l : {}; }
+  function pikFormLockSet(kk, form) { const l = pikFormLockGet(); if (form == null) delete l[kk]; else l[kk] = form; store.set('yos-pik-formlock', l); }
+  function pikFormApplyLock(key, natural) { const lock = pikFormLockGet()[key]; return (lock && lock < natural) ? lock : natural; }
+  function pikFormOf(e) { const k = pikKindKey(e); return pikFormApplyLock(k, pikFormOfCount(pikCounts()[k] || 1, k)); }
+  function pikFormOfKind(key) { return pikFormApplyLock(key, pikFormOfCount(pikCounts()[key] || 1, key)); }
   function pikCountTotal() { const c = pikCounts(); let t = 0; Object.keys(c).forEach((k) => { t += c[k] || 0; }); return t; }
   const PIKLB_TIERS = [10, 30, 72, 100, 140, 200, 300];
   function pikLbTier(total) { let ix = 0; PIKLB_TIERS.forEach((t, i) => { if (total >= t) ix = i + 1; }); return ix; }
@@ -31283,6 +31289,48 @@ document.addEventListener('DOMContentLoaded', () => {
     bio.className = 'pik-card-bio';
     const bx = (h * 31 + ix) % PIK_BIOS.length;
     bio.textContent = '“' + trT(PIK_BIOS[bx], PIK_BIOS_FR[bx]) + '”';
+    // v161: the appearance picker — evolution is progress, the LOOK is a
+    // choice. lock any earned form; the counters keep climbing underneath
+    let formPick = null;
+    {
+      const natural = pikFormOfCount(pikCounts()[pikKindKey(p)] || 1, pikKindKey(p));
+      if (natural >= 2) {
+        const kkP = pikKindKey(p);
+        formPick = document.createElement('div');
+        formPick.className = 'pik-card-formpick';
+        const lab = document.createElement('span');
+        lab.className = 'pik-card-formpick-label';
+        lab.textContent = trT('APPEARS AS', 'APPARAÎT EN');
+        formPick.appendChild(lab);
+        const showing = pikFormApplyLock(kkP, natural);
+        [1, 2, 3].forEach((f) => {
+          if (f > natural) return; // not earned yet — no spoilers
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.className = 'pikdex-float-btn' + (showing === f ? ' is-picked' : '');
+          b.textContent = f === 1 ? trT('★ classic', '★ classique') : f === 2 ? '★★' : '★★★';
+          b.setAttribute('aria-pressed', showing === f ? 'true' : 'false');
+          b.addEventListener('click', () => {
+            if (f === showing) return;
+            pikFormLockSet(kkP, f >= natural ? null : f);
+            playSparkleSound();
+            const nmT = pikNameOf(dex, ix);
+            showToast(f < natural
+              ? trT(`💾 ${nmT} keeps the ${f === 1 ? 'classic' : '★★'} look — evolution is a state of mind ♡`, `💾 ${nmT} garde le look ${f === 1 ? 'classique' : '★★'} — l'évolution est un état d'esprit ♡`)
+              : trT(`⚡ ${nmT} returns to FULL POWER`, `⚡ ${nmT} retrouve sa PLEINE PUISSANCE`));
+            try { deskPikResync(); } catch (e) { /* re-dresses on respawn */ }
+            try { gardenResync(); } catch (e) { /* the stage catches up */ }
+            try { renderPikdex(); } catch (e) { /* dex repaints on open */ }
+            pikProfileShow(ix);
+          });
+          formPick.appendChild(b);
+        });
+        const hint = document.createElement('span');
+        hint.className = 'pik-card-formpick-hint';
+        hint.textContent = trT('(cosmetic — progress keeps counting)', '(cosmétique — la progression continue)');
+        formPick.appendChild(hint);
+      }
+    }
     const actions = document.createElement('div');
     actions.className = 'pik-card-actions';
     const swap = document.createElement('button');
@@ -31301,7 +31349,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     actions.appendChild(swap);
     body.append(port, info);
-    card.append(head, body, sk, stats, bio, actions);
+    if (formPick) card.append(head, body, sk, stats, bio, formPick, actions);
+    else card.append(head, body, sk, stats, bio, actions);
     ov.appendChild(card);
     ov.addEventListener('click', function bg(e) {
       if (e.target === ov) { pikProfileHide(); ov.removeEventListener('click', bg); }
