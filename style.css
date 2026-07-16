@@ -9559,6 +9559,23 @@ html[data-theme="dark"].dream-geo .geo-broken {
   margin: 1px 0;
   word-break: break-word;
 }
+/* the buttons print ON the receipt too: paper row, ink-stamped boxes */
+.geo-fix-invoice .dream-dlg-row {
+  background: #fdfcf3;
+  margin: 0;
+  padding: 4px 8px 10px;
+}
+.geo-fix-invoice .dream-dlg-btn {
+  background: #fdfcf3;
+  color: #26203a;
+  border: 2px dashed #26203a;
+  box-shadow: none;
+  font-family: 'Courier New', Courier, monospace;
+  font-weight: bold;
+  font-size: 0.72rem;
+}
+.geo-fix-invoice .dream-dlg-btn:hover { background: #26203a; color: #fdfcf3; }
+.geo-fix-invoice .dream-dlg-btn:active { transform: translate(1px, 1px); box-shadow: none; }
 .geo-fix-meter { font-family: monospace; color: #7cfc00; background: #000; padding: 2px 6px; }
 .geo-fix-input {
   width: 100%;
