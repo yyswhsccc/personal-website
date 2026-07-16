@@ -7149,14 +7149,9 @@ html[data-theme="dark"] .pikdex-float-btn.is-picked { background: var(--purple-d
   95% { transform: translateY(-4px); }
   100% { transform: translateY(0); }
 }
-.pikfx-confetti::after {
-  content: '🎊';
-  position: absolute;
-  top: -10px; left: -10px;
-  font-size: 10px;
-  animation: pik-tease-spin 1.2s steps(4, end) infinite;
-  pointer-events: none;
-}
+/* .pikfx-confetti::after retired (v161.7, owner decree): the spinning
+   mini-🎊 doubled up with the hat. ONE emoji per head — the live
+   party-bit particles carry the celebration now */
 .pikfx-invert { animation: pikfx-invert 2s steps(1, end) infinite; }
 @keyframes pikfx-invert {
   0%, 49%, 100% { filter: none; }
