@@ -27288,13 +27288,24 @@ document.addEventListener('DOMContentLoaded', () => {
         blk(cx - 1, bodyTop - 3, '#ffd400'); [cx - 2, cx - 1, cx, cx + 1, cx + 2].forEach((rx) => px(rx, bodyTop - 1, '#ffd400')); px(cx, bodyTop - 4 + 1, '#c98a2e');
         if (epic) { px(cx - 3, bodyTop - 2, '#ffd400'); px(cx + 3, bodyTop - 2, '#ffd400'); }
       },
-      y2kbug() { // party: plus-star confetti
-        star(edgeR(bodyTop) + 2, bodyTop - 2, '#ff2fae');
-        if (epic) { star(edgeL(bodyTop) - 2, bodyTop - 1, '#41e0ff'); star(cx, -2, '#ffd400'); }
+      y2kbug() { // the party went LIVE (floating bits + confetti wake) —
+        // the sprite stays clean so the single 🎊 up top reads alone
+        px(cx - 2, bodyTop + 3, '#ff2fae'); px(cx + 2, bodyTop + 4, '#41e0ff'); // two confetti dots on the chest
+        if (epic) rim('#ff2fae');
       },
-      bitflip() { // half of it flipped: 2px inverted stripe
-        for (let ry = bodyTop; ry < h; ry++) { const r = edgeR(ry); if (solid(r, ry)) px(r, ry, '#1a1a1a'); if (solid(r - 1, ry)) px(r - 1, ry, '#1a1a1a'); }
-        if (epic) for (let ry = bodyTop; ry < h; ry += 2) { const l = edgeL(ry); if (solid(l, ry)) px(l, ry, '#f2f2f2'); }
+      bitflip() { // the bit can't decide: half of it lives in the mirror world
+        const B = '#1a1a1a', W = '#f2f2f2';
+        const flip = (rx, ry) => { const ch = rows[ry][rx]; if (ch === 'B' || ch === 'W' || ch === 'w') px(rx, ry, B); else if (ch === 'D') px(rx, ry, W); };
+        for (let ry = bodyTop; ry < h; ry++) for (let rx = cx + 1; rx < w; rx++) flip(rx, ry); // ★★ HALF FLIP
+        if (epic) {
+          // ★★★ SUPERPOSITION: checkerboard on the loyal half too, plus
+          // the 0 and the 1 it cannot pick, plus the guilty cosmic ray
+          for (let ry = bodyTop; ry < h; ry++) for (let rx = 0; rx <= cx; rx++) { if ((rx + ry) % 2) flip(rx, ry); }
+          const l = edgeL(bodyTop + 2), r = edgeR(bodyTop + 2), y1 = bodyTop + 1;
+          px(l - 2, y1, B); px(l - 2, y1 + 1, B); px(l - 2, y1 + 2, B); px(l - 3, y1, W); // the 1
+          px(r + 2, y1, B); px(r + 3, y1, B); px(r + 1, y1 + 1, B); px(r + 4, y1 + 1, B); px(r + 2, y1 + 2, B); px(r + 3, y1 + 2, B); // the 0
+          px(cx + 3, -3, '#ffd400'); px(cx + 2, -2, '#ffd400'); px(cx + 1, -1, '#fff6c9'); // the ray that did this
+        }
       },
       turbo() { // exhaust: layered flame cone
         const yM = bodyTop + 4, l = edgeL(yM);
@@ -30100,7 +30111,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const r = DESK_PIK.layer.getBoundingClientRect();
     const w = {
       el, img, hue: hue !== null ? hue : null, chameleon: !!chameleon, hueAt: 0, stage: stage || 0,
-      party: spId === 'y2kbug' && form >= 2, partyAt: 0, // evolved Y2K Bug: a walking celebration
+      party: spId === 'y2kbug' && form >= 2, partyMax: spId === 'y2kbug' && form >= 3, partyAt: 0, // evolved Y2K Bug: a walking celebration (the wake is APEX-only)
       sp: species || null, spd: species && species.spd ? species.spd : 1, stepAt: 0,
       x: 40 + Math.random() * Math.max(120, r.width - 160),
       y: r.height * 0.35 + Math.random() * (r.height * 0.5),
@@ -30275,7 +30286,7 @@ document.addEventListener('DOMContentLoaded', () => {
     { id: 'gilded', hat: '🏆', body: { body: '#ffd873', dark: '#c9992e' }, fx: 'shine', n: ['Gold Master', 'Version Or'], t: ['the final build. shipped. golden.', 'le build final. livré. doré.'], lore: ['the release that never needed a hotfix. worship it.', 'la version qui n\'a jamais eu besoin de hotfix. vénère-la.'] },
     { id: 'cacheghost', hat: '👻', body: { body: '#e8e6f5', dark: '#a9a4c9' }, fx: 'ghost', n: ['Cache Ghost', 'Fantôme du Cache'], t: ['you cleared it. it came back.', 'tu l\'as vidé. il est revenu.'], lore: ['404 in the heap, alive in your heart. clear-site-data can\'t touch it.', '404 dans le tas, vivant dans ton cœur. clear-site-data n\'y peut rien.'] },
     { id: 'cronjob', hat: '⏰', body: { body: '#a8e8d8', dark: '#4fae8e' }, fx: 'tick', n: ['Cron Job', 'Tâche Cron'], t: ['every minute, on the minute.', 'chaque minute, à la minute.'], lore: ['runs * * * * *. never missed a beat. slightly smug about it.', 'tourne en * * * * *. n\'a jamais raté. légèrement fier de lui.'] },
-    { id: 'y2kbug', hat: '🎉', body: { body: '#ffb3dd', dark: '#f0509f' }, fx: 'confetti', n: ['Y2K Bug', 'Bug de l\'An 2000'], t: ['it partied like it\'s 19100.', 'il a fait la fête comme en 19100.'], lore: ['the apocalypse that RSVP\'d and never showed. still dressed for it.', 'l\'apocalypse qui avait confirmé et n\'est jamais venue. toujours sur son 31.'] },
+    { id: 'y2kbug', hat: '🎊', body: { body: '#ffb3dd', dark: '#f0509f' }, fx: 'confetti', n: ['Y2K Bug', 'Bug de l\'An 2000'], t: ['it partied like it\'s 19100.', 'il a fait la fête comme en 19100.'], lore: ['the apocalypse that RSVP\'d and never showed. still dressed for it.', 'l\'apocalypse qui avait confirmé et n\'est jamais venue. toujours sur son 31.'] },
     { id: 'bitflip', hat: '🎲', body: { body: '#f2f2f2', dark: '#1a1a1a' }, fx: 'invert', n: ['Bit Flip', 'Bit Inversé'], t: ['a cosmic ray did this.', 'c\'est un rayon cosmique qui a fait ça.'], lore: ['one stray cosmic ray and now it can\'t decide if it\'s a 0 or a 1.', 'un rayon cosmique égaré, et il hésite entre 0 et 1 depuis.'] },
     { id: 'turbo', hat: '🔥', body: { body: '#ff8a5c', dark: '#d1431f' }, fx: 'heat', spd: 1.9, n: ['Overclock', 'Overclock'], t: ['it voids its own warranty.', 'il annule sa propre garantie.'], lore: ['runs 30% faster, 300% warmer. the fan noise is purring, probably.', 'tourne 30 % plus vite, 300 % plus chaud. le ventilo ronronne, sans doute.'] },
     { id: 'dotmatrix', hat: '🖨️', body: { body: '#c7d3e8', dark: '#7c8db0' }, fx: 'paper', n: ['Dot Matrix', 'Matricielle'], t: ['you can hear it from two rooms away.', 'tu l\'entends depuis deux pièces.'], lore: ['prints one pixel at a time. SCREEE. beautiful. archival quality.', 'imprime pixel par pixel. SCREEE. magnifique. qualité archive.'] },
@@ -31570,7 +31581,7 @@ document.addEventListener('DOMContentLoaded', () => {
           w.trailAt = now + 750 + Math.random() * 450; // airier cadence
           const n = 1 + Math.floor(Math.random() * 10);
           const cx = w.x + 14, cy = w.y + 34; // strictly below the sprite
-          if (w.party) { // the celebration walks WITH it: a confetti wake
+          if (w.partyMax) { // the APEX celebration walks WITH it: a confetti wake
             for (let k = 0; k < 2 + Math.floor(Math.random() * 4); k++) {
               const s = document.createElement('span');
               s.className = 'pik-trail pik-party-trail';
