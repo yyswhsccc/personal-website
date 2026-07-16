@@ -27212,11 +27212,13 @@ document.addEventListener('DOMContentLoaded', () => {
         [-3, 0, 3].forEach((k, i) => { px(cx + k, h, i === 1 ? '#7ee787' : '#2ea043'); px(cx + k, h + 0, '#2ea043'); });
         if (epic) { px(cx - 2, h, '#7ee787'); px(cx + 2, h, '#7ee787'); rim('#2ea043'); }
       },
-      pointer() { // it multiplied: a chubby pointer-baby toddles behind
-        const r = edgeR(bodyTop + 2);
-        blob(r + 2, bodyTop + 1, '#c9cede', '#5a5f75');
-        px(r + 2, bodyTop - 1, '#ffffff'); // a soft highlight so the chub pops on white
-        if (epic) { const l = edgeL(bodyTop + 3); blob(l - 2, bodyTop + 3, '#dfe3f0', '#5a5f75'); }
+      pointer() { // the LIVE pink baby is the show — the parent just wears
+        // a little heart for it (gold at APEX)
+        const yH = bodyTop + 2, r = edgeR(yH);
+        const HC = epic ? '#ffd400' : '#ff8fc7', HL = epic ? '#fff6c9' : '#ffb3dd';
+        px(r + 2, yH, HC); px(r + 4, yH, HC);
+        px(r + 2, yH + 1, HC); px(r + 3, yH + 1, HL); px(r + 4, yH + 1, HC);
+        px(r + 3, yH + 2, HC);
       },
       wifi() { // thick arcs
         [cx - 1, cx, cx + 1].forEach((rx) => px(rx, -1, '#4f9edb'));
@@ -27259,11 +27261,15 @@ document.addEventListener('DOMContentLoaded', () => {
         [[-1, -1], [0, -1], [1, -1]].forEach((d) => px(cx + d[0], d[1], '#41e0ff'));
         if (epic) { blk(cx + 4, -3, '#ffd400'); px(cx + 6, -2, '#ffd400'); px(cx + 4, -1 + 0, '#ffd400'); } // the sun peeks out at APEX
       },
-      feature() { // the second face: two REAL eyes on the back
-        const l = edgeL(bodyTop + 2);
-        px(l - 1, bodyTop + 2, '#14020e'); px(l - 1, bodyTop + 3, '#14020e');
-        px(l - 1, bodyTop + 5, '#14020e'); px(l - 1, bodyTop + 6, '#14020e');
-        if (epic) { px(l - 2, bodyTop + 4, '#7fae35'); px(l - 2, bodyTop + 3, '#7fae35'); rim('#7fae35'); }
+      feature() { // it's TWO features now: the tail end wakes up with a
+        // REAL face (the old scattered dots read as dirt — v161.9 redo)
+        px(8, 8, '#14020e'); px(10, 8, '#14020e'); // rear eyes, properly spaced
+        px(9, 9, '#ffb3d1'); // rear blush
+        if (epic) {
+          // APEX: a twin sprout on the tail — two heads, two plants, one boi
+          px(10, 5, '#57c689'); px(10, 4, '#57c689');
+          px(9, 3, '#7ddba4'); px(10, 3, '#7ddba4');
+        }
       },
       latency() { // after-images: tall ghosts
         const l = edgeL(bodyTop + 3);
@@ -27296,19 +27302,21 @@ document.addEventListener('DOMContentLoaded', () => {
         px(cx - 2, bodyTop + 3, '#ff2fae'); px(cx + 2, bodyTop + 4, '#41e0ff'); // two confetti dots on the chest
         if (epic) rim('#ff2fae');
       },
-      bitflip() { // the bit can't decide: half of it lives in the mirror world
-        const B = '#1a1a1a', W = '#f2f2f2';
-        const flip = (rx, ry) => { const ch = rows[ry][rx]; if (ch === 'B' || ch === 'W' || ch === 'w') px(rx, ry, B); else if (ch === 'D') px(rx, ry, W); };
-        for (let ry = bodyTop; ry < h; ry++) for (let rx = cx + 1; rx < w; rx++) flip(rx, ry); // ★★ HALF FLIP
-        for (let ry = bodyTop; ry < h; ry++) for (let rx = cx + 1; rx < w; rx++) { if (rows[ry][rx] === 'e') px(rx, ry, W); } // the flipped eye inverts too
+      bitflip() { // its template is ALREADY half white / half dark (the 'w'
+        // at row5 is the dark half's own eye) — so the evolution swaps PIECES:
+        // ★★: THE ZIPPER — the halves interlock, trading one bit per row
+        // (odd rows: a dark tooth bites into the white half; even rows: a
+        // white tooth bites back). structural, not crumbs — v161.9 take 4
+        for (let zy = 3; zy <= 9; zy++) {
+          if (zy % 2) px(5, zy, '#1a1a1a'); else px(6, zy, '#f2f2f2');
+        }
+        px(7, 7, '#ff8fc7'); // and the dark half finally blushes about it
         if (epic) {
-          // ★★★ THE SEAM (the checkerboard read as static — v161.8 redo):
-          // a neon fault line down the middle, the 0 and the 1 hovering in
-          // glitch colors, and the guilty golden cosmic ray. clean, weird, cute
-          for (let ry = bodyTop; ry < h; ry++) { if (solid(cx, ry)) px(cx, ry, ry % 2 ? '#ff2fae' : '#41e0ff'); }
-          const l = edgeL(bodyTop + 2), r = edgeR(bodyTop + 2), y1 = bodyTop + 1;
-          px(l - 2, y1, '#41e0ff'); px(l - 2, y1 + 1, '#41e0ff'); px(l - 2, y1 + 2, '#41e0ff'); px(l - 3, y1, '#41e0ff'); // the 1, in cyan
-          px(r + 2, y1, '#ff2fae'); px(r + 3, y1, '#ff2fae'); px(r + 1, y1 + 1, '#ff2fae'); px(r + 4, y1 + 1, '#ff2fae'); px(r + 2, y1 + 2, '#ff2fae'); px(r + 3, y1 + 2, '#ff2fae'); // the 0, in magenta
+          // ★★★: the halves finally agree on ONE thing — a little split
+          // heart on the chest (magenta side, cyan side), plus the ray
+          px(4, 7 + 1, '#ff2fae'); px(6, 7 + 1, '#41e0ff');
+          px(4, 9, '#ff2fae'); px(5, 9, '#ffffff'); px(6, 9, '#41e0ff');
+          px(5, 10, '#c9a7f5');
           px(cx + 3, -3, '#ffd400'); px(cx + 2, -2, '#ffd400'); px(cx + 1, -1, '#fff6c9'); // the ray that did this
         }
       },
@@ -31605,27 +31613,57 @@ document.addEventListener('DOMContentLoaded', () => {
           setTimeout(() => { try { bs.remove(); } catch (e) { /* twinkled out */ } }, 1500);
         }
       }
-      // cumulus weather: a personal drizzle; APEX adds the lightning
-      if (w.weather && now > w.rainAt) {
-        w.rainAt = now + 380 + Math.random() * 420;
-        const rd = document.createElement('span');
-        rd.className = 'pik-rain-bit';
-        rd.style.left = (w.x + 6 + Math.random() * 20) + 'px';
-        rd.style.top = (w.y + 30) + 'px';
-        DESK_PIK.layer.appendChild(rd);
-        rd.addEventListener('animationend', () => rd.remove());
-      }
-      if (w.apexWeather && now > w.boltAt) {
-        w.boltAt = now + 6000 + Math.random() * 7000;
-        const bl = document.createElement('span');
-        bl.className = 'pik-bolt-bit';
-        bl.textContent = '⚡';
-        bl.style.left = (w.x + 8 + Math.random() * 16) + 'px';
-        bl.style.top = (w.y + 26) + 'px';
-        DESK_PIK.layer.appendChild(bl);
-        bl.addEventListener('animationend', () => bl.remove());
-        w.el.classList.add('pik-flash');
-        setTimeout(() => { try { w.el.classList.remove('pik-flash'); } catch (e) { /* thundered off */ } }, 320);
+      // cumulus weather: ★★ = a personal drizzle. APEX = a full weather
+      // station cycling every 8-15s through rain / storm / snow / sunshine
+      if (w.weather) {
+        if (w.apexWeather && now > (w.wxModeAt || 0)) {
+          const MODES = ['rain', 'storm', 'snow', 'sunny'];
+          let nm;
+          do { nm = MODES[Math.floor(Math.random() * MODES.length)]; } while (nm === w.wxMode);
+          w.wxMode = nm;
+          w.wxModeAt = now + 8000 + Math.random() * 7000;
+        }
+        const wx = w.apexWeather ? (w.wxMode || 'rain') : 'rain';
+        if (now > w.rainAt) {
+          if (wx === 'rain' || wx === 'storm') {
+            const rd = document.createElement('span');
+            rd.className = 'pik-rain-bit';
+            rd.style.left = (w.x + 6 + Math.random() * 20) + 'px';
+            rd.style.top = (w.y + 30) + 'px';
+            DESK_PIK.layer.appendChild(rd);
+            rd.addEventListener('animationend', () => rd.remove());
+            w.rainAt = now + (wx === 'storm' ? 170 + Math.random() * 160 : 380 + Math.random() * 420);
+          } else if (wx === 'snow') {
+            const sf = document.createElement('span');
+            sf.className = 'pik-snow-bit';
+            sf.style.left = (w.x + 4 + Math.random() * 24) + 'px';
+            sf.style.top = (w.y + 28) + 'px';
+            DESK_PIK.layer.appendChild(sf);
+            sf.addEventListener('animationend', () => sf.remove());
+            w.rainAt = now + 460 + Math.random() * 420;
+          } else { // sunny: golden warmth rises off the cloud
+            const su = document.createElement('span');
+            su.className = 'pik-party-bit';
+            su.style.background = Math.random() < 0.5 ? '#ffd400' : '#fff6c9';
+            su.style.left = (w.x + 4 + Math.random() * 24) + 'px';
+            su.style.top = (w.y + Math.random() * 20) + 'px';
+            DESK_PIK.layer.appendChild(su);
+            su.addEventListener('animationend', () => su.remove());
+            w.rainAt = now + 420 + Math.random() * 380;
+          }
+        }
+        if (wx === 'storm' && now > w.boltAt) {
+          w.boltAt = now + 2200 + Math.random() * 1600;
+          const bl = document.createElement('span');
+          bl.className = 'pik-bolt-bit';
+          bl.textContent = '⚡';
+          bl.style.left = (w.x + 8 + Math.random() * 16) + 'px';
+          bl.style.top = (w.y + 26) + 'px';
+          DESK_PIK.layer.appendChild(bl);
+          bl.addEventListener('animationend', () => bl.remove());
+          w.el.classList.add('pik-flash');
+          setTimeout(() => { try { w.el.classList.remove('pik-flash'); } catch (e) { /* thundered off */ } }, 320);
+        }
       }
       if (now < w.restUntil) return;
       const dx = w.tx - w.x, dy = w.ty - w.y;
