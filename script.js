@@ -27347,6 +27347,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const img = document.createElement('img');
     img.className = 'pik-evo-sprite';
     img.alt = '';
+    img.style.width = (newForm - 1) >= 2 ? 'min(272px, 62vw)' : 'min(176px, 40vw)';
     img.src = pikSprite(pikEntryColor(p), p.s || 0, p.sp || null, false, newForm - 1, kk);
     port.appendChild(img);
     const sp = p.sp ? pikSpecies(p.sp) : null;
@@ -27409,6 +27410,7 @@ document.addEventListener('DOMContentLoaded', () => {
     timers.push(setTimeout(() => { // THE REVEAL
       ov.classList.remove('flashing');
       ov.classList.add('revealed');
+      img.style.width = 'min(272px, 62vw)';
       img.src = pikSprite(pikEntryColor(p), p.s || 0, p.sp || null, false, newForm, kk);
       clearInterval(dust);
       playFanfare();
@@ -27566,7 +27568,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const img = document.createElement('img');
     img.src = pikSprite(color, stage, species ? species.id : null, false, gbForm, gbKey);
     img.alt = '';
-    img.style.width = gbForm === 3 ? '46px' : gbForm === 2 ? '39px' : '33px';
+    img.style.width = gbForm === 3 ? '71px' : gbForm === 2 ? '60px' : '33px'; // apron-compensated (see v161.1)
     if (gbForm >= 2) el.classList.add('pik-form' + gbForm);
     el.appendChild(img);
     if (species) { // the hat performs live, too
@@ -30642,10 +30644,11 @@ document.addEventListener('DOMContentLoaded', () => {
       roster.slice(0, PIK_MAX).forEach((r, i) => {
         const sp = r.sp ? pikSpecies(r.sp) : null;
         const holder = document.createElement('span');
-        holder.className = 'loader-pik';
+        const ldForm = (typeof pikFormOf === 'function') ? pikFormOf(r) : 1;
+        holder.className = 'loader-pik' + (ldForm >= 2 ? ' pik-form' + ldForm : '');
         holder.style.animationDelay = (i * 0.13) + 's';
         const img = document.createElement('img');
-        img.src = pikSprite(sp ? sp.body : ((r.h != null) ? hueColor(r.h) : (PIK_COLORS[r.c] || PIK_COLORS[0])), r.s || 0, r.sp || null, false, typeof pikFormOf === 'function' ? pikFormOf(r) : 1, typeof pikKindKey === 'function' ? pikKindKey(r) : '');
+        img.src = pikSprite(sp ? sp.body : ((r.h != null) ? hueColor(r.h) : (PIK_COLORS[r.c] || PIK_COLORS[0])), r.s || 0, r.sp || null, false, ldForm, typeof pikKindKey === 'function' ? pikKindKey(r) : '');
         img.alt = '';
         holder.appendChild(img);
         if (sp) {
@@ -30971,7 +30974,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!p.a) return;
         const chip = document.createElement('button');
         chip.type = 'button';
-        chip.className = 'pikdex-squad-chip' + (p.ch ? ' is-chameleon' : '');
+        const chipForm = typeof pikFormOf === 'function' ? pikFormOf(p) : 1;
+        chip.className = 'pikdex-squad-chip' + (p.ch ? ' is-chameleon' : '') + (chipForm >= 2 ? ' pik-form' + chipForm : '');
         const nm = pikNameOf(dex, ix);
         chip.title = nm + ' — ' + trT('open dossier', 'ouvrir le dossier');
         const star = document.createElement('span');
@@ -30979,7 +30983,7 @@ document.addEventListener('DOMContentLoaded', () => {
         star.textContent = '⭐';
         chip.appendChild(star);
         const im = document.createElement('img');
-        im.src = pikSprite(p.sp ? pikEntryColor(p) : hueColor(pikHueOf(p)), p.s || 0, p.sp || null, false, typeof pikFormOf === 'function' ? pikFormOf(p) : 1, pikKindKey(p));
+        im.src = pikSprite(p.sp ? pikEntryColor(p) : hueColor(pikHueOf(p)), p.s || 0, p.sp || null, false, chipForm, pikKindKey(p));
         im.alt = '';
         chip.appendChild(im);
         if (p.sp) {
@@ -31052,12 +31056,13 @@ document.addEventListener('DOMContentLoaded', () => {
       const p = dex[dexIx];
       const cell = document.createElement('button');
       cell.type = 'button';
-      cell.className = 'pikdex-cell' + (p.a ? ' is-on-duty' : '') + (p.ch ? ' is-chameleon' : '') + (extraCls || '');
+      const cellForm = typeof pikFormOf === 'function' ? pikFormOf(p) : 1;
+      cell.className = 'pikdex-cell' + (p.a ? ' is-on-duty' : '') + (p.ch ? ' is-chameleon' : '') + (cellForm >= 2 ? ' pik-form' + cellForm : '') + (extraCls || '');
       cell.setAttribute('role', 'listitem');
       const name = pikNameOf(dex, dexIx);
       cell.title = name;
       const img = document.createElement('img');
-      img.src = pikSprite(p.sp ? pikEntryColor(p) : hueColor(pikHueOf(p)), p.s || 0, p.sp || null, false, typeof pikFormOf === 'function' ? pikFormOf(p) : 1, pikKindKey(p));
+      img.src = pikSprite(p.sp ? pikEntryColor(p) : hueColor(pikHueOf(p)), p.s || 0, p.sp || null, false, cellForm, pikKindKey(p));
       img.alt = '';
       const nm = document.createElement('span');
       nm.className = 'pikdex-cell-name';
@@ -31184,10 +31189,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const body = document.createElement('div');
     body.className = 'pik-card-body';
     const port = document.createElement('div');
-    port.className = 'pik-card-portrait';
+    const portForm = typeof pikFormOf === 'function' ? pikFormOf(p) : 1;
+    port.className = 'pik-card-portrait' + (portForm >= 2 ? ' pik-form' + portForm : '');
     const big = document.createElement('img');
     big.alt = '';
-    big.src = pikSprite(pikEntryColor(p), p.s || 0, p.sp || null, false, typeof pikFormOf === 'function' ? pikFormOf(p) : 1, pikKindKey(p));
+    big.src = pikSprite(pikEntryColor(p), p.s || 0, p.sp || null, false, portForm, pikKindKey(p));
     port.appendChild(big);
     const pSpecies = p.sp ? pikSpecies(p.sp) : null;
     if (pSpecies) {

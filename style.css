@@ -7632,8 +7632,16 @@ body.nm-melt-static::after {
 
 
 /* ============ pikmin EVOLUTION: three forms per kind ============ */
-.desk-pik.pik-form2, .desk-pik.pik-form2 img { width: 39px; }
-.desk-pik.pik-form3, .desk-pik.pik-form3 img { width: 46px; }
+/* evolved sprites carry a 3px transparent apron (canvas 17 wide vs 11):
+   widths are ×17/11 so the BODY renders at its intended size — the apron
+   is where horns/halos/tails live, not a shrink ray (v161.1 size fix) */
+.desk-pik.pik-form2, .desk-pik.pik-form2 img { width: 60px; }
+.desk-pik.pik-form3, .desk-pik.pik-form3 img { width: 71px; }
+.pikdex-cell.pik-form2 img, .pikdex-cell.pik-form3 img { width: 53px; }
+.pikdex-squad-chip.pik-form2 img, .pikdex-squad-chip.pik-form3 img { width: 53px; }
+.pik-parade.pik-form2 img, .pik-parade.pik-form3 img { width: 65px; }
+.pik-card-portrait.pik-form2 img, .pik-card-portrait.pik-form3 img { width: 99px; }
+.loader-pik.pik-form2 img, .loader-pik.pik-form3 img { width: 40px; }
 .desk-pik.pik-form2 img {
   filter: drop-shadow(0 0 3px #ffffff) drop-shadow(0 0 8px rgba(255, 255, 255, 0.95));
 }
