@@ -27008,6 +27008,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // v161.4: Low Batt's evolved life is a REAL-TIME charge cycle — one
   // hour up, one hour down, forever. quantized to 8 bars so the sprite
   // cache stays sane (a new frame every ~7.5 minutes)
+  const PIK_PARTY_COLORS = ['#ff2fae', '#41e0ff', '#ffd400', '#7cfc00', '#c9a7f5', '#ff8a5c'];
   function pikBattState() {
     const CYC = 7200000, t = Date.now() % CYC;
     const charging = t < 3600000;
@@ -27231,8 +27232,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const colsSet = [];
         for (let rx = 0; rx < w; rx++) { for (let ry = iTop; ry <= iBot; ry++) { if (rows[ry] && rows[ry][rx] === 'B') { colsSet.push(rx); break; } } }
         const nFill = Math.round(colsSet.length * bb.level / 8);
-        const fillCol = (!bb.charging || bb.level >= 8) ? '#8fe89b' : '#ffffff';
-        colsSet.slice(0, nFill).forEach((rx) => { for (let ry = iTop; ry <= iBot; ry++) { if (rows[ry][rx] === 'B') px(rx, ry, fillCol); } });
+        // a proper battery indicator: red bars first, amber through the
+        // middle, green at the top of the charge (owner spec v161.5)
+        const GRAD = ['#ff5d5d', '#ff7a4d', '#ff9d3f', '#ffc23f', '#ffe14d', '#c8e84f', '#9be86b', '#7ce87c'];
+        colsSet.slice(0, nFill).forEach((rx, gi) => {
+          const col = GRAD[Math.min(GRAD.length - 1, Math.floor(gi * GRAD.length / Math.max(1, colsSet.length)))];
+          for (let ry = iTop; ry <= iBot; ry++) { if (rows[ry][rx] === 'B') px(rx, ry, col); }
+        });
         if (bb.charging) {
           // plugged in: the cable, and the bright little bolt overhead
           const yP = 6, r = edgeR(yP);
@@ -30094,6 +30100,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const r = DESK_PIK.layer.getBoundingClientRect();
     const w = {
       el, img, hue: hue !== null ? hue : null, chameleon: !!chameleon, hueAt: 0, stage: stage || 0,
+      party: spId === 'y2kbug' && form >= 2, partyAt: 0, // evolved Y2K Bug: a walking celebration
       sp: species || null, spd: species && species.spd ? species.spd : 1, stepAt: 0,
       x: 40 + Math.random() * Math.max(120, r.width - 160),
       y: r.height * 0.35 + Math.random() * (r.height * 0.5),
@@ -31511,6 +31518,17 @@ document.addEventListener('DOMContentLoaded', () => {
         w.hue = ((w.hue || 5) + 30) % 360 || 5;
         w.img.src = pikSprite(hueColor(w.hue), w.stage, null, false, pikFormOfLive(w), pikKindOfLive(w));
       }
+      // evolved Y2K Bug never stops partying: confetti bits float off it
+      if (w.party && now > w.partyAt) {
+        w.partyAt = now + 260 + Math.random() * 260;
+        const cf = document.createElement('span');
+        cf.className = 'pik-party-bit';
+        cf.style.background = PIK_PARTY_COLORS[Math.floor(Math.random() * PIK_PARTY_COLORS.length)];
+        cf.style.left = (w.x + 4 + Math.random() * 26) + 'px';
+        cf.style.top = (w.y - 6 + Math.random() * 32) + 'px';
+        DESK_PIK.layer.appendChild(cf);
+        cf.addEventListener('animationend', () => cf.remove());
+      }
       if (now < w.restUntil) return;
       const dx = w.tx - w.x, dy = w.ty - w.y;
       const d = Math.hypot(dx, dy);
@@ -31552,6 +31570,22 @@ document.addEventListener('DOMContentLoaded', () => {
           w.trailAt = now + 750 + Math.random() * 450; // airier cadence
           const n = 1 + Math.floor(Math.random() * 10);
           const cx = w.x + 14, cy = w.y + 34; // strictly below the sprite
+          if (w.party) { // the celebration walks WITH it: a confetti wake
+            for (let k = 0; k < 2 + Math.floor(Math.random() * 4); k++) {
+              const s = document.createElement('span');
+              s.className = 'pik-trail pik-party-trail';
+              s.style.background = PIK_PARTY_COLORS[Math.floor(Math.random() * PIK_PARTY_COLORS.length)];
+              s.style.left = (cx + Math.random() * 26 - 13) + 'px';
+              s.style.top = (cy + Math.random() * 10) + 'px';
+              s.style.transform = 'rotate(' + Math.floor(Math.random() * 90) + 'deg)';
+              DESK_PIK.layer.appendChild(s);
+              setTimeout(() => s.classList.add('fading'), 10500);
+              setTimeout(() => s.remove(), 12000);
+            }
+            const trailsP = DESK_PIK.layer.querySelectorAll('.pik-trail');
+            for (let k = 0; k < trailsP.length - 120; k++) trailsP[k].remove();
+            return;
+          }
           const posyR = n > 2 ? 15 + n * 3 : 0; // roomy, breathable posies
           for (let k = 0; k < n; k++) {
             const f = document.createElement('img');

@@ -6500,6 +6500,34 @@ html[data-theme="dark"] .pikdex-squad-chip {
 }
 html[data-theme="dark"] .pikdex-squad-chip:hover { box-shadow: 2px 5px 0 #1c0f2e, 0 0 10px var(--purple-dark), inset 0 0 0 1px rgba(201, 167, 245, 0.25); }
 @media (prefers-reduced-motion: reduce) { .pikdex-squad-chip { transition: none; } }
+/* evolved Y2K Bug: a walking celebration — floating confetti bits and a
+   confetti wake instead of flower prints */
+.pik-party-bit {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  pointer-events: none;
+  z-index: 3;
+  animation: pik-party-float 1.7s ease-out forwards;
+}
+@keyframes pik-party-float {
+  0% { opacity: 0; transform: translateY(0) rotate(0deg); }
+  15% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-16px) rotate(120deg); }
+}
+.pik-party-trail {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 1px;
+  pointer-events: none;
+  opacity: 0.9;
+}
+.pik-party-trail.fading { opacity: 0; transition: opacity 1.5s ease; }
+@media (prefers-reduced-motion: reduce) {
+  .pik-party-bit { display: none; }
+}
+
 /* the dossier's appearance picker: lock any earned form, purely cosmetic */
 .pik-card-formpick {
   display: flex;
