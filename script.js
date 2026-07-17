@@ -27096,7 +27096,7 @@ document.addEventListener('DOMContentLoaded', () => {
     dotmatrix: ['it prints its own hi-scores now', 'il imprime ses propres records maintenant'],
     bsodjr: ['it collects crash reports AND frames them', 'il collectionne les rapports de plantage ET les encadre'],
     rgbrig: ['the FPS are still cosmetic. the GLOW is real', 'les FPS restent cosmétiques. le HALO est réel'],
-    captcha: ['it is DEFINITELY not a robot (the mustache proves it)', 'il n\'est VRAIMENT pas un robot (la moustache le prouve)'],
+    captcha: ['it is DEFINITELY not a robot (it has a FLOWER)', 'il n\'est VRAIMENT pas un robot (il a une FLEUR)'],
     kernelpg: ['it\'s free, it\'s open, it has FLIPPERS', 'il est libre, il est ouvert, il a des NAGEOIRES']
   };
   function pikEvoLore(kk, form) {
@@ -27347,13 +27347,10 @@ document.addEventListener('DOMContentLoaded', () => {
         rim((rx, ry) => ['#ff4d6d', '#7cfc00', '#41e0ff'][(rx + ry) % 3]);
         if (epic) { star(cx - 3, -1, '#ff4d6d'); star(cx + 3, -1, '#41e0ff'); }
       },
-      captcha() { // the human disguise (v164): NO glasses — dark frames on
-        // a small face mush into a blob (user-decreed: never again). the
-        // static marks stay minimal; the SHAPESHIFTING is live in the tick
-        px(3, 6, '#7a4a26'); px(4, 6, '#7a4a26'); px(5, 6, '#7a4a26'); px(6, 6, '#7a4a26'); px(7, 6, '#7a4a26'); // ★★: a mustache. humans have those
-        if (epic) {
-          star(5, 0, '#ff8fc7'); px(5, 0, '#ffd400'); // ★★★: the antenna is a flower. biological. definitely
-        }
+      captcha() { // the human disguise (v165): no glasses, no mustache
+        // (both user-decreed too weird). the antenna does the talking:
+        if (epic) { star(5, 0, '#ff8fc7'); px(5, 0, '#ffd400'); } // ★★★: full bloom, gold core
+        else { px(5, 0, '#ff8fc7'); px(5, 1, '#ffb3dd'); } // ★★: a pink bud
       },
       kernelpg() { // tux upgrades: a round chest heart, then little flippers
         const yH = bodyTop + 3;
@@ -31584,7 +31581,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       // the pointer family: the pink baby follows, stalls, and gets fetched
       if (w.babyEl) {
-        const bTx = w.x - 16, bTy = w.y + 8;
+        const bTx = w.x - 30, bTy = w.y + 12; // trail BEHIND the parent, not on it
         const stalled = now < w.babyStallUntil;
         if (stalled) w.babyEl.classList.add('is-stalled');
         else {
@@ -31596,11 +31593,20 @@ document.addEventListener('DOMContentLoaded', () => {
             w.babyY += (bTy - w.babyY) * 0.07;
           }
         }
+        // personal space: the baby NEVER overlaps the parent — if the
+        // centers get closer than 36px it is nudged back out
+        const pcx = w.x + 22, pcy = w.y + 20, bcx = w.babyX + 9, bcy = w.babyY + 9;
+        const cd = Math.hypot(bcx - pcx, bcy - pcy);
+        if (cd < 36 && cd > 0.01) {
+          const push = (36 - cd) / cd;
+          w.babyX += (bcx - pcx) * push;
+          w.babyY += (bcy - pcy) * push;
+        }
         const babyDist = Math.hypot(w.x - w.babyX, w.y - w.babyY);
-        if (!stalled && babyDist > 56 && !w.fetching) w.fetching = true; // it fell behind — go back for it
+        if (!stalled && babyDist > 70 && !w.fetching) w.fetching = true; // it fell behind — go back for it
         if (w.fetching) {
           w.tx = w.babyX + 16; w.ty = Math.max(8, w.babyY - 8);
-          if (babyDist < 26) {
+          if (babyDist < 52) {
             w.fetching = false;
             w.babyStallUntil = 0;
             const hb = document.createElement('span'); // the reunion heart
@@ -31632,7 +31638,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // morphs into a pixel animal, holds a few seconds, then POP — pink
       // confetti — back to robot, wondering aloud if anything seemed off.
       // ★★★: it cycles the whole zoo and only sometimes blows its cover.
-      // every animal keeps the mustache (continuity is important)
+      // every creature keeps the antenna flower (continuity is important)
       if (w.disguiser && now > w.disguiseAt) {
         if (w.disguised < 0) { // currently a robot: put on a costume
           if (!w.trueSrc) w.trueSrc = w.img.src;
@@ -31876,15 +31882,28 @@ document.addEventListener('DOMContentLoaded', () => {
   // six SOFT pastel bloom sprites — powder pink / milk lilac /
   // custard / powder blue / mint cream / peach milk. gentle on
   // the eyes, unmistakably Y2K NSO.
-  // Not A Robot's wardrobe: six pixel animals, every one keeping the
-  // mustache (M) — the disguise is flawless except for that one detail
+  // Not A Robot's wardrobe (v165): EIGHTEEN pixel creatures — plain,
+  // fancy, and mythical. no mustaches (user-decreed: too weird). the
+  // tell is the antenna FLOWER every disguise keeps wearing on its head
   var PIK_DISGUISES = [
-    { t: ['...........', '...........', '..D.....D..', '..DB...BD..', '..BBBBBBB..', '..BeBBBeB..', '..BMMMMMB..', '..BuBwBuB..', '..BBBBBBB..', '...BBBBB...', '...D...D...', '...........', '...........', '...........'], c: { B: '#c3c3d6', D: '#7a7a94' } }, // cat
-    { t: ['...B...B...', '...B...B...', '...B...B...', '..BBBBBBB..', '..BeBBBeB..', '..BMMMMMB..', '..BuBwBuB..', '..BBBBBBB..', '..BBBBBBB..', '...BBBBB...', '...D...D...', '...........', '...........', '...........'], c: { B: '#f7f2f2', D: '#d8a8b8' } }, // bunny
-    { t: ['...........', '...........', '...BBBBB...', '..BBBBBBB..', '..BeBeBXX..', '..BMMMBXX..', '..BBBBBBB..', '..BBBBBBB..', '..BBBBBBB..', '...BBBBB...', '...X...X...', '...........', '...........', '...........'], c: { B: '#ffd94d', D: '#e0a800', X: '#ff8a3c' } }, // duck
-    { t: ['...........', '..BB...BB..', '..Be...eB..', '..BBBBBBB..', '..BBBBBBB..', '..BMMMMMB..', '..BwwwwwB..', '..BuBBBuB..', '..BBBBBBB..', '...BBBBB...', '...D...D...', '...........', '...........', '...........'], c: { B: '#8fd45e', D: '#4f9e3d' } }, // frog
-    { t: ['...........', '...........', '..D.....D..', '..BBBBBBB..', '..BeBBBeB..', '..BMMMMMB..', '..BXXDXXB..', '..BBBBBBB..', '..BBBBBBB..', '...BBBBB...', '...D...D...', '...........', '...........', '...........'], c: { B: '#ffb9cc', D: '#e58aa8', X: '#ff8fb0' } }, // pig
-    { t: ['...........', '..BB...BB..', '..Bu...uB..', '..BBBBBBB..', '..BeBBBeB..', '..BMMMMMB..', '..BuBwBuB..', '..BBBBBBB..', '..BBBBBBB..', '...BBBBB...', '...D...D...', '...........', '...........', '...........'], c: { B: '#cfc3e8', D: '#8f7fc0' } } // mouse
+    { t: ['...........', '...........', '..D.....D..', '..DB...BD..', '..BBBBBBB..', '..BeBBBeB..', '..BBBBBBB..', '..BuBwBuB..', '..BBBBBBB..', '...BBBBB...', '...D...D...', '...........', '...........', '...........'], c: { B: '#c3c3d6', D: '#7a7a94' } }, // cat
+    { t: ['...B...B...', '...B...B...', '...B...B...', '..BBBBBBB..', '..BeBBBeB..', '..BBBBBBB..', '..BuBwBuB..', '..BBBBBBB..', '..BBBBBBB..', '...BBBBB...', '...D...D...', '...........', '...........', '...........'], c: { B: '#f7f2f2', D: '#d8a8b8' } }, // bunny
+    { t: ['...........', '...........', '...BBBBB...', '..BBBBBBB..', '..BeBeBXX..', '..BBBBBXX..', '..BBBBBBB..', '..BBBBBBB..', '..BBBBBBB..', '...BBBBB...', '...X...X...', '...........', '...........', '...........'], c: { B: '#ffd94d', D: '#e0a800', X: '#ff8a3c' } }, // duck
+    { t: ['...........', '..BB...BB..', '..Be...eB..', '..BBBBBBB..', '..BBBBBBB..', '..BBBBBBB..', '..BwwwwwB..', '..BuBBBuB..', '..BBBBBBB..', '...BBBBB...', '...D...D...', '...........', '...........', '...........'], c: { B: '#8fd45e', D: '#4f9e3d' } }, // frog
+    { t: ['...........', '...........', '..D.....D..', '..BBBBBBB..', '..BeBBBeB..', '..BBBBBBB..', '..BXXDXXB..', '..BBBBBBB..', '..BBBBBBB..', '...BBBBB...', '...D...D...', '...........', '...........', '...........'], c: { B: '#ffb9cc', D: '#e58aa8', X: '#ff8fb0' } }, // pig
+    { t: ['...........', '..BB...BB..', '..Bu...uB..', '..BBBBBBB..', '..BeBBBeB..', '..BBBBBBB..', '..BuBwBuB..', '..BBBBBBB..', '..BBBBBBB..', '...BBBBB...', '...D...D...', '...........', '...........', '...........'], c: { B: '#cfc3e8', D: '#8f7fc0' } }, // mouse
+    { t: ['......X....', '.....XX....', '..P.BBB.P..', '..PBBBBBP..', '..BeBBBeB..', '..BBBwBBB..', '..BuBBBuB..', '..BBBBBBB..', '..BBBBBBB..', '...BBBBB...', '...D...D...', '...........', '...........', '...........'], c: { B: '#f7f2fa', D: '#d8b8e8', X: '#ffd400', P: '#ff9fd0' }, f: [3, 1] }, // UNICORN
+    { t: ['...........', '..D.....D..', '..BBBBBBB..', '..BeBBBeB..', '..BBBwBBB..', '.XBBBBBBBX.', '.XXBBBBBXX.', '..BBBBBBB..', '..BBBBBBB..', '...BBBBB...', '...D...D...', '...........', '...........', '...........'], c: { B: '#7fd8c8', D: '#3f9e8e', X: '#5fb8a8' } }, // dragon
+    { t: ['...........', '...........', '...BBBBB...', '..BBBBBBB..', '..BeBBBeB..', '..BBBBBBB..', '..BuBBBuB..', '..BBBBBBB..', '..BBBBBBB..', '..B.BB.B...', '...........', '...........', '...........', '...........'], c: { B: '#eef2ff', D: '#b8c4e8' } }, // ghost (floats, no feet)
+    { t: ['...........', '...........', '..BBBBBBB..', '.BBBBBBBBB.', '.BeBBBBBeB.', '.BBBwwwBBB.', '.BBBBBBBBB.', '.BBBBBBBBB.', '.B.B.B.B.B.', '.B.B.B.B.B.', '...........', '...........', '...........', '...........'], c: { B: '#c9a7f5', D: '#8f6fd0' } }, // octopus
+    { t: ['...........', '..w.....w..', '.www...www.', '..BBBBBBB..', '..BeBBBeB..', '..DDDDDDD..', '..BBBBBBB..', '..DDDDDDD..', '..BBBBBBB..', '...BBBBB...', '.....X.....', '...........', '...........', '...........'], c: { B: '#ffd94d', D: '#3a3a3a', X: '#3a3a3a' } }, // bee
+    { t: ['...........', '.e.e.......', '.B.B.......', '.BBB.XXXX..', '.BBBXXDDX..', '.BBBXDXDX..', '.BBBXXDDX..', '.BBBB.XXX..', '.BBBBBBBB..', '..BBBBBBB..', '...........', '...........', '...........', '...........'], c: { B: '#ffcf9f', D: '#c07840', X: '#e8a86a' }, f: [2, 0] }, // snail
+    { t: ['...........', '...X.X.X...', '..BBBBBBB..', '..BeBBBeB..', '..BBBwBBB..', '..BuBBBuB..', '..BBBBBBB..', '..BBBBBBB..', '..BBBBBBB..', '...BBBBB...', '...D...D...', '...........', '...........', '...........'], c: { B: '#9fd45e', D: '#5f9e3d', X: '#ff8a5c' }, f: [7, 0] }, // stego
+    { t: ['...........', '..D.....D..', '..DB...BD..', '..BBBBBBB..', '..BeBBBeB..', '..BwwwwwB..', '..BBwwwBB..', '..BBBBBBB..', '..BBBBBBB..', '...BBBBB...', '...D...D...', '...........', '...........', '...........'], c: { B: '#ff9a56', D: '#c86a30' } }, // fox
+    { t: ['...........', '..BB...BB..', '..BB...BB..', '..BBBBBBB..', '..BeBBBeB..', '..BBwwwBB..', '..BBwDwBB..', '..BBBBBBB..', '..BBBBBBB..', '...BBBBB...', '...D...D...', '...........', '...........', '...........'], c: { B: '#c89060', D: '#8a5a30' } }, // bear
+    { t: ['...........', '...........', '...BBBBB...', '..BBBBBBB..', '..BeBBBeB..', '..BBBXBBB..', '.BBBBBBBBB.', '.BBBBBBBBB.', '..BBBBBBB..', '...BBBBB...', '...X...X...', '...........', '...........', '...........'], c: { B: '#ffe066', D: '#e0a800', X: '#ff8a3c' } }, // chick
+    { t: ['...........', '...BBBBB...', '...BeBeB...', '..XXXXXXX..', '..XDXDXDX..', '..XXXXXXX..', '..XDXDXDX..', '..XXXXXXX..', '..BBBBBBB..', '...B...B...', '...........', '...........', '...........', '...........'], c: { B: '#9fd45e', D: '#3f7e2d', X: '#6fae4e' } }, // turtle
+    { t: ['....w......', '...w.w.....', '...........', '..BBBBBBB..', '.BBBBBBBBB.', '.BeBBBBBBB.', '.BwBBBBBBB.', '.BBBBBBBBB.', '..BBBBBBB..', '...BBBB.X..', '........X..', '...........', '...........', '...........'], c: { B: '#7cb8f0', D: '#4a88c8', X: '#5a98d8' }, f: [5, 2] } // whale
   ];
   var pikDisguiseCache = null;
   function pikDisguiseSprite(i) {
@@ -31893,7 +31912,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const c = document.createElement('canvas');
         c.width = 11; c.height = 14;
         const x = c.getContext('2d');
-        const pal = { B: a.c.B, D: a.c.D, X: a.c.X || a.c.D, M: '#7a4a26', w: 'rgba(255,255,255,0.75)', e: '#14020e', u: 'rgba(255,120,180,0.65)' };
+        const pal = { B: a.c.B, D: a.c.D, X: a.c.X || a.c.D, P: a.c.P || '#ff9fd0', w: 'rgba(255,255,255,0.78)', e: '#14020e', u: 'rgba(255,120,180,0.65)' };
         a.t.forEach((row, ry) => {
           for (let rx = 0; rx < row.length; rx++) {
             const ch = row[rx];
@@ -31902,6 +31921,20 @@ document.addEventListener('DOMContentLoaded', () => {
             x.fillRect(rx, ry, 1, 1);
           }
         });
+        // the tell: every disguise wears the antenna flower on its head
+        let fx = 5, fy;
+        if (a.f) { fx = a.f[0]; fy = a.f[1]; }
+        else {
+          let top = 3;
+          for (let ry = 0; ry < 14; ry++) { if (a.t[ry][fx] !== '.') { top = ry; break; } }
+          fy = Math.max(1, top - 1);
+        }
+        x.fillStyle = '#ff8fc7';
+        [[fx - 1, fy], [fx + 1, fy], [fx, fy - 1], [fx, fy + 1]].forEach(([qx, qy]) => {
+          if (qx >= 0 && qx < 11 && qy >= 0 && qy < 14) x.fillRect(qx, qy, 1, 1);
+        });
+        x.fillStyle = '#ffd400';
+        x.fillRect(fx, fy, 1, 1);
         return c.toDataURL();
       });
     }
