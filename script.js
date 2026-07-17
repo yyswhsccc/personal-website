@@ -32426,12 +32426,12 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
               w.trackFlip = !w.trackFlip; // left paw, right paw, left paw
               const s = document.createElement('img');
-              const wet = tr[0] === 'drop' || tr[0] === 'slime' || tr[0] === 'wisp';
+              const wet = tr[0] === 'drop' || tr[0] === 'slime' || tr[0] === 'wisp' || tr[0] === 'dash'; // the bee's flight line glows too
               s.className = 'pik-trail pik-track' + (wet ? ' pik-track-wet' : '');
               if (wet) s.style.setProperty('--track-glow', tr[1]);
               s.src = pikTrackSprite(tr[0], tr[1]);
               s.alt = '';
-              s.style.width = ({ paw: 10, bird: 10, drop: 8, wisp: 12, dash: 9, slime: 9 })[tr[0]] + 'px';
+              s.style.width = ({ paw: 10, bird: 10, drop: 8, wisp: 12, dash: 13, slime: 9 })[tr[0]] + 'px';
               s.style.left = (cx + (w.trackFlip ? -6 : 2)) + 'px';
               s.style.top = (cy + Math.random() * 6) + 'px';
               DESK_PIK.layer.appendChild(s);
@@ -32533,7 +32533,7 @@ document.addEventListener('DOMContentLoaded', () => {
       P(3, 1); P(3, 2); P(3, 3); P(3, 4); // middle toe
       P(1, 1); P(2, 2); P(5, 1); P(4, 2); // side toes
     } else if (kind === 'dash') {
-      [1, 2, 3, 4, 5].forEach((rx) => P(rx, 3)); // a flight stroke
+      [1, 2, 3, 4, 5].forEach((rx) => { P(rx, 3); P(rx, 4); }); // a flight stroke, TWO pixels thick (v174)
     } else if (kind === 'wisp') {
       [[2, 1], [3, 1], [4, 1], [1, 2], [5, 2], [1, 3], [5, 3], [2, 4], [3, 4], [4, 4]].forEach(([a, b]) => P(a, b)); // a hollow puff
     } else { // drop / slime: a glossy blob
