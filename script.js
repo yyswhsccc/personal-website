@@ -31013,7 +31013,7 @@ document.addEventListener('DOMContentLoaded', () => {
       starTrail: spId === 'pointer' && form >= 2, // the pointer family walks on stardust
       starNebula: spId === 'pointer' && form >= 3, // APEX: the full glowing nebula
       glitchy: spId === 'bitflip' && form >= 3, glitchAt: 0, // APEX bit flip: it ACTUALLY flips
-      disguiser: spId === 'captcha' && form >= 2, disguiseDeep: spId === 'captcha' && form >= 3, disguiseAt: 0, disguised: -1, // Not A Robot: the costumes
+      disguiser: spId === 'captcha' && form >= 2, disguiseDeep: spId === 'captcha' && form >= 3, disguiseAt: Date.now() + 4000 + Math.random() * 5000, disguised: -1, // Not A Robot: the costumes (fresh walkers idle first — a resync mid-reveal must not cut the show)
       framedSp: spId === 'y2kbug' && form >= 2, // sprites on the 0.9s frame clock
       cronRing: spId === 'cronjob' && form >= 2, lastMin: -1, // it rings ON the minute
       weather: spId === 'cumulus' && form >= 2, apexWeather: spId === 'cumulus' && form >= 3, rainAt: 0, boltAt: 0,
@@ -32544,7 +32544,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // confetti — back to robot, wondering aloud if anything seemed off.
       // ★★★: it cycles the whole zoo and only sometimes blows its cover.
       // every creature keeps the antenna flower (continuity is important)
-      if (w.disguiser && now > w.disguiseAt) {
+      if (w.disguiser && now > w.disguiseAt && now > (w.revealUntil || 0)) {
         // the ✅ hat swaps for a scrolling site-style banner announcing
         // (with full CAPTCHA confidence) what the creature definitely is
         const disgBanner = () => {
@@ -32615,6 +32615,7 @@ document.addEventListener('DOMContentLoaded', () => {
           burstWave(24, 30, 64, PIK_PARTY_COLORS, 0);
           burstWave(16, 16, 44, ['#ff2fae', '#ff8fc7', '#ffb3dd', '#ff5fa8'], 150);
           w.restUntil = now + 3600; w.tx = w.x; w.ty = w.y; // ROOTED to the spot
+          w.revealUntil = now + 4400; // the reveal scene is SACRED — no costume may cut it
           w.el.classList.remove('poked'); void w.el.offsetWidth; w.el.classList.add('poked');
           pikChirp();
           // then: two full seconds of SHIFTY EYES (left... right... left...)
@@ -32646,7 +32647,8 @@ document.addEventListener('DOMContentLoaded', () => {
           }
           setTimeout(() => {
             try {
-              if (w.disguised < 0) w.img.src = w.trueSrc; // eyes front
+              if (w.disguised >= 0) return; // a costume never delivers the robot's line
+              w.img.src = w.trueSrc; // eyes front
               const L = [
                 trT('...did something feel different just now?', '...quelque chose était différent à l\'instant, non ?'),
                 trT('I have ALWAYS been a robot', 'j\'ai TOUJOURS été un robot'),
