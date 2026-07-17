@@ -6618,6 +6618,20 @@ html[data-theme="dark"] .pikdex-squad-chip:hover { box-shadow: 2px 5px 0 #1c0f2e
 }
 @keyframes pik-bolt-flash { to { opacity: 0; transform: translateY(8px); } }
 .pik-flash img { filter: brightness(1.9) drop-shadow(0 0 8px #ffd400) !important; }
+/* the disguise blows: BIG chunky pixel confetti, flying radially */
+.pik-burst-bit {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  pointer-events: none;
+  image-rendering: pixelated;
+  animation: pik-burst-fly 0.85s cubic-bezier(0.15, 0.7, 0.3, 1) forwards;
+}
+@keyframes pik-burst-fly {
+  0% { transform: translate(0, 0) rotate(0deg); opacity: 1; }
+  70% { opacity: 1; }
+  100% { transform: translate(var(--bx, 0px), var(--by, -20px)) rotate(var(--br, 90deg)); opacity: 0; }
+}
 /* bit flip APEX: the bit ACTUALLY flips — a mirrored glitch stutter.
    lives on the WRAPPER (the img owns pik-bob + species fx filters) */
 .desk-pik.pik-glitch { animation: pik-glitch-jolt 0.42s steps(5); }
@@ -6630,7 +6644,7 @@ html[data-theme="dark"] .pikdex-squad-chip:hover { box-shadow: 2px 5px 0 #1c0f2e
   100% { transform: none; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .pik-rain-bit, .pik-snow-bit, .pik-bolt-bit, .pik-baby-star, .pik-star-dust, .pik-neb-puff { display: none; }
+  .pik-rain-bit, .pik-snow-bit, .pik-bolt-bit, .pik-baby-star, .pik-star-dust, .pik-neb-puff, .pik-burst-bit { display: none; }
   .pik-star-trail { animation: none; }
   .desk-pik.pik-glitch { animation: none; }
   .desk-pik-baby { animation: none; }

@@ -27020,6 +27020,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const kind = form >= 2 ? (kk || (spId ? 's:' + spId : 'w:' + pikSegOfHue(pikHueFromColor(color)))) : '';
     let key = color.body + '/' + stage + '/' + (spId || '') + '/' + (silhouette ? 1 : 0) + '/' + form + '/' + kind;
     if (!silhouette && form >= 2 && spId === 'lowbatt') { const bb = pikBattState(); key += '/b' + (bb.charging ? 'C' : 'D') + bb.level; }
+    if (!silhouette && form >= 2 && spId === 'y2kbug') key += '/c' + (Math.floor(Date.now() / 900) % 4); // the on-body confetti reshuffles
     if (pikSpriteCache[key]) return pikSpriteCache[key];
     let rows;
     if (spId && PIK_SPECIES_TPLS[spId]) {
@@ -27297,9 +27298,19 @@ document.addEventListener('DOMContentLoaded', () => {
         blk(cx - 1, bodyTop - 3, '#ffd400'); [cx - 2, cx - 1, cx, cx + 1, cx + 2].forEach((rx) => px(rx, bodyTop - 1, '#ffd400')); px(cx, bodyTop - 4 + 1, '#c98a2e');
         if (epic) { px(cx - 3, bodyTop - 2, '#ffd400'); px(cx + 3, bodyTop - 2, '#ffd400'); }
       },
-      y2kbug() { // the party went LIVE (floating bits + confetti wake) —
-        // the sprite stays clean so the single 🎊 up top reads alone
-        px(cx - 2, bodyTop + 3, '#ff2fae'); px(cx + 2, bodyTop + 4, '#41e0ff'); // two confetti dots on the chest
+      y2kbug() { // the party is ON the body too (v166): chunky confetti
+        // pixels that RESHUFFLE every ~0.9s — the sprite is framed via the
+        // cache key ('/c' + frame) and the tick re-rolls w.img.src live
+        const CONF = [
+          [[3, 3], [6, 5], [2, 7], [5, 8], [7, 7], [4, 9]],
+          [[4, 3], [2, 5], [7, 8], [3, 8], [6, 7], [5, 9]],
+          [[5, 3], [3, 5], [6, 8], [1, 7], [4, 7], [7, 9]],
+          [[6, 3], [5, 5], [2, 8], [7, 5], [4, 8], [3, 9]]
+        ];
+        const cf = Math.floor(Date.now() / 900) % 4;
+        const spots = CONF[cf];
+        const n = epic ? spots.length : 4; // ★★ wears four bits, APEX all six
+        for (let i = 0; i < n; i++) px(spots[i][0], spots[i][1], PIK_PARTY_COLORS[(i + cf) % PIK_PARTY_COLORS.length]);
         if (epic) rim('#ff2fae');
       },
       bitflip() { // GLITCH SCANLINES (v163, take 5): every decoration ON a
@@ -31568,6 +31579,15 @@ document.addEventListener('DOMContentLoaded', () => {
         w.hue = ((w.hue || 5) + 30) % 360 || 5;
         w.img.src = pikSprite(hueColor(w.hue), w.stage, null, false, pikFormOfLive(w), pikKindOfLive(w));
       }
+      // evolved Y2K Bug: the on-body confetti reshuffles every ~0.9s
+      if (w.party && w.sp && now > (w.confAt || 0)) {
+        w.confAt = now + 300;
+        const nf = Math.floor(now / 900) % 4;
+        if (nf !== w.confFrame) {
+          w.confFrame = nf;
+          w.img.src = pikSprite(w.sp.body, w.stage, w.sp.id, false, pikFormOfLive(w), pikKindOfLive(w));
+        }
+      }
       // evolved Y2K Bug never stops partying: confetti bits float off it
       if (w.party && now > w.partyAt) {
         w.partyAt = now + 260 + Math.random() * 260;
@@ -31657,15 +31677,21 @@ document.addEventListener('DOMContentLoaded', () => {
           w.disguised = -1;
           w.img.src = w.trueSrc;
           if (w.disguiseCls) { w.disguiseCls.forEach((cl) => w.el.classList.add(cl)); w.disguiseCls = null; }
-          for (let k = 0; k < 10; k++) {
+          for (let k = 0; k < 22; k++) { // the BIG pop: chunky pixel confetti, radial
             const b = document.createElement('span');
-            b.className = 'pik-party-bit';
-            b.style.background = ['#ff8fc7', '#ffb3dd', '#ff5fa8', '#ffd9ec'][k % 4];
-            b.style.left = (w.x + 4 + Math.random() * 24) + 'px';
-            b.style.top = (w.y + 4 + Math.random() * 26) + 'px';
+            b.className = 'pik-burst-bit';
+            b.style.background = PIK_PARTY_COLORS[k % PIK_PARTY_COLORS.length];
+            const ang = (k / 22) * 6.283 + Math.random() * 0.5;
+            const dist = 26 + Math.random() * 34;
+            b.style.setProperty('--bx', (Math.cos(ang) * dist).toFixed(1) + 'px');
+            b.style.setProperty('--by', (Math.sin(ang) * dist * 0.8 - 8).toFixed(1) + 'px');
+            b.style.setProperty('--br', Math.floor(Math.random() * 240 - 120) + 'deg');
+            b.style.left = (w.x + 19) + 'px';
+            b.style.top = (w.y + 16) + 'px';
             DESK_PIK.layer.appendChild(b);
             b.addEventListener('animationend', () => b.remove());
           }
+          w.restUntil = now + 1000; w.tx = w.x; w.ty = w.y; // frozen mid-pop. deer, headlights
           w.el.classList.remove('poked'); void w.el.offsetWidth; w.el.classList.add('poked');
           pikChirp();
           const L = [
