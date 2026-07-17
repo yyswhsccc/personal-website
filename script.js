@@ -27347,16 +27347,12 @@ document.addEventListener('DOMContentLoaded', () => {
         rim((rx, ry) => ['#ff4d6d', '#7cfc00', '#41e0ff'][(rx + ry) % 3]);
         if (epic) { star(cx - 3, -1, '#ff4d6d'); star(cx + 3, -1, '#41e0ff'); }
       },
-      captcha() { // the human disguise escalates (v163): the old green
-        // checkmark on a green body (and an APEX rim the exact color of
-        // the border) was invisible. a robot passing as human needs PROPS:
+      captcha() { // the human disguise (v164): NO glasses — dark frames on
+        // a small face mush into a blob (user-decreed: never again). the
+        // static marks stay minimal; the SHAPESHIFTING is live in the tick
         px(3, 6, '#7a4a26'); px(4, 6, '#7a4a26'); px(5, 6, '#7a4a26'); px(6, 6, '#7a4a26'); px(7, 6, '#7a4a26'); // ★★: a mustache. humans have those
         if (epic) {
-          // ★★★: the FULL kit — browline glasses hugging both eyes,
-          // and the antenna disguised as a flower. biological. definitely.
-          px(2, 4, '#2a1a33'); px(3, 4, '#2a1a33'); px(4, 4, '#2a1a33'); px(5, 4, '#2a1a33'); px(6, 4, '#2a1a33');
-          px(2, 5, '#2a1a33'); px(6, 5, '#2a1a33');
-          star(5, 0, '#ff8fc7'); px(5, 0, '#ffd400');
+          star(5, 0, '#ff8fc7'); px(5, 0, '#ffd400'); // ★★★: the antenna is a flower. biological. definitely
         }
       },
       kernelpg() { // tux upgrades: a round chest heart, then little flippers
@@ -30142,6 +30138,7 @@ document.addEventListener('DOMContentLoaded', () => {
       starTrail: spId === 'pointer' && form >= 2, // the pointer family walks on stardust
       starNebula: spId === 'pointer' && form >= 3, // APEX: the full glowing nebula
       glitchy: spId === 'bitflip' && form >= 3, glitchAt: 0, // APEX bit flip: it ACTUALLY flips
+      disguiser: spId === 'captcha' && form >= 2, disguiseDeep: spId === 'captcha' && form >= 3, disguiseAt: 0, disguised: -1, // Not A Robot: the costumes
       weather: spId === 'cumulus' && form >= 2, apexWeather: spId === 'cumulus' && form >= 3, rainAt: 0, boltAt: 0,
       sp: species || null, spd: species && species.spd ? species.spd : 1, stepAt: 0,
       x: 40 + Math.random() * Math.max(120, r.width - 160),
@@ -31631,6 +31628,50 @@ document.addEventListener('DOMContentLoaded', () => {
           setTimeout(() => { try { bs.remove(); } catch (e) { /* twinkled out */ } }, 1500);
         }
       }
+      // Not A Robot (v164): the disguise ACTIVATES. ★★: now and then it
+      // morphs into a pixel animal, holds a few seconds, then POP — pink
+      // confetti — back to robot, wondering aloud if anything seemed off.
+      // ★★★: it cycles the whole zoo and only sometimes blows its cover.
+      // every animal keeps the mustache (continuity is important)
+      if (w.disguiser && now > w.disguiseAt) {
+        if (w.disguised < 0) { // currently a robot: put on a costume
+          if (!w.trueSrc) w.trueSrc = w.img.src;
+          w.disguised = Math.floor(Math.random() * PIK_DISGUISES.length);
+          w.img.src = pikDisguiseSprite(w.disguised);
+          w.disguiseCls = ['pik-form2', 'pik-form3'].filter((cl) => w.el.classList.contains(cl));
+          w.disguiseCls.forEach((cl) => w.el.classList.remove(cl));
+          w.disguiseAt = now + 3800 + Math.random() * 3200;
+        } else if (w.disguiseDeep && Math.random() < 0.62) { // APEX: next costume, cover intact
+          let nx;
+          do { nx = Math.floor(Math.random() * PIK_DISGUISES.length); } while (nx === w.disguised);
+          w.disguised = nx;
+          w.img.src = pikDisguiseSprite(nx);
+          w.disguiseAt = now + 3800 + Math.random() * 3600;
+        } else { // the cover is BLOWN: pink pop, back to robot, play it cool
+          w.disguised = -1;
+          w.img.src = w.trueSrc;
+          if (w.disguiseCls) { w.disguiseCls.forEach((cl) => w.el.classList.add(cl)); w.disguiseCls = null; }
+          for (let k = 0; k < 10; k++) {
+            const b = document.createElement('span');
+            b.className = 'pik-party-bit';
+            b.style.background = ['#ff8fc7', '#ffb3dd', '#ff5fa8', '#ffd9ec'][k % 4];
+            b.style.left = (w.x + 4 + Math.random() * 24) + 'px';
+            b.style.top = (w.y + 4 + Math.random() * 26) + 'px';
+            DESK_PIK.layer.appendChild(b);
+            b.addEventListener('animationend', () => b.remove());
+          }
+          w.el.classList.remove('poked'); void w.el.offsetWidth; w.el.classList.add('poked');
+          pikChirp();
+          const L = [
+            trT('...did something feel different just now?', '...quelque chose était différent à l\'instant, non ?'),
+            trT('I have ALWAYS been this robot', 'j\'ai TOUJOURS été ce robot'),
+            trT('you saw nothing ♡', 'tu n\'as rien vu ♡'),
+            trT('that was a bug. probably', 'c\'était un bug. sûrement')
+          ];
+          deskPikSay(w, L[Math.floor(Math.random() * L.length)]);
+          w.disguiseAt = now + (w.disguiseDeep ? 6500 + Math.random() * 6500 : 13000 + Math.random() * 12000);
+        }
+      }
       // bit flip APEX: every few seconds the bit ACTUALLY flips — a glitch
       // stutter that mirrors the whole creature for a heartbeat
       if (w.glitchy && now > w.glitchAt) {
@@ -31835,6 +31876,37 @@ document.addEventListener('DOMContentLoaded', () => {
   // six SOFT pastel bloom sprites — powder pink / milk lilac /
   // custard / powder blue / mint cream / peach milk. gentle on
   // the eyes, unmistakably Y2K NSO.
+  // Not A Robot's wardrobe: six pixel animals, every one keeping the
+  // mustache (M) — the disguise is flawless except for that one detail
+  var PIK_DISGUISES = [
+    { t: ['...........', '...........', '..D.....D..', '..DB...BD..', '..BBBBBBB..', '..BeBBBeB..', '..BMMMMMB..', '..BuBwBuB..', '..BBBBBBB..', '...BBBBB...', '...D...D...', '...........', '...........', '...........'], c: { B: '#c3c3d6', D: '#7a7a94' } }, // cat
+    { t: ['...B...B...', '...B...B...', '...B...B...', '..BBBBBBB..', '..BeBBBeB..', '..BMMMMMB..', '..BuBwBuB..', '..BBBBBBB..', '..BBBBBBB..', '...BBBBB...', '...D...D...', '...........', '...........', '...........'], c: { B: '#f7f2f2', D: '#d8a8b8' } }, // bunny
+    { t: ['...........', '...........', '...BBBBB...', '..BBBBBBB..', '..BeBeBXX..', '..BMMMBXX..', '..BBBBBBB..', '..BBBBBBB..', '..BBBBBBB..', '...BBBBB...', '...X...X...', '...........', '...........', '...........'], c: { B: '#ffd94d', D: '#e0a800', X: '#ff8a3c' } }, // duck
+    { t: ['...........', '..BB...BB..', '..Be...eB..', '..BBBBBBB..', '..BBBBBBB..', '..BMMMMMB..', '..BwwwwwB..', '..BuBBBuB..', '..BBBBBBB..', '...BBBBB...', '...D...D...', '...........', '...........', '...........'], c: { B: '#8fd45e', D: '#4f9e3d' } }, // frog
+    { t: ['...........', '...........', '..D.....D..', '..BBBBBBB..', '..BeBBBeB..', '..BMMMMMB..', '..BXXDXXB..', '..BBBBBBB..', '..BBBBBBB..', '...BBBBB...', '...D...D...', '...........', '...........', '...........'], c: { B: '#ffb9cc', D: '#e58aa8', X: '#ff8fb0' } }, // pig
+    { t: ['...........', '..BB...BB..', '..Bu...uB..', '..BBBBBBB..', '..BeBBBeB..', '..BMMMMMB..', '..BuBwBuB..', '..BBBBBBB..', '..BBBBBBB..', '...BBBBB...', '...D...D...', '...........', '...........', '...........'], c: { B: '#cfc3e8', D: '#8f7fc0' } } // mouse
+  ];
+  var pikDisguiseCache = null;
+  function pikDisguiseSprite(i) {
+    if (!pikDisguiseCache) {
+      pikDisguiseCache = PIK_DISGUISES.map((a) => {
+        const c = document.createElement('canvas');
+        c.width = 11; c.height = 14;
+        const x = c.getContext('2d');
+        const pal = { B: a.c.B, D: a.c.D, X: a.c.X || a.c.D, M: '#7a4a26', w: 'rgba(255,255,255,0.75)', e: '#14020e', u: 'rgba(255,120,180,0.65)' };
+        a.t.forEach((row, ry) => {
+          for (let rx = 0; rx < row.length; rx++) {
+            const ch = row[rx];
+            if (ch === '.') continue;
+            x.fillStyle = pal[ch] || a.c.B;
+            x.fillRect(rx, ry, 1, 1);
+          }
+        });
+        return c.toDataURL();
+      });
+    }
+    return pikDisguiseCache[i % pikDisguiseCache.length];
+  }
   // the pointer family's nebula: nine colorways x two pixel star shapes
   // (plus-star and diamond sparkle). glow color rides along for CSS halos.
   var trailStarCache = null;
