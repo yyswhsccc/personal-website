@@ -27096,7 +27096,7 @@ document.addEventListener('DOMContentLoaded', () => {
     dotmatrix: ['it prints its own hi-scores now', 'il imprime ses propres records maintenant'],
     bsodjr: ['it collects crash reports AND frames them', 'il collectionne les rapports de plantage ET les encadre'],
     rgbrig: ['the FPS are still cosmetic. the GLOW is real', 'les FPS restent cosmétiques. le HALO est réel'],
-    captcha: ['it is DEFINITELY not a robot (verified twice)', 'il n\'est VRAIMENT pas un robot (vérifié deux fois)'],
+    captcha: ['it is DEFINITELY not a robot (the mustache proves it)', 'il n\'est VRAIMENT pas un robot (la moustache le prouve)'],
     kernelpg: ['it\'s free, it\'s open, it has FLIPPERS', 'il est libre, il est ouvert, il a des NAGEOIRES']
   };
   function pikEvoLore(kk, form) {
@@ -27302,21 +27302,28 @@ document.addEventListener('DOMContentLoaded', () => {
         px(cx - 2, bodyTop + 3, '#ff2fae'); px(cx + 2, bodyTop + 4, '#41e0ff'); // two confetti dots on the chest
         if (epic) rim('#ff2fae');
       },
-      bitflip() { // its template is ALREADY half white / half dark (the 'w'
-        // at row5 is the dark half's own eye) — so the evolution swaps PIECES:
-        // ★★: THE ZIPPER — the halves interlock, trading one bit per row
-        // (odd rows: a dark tooth bites into the white half; even rows: a
-        // white tooth bites back). structural, not crumbs — v161.9 take 4
-        for (let zy = 3; zy <= 9; zy++) {
-          if (zy % 2) px(5, zy, '#1a1a1a'); else px(6, zy, '#f2f2f2');
-        }
-        px(7, 7, '#ff8fc7'); // and the dark half finally blushes about it
+      bitflip() { // GLITCH SCANLINES (v163, take 5): every decoration ON a
+        // black-and-white body read as noise — so the corruption is
+        // structural now. whole columns slip like a torn sprite sheet;
+        // at APEX the eyes land at TWO heights (peak indecision, visibly)
+        const TONE = { B: '#f2f2f2', D: '#1a1a1a', w: '#ffffff', e: '#14020e', u: 'rgba(255,120,180,0.65)' };
+        const slip = (c, dy, torn) => {
+          let first = -1, last = -1;
+          for (let ry = 3; ry < h; ry++) {
+            if (rows[ry][c] === '.') continue;
+            if (first < 0) first = ry;
+            last = ry;
+            x.clearRect(c, ry, 1, 1);
+          }
+          for (let ry = first; ry <= last; ry++) {
+            const ch = rows[ry][c];
+            if (ch !== '.') px(c, ry + dy, TONE[ch] || '#f2f2f2');
+          }
+          if (torn && first >= 0) px(c, dy > 0 ? first : last, torn); // the torn edge glows
+        };
+        slip(3, 1, epic ? '#41e0ff' : null); // the left column slips down, eye and all
         if (epic) {
-          // ★★★: the halves finally agree on ONE thing — a little split
-          // heart on the chest (magenta side, cyan side), plus the ray
-          px(4, 7 + 1, '#ff2fae'); px(6, 7 + 1, '#41e0ff');
-          px(4, 9, '#ff2fae'); px(5, 9, '#ffffff'); px(6, 9, '#41e0ff');
-          px(5, 10, '#c9a7f5');
+          slip(8, -1, '#ff2fae'); // the right column slips UP: eyes at two heights
           px(cx + 3, -3, '#ffd400'); px(cx + 2, -2, '#ffd400'); px(cx + 1, -1, '#fff6c9'); // the ray that did this
         }
       },
@@ -27340,10 +27347,17 @@ document.addEventListener('DOMContentLoaded', () => {
         rim((rx, ry) => ['#ff4d6d', '#7cfc00', '#41e0ff'][(rx + ry) % 3]);
         if (epic) { star(cx - 3, -1, '#ff4d6d'); star(cx + 3, -1, '#41e0ff'); }
       },
-      captcha() { // a 2px-thick chest checkmark
-        px(cx - 2, bodyTop + 3, '#7cba58'); px(cx - 1, bodyTop + 4, '#7cba58'); px(cx, bodyTop + 5, '#7cba58');
-        px(cx + 1, bodyTop + 4, '#7cba58'); px(cx + 2, bodyTop + 3, '#7cba58'); px(cx + 3, bodyTop + 2, '#7cba58');
-        if (epic) rim('#7cba58');
+      captcha() { // the human disguise escalates (v163): the old green
+        // checkmark on a green body (and an APEX rim the exact color of
+        // the border) was invisible. a robot passing as human needs PROPS:
+        px(3, 6, '#7a4a26'); px(4, 6, '#7a4a26'); px(5, 6, '#7a4a26'); px(6, 6, '#7a4a26'); px(7, 6, '#7a4a26'); // ★★: a mustache. humans have those
+        if (epic) {
+          // ★★★: the FULL kit — browline glasses hugging both eyes,
+          // and the antenna disguised as a flower. biological. definitely.
+          px(2, 4, '#2a1a33'); px(3, 4, '#2a1a33'); px(4, 4, '#2a1a33'); px(5, 4, '#2a1a33'); px(6, 4, '#2a1a33');
+          px(2, 5, '#2a1a33'); px(6, 5, '#2a1a33');
+          star(5, 0, '#ff8fc7'); px(5, 0, '#ffd400');
+        }
       },
       kernelpg() { // tux upgrades: a round chest heart, then little flippers
         const yH = bodyTop + 3;
@@ -30127,6 +30141,7 @@ document.addEventListener('DOMContentLoaded', () => {
       party: spId === 'y2kbug' && form >= 2, partyMax: spId === 'y2kbug' && form >= 3, partyAt: 0, // evolved Y2K Bug: a walking celebration (the wake is APEX-only)
       starTrail: spId === 'pointer' && form >= 2, // the pointer family walks on stardust
       starNebula: spId === 'pointer' && form >= 3, // APEX: the full glowing nebula
+      glitchy: spId === 'bitflip' && form >= 3, glitchAt: 0, // APEX bit flip: it ACTUALLY flips
       weather: spId === 'cumulus' && form >= 2, apexWeather: spId === 'cumulus' && form >= 3, rainAt: 0, boltAt: 0,
       sp: species || null, spd: species && species.spd ? species.spd : 1, stepAt: 0,
       x: 40 + Math.random() * Math.max(120, r.width - 160),
@@ -31615,6 +31630,13 @@ document.addEventListener('DOMContentLoaded', () => {
           DESK_PIK.layer.appendChild(bs);
           setTimeout(() => { try { bs.remove(); } catch (e) { /* twinkled out */ } }, 1500);
         }
+      }
+      // bit flip APEX: every few seconds the bit ACTUALLY flips — a glitch
+      // stutter that mirrors the whole creature for a heartbeat
+      if (w.glitchy && now > w.glitchAt) {
+        w.glitchAt = now + 4000 + Math.random() * 4500;
+        w.el.classList.add('pik-glitch');
+        setTimeout(() => { try { w.el.classList.remove('pik-glitch'); } catch (e) { /* deglitched */ } }, 440);
       }
       // cumulus weather: ★★ = a personal drizzle. APEX = a full weather
       // station cycling every 8-15s through rain / storm / snow / sunshine
