@@ -14864,16 +14864,19 @@ document.addEventListener('DOMContentLoaded', () => {
   // (t↔a fight over the same property), 'f' static filter vs 'fa' animated
   // filter, 'c' children-only, 'x' text-only (c and x combine with anything)
   const GEO_BREAK_FX = [
-    { cls: 'geo-wreck-flip', grp: 't', toast: ['this page was installed upside down. warranty void if rotated.', 'cette page a été installée à l\'envers. garantie annulée si retournée.'] },
-    { cls: 'geo-wreck-mirror', grp: 't', toast: ['the page is mirrored. the plumber insists it reads better this way.', 'la page est en miroir. le plombier insiste : ça se lit mieux comme ça.'] },
-    { cls: 'geo-wreck-tiny', grp: 't', toast: ['the page shrank in the wash. do not tumble-dry websites.', 'la page a rétréci au lavage. ne pas sécher les sites au tambour.'] },
-    { cls: 'geo-wreck-drift', grp: 'a', toast: ['the content is leaking. a bucket was ordered in 1998.', 'le contenu fuit. un seau a été commandé en 1998.'] },
-    { cls: 'geo-wreck-wobble', grp: 'a', toast: ['structural wobble. certified safe-ish by slime & sons.', 'oscillation structurelle. certifiée à peu près sûre par slime & sons.'] },
-    { cls: 'geo-wreck-bounce', grp: 'a', toast: ['the page has the zoomies. the plumber blames the springs.', 'la page a la bougeotte. le plombier accuse les ressorts.'] },
-    { cls: 'geo-wreck-tilt', grp: 'c', toast: ['minor earthquake damage. the shelves are FINE. mostly.', 'légers dégâts sismiques. les étagères vont BIEN. globalement.'] },
-    { cls: 'geo-wreck-space', grp: 'x', toast: ['water damage: the letters swelled up.', 'dégât des eaux : les lettres ont gonflé.'] },
-    { cls: 'geo-wreck-blur', grp: 'f', toast: ['still loading since 1998 (56k). squint harder.', 'en cours de chargement depuis 1998 (56k). plissez plus fort.'] },
-    { cls: 'geo-wreck-rainbow', grp: 'fa', toast: ['the color dial is stuck on ALL OF THEM. enjoy.', 'la molette des couleurs est bloquée sur TOUTES. profitez.'] }
+    { cls: 'geo-wreck-flip', grp: 't', toast: ['installed upside down. the TODO comment proves they KNEW.', 'installée à l\'envers. le commentaire TODO prouve qu\'ils SAVAIENT.'] },
+    { cls: 'geo-wreck-mirror', grp: 't', toast: ['mirrored. “works on MY monitor” — signed, the plumber.', 'en miroir. « marche sur MON écran » — signé, le plombier.'] },
+    { cls: 'geo-wreck-tiny', grp: 't', toast: ['rendered at 45% zoom. the unused whitespace is billed anyway.', 'rendue à 45 %. l\'espace vide inutilisé est facturé quand même.'] },
+    { cls: 'geo-wreck-drift', grp: 'a', toast: ['someone imported physics.css. the content obeys gravity now.', 'quelqu\'un a importé physics.css. le contenu obéit à la gravité.'] },
+    { cls: 'geo-wreck-wobble', grp: 'a', toast: ['magnitude 9.8 earthquake mode. certified “probably fine”.', 'mode séisme magnitude 9,8. certifié « sans doute correct ».'] },
+    { cls: 'geo-wreck-bounce', grp: 'a', toast: ['the page is a DVD screensaver now. everyone waits for the corner.', 'la page est un écran de veille DVD. tout le monde attend le coin.'] },
+    { cls: 'geo-wreck-tilt', grp: 'c', toast: ['the page is z-fighting itself. it is losing.', 'la page se bat en z-fighting contre elle-même. elle perd.'] },
+    { cls: 'geo-wreck-space', grp: 'x', toast: ['style.css failed to load. enjoy Times New Roman, like the ancients.', 'style.css n\'a pas chargé. savourez le Times New Roman, comme les anciens.'] },
+    { cls: 'geo-wreck-blur', grp: 'f', toast: ['56k JPEG mode: the bottom half has been downloading since 1998.', 'mode JPEG 56k : la moitié basse se télécharge depuis 1998.'] },
+    { cls: 'geo-wreck-rainbow', grp: 'fa', toast: ['CRT meltdown. do NOT adjust your monitor. it likes this.', 'fusion du tube cathodique. ne réglez PAS votre écran. il aime ça.'] },
+    { cls: 'geo-wreck-bsod', grp: 'o', toast: ['the window bluescreened INSIDE the site. very meta. very 1998.', 'la fenêtre a fait un écran bleu DANS le site. très méta. très 1998.'] },
+    { cls: 'geo-wreck-lost', grp: 'o', toast: ['HTTP 404: the content was JUST here. it moved somewhere nicer.', 'HTTP 404 : le contenu était LÀ il y a une seconde. il a déménagé.'] },
+    { cls: 'geo-wreck-popups', grp: 'o', toast: ['popup infestation. do NOT click the prize. there is no prize.', 'infestation de popups. ne cliquez PAS sur le prix. il n\'y a pas de prix.'] }
   ];
   function geoWreckConflict(a, b) {
     return a === b || (a === 't' && b === 'a') || (a === 'a' && b === 't') || (a === 'f' && b === 'fa') || (a === 'fa' && b === 'f');
@@ -16216,6 +16219,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.__yosGeo = {
       lad: () => geoActLadder(), exc: () => geoActExcavator(), dig: () => geoActDig(), run: () => geoActToolRun(), truck: () => geoVehicle(),
       lunch: () => geoActLunch(), insp: () => geoActInspector(), nap: () => geoActNap(), radio: () => geoActRadio(), mixer: () => geoActMixer(),
+      smash: (wid) => { const f = dreamWorld && dreamWorld.flags; if (!f) return 'dream first'; f.geoFix = f.geoFix || { round: 0, contract: [], wreckIds: {}, broken: [] }; f.geoFix.done = 0; geoWreckWindow(wid || 'win-pikdex'); return 'smashed ' + (wid || 'win-pikdex'); },
       show: (ms) => geoCrewWork(ms || 16000),
       inv: () => {
         if (!dreamWorld) return 'enter the geo dream first';
