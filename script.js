@@ -32569,7 +32569,7 @@ document.addEventListener('DOMContentLoaded', () => {
           w.el.classList.add('is-disguised'); // CSS belt-and-suspenders for the hat
           disgBanner();
           w.disguiseAt = now + 3800 + Math.random() * 3200;
-        } else if (w.disguiseDeep && Math.random() < 0.82) { // APEX: next costume, cover intact (rarely blows it — v173)
+        } else if (w.disguiseDeep && Math.random() < 0.68) { // APEX: next costume, cover intact (v182: blows it ~1 in 3 beats — 0.62 was too often, 0.82 too rare)
           let nx;
           do { nx = Math.floor(Math.random() * PIK_DISGUISES.length); } while (nx === w.disguised);
           w.disguised = nx;

@@ -6475,8 +6475,10 @@ html[data-theme="dark"] .cloud-save {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--text);
+  color: var(--ink); /* v182: full-contrast ink — --text washed out on the chip */
+  font-weight: bold;
 }
+html[data-theme="dark"] .pikdex-squad-name { color: #f6efff; text-shadow: 1px 1px 0 rgba(20, 2, 30, 0.8); }
 .pikdex-squad-hat { position: absolute; top: 2px; left: 50%; transform: translateX(-50%); font-size: 0.72rem; pointer-events: none; }
 .pikdex-squad-empty {
   border: 2px dashed var(--purple);
