@@ -14908,6 +14908,7 @@ document.addEventListener('DOMContentLoaded', () => {
       s.addEventListener('animationend', () => s.remove());
     }, 380);
     dT(() => { clearInterval(sparks); try { w.remove(); } catch (e) { /* clocked out */ } }, ms || 3400);
+    return w;
   }
   // heavy machinery: a pink pik drives the rig across the bottom of the site
   function geoVehicle() {
@@ -15380,6 +15381,193 @@ document.addEventListener('DOMContentLoaded', () => {
       }, 300 + i * 150);
     }
   }
+  function geoActLadder() { // a REAL ladder, actually climbed, rung by rung
+    if (REDUCED_MOTION) return;
+    const iw = window.innerWidth || 1200, ih = window.innerHeight || 800;
+    const hosts = [...document.querySelectorAll('.geo-wreck-host')].map((b) => b.getBoundingClientRect()).filter((r) => r.width);
+    const r = hosts.length ? hosts[Math.floor(Math.random() * hosts.length)] : null;
+    const x = r ? Math.max(50, Math.min(iw - 70, r.left + r.width - 34)) : iw * (0.25 + Math.random() * 0.5);
+    const yTop = Math.max(64, r ? r.top - 6 : ih * 0.3);
+    const H = Math.min((ih - 130) - yTop, 300);
+    if (H < 90) return;
+    const lad = document.createElement('div');
+    lad.className = 'geo-ladder';
+    lad.style.left = x + 'px';
+    lad.style.top = yTop + 'px';
+    lad.style.height = H + 'px';
+    document.body.appendChild(lad);
+    dN(lad);
+    const pik = document.createElement('div');
+    pik.className = 'geo-crew-worker geo-ladder-pik';
+    const img = document.createElement('img');
+    img.alt = '';
+    try { img.src = pikSprite(hueColor(318 + Math.random() * 14), Math.floor(Math.random() * 3), null); } catch (e) { try { lad.remove(); } catch (e2) { /* no ladder either */ } return; }
+    img.style.width = '24px';
+    const t = document.createElement('span');
+    t.className = 'geo-crew-tool';
+    t.textContent = '🔧';
+    pik.appendChild(img);
+    pik.appendChild(t);
+    const y0 = yTop + H - 30;
+    pik.style.left = (x - 6) + 'px';
+    pik.style.top = y0 + 'px';
+    document.body.appendChild(pik);
+    dN(pik);
+    playTone(300, 'square', 0.08, 0, 0.03); // ladder CLONK against the wall
+    const rungs = Math.max(4, Math.floor((H - 36) / 14));
+    let i = 0;
+    const up = dI(() => {
+      if (!document.body.contains(pik)) { clearInterval(up); return; }
+      i++;
+      pik.style.top = (y0 - i * 14) + 'px';
+      pik.classList.toggle('geo-ladder-sway');
+      playTone(500 + (i % 2) * 60, 'square', 0.02, 0, 0.012);
+      if (i < rungs) return;
+      clearInterval(up);
+      geoChirp(x + 16, y0 - i * 14 - 26, 'pik!!');
+      dT(() => { [0, 1, 2].forEach((k) => playTone(880 - k * 90, 'square', 0.05, k * 0.16, 0.02)); }, 500); // wrench time at the top
+      dT(() => { // and back DOWN, rung by rung — safety first
+        let j = i;
+        const down = dI(() => {
+          if (!document.body.contains(pik)) { clearInterval(down); return; }
+          j--;
+          pik.style.top = (y0 - j * 14) + 'px';
+          pik.classList.toggle('geo-ladder-sway');
+          if (j > 0) return;
+          clearInterval(down);
+          geoLerp(pik, x - 6, y0, x < iw / 2 ? -60 : iw + 60, y0, 1400, () => { try { pik.remove(); } catch (e) { /* clocked out */ } });
+          dT(() => { try { lad.remove(); } catch (e) { /* returned to the van */ } }, 1500);
+        }, 200);
+      }, 2100);
+    }, 260);
+  }
+  function geoActExcavator() { // the BIG RIG: a full pixel excavator crosses the site
+    if (REDUCED_MOTION) return;
+    const iw = window.innerWidth || 1200, ih = window.innerHeight || 800;
+    const v = document.createElement('div');
+    v.className = 'geo-exc';
+    ['geo-exc-boom', 'geo-exc-arm', 'geo-exc-bucket', 'geo-exc-cab', 'geo-exc-glass', 'geo-exc-base', 'geo-exc-track'].forEach((cls) => {
+      const s = document.createElement('div');
+      s.className = cls;
+      v.appendChild(s);
+    });
+    const drv = document.createElement('img');
+    drv.className = 'geo-exc-driver';
+    drv.alt = '';
+    try { drv.src = pikSprite(hueColor(324), 2, null); } catch (e) { /* it drives itself */ }
+    v.appendChild(drv);
+    const ltr = Math.random() < 0.5;
+    if (!ltr) v.classList.add('geo-exc-rtl');
+    v.style.top = Math.max(70, ih - 168) + 'px';
+    document.body.appendChild(v);
+    dN(v);
+    geoSaySite(['HEAVY MACHINERY COMING THROUGH!! leaves INSIDE the vehicle!!', 'ENGIN LOURD EN APPROCHE !! les feuilles À L\'INTÉRIEUR !!']);
+    const W = 200;
+    const x0 = ltr ? -W : iw + W, x1 = ltr ? iw + W : -W;
+    const t0 = Date.now(), DUR = 9000;
+    let lastBeep = 0, lastPuff = 0;
+    const iv = dI(() => {
+      if (!document.body.contains(v)) { clearInterval(iv); return; }
+      const p = Math.min(1, (Date.now() - t0) / DUR);
+      v.style.left = (x0 + (x1 - x0) * p) + 'px';
+      const nw = Date.now();
+      if (nw - lastBeep > 800) { lastBeep = nw; playTone(660, 'square', 0.07, 0, 0.02); }
+      if (nw - lastPuff > 420) { // exhaust puffs off the tail end
+        lastPuff = nw;
+        const s = document.createElement('span');
+        s.className = 'trail-sparkle';
+        s.textContent = Math.random() < 0.5 ? '💨' : '·';
+        s.style.left = (parseFloat(v.style.left) + (ltr ? 4 : W - 20)) + 'px';
+        s.style.top = (parseFloat(v.style.top) + 44 + Math.random() * 22) + 'px';
+        document.body.appendChild(s);
+        s.addEventListener('animationend', () => s.remove());
+      }
+      if (p >= 1) { clearInterval(iv); try { v.remove(); } catch (e) { /* parked at HQ */ } }
+    }, 50);
+  }
+  function geoActDig() { // ACTUAL digging: dirt flies, a mound grows, treasure appears
+    if (REDUCED_MOTION) return;
+    const iw = window.innerWidth || 1200, ih = window.innerHeight || 800;
+    const x = iw * (0.3 + Math.random() * 0.4), y = ih * 0.58;
+    const a = geoWorkerAt(x - 36, y, '⛏️', 7800);
+    const b = geoWorkerAt(x + 30, y, '🥄', 7800); // one of them brought a spoon
+    [a, b].forEach((w) => { if (w) w.classList.add('geo-crew-digger'); });
+    const yBase = y + 34;
+    const mound = document.createElement('div');
+    mound.className = 'geo-dig-mound';
+    document.body.appendChild(mound);
+    dN(mound);
+    let h = 5;
+    const step = () => {
+      mound.style.height = h + 'px';
+      mound.style.width = Math.round(h * 2.4) + 'px';
+      mound.style.left = Math.round(x - h * 1.2) + 'px';
+      mound.style.top = (yBase - h) + 'px';
+    };
+    step();
+    const dig = dI(() => {
+      if (!dreamWorld || !document.body.contains(mound)) { clearInterval(dig); return; }
+      h = Math.min(34, h + 3);
+      step();
+      for (let k = 0; k < 2; k++) { // dirt, in honest little arcs
+        const s = document.createElement('span');
+        s.className = 'geo-dig-dirt';
+        s.style.left = (x - 20 + Math.random() * 40) + 'px';
+        s.style.top = (y + 10) + 'px';
+        s.style.setProperty('--dx', (Math.random() * 64 - 32).toFixed(0) + 'px');
+        s.style.background = ['#8a6a4a', '#6e5238', '#a3805c'][Math.floor(Math.random() * 3)];
+        document.body.appendChild(s);
+        s.addEventListener('animationend', () => s.remove());
+      }
+      playTone(220 + Math.random() * 60, 'square', 0.03, 0, 0.03);
+    }, 520);
+    dT(() => {
+      clearInterval(dig);
+      const find = document.createElement('span'); // they found something!!
+      find.className = 'geo-crew-rig-fixed';
+      find.textContent = ['🚧', '💾', '🦴'][Math.floor(Math.random() * 3)];
+      find.style.left = x + 'px';
+      find.style.top = (y + 8) + 'px';
+      document.body.appendChild(find);
+      dN(find);
+      geoLerp(find, x, y + 8, x, y - 46, 700);
+      geoChirp(x + 12, y - 36, 'pik!!!');
+      playSparkleSound();
+      geoSaySite(['ARCHAEOLOGY!! bill it as archaeology!!', 'ARCHÉOLOGIE !! facturez ça en archéologie !!']);
+      dT(() => { try { find.remove(); } catch (e) { /* pocketed */ } try { mound.remove(); } catch (e) { /* swept */ } }, 2600);
+    }, 6200);
+  }
+  function geoActToolRun() { // the tool relay: piks SPRINT the site carrying inventory
+    if (REDUCED_MOTION) return;
+    const iw = window.innerWidth || 1200, ih = window.innerHeight || 800;
+    const TOOLS = ['🔨', '🪚', '🔧', '🪜', '🧰', '📦'];
+    for (let i = 0; i < 4; i++) {
+      dT(() => {
+        if (!dreamWorld) return;
+        const ltr = Math.random() < 0.5;
+        const y = ih * (0.3 + Math.random() * 0.45);
+        const w = document.createElement('div');
+        w.className = 'geo-crew-worker geo-crew-runner' + (ltr ? '' : ' geo-crew-worker-rtl');
+        const img = document.createElement('img');
+        img.alt = '';
+        try { img.src = pikSprite(hueColor(316 + Math.random() * 18), Math.floor(Math.random() * 3), null); } catch (e) { return; }
+        img.style.width = '25px';
+        const t = document.createElement('span');
+        t.className = 'geo-crew-tool geo-crew-carry';
+        t.textContent = TOOLS[Math.floor(Math.random() * TOOLS.length)];
+        w.appendChild(img);
+        w.appendChild(t);
+        w.style.top = y + 'px';
+        const x0 = ltr ? -70 : iw + 70, x1 = ltr ? iw + 70 : -70;
+        w.style.left = x0 + 'px';
+        document.body.appendChild(w);
+        dN(w);
+        geoLerp(w, x0, y, x1, y + (Math.random() * 60 - 30), 2400 + Math.random() * 1200, () => { try { w.remove(); } catch (e) { /* delivered */ } });
+        [0, 1, 2, 3].forEach((k) => playTone(420 + (k % 2) * 80, 'square', 0.025, k * 0.3, 0.02));
+      }, i * 700);
+    }
+    dT(() => geoChirp(iw / 2, ih * 0.35, 'hup hup hup!!'), 900);
+  }
   const GEO_FOREMAN_LINES = [
     ['lift with the leaves!! read the request AS WRITTEN!!', 'soulevez avec les feuilles !! lisez la demande TELLE QUELLE !!'],
     ['do NOT fix anything that is not in the contract!!', 'ne réparez RIEN qui ne soit pas au contrat !!'],
@@ -15414,15 +15602,16 @@ document.addEventListener('DOMContentLoaded', () => {
       dT(() => { geoSaySite(ln); playTone(660 + Math.random() * 120, 'triangle', 0.05, 0, 0.02); }, t);
     }
     if (REDUCED_MOTION) return;
-    // wave one + mandatory machinery
+    // wave one + mandatory machinery: the BIG pixel excavator always
+    // makes at least one full crossing (owner decree v170)
     geoWave(4 + Math.floor(Math.random() * 2), S * 0.5);
-    geoVehicle();
+    dT(geoActExcavator, 500);
     if (Math.random() < 0.6) dT(geoVehicle, S * 0.5);
     // draw tonight's programme from the repertoire
-    const ACTS = [geoActMeasure, geoActCoffee, geoActCrane, geoActJackhammer, geoActDynamite, geoActBlueprint, geoActConeParade, geoActPaint];
+    const ACTS = [geoActMeasure, geoActCoffee, geoActCrane, geoActJackhammer, geoActDynamite, geoActBlueprint, geoActConeParade, geoActPaint, geoActLadder, geoActDig, geoActToolRun, geoActExcavator];
     for (let i = ACTS.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = ACTS[i]; ACTS[i] = ACTS[j]; ACTS[j] = t; }
-    const nActs = S > 20000 ? 4 : 3;
-    const slots = [0.18, 0.42, 0.62, 0.8];
+    const nActs = S > 20000 ? 5 : 4;
+    const slots = [0.14, 0.3, 0.47, 0.64, 0.8];
     for (let i = 0; i < nActs; i++) {
       const act = ACTS[i];
       dT(() => { try { act(); } catch (e) { /* the act missed its cue */ } }, S * slots[i]);
@@ -15572,6 +15761,15 @@ document.addEventListener('DOMContentLoaded', () => {
     gainFollowers(2);
     achvUnlock('goblinfix');
     if (gf.bubble && document.body.contains(gf.bubble)) gf.bubble.textContent = trT('PROJECT COMPLETE. read the invoice. ESPECIALLY the fine print ♡', 'CHANTIER TERMINÉ. lisez la facture. SURTOUT les petites lignes ♡');
+    geoInvoiceShow();
+    geoInvoiceNagLoop(); // the crew waits at the door — and it is not patient
+  }
+  // the invoice window (v170): the crew will NOT leave without a verdict.
+  // dismissing it only gets it reprinted — accounting insists
+  function geoInvoiceShow() {
+    if (!dreamWorld) return;
+    const gf = dreamWorld.flags.geoFix;
+    if (!gf) return;
     const inv = dreamDlg(() => {
       // the wage bill prints like a 1998 supermarket receipt: monospace
       // columns, dashed rules, astronomical TOKEN pricing (agents bill in
@@ -15649,14 +15847,89 @@ document.addEventListener('DOMContentLoaded', () => {
         force: true, cls: 'geo-fix-dlg geo-fix-invoice', lines,
         x: Math.max(12, (window.innerWidth || 1200) / 2 - 170), y: Math.max(44, Math.round((window.innerHeight || 800) * 0.07)),
         buttons: [
-          [trT('it\'s perfect ♡', 'c\'est parfait ♡'), () => { playSparkleSound(); gainFollowers(1); showToast(trT('the crew frames your signature. it goes on the wall of the van.', 'l\'équipe encadre votre signature. elle ira sur le mur du fourgon.')); }],
+          [trT('it\'s perfect ♡', 'c\'est parfait ♡'), () => {
+            playSparkleSound();
+            gainFollowers(1);
+            showToast(trT('the crew frames your signature. it goes on the wall of the van.', 'l\'équipe encadre votre signature. elle ira sur le mur du fourgon.'));
+            geoInvoiceChoose('perfect');
+          }],
+          [trT('REFUND!!!!', 'REMBOURSEZ !!!!'), () => {
+            playGlitchSound();
+            geoSaySite(['REFUND?! …fine. FINE. processing.', 'REMBOURSER ?! …bon. BON. traitement.']);
+            showToast(trT('⛑ refund approved ✓ your payment (1 signature) returns by mail. allow 4-6 business decades.', '⛑ remboursement approuvé ✓ votre paiement (1 signature) revient par courrier. comptez 4-6 décennies ouvrées.'));
+            dT(() => {
+              if (!dreamWorld) return;
+              cheatFall(['🚧', '🚧', '✨'], 14);
+              playFanfare();
+              showToast(trT('the difference is issued in CONES. store credit. no returns ♡', 'la différence est versée en CÔNES. avoir magasin. sans retour ♡'));
+            }, 1700);
+            geoInvoiceChoose('refund');
+          }],
           [trT('(read the fine print)', '(lire les petites lignes)'), () => { showToast(trT('fine print: “no refunds. the cones were never ours. love, s&s ♡”', 'petites lignes : « aucun remboursement. les cônes n\'ont jamais été à nous. bisous, s&s ♡ »')); }, true]
-        ]
+        ],
+        onX: (dlg) => {
+          dlg.remove();
+          const g = dreamWorld && dreamWorld.flags.geoFix;
+          if (!g || g.invoiceChosen) return;
+          showToast(trT('🖨 accounting reprints the invoice. it WILL be answered.', '🖨 la compta réimprime la facture. elle SERA traitée.'));
+          dT(geoInvoiceShow, 2800);
+        }
       };
     });
     if (inv) geoDragify(inv);
-    dT(geoCrewExit, 4200);
   }
+  function geoInvoiceChoose(kind) {
+    const gf = dreamWorld && dreamWorld.flags.geoFix;
+    if (!gf || gf.invoiceChosen) return;
+    gf.invoiceChosen = 1;
+    dT(geoCrewExit, kind === 'refund' ? 2600 : 1200);
+  }
+  // hesitate past 10s and the foreman starts CLEARING HIS THROAT
+  function geoInvoiceNagLoop() {
+    const NAGS = [
+      ['the pen is RIGHT THERE, visitor.', 'le stylo est JUSTE LÀ, visiteur.'],
+      ['we bill waiting time. it\'s in the fine print.', 'on facture l\'attente. c\'est dans les petites lignes.'],
+      ['ahem. AHEM. ♡', 'hum. HUM. ♡'],
+      ['the van is idling. think of the PLANET.', 'le fourgon tourne. pensez à la PLANÈTE.'],
+      ['we have other websites to ruin, you know.', 'on a d\'autres sites à ruiner, vous savez.'],
+      ['blink twice if the invoice is too beautiful.', 'clignez deux fois si la facture est trop belle.']
+    ];
+    const tick = () => {
+      if (!dreamWorld || !dreamWorld.flags.geoFix) return;
+      const g = dreamWorld.flags.geoFix;
+      if (g.invoiceChosen) return;
+      const ln = NAGS[(g.nagI = (g.nagI || 0) + 1) % NAGS.length];
+      if (g.bubble && document.body.contains(g.bubble)) g.bubble.textContent = trT(...ln);
+      else showToast('⛑ ' + trT(...ln));
+      playTone(660, 'triangle', 0.06, 0, 0.02);
+      playTone(520, 'triangle', 0.06, 0.18, 0.02);
+      dT(tick, 10000);
+    };
+    dT(tick, 10000);
+  }
+  // dev hook: exercise the jobsite repertoire from the console (only
+  // works inside the geo dream; same pattern as __yosARC)
+  try {
+    window.__yosGeo = {
+      lad: () => geoActLadder(), exc: () => geoActExcavator(), dig: () => geoActDig(), run: () => geoActToolRun(),
+      show: (ms) => geoCrewWork(ms || 16000),
+      inv: () => {
+        if (!dreamWorld) return 'enter the geo dream first';
+        const f = dreamWorld.flags;
+        f.geoFix = f.geoFix || {};
+        const gf = f.geoFix;
+        gf.round = 3; gf.broken = gf.broken || []; gf.wreckIds = gf.wreckIds || {};
+        gf.contract = gf.contract && gf.contract.length ? gf.contract : [
+          { q: 'fix the music', v: ['the music is fixed: it follows you now', 'la musique est réparée : elle vous suit'], loop: ['"fix" ≠ "restore"', '« réparer » ≠ « restaurer »'] },
+          { q: 'make it faster', v: ['the moving parts move faster', 'les parties mobiles vont plus vite'], loop: ['"it" was never defined', '« ça » n\'a jamais été défini'] },
+          { q: 'remove the cones', v: ['the WORD "cones" was removed', 'le MOT « cônes » a été retiré'], loop: ['words are removable. cones are not', 'les mots s\'enlèvent. pas les cônes'] }
+        ];
+        gf.revealed = 0; gf.done = 0; gf.invoiceChosen = 0;
+        geoFixReveal();
+        return 'invoice up';
+      }
+    };
+  } catch (e) { /* hooks are a luxury */ }
   function geoCrewExit() {
     if (!dreamWorld) return;
     const gf = dreamWorld.flags.geoFix;
