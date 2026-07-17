@@ -27971,9 +27971,16 @@ document.addEventListener('DOMContentLoaded', () => {
         px(cx + 3, -1, dark); px(cx + 3, 0, dark); blk(cx + 3, -3, '#7cfc00');
         if (epic) { px(cx, -1, dark); blk(cx - 1, -3, '#7cfc00'); }
       },
-      function thirdEye() { // sees the bug coming: a REAL extra eye
-        blk(cx - 1, bodyTop, '#14020e'); px(cx, bodyTop, '#ffffff');
-        if (epic) { [cx - 2, cx - 1, cx, cx + 1, cx + 2].forEach((rx) => px(rx, bodyTop - 1, '#ffd400')); }
+      function thirdEye() { // v181: an ACTUAL eye — white sclera, dark
+        // pupil, a lid — the old 2×2 ink blot read as a smudge
+        const yE = bodyTop + 1;
+        px(cx - 1, yE, '#ffffff'); px(cx + 1, yE, '#ffffff');
+        px(cx, yE, '#14020e'); // the pupil
+        px(cx - 1, yE - 1, dark); px(cx, yE - 1, dark); px(cx + 1, yE - 1, dark); // the lid
+        if (epic) {
+          [cx - 2, cx - 1, cx, cx + 1, cx + 2].forEach((rx) => px(rx, yE - 2, '#ffd400')); // golden brow: ENLIGHTENED
+          px(cx, yE + 1, '#c9a7f5'); // one violet tear. it saw the bug. it wept
+        }
       },
       function mohawk() { // root mohawk: thick spikes
         blk(cx - 2, bodyTop - 2, dark); blk(cx + 1, bodyTop - 2, dark);
