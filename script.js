@@ -14880,18 +14880,38 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     return out;
   }
+  // v180.1: one shared original-value ledger per wrecked body — the FIRST
+  // mode to touch a text node records its true original; every later mode
+  // edits freely; restore replays the ledger, so stacked damage on the
+  // same node can never trap a wrong value
+  var geoTextLedger = new WeakMap();
+  function geoSetText(body, node, val) {
+    let m = geoTextLedger.get(body);
+    if (!m) { m = new Map(); geoTextLedger.set(body, m); }
+    if (!m.has(node)) m.set(node, node.nodeValue);
+    node.nodeValue = val;
+  }
+  function geoTextRestore(body) {
+    const m = geoTextLedger.get(body);
+    if (!m) return;
+    m.forEach((orig, node) => { try { node.nodeValue = orig; } catch (e) { /* node moved on */ } });
+    geoTextLedger.delete(body);
+  }
   const GEO_REAL_FX = [
     { id: 'srcdump', // the renderer resigns: the window shows its OWN source, bitten
       toast: ['the renderer gave up. here is the raw source. we improved it with cones.', 'le moteur de rendu a démissionné. voici la source brute. améliorée avec des cônes.'],
       apply(body, win) {
         let srcTxt = body.innerHTML || '';
-        if (srcTxt.length > 5200) srcTxt = srcTxt.slice(0, 5200) + '\n<!-- …the rest fell off the truck -->';
-        // REAL bites: chunks eaten, quotes stolen, cones nested in the markup
-        for (let k = 0; k < 7; k++) {
-          const at = Math.floor(Math.random() * Math.max(1, srcTxt.length - 60));
-          srcTxt = srcTxt.slice(0, at) + '🚧<!-- bitten -->' + srcTxt.slice(at + 24 + Math.floor(Math.random() * 30));
+        if (srcTxt.length > 9000) srcTxt = srcTxt.slice(0, 9000) + '\n<!-- …the rest fell off the truck -->';
+        // REAL bites, harder (v180): big chunks eaten, most quotes stolen,
+        // cones and TODOs jammed into the markup, angle brackets knocked loose
+        for (let k = 0; k < 18; k++) {
+          const at = Math.floor(Math.random() * Math.max(1, srcTxt.length - 90));
+          const filler = ['🚧<!-- bitten -->', '🚧🚧', '<!-- TODO -->', '<div🔨', '"></', '🚧'][Math.floor(Math.random() * 6)];
+          srcTxt = srcTxt.slice(0, at) + filler + srcTxt.slice(at + 30 + Math.floor(Math.random() * 60));
         }
-        srcTxt = srcTxt.replace(/"/g, (m) => (Math.random() < 0.14 ? '' : m));
+        srcTxt = srcTxt.replace(/"/g, (m) => (Math.random() < 0.42 ? '' : m));
+        srcTxt = srcTxt.replace(/</g, (m) => (Math.random() < 0.08 ? '‹' : m));
         const kids = [...body.children].map((el) => [el, el.style.display]);
         kids.forEach(([el]) => { el.style.display = 'none'; });
         const pre = document.createElement('pre');
@@ -14906,49 +14926,47 @@ document.addEventListener('DOMContentLoaded', () => {
     { id: 'nan', // every real number on the page becomes NaN
       toast: ['every number on this page is NaN now. the math checks out (it does not).', 'chaque nombre de cette page vaut NaN. le calcul est bon (non).'],
       apply(body) {
-        const edits = [];
+        let hits = 0;
         geoTextNodes(body).forEach((n) => {
           if (!/\d/.test(n.nodeValue)) return;
-          edits.push([n, n.nodeValue]);
-          n.nodeValue = n.nodeValue.replace(/\d+([.,]\d+)?/g, 'NaN');
+          hits++;
+          geoSetText(body, n, n.nodeValue.replace(/\d+([.,]\d+)?/g, () => (Math.random() < 0.4 ? 'NaN NaN NaN' : 'NaN')));
         });
-        if (!edits.length) return null;
-        return () => edits.forEach(([n, v]) => { try { n.nodeValue = v; } catch (e) { /* node moved on */ } });
+        if (!hits) return null;
+        return () => geoTextRestore(body);
       } },
     { id: 'undef', // the variables escaped: real copy renders as undefined
       toast: ['the variables escaped. the page now renders the TRUTH: undefined.', 'les variables se sont échappées. la page affiche la VÉRITÉ : undefined.'],
       apply(body) {
-        const LEAK = ['undefined', 'null', '[object Object]', 'NaN', '${content}', '%TITLE%'];
-        const edits = [];
+        const LEAK = ['undefined', 'null', '[object Object]', 'NaN', '${content}', '%TITLE%', 'undefined', '[object HTMLDivElement]', 'ReferenceError', 'Promise <pending>'];
+        let hits = 0;
         geoTextNodes(body).forEach((n) => {
-          if (Math.random() > 0.34) return;
-          edits.push([n, n.nodeValue]);
-          n.nodeValue = LEAK[Math.floor(Math.random() * LEAK.length)];
+          if (Math.random() > 0.7) return;
+          hits++;
+          geoSetText(body, n, LEAK[Math.floor(Math.random() * LEAK.length)]);
         });
-        if (!edits.length) return null;
-        return () => edits.forEach(([n, v]) => { try { n.nodeValue = v; } catch (e) { /* re-rendered */ } });
+        if (!hits) return null;
+        return () => geoTextRestore(body);
       } },
     { id: 'mojibake', // the charset fell off the truck (REAL double-encode)
       toast: ['the charset fell off the truck. authentic mojibake, vintage 1998.', 'le charset est tombé du camion. mojibake authentique, millésime 1998.'],
       apply(body) {
-        const edits = [];
+        let hits = 0;
         geoTextNodes(body).forEach((n) => {
           let g2;
-          try { g2 = unescape(encodeURIComponent(n.nodeValue)); } catch (e) { return; }
+          try { g2 = unescape(encodeURIComponent(unescape(encodeURIComponent(n.nodeValue)))); } catch (e) { return; } // double-double
           if (g2 === n.nodeValue) return; // pure ascii is immune. lucky ascii.
-          edits.push([n, n.nodeValue]);
-          n.nodeValue = g2;
+          hits++;
+          geoSetText(body, n, g2);
         });
-        // ascii-heavy pages still deserve SOME suffering
-        if (edits.length < 4) {
-          geoTextNodes(body).forEach((n) => {
-            if (Math.random() > 0.3) return;
-            edits.push([n, n.nodeValue]);
-            n.nodeValue = n.nodeValue.replace(/[aeiouAEIOU]/g, (c) => ({ a: 'Ã¤', e: 'Ã©', i: 'Ã¯', o: 'Ã¸', u: 'Ã¼' })[c.toLowerCase()] || c);
-          });
-        }
-        if (!edits.length) return null;
-        return () => edits.forEach(([n, v]) => { try { n.nodeValue = v; } catch (e) { /* moved on */ } });
+        // ascii-heavy pages deserve suffering too — most of it
+        geoTextNodes(body).forEach((n) => {
+          if (!/[aeiouAEIOU]/.test(n.nodeValue) || Math.random() > 0.85) return;
+          hits++;
+          geoSetText(body, n, n.nodeValue.replace(/[aeiouAEIOU]/g, (c) => ({ a: 'Ã¤', e: 'Ã©', i: 'Ã¯', o: 'Ã¸', u: 'Ã¼' })[c.toLowerCase()] || c));
+        });
+        if (!hits) return null;
+        return () => geoTextRestore(body);
       } },
     { id: 'wires', // every control in the window genuinely throws now
       toast: ['all the wires are crossed: every button in there throws. the errors are load-bearing.', 'tous les fils sont croisés : chaque bouton lève une erreur. les erreurs sont porteuses.'],
@@ -14981,8 +14999,8 @@ document.addEventListener('DOMContentLoaded', () => {
       toast: ['the renderer ran out of memory halfway. the rest of the page exists spiritually.', 'le moteur de rendu a manqué de mémoire à mi-page. le reste existe spirituellement.'],
       apply(body) {
         const kids = [...body.children];
-        if (kids.length < 3) return null;
-        const keep = 1 + Math.floor(Math.random() * 2);
+        if (kids.length < 2) return null;
+        const keep = Math.floor(Math.random() * 2); // 0 or 1 — the page barely starts
         const hidden = kids.slice(keep).map((el) => [el, el.style.display]);
         hidden.forEach(([el]) => { el.style.display = 'none'; });
         const note = document.createElement('pre');
@@ -15229,20 +15247,36 @@ document.addEventListener('DOMContentLoaded', () => {
     prev.forEach((c) => body.classList.remove(c));
     // v179: the MAIN damage is REAL (dom/text/behavior mutation); the old
     // cosmetic classes survive only as a 40% garnish on top
-    const mainR = GEO_REAL_FX[Math.floor(Math.random() * GEO_REAL_FX.length)];
-    const side = (Math.random() < 0.4) ? GEO_BREAK_FX[Math.floor(Math.random() * GEO_BREAK_FX.length)] : null;
+    // v180: STACK 2-3 real damages per wreck (some can no-op, so aim high);
+    // the old cosmetic CSS is now a rare 10% garnish
+    const pool = GEO_REAL_FX.slice();
+    for (let a = pool.length - 1; a > 0; a--) { const b = Math.floor(Math.random() * (a + 1)); const t = pool[a]; pool[a] = pool[b]; pool[b] = t; }
+    const nStack = 2 + Math.floor(Math.random() * 2); // 2 or 3
+    const side = (Math.random() < 0.1) ? GEO_BREAK_FX[Math.floor(Math.random() * GEO_BREAK_FX.length)] : null;
     const applyFx = () => {
       if (!dreamWorld || !dreamWorld.flags.geoFix || dreamWorld.flags.geoFix.done) return;
       const g2 = dreamWorld.flags.geoFix;
       const rw = (g2.realWrecks = g2.realWrecks || {});
       if (rw[wid]) { try { rw[wid](); } catch (e) { /* was already unfixed */ } delete rw[wid]; }
-      let rest = null;
-      try { rest = mainR.apply(body, win); } catch (e) { rest = null; /* even the damage broke */ }
-      if (rest) rw[wid] = rest;
+      const restores = [];
+      let firstToast = null;
+      // srcdump/oom hide the body's real children, so run text/behavior
+      // damages FIRST and any child-hider LAST
+      const ordered = pool.slice().sort((p, q) => ((p.id === 'srcdump' || p.id === 'oom') ? 1 : 0) - ((q.id === 'srcdump' || q.id === 'oom') ? 1 : 0));
+      let landed = 0;
+      for (let k = 0; k < ordered.length && landed < nStack; k++) {
+        const mode = ordered[k];
+        let rest = null;
+        try { rest = mode.apply(body, win); } catch (e) { rest = null; /* even the damage broke */ }
+        if (rest) { restores.push(rest); if (!firstToast) firstToast = mode.toast; landed++; }
+      }
+      // restore LIFO: a later mode may have re-edited a node an earlier one
+      // already touched — undo newest-first so the ORIGINAL value wins
+      if (restores.length) rw[wid] = () => restores.slice().reverse().forEach((r) => { try { r(); } catch (e) { /* best effort */ } });
       body.classList.add('geo-wreck-host');
       if (side) body.classList.add(side.cls);
       playGlitchSound();
-      showToast('🚧 ' + trT(...mainR.toast) + (side ? ' ' + trT('(+ bonus damage, free of charge)', '(+ dégâts bonus, offerts)') : ''));
+      showToast('🚧 ' + trT(...(firstToast || GEO_REAL_FX[0].toast)) + (landed > 1 ? ' ×' + landed : ''));
     };
     const loaded = (g.loaded = g.loaded || {});
     if (REDUCED_MOTION || loaded[wid]) { applyFx(); return; }
