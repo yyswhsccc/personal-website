@@ -14911,7 +14911,22 @@ document.addEventListener('DOMContentLoaded', () => {
       document.body.appendChild(s);
       s.addEventListener('animationend', () => s.remove());
     }, 700);
-    dT(() => { clearInterval(sparks); try { w.remove(); } catch (e) { /* clocked out */ } }, ms || 10200);
+    const life = ms || 10200;
+    // v178: workers WANDER the site mid-shift — leisurely strolls to
+    // wherever looks broken enough to lean on
+    if (life > 6000 && Math.random() < 0.6) {
+      let wx = parseFloat(w.style.left), wy = parseFloat(w.style.top);
+      const stroll = (delay) => dT(() => {
+        if (!document.body.contains(w)) return;
+        const nx = Math.max(4, Math.min((window.innerWidth || 1200) - 60, wx + (Math.random() * 320 - 160)));
+        const ny = Math.max(60, Math.min((window.innerHeight || 800) - 90, wy + (Math.random() * 150 - 75)));
+        geoLerp(w, wx, wy, nx, ny, 4500 + Math.random() * 2500);
+        wx = nx; wy = ny;
+      }, delay);
+      stroll(1600 + Math.random() * 2200);
+      if (life > 14000) stroll(9500 + Math.random() * 3500);
+    }
+    dT(() => { clearInterval(sparks); try { w.remove(); } catch (e) { /* clocked out */ } }, life);
     return w;
   }
   // heavy machinery v173: CHUNKY canvas pixel rigs (same coarse grain as
@@ -14921,20 +14936,24 @@ document.addEventListener('DOMContentLoaded', () => {
   function geoRigFrame(kind, f) {
     const key = kind + f;
     if (geoRigFrames[key]) return geoRigFrames[key];
-    const D = '#201a10', Y = '#ffd23f', S = '#e8a800', G = '#bfeaff', T = '#3a3348', TT = '#55496b', O = '#ff8a5c';
+    // NO outlines (owner decree v178): soft two-tone shading, exactly like
+    // the slime foreman — and the cab window is a transparent HOLE so the
+    // pik driver (layered BEHIND the rig) sits INSIDE the machine
+    const Y = '#ffd23f', S = '#e8a800', S2 = '#c98a2e', T = '#55496b', TL = '#8f7fc0', TT = '#6e6288', O = '#ff8a5c', HI = '#ffe98a';
     const c = document.createElement('canvas');
-    if (kind === 'exc') c.width = 34; else c.width = 30;
+    c.width = kind === 'exc' ? 34 : 30;
     c.height = kind === 'exc' ? 18 : 16;
     const x = c.getContext('2d');
     const R = (col, x0, y0, w0, h0) => { x.fillStyle = col; x.fillRect(x0, y0, w0, h0); };
     if (kind === 'exc') { // facing LEFT
-      R(D, 11, 11, 22, 7); R(T, 12, 12, 20, 5); // tracks
-      for (let i = 0; i < 10; i++) { R(TT, 13 + i * 2, 12, 1, 1); R(TT, 13 + i * 2, 16, 1, 1); }
-      R(TT, 13, 14, 2, 2); R(TT, 29, 14, 2, 2); // hubs
-      R(D, 12, 8, 21, 4); R(Y, 13, 9, 19, 2); // deck
-      R(D, 19, 0, 13, 10); R(Y, 20, 1, 11, 8); R(S, 28, 2, 3, 7); // cab
-      R(D, 21, 2, 7, 5); R(G, 22, 3, 5, 3); // glass
-      R(D, 32, 4, 2, 4); // exhaust
+      R(T, 11, 12, 22, 6); R(TT, 11, 12, 22, 1); // tracks + top sheen
+      for (let i = 0; i < 10; i++) { R(TL, 13 + i * 2, 16, 1, 1); }
+      R(TL, 13, 14, 2, 2); R(TL, 29, 14, 2, 2); // hubs
+      R(S, 12, 9, 21, 3); R(Y, 12, 9, 21, 1); // deck
+      R(Y, 19, 1, 12, 9); R(HI, 19, 1, 12, 1); R(S, 28, 2, 3, 8); // cab
+      x.clearRect(21, 3, 6, 5); // the window is a HOLE — driver sits inside
+      R(S, 21, 8, 6, 1); // window sill
+      R(S2, 31, 0, 2, 3); // exhaust
       const P = [15, 8];
       const EB = [[[7, 3], [3, 6]], [[6, 6], [2, 10]], [[6, 8], [2, 13]]][f];
       const seg = (a, b, col, w2, off) => {
@@ -14944,33 +14963,35 @@ document.addEventListener('DOMContentLoaded', () => {
           R(col, lx + off, ly + off, w2, w2);
         }
       };
-      seg(P, EB[0], D, 3, 0); seg(EB[0], EB[1], D, 3, 0); // boom + arm, dark shell
-      seg(P, EB[0], Y, 1, 1); seg(EB[0], EB[1], Y, 1, 1); // yellow core
+      seg(P, EB[0], S, 3, 0); seg(EB[0], EB[1], S, 3, 0); // amber under-shade
+      seg(P, EB[0], Y, 2, 0); seg(EB[0], EB[1], Y, 2, 0); // yellow arm on top
       const bx = EB[1][0], by = EB[1][1];
-      R(D, bx - 1, by + 1, 5, 4); R(T, bx, by + 2, 3, 2); // the bucket
-    } else if (kind === 'mixer') { // 30×16, facing RIGHT — f toggles the drum stripes (rotation!)
-      R(D, 4, 11, 5, 5); R(TT, 6, 13, 1, 1);
-      R(D, 20, 11, 5, 5); R(TT, 22, 13, 1, 1);
-      R(D, 1, 10, 28, 3); // chassis
-      R(D, 21, 2, 8, 9); R(Y, 22, 3, 6, 7); R(D, 23, 4, 4, 4); R(G, 24, 5, 2, 2); // cab + glass
-      R(D, 1, 2, 18, 9); R(T, 2, 3, 16, 7); // the drum
+      R(T, bx - 1, by + 1, 5, 4); R(TL, bx - 1, by + 1, 5, 1); // the bucket
+    } else if (kind === 'mixer') { // facing RIGHT — f toggles the drum stripes
+      R(T, 4, 11, 5, 5); R(TL, 6, 13, 1, 1);
+      R(T, 20, 11, 5, 5); R(TL, 22, 13, 1, 1);
+      R(TT, 1, 10, 28, 2); // chassis
+      R(Y, 21, 3, 8, 8); R(HI, 21, 3, 8, 1); R(S, 27, 4, 2, 7); // cab
+      x.clearRect(22, 4, 4, 4); R(S, 22, 8, 4, 1); // window hole + sill
+      R(T, 1, 2, 18, 9); R(TT, 1, 2, 18, 1); // the drum
       for (let dx2 = 2; dx2 < 18; dx2++) for (let dy2 = 3; dy2 < 10; dy2++) {
         if (((dx2 + dy2 + f * 2) % 4) < 2) R(S, dx2, dy2, 1, 1); // barber-pole stripes
       }
-      R(D, 0, 8, 3, 3); // the pour chute
+      R(TT, 0, 8, 3, 3); // the pour chute
     } else { // 'truck', facing RIGHT — f0 flat bed, f1 TIPPED
-      R(D, 4, 11, 5, 5); R(TT, 6, 13, 1, 1); // rear wheel
-      R(D, 20, 11, 5, 5); R(TT, 22, 13, 1, 1); // front wheel
-      R(D, 1, 10, 28, 3); // chassis
-      R(D, 21, 2, 8, 9); R(Y, 22, 3, 6, 7); R(D, 23, 4, 4, 4); R(G, 24, 5, 2, 2); // cab + glass
+      R(T, 4, 11, 5, 5); R(TL, 6, 13, 1, 1);
+      R(T, 20, 11, 5, 5); R(TL, 22, 13, 1, 1);
+      R(TT, 1, 10, 28, 2); // chassis
+      R(Y, 21, 3, 8, 8); R(HI, 21, 3, 8, 1); R(S, 27, 4, 2, 7); // cab
+      x.clearRect(22, 4, 4, 4); R(S, 22, 8, 4, 1); // window hole + sill
       if (f === 0) {
-        R(D, 1, 3, 19, 8); R(Y, 2, 4, 17, 6); // bed
+        R(S, 1, 3, 19, 8); R(Y, 1, 3, 19, 2); // bed, amber with a bright lip
         R(T, 3, 4, 15, 2); // the load
         for (let i = 0; i < 5; i++) R(O, 4 + i * 3, 4, 1, 1); // cones peeking out
       } else {
-        for (let i = 0; i < 9; i++) R(D, 2 + i * 2, 9 - i, 4, 4); // bed, tipped
+        for (let i = 0; i < 9; i++) R(S, 2 + i * 2, 9 - i, 4, 4); // bed, tipped
         for (let i = 0; i < 9; i++) R(Y, 3 + i * 2, 10 - i, 2, 2);
-        R(D, 1, 8, 2, 5); // tailgate swung open
+        R(S2, 1, 8, 2, 5); // tailgate swung open
       }
     }
     geoRigFrames[key] = c.toDataURL();
@@ -14987,8 +15008,8 @@ document.addEventListener('DOMContentLoaded', () => {
     drv.className = 'geo-rig-driver geo-rig-driver-' + kind;
     drv.alt = '';
     try { drv.src = pikSprite(hueColor(318 + Math.random() * 14), 2, null); } catch (e) { /* self-driving */ }
+    v.appendChild(drv); // driver FIRST — it shows through the window hole
     v.appendChild(rig);
-    v.appendChild(drv);
     document.body.appendChild(v);
     dN(v);
     return { v, rig };
@@ -15032,10 +15053,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!dreamWorld) return;
         const mound = document.createElement('div');
         mound.className = 'geo-dig-mound';
-        mound.style.left = (dumpX + 2) + 'px';
-        mound.style.top = (topY + 64) + 'px';
-        mound.style.width = '34px';
-        mound.style.height = '14px';
+        mound.style.left = (dumpX - 14) + 'px';
+        mound.style.top = (topY + 52) + 'px';
+        mound.style.width = '68px';
+        mound.style.height = '28px';
         document.body.appendChild(mound);
         dN(mound);
         const cone = document.createElement('span');
@@ -15585,11 +15606,11 @@ document.addEventListener('DOMContentLoaded', () => {
       dN(mound);
       let mh = 0;
       const moundStep = () => {
-        mh = Math.min(26, mh + 7);
+        mh = Math.min(52, mh + 12); // a PROPER heap (v178)
         mound.style.height = mh + 'px';
         mound.style.width = Math.round(mh * 2.4) + 'px';
         mound.style.left = Math.round(bucketX() + (ltr ? 34 : -34) - mh * 1.2) + 'px';
-        mound.style.top = (topY + 96 - mh) + 'px';
+        mound.style.top = (topY + 108 - mh) + 'px';
       };
       let scoop = 0;
       const digCycle = () => {
@@ -15646,7 +15667,7 @@ document.addEventListener('DOMContentLoaded', () => {
     mound.className = 'geo-dig-mound';
     document.body.appendChild(mound);
     dN(mound);
-    let h = 5;
+    let h = 8;
     const step = () => {
       mound.style.height = h + 'px';
       mound.style.width = Math.round(h * 2.4) + 'px';
@@ -15656,7 +15677,7 @@ document.addEventListener('DOMContentLoaded', () => {
     step();
     const dig = dI(() => {
       if (!dreamWorld || !document.body.contains(mound)) { clearInterval(dig); return; }
-      h = Math.min(34, h + 3);
+      h = Math.min(60, h + 5);
       step();
       for (let k = 0; k < 2; k++) { // dirt, in honest little arcs
         const s = document.createElement('span');
@@ -15840,11 +15861,11 @@ document.addEventListener('DOMContentLoaded', () => {
       let pw = 8;
       const pour = dI(() => {
         if (!dreamWorld || !document.body.contains(puddle)) { clearInterval(pour); return; }
-        pw = Math.min(38, pw + 5);
+        pw = Math.min(76, pw + 9);
         puddle.style.width = pw + 'px';
-        puddle.style.height = Math.round(pw / 3.4) + 'px';
+        puddle.style.height = Math.round(pw / 3) + 'px';
         puddle.style.left = (pourX - pw / 2 + 12) + 'px';
-        puddle.style.top = (topY + 72 - Math.round(pw / 3.4)) + 'px';
+        puddle.style.top = (topY + 78 - Math.round(pw / 3)) + 'px';
         const s = document.createElement('span');
         s.className = 'geo-dig-dirt';
         s.style.left = (pourX + 6 + Math.random() * 10) + 'px';
@@ -15873,6 +15894,29 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 2400);
       }, 7500);
     });
+  }
+  function geoActHouseCall() { // the crew makes HOUSE CALLS: opens a page
+    // — broken or not — and fixes it thoroughly. after the fixing, it is
+    // broken. that is what fixing means here.
+    if (!dreamWorld) return;
+    const g = dreamWorld.flags.geoFix;
+    if (!g || g.done) return;
+    const ids = Object.keys(g.wreckIds || {});
+    if (!ids.length) return;
+    const wid = ids[Math.floor(Math.random() * ids.length)];
+    try { openWindow(wid); } catch (e) { return; }
+    dT(() => {
+      const win = document.getElementById(wid);
+      if (!win) return;
+      const r = win.getBoundingClientRect();
+      if (!r.width) return;
+      geoWorkerAt(r.left + 20 + Math.random() * Math.max(40, r.width - 100), r.top + r.height * 0.35, '🔧', 13000);
+      geoWorkerAt(r.left + r.width * 0.55, r.top + r.height * 0.6, '🔨', 13000);
+      geoChirp(r.left + r.width / 2, Math.max(30, r.top - 10), 'pik pik!!');
+      dT(() => {
+        if (dreamWorld && dreamWorld.flags.geoFix && !dreamWorld.flags.geoFix.done) geoWreckWindow(wid);
+      }, 6500 + Math.random() * 3000);
+    }, 700);
   }
   const GEO_FOREMAN_LINES = [
     ['lift with the leaves!! read the request AS WRITTEN!!', 'soulevez avec les feuilles !! lisez la demande TELLE QUELLE !!'],
@@ -15909,12 +15953,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (REDUCED_MOTION) return;
     // wave one + mandatory machinery: the BIG pixel excavator always
-    // makes at least one full crossing (owner decree v170)
+    // makes at least one full crossing (owner decree v170) — and the crew
+    // makes at least two HOUSE CALLS (v178: open pages, fix them, i.e. break them)
     geoWave(4 + Math.floor(Math.random() * 2), S * 0.5);
     dT(geoActExcavator, 500);
+    dT(geoActHouseCall, S * 0.22);
+    dT(geoActHouseCall, S * 0.55);
     if (Math.random() < 0.6) dT(geoVehicle, S * 0.5);
     // draw tonight's programme from the repertoire
-    const ACTS = [geoActMeasure, geoActCoffee, geoActCrane, geoActJackhammer, geoActDynamite, geoActBlueprint, geoActConeParade, geoActPaint, geoActLadder, geoActDig, geoActToolRun, geoActExcavator, geoActLunch, geoActInspector, geoActNap, geoActRadio, geoActMixer];
+    const ACTS = [geoActMeasure, geoActCoffee, geoActCrane, geoActJackhammer, geoActDynamite, geoActBlueprint, geoActConeParade, geoActPaint, geoActLadder, geoActDig, geoActToolRun, geoActExcavator, geoActLunch, geoActInspector, geoActNap, geoActRadio, geoActMixer, geoActHouseCall];
     for (let i = ACTS.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = ACTS[i]; ACTS[i] = ACTS[j]; ACTS[j] = t; }
     const nActs = S > 52000 ? 6 : 5;
     const slots = [0.12, 0.26, 0.4, 0.54, 0.68, 0.8];
@@ -16160,17 +16207,22 @@ document.addEventListener('DOMContentLoaded', () => {
             geoInvoiceChoose('perfect');
           }],
           [trT('REFUND!!!!', 'REMBOURSEZ !!!!'), () => {
+            // v178: they are MERCHANTS. refunds are not a thing that happens.
+            const g2 = dreamWorld && dreamWorld.flags.geoFix;
+            const n = g2 ? (g2.refundTries = (g2.refundTries || 0) + 1) : 1;
             playGlitchSound();
-            geoSaySite(['REFUND?! …fine. FINE. processing.', 'REMBOURSER ?! …bon. BON. traitement.']);
-            showToast(trT('⛑ refund approved ✓ your payment (1 signature) returns by mail. allow 4-6 business decades.', '⛑ remboursement approuvé ✓ votre paiement (1 signature) revient par courrier. comptez 4-6 décennies ouvrées.'));
-            dT(() => {
-              if (!dreamWorld) return;
-              cheatFall(['🚧', '🚧', '✨'], 14);
-              playFanfare();
-              showToast(trT('the difference is issued in CONES. store credit. no returns ♡', 'la différence est versée en CÔNES. avoir magasin. sans retour ♡'));
-            }, 1700);
-            geoInvoiceChoose('refund');
-          }],
+            if (n === 1) {
+              geoSaySite(['REFUND?! …one moment. consulting the fine print.', 'REMBOURSER ?! …un instant. consultation des petites lignes.']);
+              showToast(trT('⛑ the fine print says no. it says it in BOLD.', '⛑ les petites lignes disent non. en GRAS.'));
+            } else if (n === 2) {
+              geoSaySite(['the word “refund” has been removed from our dictionary.', 'le mot « remboursement » a été retiré de notre dictionnaire.']);
+              showToast(trT('⛑ removal fee: 1 dictionary. added to your invoice ♡', '⛑ frais de retrait : 1 dictionnaire. ajouté à votre facture ♡'));
+            } else {
+              geoSaySite(['SIR. this is a construction site.', 'MONSIEUR. c\'est un chantier ici.']);
+              showToast(trT('⛑ complaint received ✓ filed under “framed compliments”. the pen is still RIGHT THERE.', '⛑ réclamation reçue ✓ classée sous « compliments encadrés ». le stylo est toujours JUSTE LÀ.'));
+              cheatFall(['🚧'], 8);
+            }
+          }, true],
           [trT('(read the fine print)', '(lire les petites lignes)'), () => { showToast(trT('fine print: “no refunds. the cones were never ours. love, s&s ♡”', 'petites lignes : « aucun remboursement. les cônes n\'ont jamais été à nous. bisous, s&s ♡ »')); }, true]
         ],
         onX: (dlg) => {
@@ -16219,6 +16271,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.__yosGeo = {
       lad: () => geoActLadder(), exc: () => geoActExcavator(), dig: () => geoActDig(), run: () => geoActToolRun(), truck: () => geoVehicle(),
       lunch: () => geoActLunch(), insp: () => geoActInspector(), nap: () => geoActNap(), radio: () => geoActRadio(), mixer: () => geoActMixer(),
+      housecall: () => geoActHouseCall(),
       smash: (wid) => { const f = dreamWorld && dreamWorld.flags; if (!f) return 'dream first'; f.geoFix = f.geoFix || { round: 0, contract: [], wreckIds: {}, broken: [] }; f.geoFix.done = 0; geoWreckWindow(wid || 'win-pikdex'); return 'smashed ' + (wid || 'win-pikdex'); },
       show: (ms) => geoCrewWork(ms || 16000),
       inv: () => {

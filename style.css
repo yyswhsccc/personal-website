@@ -9999,8 +9999,8 @@ html[data-theme="dark"].dream-geo .geo-broken {
   position: fixed;
   z-index: 2691;
   font-family: var(--font-pixel);
-  font-size: 0.7rem;
-  padding: 2px 5px;
+  font-size: 1.05rem;
+  padding: 5px 10px;
   background: #ffd23f;
   color: #201a10;
   border: 2px solid #201a10;
@@ -10011,12 +10011,14 @@ html[data-theme="dark"].dream-geo .geo-broken {
    same coarse grain as the pikmin themselves */
 .geo-rig { position: fixed; z-index: 2690; pointer-events: none; filter: drop-shadow(0 0 6px rgba(255, 210, 63, 0.5)); }
 .geo-rig-flip { transform: scaleX(-1); }
-.geo-rig-img { display: block; image-rendering: pixelated; }
+.geo-rig-img { display: block; image-rendering: pixelated; position: relative; z-index: 2; }
 .geo-rig-exc { width: 170px; }
-.geo-rig-truck { width: 150px; }
-.geo-rig-driver { position: absolute; width: 26px; image-rendering: pixelated; animation: bsod-hero-bob 1.05s steps(2) infinite; }
-.geo-rig-driver-exc { left: 58%; top: -14px; }
-.geo-rig-driver-truck { left: 74%; top: -12px; }
+.geo-rig-truck, .geo-rig-mixer { width: 150px; }
+/* the driver sits INSIDE the cab: layered UNDER the rig, visible
+   through the transparent window hole in the sprite */
+.geo-rig-driver { position: absolute; width: 30px; image-rendering: pixelated; z-index: 1; animation: bsod-hero-bob 1.05s steps(2) infinite; }
+.geo-rig-driver-exc { left: 103px; top: 8px; }
+.geo-rig-driver-truck, .geo-rig-driver-mixer { left: 107px; top: 14px; width: 26px; }
 /* v170: real digging — crouching piks, arcing dirt, a growing mound */
 .geo-crew-digger img { animation: geo-dig-crouch 1.56s ease-in-out infinite; }
 @keyframes geo-dig-crouch { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(3px) rotate(14deg); } }
@@ -10032,8 +10034,8 @@ html[data-theme="dark"].dream-geo .geo-broken {
 .geo-dig-dirt {
   position: fixed;
   z-index: 2690;
-  width: 5px;
-  height: 5px;
+  width: 8px;
+  height: 8px;
   pointer-events: none;
   animation: geo-dirt-arc 0.9s cubic-bezier(0.3, 0, 0.7, 1) forwards;
 }
@@ -10096,9 +10098,11 @@ html[data-theme="dark"].dream-geo .geo-broken {
   pointer-events: none;
   display: flex;
   align-items: flex-end;
-  gap: 10px;
+  gap: 18px; /* v178: no more crew pile-ups */
 }
 .geo-crew-mem { position: relative; display: flex; align-items: flex-end; }
+.geo-crew-mem:nth-child(2n) { transform: translateY(-9px); }
+.geo-crew-mem:nth-child(3n) { transform: translateY(7px); }
 .geo-crew-hat { position: absolute; top: -14px; left: 50%; transform: translateX(-50%); font-size: 0.8rem; }
 .geo-crew-hero {
   width: 112px;
