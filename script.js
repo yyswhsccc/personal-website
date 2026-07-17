@@ -31660,23 +31660,43 @@ document.addEventListener('DOMContentLoaded', () => {
       // ★★★: it cycles the whole zoo and only sometimes blows its cover.
       // every creature keeps the antenna flower (continuity is important)
       if (w.disguiser && now > w.disguiseAt) {
+        // the ✅ hat swaps for a scrolling site-style banner announcing
+        // (with full CAPTCHA confidence) what the creature definitely is
+        const disgBanner = () => {
+          const a = PIK_DISGUISES[w.disguised];
+          if (!w.disgBannerEl) {
+            const bn = document.createElement('span');
+            bn.className = 'pik-disg-banner';
+            bn.appendChild(document.createElement('span'));
+            w.el.appendChild(bn);
+            w.disgBannerEl = bn;
+          }
+          w.disgBannerEl.firstChild.textContent = trT('this is ' + a.n[0] + ' \u2713 ', 'ceci est ' + a.n[1] + ' \u2713 ');
+          const hat = w.el.querySelector('.pik-hat');
+          if (hat) hat.style.display = 'none';
+        };
         if (w.disguised < 0) { // currently a robot: put on a costume
           if (!w.trueSrc) w.trueSrc = w.img.src;
           w.disguised = Math.floor(Math.random() * PIK_DISGUISES.length);
           w.img.src = pikDisguiseSprite(w.disguised);
           w.disguiseCls = ['pik-form2', 'pik-form3'].filter((cl) => w.el.classList.contains(cl));
           w.disguiseCls.forEach((cl) => w.el.classList.remove(cl));
+          disgBanner();
           w.disguiseAt = now + 3800 + Math.random() * 3200;
         } else if (w.disguiseDeep && Math.random() < 0.62) { // APEX: next costume, cover intact
           let nx;
           do { nx = Math.floor(Math.random() * PIK_DISGUISES.length); } while (nx === w.disguised);
           w.disguised = nx;
           w.img.src = pikDisguiseSprite(nx);
+          disgBanner();
           w.disguiseAt = now + 3800 + Math.random() * 3600;
         } else { // the cover is BLOWN: pink pop, back to robot, play it cool
           w.disguised = -1;
           w.img.src = w.trueSrc;
           if (w.disguiseCls) { w.disguiseCls.forEach((cl) => w.el.classList.add(cl)); w.disguiseCls = null; }
+          if (w.disgBannerEl) { w.disgBannerEl.remove(); w.disgBannerEl = null; }
+          const hatBack = w.el.querySelector('.pik-hat');
+          if (hatBack) hatBack.style.display = '';
           for (let k = 0; k < 22; k++) { // the BIG pop: chunky pixel confetti, radial
             const b = document.createElement('span');
             b.className = 'pik-burst-bit';
@@ -31912,24 +31932,24 @@ document.addEventListener('DOMContentLoaded', () => {
   // fancy, and mythical. no mustaches (user-decreed: too weird). the
   // tell is the antenna FLOWER every disguise keeps wearing on its head
   var PIK_DISGUISES = [
-    { t: ['...........', '...........', '..D.....D..', '..DB...BD..', '..BBBBBBB..', '..BeBBBeB..', '..BBBBBBB..', '..BuBwBuB..', '..BBBBBBB..', '...BBBBB...', '...D...D...', '...........', '...........', '...........'], c: { B: '#c3c3d6', D: '#7a7a94' } }, // cat
-    { t: ['...B...B...', '...B...B...', '...B...B...', '..BBBBBBB..', '..BeBBBeB..', '..BBBBBBB..', '..BuBwBuB..', '..BBBBBBB..', '..BBBBBBB..', '...BBBBB...', '...D...D...', '...........', '...........', '...........'], c: { B: '#f7f2f2', D: '#d8a8b8' } }, // bunny
-    { t: ['...........', '...........', '...BBBBB...', '..BBBBBBB..', '..BeBeBXX..', '..BBBBBXX..', '..BBBBBBB..', '..BBBBBBB..', '..BBBBBBB..', '...BBBBB...', '...X...X...', '...........', '...........', '...........'], c: { B: '#ffd94d', D: '#e0a800', X: '#ff8a3c' } }, // duck
-    { t: ['...........', '..BB...BB..', '..Be...eB..', '..BBBBBBB..', '..BBBBBBB..', '..BBBBBBB..', '..BwwwwwB..', '..BuBBBuB..', '..BBBBBBB..', '...BBBBB...', '...D...D...', '...........', '...........', '...........'], c: { B: '#8fd45e', D: '#4f9e3d' } }, // frog
-    { t: ['...........', '...........', '..D.....D..', '..BBBBBBB..', '..BeBBBeB..', '..BBBBBBB..', '..BXXDXXB..', '..BBBBBBB..', '..BBBBBBB..', '...BBBBB...', '...D...D...', '...........', '...........', '...........'], c: { B: '#ffb9cc', D: '#e58aa8', X: '#ff8fb0' } }, // pig
-    { t: ['...........', '..BB...BB..', '..Bu...uB..', '..BBBBBBB..', '..BeBBBeB..', '..BBBBBBB..', '..BuBwBuB..', '..BBBBBBB..', '..BBBBBBB..', '...BBBBB...', '...D...D...', '...........', '...........', '...........'], c: { B: '#cfc3e8', D: '#8f7fc0' } }, // mouse
-    { t: ['......X....', '.....XX....', '..P.BBB.P..', '..PBBBBBP..', '..BeBBBeB..', '..BBBwBBB..', '..BuBBBuB..', '..BBBBBBB..', '..BBBBBBB..', '...BBBBB...', '...D...D...', '...........', '...........', '...........'], c: { B: '#f7f2fa', D: '#d8b8e8', X: '#ffd400', P: '#ff9fd0' }, f: [3, 1] }, // UNICORN
-    { t: ['...........', '..D.....D..', '..BBBBBBB..', '..BeBBBeB..', '..BBBwBBB..', '.XBBBBBBBX.', '.XXBBBBBXX.', '..BBBBBBB..', '..BBBBBBB..', '...BBBBB...', '...D...D...', '...........', '...........', '...........'], c: { B: '#7fd8c8', D: '#3f9e8e', X: '#5fb8a8' } }, // dragon
-    { t: ['...........', '...........', '...BBBBB...', '..BBBBBBB..', '..BeBBBeB..', '..BBBBBBB..', '..BuBBBuB..', '..BBBBBBB..', '..BBBBBBB..', '..B.BB.B...', '...........', '...........', '...........', '...........'], c: { B: '#eef2ff', D: '#b8c4e8' } }, // ghost (floats, no feet)
-    { t: ['...........', '...........', '..BBBBBBB..', '.BBBBBBBBB.', '.BeBBBBBeB.', '.BBBwwwBBB.', '.BBBBBBBBB.', '.BBBBBBBBB.', '.B.B.B.B.B.', '.B.B.B.B.B.', '...........', '...........', '...........', '...........'], c: { B: '#c9a7f5', D: '#8f6fd0' } }, // octopus
-    { t: ['...........', '..w.....w..', '.www...www.', '..BBBBBBB..', '..BeBBBeB..', '..DDDDDDD..', '..BBBBBBB..', '..DDDDDDD..', '..BBBBBBB..', '...BBBBB...', '.....X.....', '...........', '...........', '...........'], c: { B: '#ffd94d', D: '#3a3a3a', X: '#3a3a3a' } }, // bee
-    { t: ['...........', '.e.e.......', '.B.B.......', '.BBB.XXXX..', '.BBBXXDDX..', '.BBBXDXDX..', '.BBBXXDDX..', '.BBBB.XXX..', '.BBBBBBBB..', '..BBBBBBB..', '...........', '...........', '...........', '...........'], c: { B: '#ffcf9f', D: '#c07840', X: '#e8a86a' }, f: [2, 0] }, // snail
-    { t: ['...........', '...X.X.X...', '..BBBBBBB..', '..BeBBBeB..', '..BBBwBBB..', '..BuBBBuB..', '..BBBBBBB..', '..BBBBBBB..', '..BBBBBBB..', '...BBBBB...', '...D...D...', '...........', '...........', '...........'], c: { B: '#9fd45e', D: '#5f9e3d', X: '#ff8a5c' }, f: [7, 0] }, // stego
-    { t: ['...........', '..D.....D..', '..DB...BD..', '..BBBBBBB..', '..BeBBBeB..', '..BwwwwwB..', '..BBwwwBB..', '..BBBBBBB..', '..BBBBBBB..', '...BBBBB...', '...D...D...', '...........', '...........', '...........'], c: { B: '#ff9a56', D: '#c86a30' } }, // fox
-    { t: ['...........', '..BB...BB..', '..BB...BB..', '..BBBBBBB..', '..BeBBBeB..', '..BBwwwBB..', '..BBwDwBB..', '..BBBBBBB..', '..BBBBBBB..', '...BBBBB...', '...D...D...', '...........', '...........', '...........'], c: { B: '#c89060', D: '#8a5a30' } }, // bear
-    { t: ['...........', '...........', '...BBBBB...', '..BBBBBBB..', '..BeBBBeB..', '..BBBXBBB..', '.BBBBBBBBB.', '.BBBBBBBBB.', '..BBBBBBB..', '...BBBBB...', '...X...X...', '...........', '...........', '...........'], c: { B: '#ffe066', D: '#e0a800', X: '#ff8a3c' } }, // chick
-    { t: ['...........', '...BBBBB...', '...BeBeB...', '..XXXXXXX..', '..XDXDXDX..', '..XXXXXXX..', '..XDXDXDX..', '..XXXXXXX..', '..BBBBBBB..', '...B...B...', '...........', '...........', '...........', '...........'], c: { B: '#9fd45e', D: '#3f7e2d', X: '#6fae4e' } }, // turtle
-    { t: ['....w......', '...w.w.....', '...........', '..BBBBBBB..', '.BBBBBBBBB.', '.BeBBBBBBB.', '.BwBBBBBBB.', '.BBBBBBBBB.', '..BBBBBBB..', '...BBBB.X..', '........X..', '...........', '...........', '...........'], c: { B: '#7cb8f0', D: '#4a88c8', X: '#5a98d8' }, f: [5, 2] } // whale
+    { t: ['...........', '...........', '..D.....D..', '..DB...BD..', '..BBBBBBB..', '..BeBBBeB..', '..BBBBBBB..', '..BuBwBuB..', '..BBBBBBB..', '...BBBBB...', '...D...D...', '...........', '...........', '...........'], c: { B: '#c3c3d6', D: '#7a7a94' }, n: ['a cat', 'un chat'] }, // cat
+    { t: ['...B...B...', '...B...B...', '...B...B...', '..BBBBBBB..', '..BeBBBeB..', '..BBBBBBB..', '..BuBwBuB..', '..BBBBBBB..', '..BBBBBBB..', '...BBBBB...', '...D...D...', '...........', '...........', '...........'], c: { B: '#f7f2f2', D: '#d8a8b8' }, n: ['a bunny', 'un lapin'] }, // bunny
+    { t: ['...........', '...........', '...BBBBB...', '..BBBBBBB..', '..BeBeBXX..', '..BBBBBXX..', '..BBBBBBB..', '..BBBBBBB..', '..BBBBBBB..', '...BBBBB...', '...X...X...', '...........', '...........', '...........'], c: { B: '#ffd94d', D: '#e0a800', X: '#ff8a3c' }, n: ['a duck', 'un canard'] }, // duck
+    { t: ['...........', '..BB...BB..', '..Be...eB..', '..BBBBBBB..', '..BBBBBBB..', '..BBBBBBB..', '..BwwwwwB..', '..BuBBBuB..', '..BBBBBBB..', '...BBBBB...', '...D...D...', '...........', '...........', '...........'], c: { B: '#8fd45e', D: '#4f9e3d' }, n: ['a frog', 'une grenouille'] }, // frog
+    { t: ['...........', '...........', '..D.....D..', '..BBBBBBB..', '..BeBBBeB..', '..BBBBBBB..', '..BXXDXXB..', '..BBBBBBB..', '..BBBBBBB..', '...BBBBB...', '...D...D...', '...........', '...........', '...........'], c: { B: '#ffb9cc', D: '#e58aa8', X: '#ff8fb0' }, n: ['a pig', 'un cochon'] }, // pig
+    { t: ['...........', '..BB...BB..', '..Bu...uB..', '..BBBBBBB..', '..BeBBBeB..', '..BBBBBBB..', '..BuBwBuB..', '..BBBBBBB..', '..BBBBBBB..', '...BBBBB...', '...D...D...', '...........', '...........', '...........'], c: { B: '#cfc3e8', D: '#8f7fc0' }, n: ['a mouse', 'une souris'] }, // mouse
+    { t: ['......X....', '.....XX....', '..P.BBB.P..', '..PBBBBBP..', '..BeBBBeB..', '..BBBwBBB..', '..BuBBBuB..', '..BBBBBBB..', '..BBBBBBB..', '...BBBBB...', '...D...D...', '...........', '...........', '...........'], c: { B: '#f7f2fa', D: '#d8b8e8', X: '#ffd400', P: '#ff9fd0' }, f: [3, 1], n: ['a UNICORN', 'une LICORNE'] }, // UNICORN
+    { t: ['...........', '..D.....D..', '..BBBBBBB..', '..BeBBBeB..', '..BBBwBBB..', '.XBBBBBBBX.', '.XXBBBBBXX.', '..BBBBBBB..', '..BBBBBBB..', '...BBBBB...', '...D...D...', '...........', '...........', '...........'], c: { B: '#7fd8c8', D: '#3f9e8e', X: '#5fb8a8' }, n: ['a dragon', 'un dragon'] }, // dragon
+    { t: ['...........', '...........', '...BBBBB...', '..BBBBBBB..', '..BeBBBeB..', '..BBBBBBB..', '..BuBBBuB..', '..BBBBBBB..', '..BBBBBBB..', '..B.BB.B...', '...........', '...........', '...........', '...........'], c: { B: '#eef2ff', D: '#b8c4e8' }, n: ['a ghost', 'un fant\u00f4me'] }, // ghost (floats, no feet)
+    { t: ['...........', '...........', '..BBBBBBB..', '.BBBBBBBBB.', '.BeBBBBBeB.', '.BBBwwwBBB.', '.BBBBBBBBB.', '.BBBBBBBBB.', '.B.B.B.B.B.', '.B.B.B.B.B.', '...........', '...........', '...........', '...........'], c: { B: '#c9a7f5', D: '#8f6fd0' }, n: ['an octopus', 'une pieuvre'] }, // octopus
+    { t: ['...........', '..w.....w..', '.www...www.', '..BBBBBBB..', '..BeBBBeB..', '..DDDDDDD..', '..BBBBBBB..', '..DDDDDDD..', '..BBBBBBB..', '...BBBBB...', '.....X.....', '...........', '...........', '...........'], c: { B: '#ffd94d', D: '#3a3a3a', X: '#3a3a3a' }, n: ['a bee', 'une abeille'] }, // bee
+    { t: ['...........', '.e.e.......', '.B.B.......', '.BBB.XXXX..', '.BBBXXDDX..', '.BBBXDXDX..', '.BBBXXDDX..', '.BBBB.XXX..', '.BBBBBBBB..', '..BBBBBBB..', '...........', '...........', '...........', '...........'], c: { B: '#ffcf9f', D: '#c07840', X: '#e8a86a' }, f: [2, 0], n: ['a snail', 'un escargot'] }, // snail
+    { t: ['...........', '...X.X.X...', '..BBBBBBB..', '..BeBBBeB..', '..BBBwBBB..', '..BuBBBuB..', '..BBBBBBB..', '..BBBBBBB..', '..BBBBBBB..', '...BBBBB...', '...D...D...', '...........', '...........', '...........'], c: { B: '#9fd45e', D: '#5f9e3d', X: '#ff8a5c' }, f: [7, 0], n: ['a stegosaurus', 'un st\u00e9gosaure'] }, // stego
+    { t: ['...........', '..D.....D..', '..DB...BD..', '..BBBBBBB..', '..BeBBBeB..', '..BwwwwwB..', '..BBwwwBB..', '..BBBBBBB..', '..BBBBBBB..', '...BBBBB...', '...D...D...', '...........', '...........', '...........'], c: { B: '#ff9a56', D: '#c86a30' }, n: ['a fox', 'un renard'] }, // fox
+    { t: ['...........', '..BB...BB..', '..BB...BB..', '..BBBBBBB..', '..BeBBBeB..', '..BBwwwBB..', '..BBwDwBB..', '..BBBBBBB..', '..BBBBBBB..', '...BBBBB...', '...D...D...', '...........', '...........', '...........'], c: { B: '#c89060', D: '#8a5a30' }, n: ['a bear', 'un ours'] }, // bear
+    { t: ['...........', '...........', '...BBBBB...', '..BBBBBBB..', '..BeBBBeB..', '..BBBXBBB..', '.BBBBBBBBB.', '.BBBBBBBBB.', '..BBBBBBB..', '...BBBBB...', '...X...X...', '...........', '...........', '...........'], c: { B: '#ffe066', D: '#e0a800', X: '#ff8a3c' }, n: ['a chick', 'un poussin'] }, // chick
+    { t: ['...........', '...BBBBB...', '...BeBeB...', '..XXXXXXX..', '..XDXDXDX..', '..XXXXXXX..', '..XDXDXDX..', '..XXXXXXX..', '..BBBBBBB..', '...B...B...', '...........', '...........', '...........', '...........'], c: { B: '#9fd45e', D: '#3f7e2d', X: '#6fae4e' }, n: ['a turtle', 'une tortue'] }, // turtle
+    { t: ['....w......', '...w.w.....', '...........', '..BBBBBBB..', '.BBBBBBBBB.', '.BeBBBBBBB.', '.BwBBBBBBB.', '.BBBBBBBBB.', '..BBBBBBB..', '...BBBB.X..', '........X..', '...........', '...........', '...........'], c: { B: '#7cb8f0', D: '#4a88c8', X: '#5a98d8' }, f: [5, 2], n: ['a whale', 'une baleine'] } // whale
   ];
   var pikDisguiseCache = null;
   function pikDisguiseSprite(i) {

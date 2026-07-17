@@ -6618,6 +6618,40 @@ html[data-theme="dark"] .pikdex-squad-chip:hover { box-shadow: 2px 5px 0 #1c0f2e
 }
 @keyframes pik-bolt-flash { to { opacity: 0; transform: translateY(8px); } }
 .pik-flash img { filter: brightness(1.9) drop-shadow(0 0 8px #ffd400) !important; }
+/* while disguised, the ✅ hat swaps for a tiny scrolling site-style
+   banner announcing what the creature DEFINITELY is */
+.pik-disg-banner {
+  position: absolute;
+  left: 50%;
+  top: -15px;
+  transform: translateX(-50%);
+  width: 68px;
+  overflow: hidden;
+  white-space: nowrap;
+  font-family: var(--font-pixel);
+  font-size: 8px;
+  line-height: 1;
+  padding: 2px 3px;
+  background: linear-gradient(90deg, #fff0fa, #ffe3f4);
+  border: 1px solid #ff8fc7;
+  border-radius: 2px;
+  box-shadow: 1px 1px 0 #e8a8d8;
+  color: #c2447e;
+  pointer-events: none;
+  z-index: 3;
+}
+.pik-disg-banner > span {
+  display: inline-block;
+  padding-left: 100%;
+  animation: pik-disg-scroll 3.4s linear infinite;
+}
+@keyframes pik-disg-scroll { to { transform: translateX(-100%); } }
+html[data-theme="dark"] .pik-disg-banner {
+  background: linear-gradient(90deg, #3a2438, #4a2c46);
+  border-color: #c2447e;
+  box-shadow: 1px 1px 0 #2a1a28;
+  color: #ffb3dd;
+}
 /* the disguise blows: BIG chunky pixel confetti, flying radially */
 .pik-burst-bit {
   position: absolute;
@@ -6647,6 +6681,7 @@ html[data-theme="dark"] .pikdex-squad-chip:hover { box-shadow: 2px 5px 0 #1c0f2e
   .pik-rain-bit, .pik-snow-bit, .pik-bolt-bit, .pik-baby-star, .pik-star-dust, .pik-neb-puff, .pik-burst-bit { display: none; }
   .pik-star-trail { animation: none; }
   .desk-pik.pik-glitch { animation: none; }
+  .pik-disg-banner > span { animation: none; padding-left: 0; }
   .desk-pik-baby { animation: none; }
 }
 
