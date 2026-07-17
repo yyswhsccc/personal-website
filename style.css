@@ -7346,16 +7346,8 @@ html[data-theme="dark"] .pikdex-float-btn.is-picked { background: var(--purple-d
   from { filter: hue-rotate(0deg) drop-shadow(0 0 4px rgba(255, 143, 199, 0.7)); }
   to { filter: hue-rotate(360deg) drop-shadow(0 0 4px rgba(255, 143, 199, 0.7)); }
 }
-.pikfx-verify::after {
-  content: '✓';
-  position: absolute;
-  top: -8px; right: -7px;
-  font-size: 10px;
-  font-weight: bold;
-  color: #7cba58;
-  animation: pikfx-blinkred 1.8s steps(2, end) infinite;
-  pointer-events: none;
-}
+/* pikfx-verify: the floating side-✓ was retired (v169.2) — the ✅ hat
+   already says it, and two checkmarks read as clutter */
 .pikfx-dart { /* speed handled in JS — the trailing wind is cosmetic */ }
 .pikfx-chunky img { image-rendering: pixelated; transform: scale(1.22); }
 
