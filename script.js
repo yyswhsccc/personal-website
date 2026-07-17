@@ -27307,10 +27307,21 @@ document.addEventListener('DOMContentLoaded', () => {
           [[5, 3], [3, 5], [6, 8], [1, 7], [4, 7], [7, 9]],
           [[6, 3], [5, 5], [2, 8], [7, 5], [4, 8], [3, 9]]
         ];
+        // ...and MORE confetti floats in the air AROUND it (the apron
+        // space), reshuffling on the same 4-frame clock (v169)
+        const AURA = [
+          [[-2, 1], [11, 2], [-1, 5], [12, 7], [0, 9], [10, 10], [4, -2]],
+          [[10, -1], [-2, 3], [12, 4], [-1, 8], [11, 9], [1, 11], [7, -2]],
+          [[-1, 2], [12, 1], [-2, 6], [11, 6], [0, 10], [9, -1], [12, 10]],
+          [[11, 0], [-2, 4], [12, 8], [-1, 10], [2, -2], [10, 4], [-2, 9]]
+        ];
         const cf = Math.floor(Date.now() / 900) % 4;
         const spots = CONF[cf];
         const n = epic ? spots.length : 4; // ★★ wears four bits, APEX all six
         for (let i = 0; i < n; i++) px(spots[i][0], spots[i][1], PIK_PARTY_COLORS[(i + cf) % PIK_PARTY_COLORS.length]);
+        const air = AURA[cf];
+        const na = epic ? air.length : 4; // ★★ floats four, APEX all seven
+        for (let i = 0; i < na; i++) px(air[i][0], air[i][1], PIK_PARTY_COLORS[(i * 2 + cf) % PIK_PARTY_COLORS.length]);
         if (epic) rim('#ff2fae');
       },
       bitflip() { // GLITCH SCANLINES (v163, take 5): every decoration ON a
