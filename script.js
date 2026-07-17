@@ -14945,6 +14945,16 @@ document.addEventListener('DOMContentLoaded', () => {
       seg(P, EB[0], Y, 1, 1); seg(EB[0], EB[1], Y, 1, 1); // yellow core
       const bx = EB[1][0], by = EB[1][1];
       R(D, bx - 1, by + 1, 5, 4); R(T, bx, by + 2, 3, 2); // the bucket
+    } else if (kind === 'mixer') { // 30×16, facing RIGHT — f toggles the drum stripes (rotation!)
+      R(D, 4, 11, 5, 5); R(TT, 6, 13, 1, 1);
+      R(D, 20, 11, 5, 5); R(TT, 22, 13, 1, 1);
+      R(D, 1, 10, 28, 3); // chassis
+      R(D, 21, 2, 8, 9); R(Y, 22, 3, 6, 7); R(D, 23, 4, 4, 4); R(G, 24, 5, 2, 2); // cab + glass
+      R(D, 1, 2, 18, 9); R(T, 2, 3, 16, 7); // the drum
+      for (let dx2 = 2; dx2 < 18; dx2++) for (let dy2 = 3; dy2 < 10; dy2++) {
+        if (((dx2 + dy2 + f * 2) % 4) < 2) R(S, dx2, dy2, 1, 1); // barber-pole stripes
+      }
+      R(D, 0, 8, 3, 3); // the pour chute
     } else { // 'truck', facing RIGHT — f0 flat bed, f1 TIPPED
       R(D, 4, 11, 5, 5); R(TT, 6, 13, 1, 1); // rear wheel
       R(D, 20, 11, 5, 5); R(TT, 22, 13, 1, 1); // front wheel
@@ -15704,6 +15714,163 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     dT(() => geoChirp(iw / 2, ih * 0.35, 'hup… hup… hup…'), 2700);
   }
+  function geoActLunch() { // union lunch. it is 3am. lunch.
+    if (REDUCED_MOTION) return;
+    const iw = window.innerWidth || 1200, ih = window.innerHeight || 800;
+    const cx = iw * (0.3 + Math.random() * 0.4), cy = ih * 0.6;
+    const mat = document.createElement('div');
+    mat.className = 'geo-lunch-mat';
+    mat.style.left = (cx - 34) + 'px';
+    mat.style.top = (cy + 20) + 'px';
+    document.body.appendChild(mat);
+    dN(mat);
+    geoWorkerAt(cx - 48, cy, '🍙', 17000);
+    geoWorkerAt(cx + 30, cy, '🥪', 17000);
+    geoWorkerAt(cx - 10, cy - 14, '🧃', 17000);
+    geoSaySite(['LUNCH BREAK. it is 3am. lunch.', 'PAUSE DÉJEUNER. il est 3h. déjeuner.']);
+    [0, 1, 2].forEach((k) => dT(() => geoChirp(cx - 30 + k * 28, cy - 26, 'nom…'), 3600 + k * 4200));
+    dT(() => { try { mat.remove(); } catch (e) { /* shaken out, folded */ } }, 17500);
+  }
+  function geoActInspector() { // quality control, generously defined
+    if (REDUCED_MOTION) return;
+    const iw = window.innerWidth || 1200, ih = window.innerHeight || 800;
+    const hosts = [...document.querySelectorAll('.geo-wreck-host')].map((b) => b.getBoundingClientRect()).filter((r) => r.width).slice(0, 2);
+    const stops = hosts.length
+      ? hosts.map((r) => [Math.min(iw - 90, r.left + r.width / 2), Math.min(ih - 130, r.top + r.height + 6)])
+      : [[iw * 0.35, ih * 0.55], [iw * 0.62, ih * 0.5]];
+    const insp = geoWorkerAt(4, stops[0][1], '📋', 40000);
+    if (!insp) return;
+    let px0 = 4, py0 = stops[0][1];
+    const visit = (i) => {
+      if (!document.body.contains(insp)) return;
+      if (i >= stops.length) {
+        geoSaySite(['inspection COMPLETE. everything is broken. PERFECT.', 'inspection TERMINÉE. tout est cassé. PARFAIT.']);
+        geoLerp(insp, px0, py0, iw + 60, py0, 8000, () => { try { insp.remove(); } catch (e) { /* off to lunch */ } });
+        return;
+      }
+      const sx = stops[i][0], sy = stops[i][1];
+      geoLerp(insp, px0, py0, sx, sy, 7000, () => {
+        px0 = sx; py0 = sy;
+        geoChirp(sx + 8, sy - 30, '…');
+        dT(() => geoChirp(sx + 8, sy - 34, 'hmm…'), 2600);
+        dT(() => {
+          const st = document.createElement('span');
+          st.className = 'geo-crew-rig-fixed';
+          st.textContent = '✅';
+          st.style.left = (sx - 10) + 'px';
+          st.style.top = (sy - 46) + 'px';
+          document.body.appendChild(st);
+          dN(st);
+          geoChirp(sx + 24, sy - 40, 'PASS ✓');
+          playSparkleSound();
+          dT(() => { try { st.remove(); } catch (e) { /* archived */ } }, 6000);
+          dT(() => visit(i + 1), 1800);
+        }, 5200);
+      });
+    };
+    visit(0);
+  }
+  function geoActNap() { // the night shift naps ON the night shift
+    if (REDUCED_MOTION) return;
+    const iw = window.innerWidth || 1200, ih = window.innerHeight || 800;
+    const x = iw * (0.3 + Math.random() * 0.4), y = ih * 0.62;
+    const napper = geoWorkerAt(x, y, '💤', 26000);
+    if (napper) napper.classList.add('geo-crew-nap');
+    geoSaySite(['do NOT wake the night shift. the night shift IS the nap.', 'ne réveillez PAS l\'équipe de nuit. l\'équipe de nuit EST la sieste.']);
+    [0, 1, 2, 3].forEach((k) => dT(() => geoChirp(x + 20, y - 22 - (k % 2) * 6, 'z' + 'z'.repeat(k % 3)), 3200 + k * 4600));
+    dT(() => { // a colleague tiptoes past. respectfully.
+      const tip = geoWorkerAt(4, y + 14, '🤫', 17000);
+      if (tip) geoLerp(tip, 4, y + 14, iw + 60, y + 14, 15500, () => { try { tip.remove(); } catch (e) { /* tiptoed away */ } });
+    }, 5200);
+  }
+  function geoActRadio() { // mandatory groove break — it is in the contract
+    if (REDUCED_MOTION) return;
+    const iw = window.innerWidth || 1200, ih = window.innerHeight || 800;
+    const cx = iw * (0.35 + Math.random() * 0.3), cy = ih * 0.58;
+    const dj = geoWorkerAt(cx, cy, '📻', 19000);
+    const dancers = [geoWorkerAt(cx - 52, cy + 6, '', 19000), geoWorkerAt(cx + 44, cy + 4, '', 19000), geoWorkerAt(cx - 8, cy + 22, '', 19000)];
+    dancers.concat([dj]).forEach((w) => { if (w) w.classList.add('geo-crew-groove'); });
+    geoSaySite(['five minutes of GROOVE. it is in the contract.', 'cinq minutes de GROOVE. c\'est dans le contrat.']);
+    const NOTES = [523, 659, 587, 784, 659, 523, 587, 659, 698, 784];
+    NOTES.forEach((n, k) => dT(() => { if (dreamWorld) playTone(n, 'triangle', 0.07, 0, 0.03); }, 800 + k * 1300));
+    for (let k = 0; k < 9; k++) {
+      dT(() => {
+        if (!dreamWorld) return;
+        const s = document.createElement('span');
+        s.className = 'trail-sparkle';
+        s.textContent = k % 2 ? '♪' : '♫';
+        s.style.left = (cx - 30 + Math.random() * 70) + 'px';
+        s.style.top = (cy - 20 - Math.random() * 14) + 'px';
+        s.style.color = ['#ff8fc7', '#ffd23f', '#41e0ff'][k % 3];
+        document.body.appendChild(s);
+        s.addEventListener('animationend', () => s.remove());
+      }, 1000 + k * 1600);
+    }
+  }
+  function geoActMixer() { // the cement mixer: the drum NEVER stops turning
+    if (REDUCED_MOTION) return;
+    const iw = window.innerWidth || 1200, ih = window.innerHeight || 800;
+    const built = geoRigBuild('mixer');
+    const v = built.v, rig = built.rig;
+    const ltr = Math.random() < 0.5;
+    if (!ltr) v.classList.add('geo-rig-flip');
+    const topY = Math.max(80, ih - 150);
+    const W = 150;
+    const x0 = ltr ? -W : iw + W;
+    const stopX = iw * (0.3 + Math.random() * 0.4);
+    v.style.top = topY + 'px';
+    v.style.left = x0 + 'px';
+    let ph = 0;
+    const drum = dI(() => { if (document.body.contains(v)) { ph = 1 - ph; rig.src = geoRigFrame('mixer', ph); } }, 700);
+    const beep = geoRigBeeper(v);
+    const done = () => { clearInterval(drum); clearInterval(beep); try { v.remove(); } catch (e) { /* rinsed and parked */ } };
+    geoLerp(v, x0, topY, stopX, topY, 8400, () => {
+      if (!document.body.contains(v)) { done(); return; }
+      geoSaySite(['POUR. gently. the cement has feelings.', 'VERSE. doucement. le ciment a des sentiments.']);
+      const pourX = stopX + (ltr ? 4 : W - 34);
+      const puddle = document.createElement('div');
+      puddle.className = 'geo-dig-mound';
+      puddle.style.background = '#b8b8c4';
+      puddle.style.borderColor = '#6e6e80';
+      document.body.appendChild(puddle);
+      dN(puddle);
+      let pw = 8;
+      const pour = dI(() => {
+        if (!dreamWorld || !document.body.contains(puddle)) { clearInterval(pour); return; }
+        pw = Math.min(38, pw + 5);
+        puddle.style.width = pw + 'px';
+        puddle.style.height = Math.round(pw / 3.4) + 'px';
+        puddle.style.left = (pourX - pw / 2 + 12) + 'px';
+        puddle.style.top = (topY + 72 - Math.round(pw / 3.4)) + 'px';
+        const s = document.createElement('span');
+        s.className = 'geo-dig-dirt';
+        s.style.left = (pourX + 6 + Math.random() * 10) + 'px';
+        s.style.top = (topY + 44) + 'px';
+        s.style.setProperty('--dx', (Math.random() * 14 - 7).toFixed(0) + 'px');
+        s.style.background = ['#b8b8c4', '#9a9aac', '#cacada'][Math.floor(Math.random() * 3)];
+        document.body.appendChild(s);
+        s.addEventListener('animationend', () => s.remove());
+        playTone(160 + Math.random() * 40, 'sawtooth', 0.05, 0, 0.02);
+      }, 900);
+      dT(() => {
+        clearInterval(pour);
+        if (!dreamWorld) { done(); return; }
+        const sign = document.createElement('span');
+        sign.className = 'geo-wet-sign';
+        sign.textContent = trT('🚧 WET!!', '🚧 FRAIS !!');
+        sign.style.left = (pourX + 26) + 'px';
+        sign.style.top = (topY + 40) + 'px';
+        document.body.appendChild(sign);
+        dN(sign);
+        geoChirp(pourX, topY + 30, 'pat pat…');
+        dT(() => { try { sign.remove(); } catch (e) { /* still wet */ } try { puddle.remove(); } catch (e) { /* cured */ } }, 24000);
+        dT(() => {
+          if (!document.body.contains(v)) { done(); return; }
+          geoLerp(v, stopX, topY, ltr ? iw + W : -W, topY, 8400, done);
+        }, 2400);
+      }, 7500);
+    });
+  }
   const GEO_FOREMAN_LINES = [
     ['lift with the leaves!! read the request AS WRITTEN!!', 'soulevez avec les feuilles !! lisez la demande TELLE QUELLE !!'],
     ['do NOT fix anything that is not in the contract!!', 'ne réparez RIEN qui ne soit pas au contrat !!'],
@@ -15744,10 +15911,10 @@ document.addEventListener('DOMContentLoaded', () => {
     dT(geoActExcavator, 500);
     if (Math.random() < 0.6) dT(geoVehicle, S * 0.5);
     // draw tonight's programme from the repertoire
-    const ACTS = [geoActMeasure, geoActCoffee, geoActCrane, geoActJackhammer, geoActDynamite, geoActBlueprint, geoActConeParade, geoActPaint, geoActLadder, geoActDig, geoActToolRun, geoActExcavator];
+    const ACTS = [geoActMeasure, geoActCoffee, geoActCrane, geoActJackhammer, geoActDynamite, geoActBlueprint, geoActConeParade, geoActPaint, geoActLadder, geoActDig, geoActToolRun, geoActExcavator, geoActLunch, geoActInspector, geoActNap, geoActRadio, geoActMixer];
     for (let i = ACTS.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = ACTS[i]; ACTS[i] = ACTS[j]; ACTS[j] = t; }
-    const nActs = S > 45000 ? 5 : 4;
-    const slots = [0.14, 0.3, 0.47, 0.64, 0.8];
+    const nActs = S > 52000 ? 6 : 5;
+    const slots = [0.12, 0.26, 0.4, 0.54, 0.68, 0.8];
     for (let i = 0; i < nActs; i++) {
       const act = ACTS[i];
       dT(() => { try { act(); } catch (e) { /* the act missed its cue */ } }, S * slots[i]);
@@ -15835,7 +16002,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // dialog leaves the stage, no new popup may open — the ballet plays.
       // v155: the show runs a proper 15-25s — construction takes TIME
       dreamWorld.flags.geoShowtime = 1;
-      const T_SHOW = REDUCED_MOTION ? 1700 : 36000 + Math.floor(Math.random() * 18000); // v175: the crew works at 1/3 speed — the CUSTOMER does the hurrying
+      const T_SHOW = REDUCED_MOTION ? 1700 : 45000 + Math.floor(Math.random() * 15000); // v176: 45-60s of unhurried craftsmanship — the CUSTOMER does the hurrying
       const T_RESOLVE = REDUCED_MOTION ? 900 : T_SHOW - 2400;
       const T_CURTAIN = T_SHOW;
       const hidden = [...document.querySelectorAll('.dream-dlg')].filter((x) => x.style.display !== 'none');
@@ -16048,6 +16215,7 @@ document.addEventListener('DOMContentLoaded', () => {
   try {
     window.__yosGeo = {
       lad: () => geoActLadder(), exc: () => geoActExcavator(), dig: () => geoActDig(), run: () => geoActToolRun(), truck: () => geoVehicle(),
+      lunch: () => geoActLunch(), insp: () => geoActInspector(), nap: () => geoActNap(), radio: () => geoActRadio(), mixer: () => geoActMixer(),
       show: (ms) => geoCrewWork(ms || 16000),
       inv: () => {
         if (!dreamWorld) return 'enter the geo dream first';
