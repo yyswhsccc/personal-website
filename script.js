@@ -14863,6 +14863,138 @@ document.addEventListener('DOMContentLoaded', () => {
   // damage groups keep combos legal: 't' body-transform, 'a' body-animation
   // (t↔a fight over the same property), 'f' static filter vs 'fa' animated
   // filter, 'c' children-only, 'x' text-only (c and x combine with anything)
+  // ---- v179 REAL DAMAGE: the wrecks mutate the page's ACTUAL dom, text
+  // and behavior (owner decree: no more cosmetic animations — break the
+  // real thing). every mode returns a restore closure; listeners are
+  // never destroyed (children are hidden, never removed; text nodes are
+  // edited in place and remembered).
+  function geoTextNodes(root, cap) {
+    const out = [];
+    const tw = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+    let n;
+    while ((n = tw.nextNode()) && out.length < (cap || 400)) {
+      const p = n.parentNode && n.parentNode.nodeName;
+      if (p === 'SCRIPT' || p === 'STYLE' || p === 'TEXTAREA' || p === 'INPUT') continue;
+      if (!n.nodeValue || !n.nodeValue.trim()) continue;
+      out.push(n);
+    }
+    return out;
+  }
+  const GEO_REAL_FX = [
+    { id: 'srcdump', // the renderer resigns: the window shows its OWN source, bitten
+      toast: ['the renderer gave up. here is the raw source. we improved it with cones.', 'le moteur de rendu a démissionné. voici la source brute. améliorée avec des cônes.'],
+      apply(body, win) {
+        let srcTxt = body.innerHTML || '';
+        if (srcTxt.length > 5200) srcTxt = srcTxt.slice(0, 5200) + '\n<!-- …the rest fell off the truck -->';
+        // REAL bites: chunks eaten, quotes stolen, cones nested in the markup
+        for (let k = 0; k < 7; k++) {
+          const at = Math.floor(Math.random() * Math.max(1, srcTxt.length - 60));
+          srcTxt = srcTxt.slice(0, at) + '🚧<!-- bitten -->' + srcTxt.slice(at + 24 + Math.floor(Math.random() * 30));
+        }
+        srcTxt = srcTxt.replace(/"/g, (m) => (Math.random() < 0.14 ? '' : m));
+        const kids = [...body.children].map((el) => [el, el.style.display]);
+        kids.forEach(([el]) => { el.style.display = 'none'; });
+        const pre = document.createElement('pre');
+        pre.className = 'geo-real-src';
+        pre.textContent = srcTxt;
+        body.appendChild(pre);
+        return () => {
+          try { pre.remove(); } catch (e) { /* recycled */ }
+          kids.forEach(([el, d]) => { try { el.style.display = d; } catch (e) { /* re-rendered */ } });
+        };
+      } },
+    { id: 'nan', // every real number on the page becomes NaN
+      toast: ['every number on this page is NaN now. the math checks out (it does not).', 'chaque nombre de cette page vaut NaN. le calcul est bon (non).'],
+      apply(body) {
+        const edits = [];
+        geoTextNodes(body).forEach((n) => {
+          if (!/\d/.test(n.nodeValue)) return;
+          edits.push([n, n.nodeValue]);
+          n.nodeValue = n.nodeValue.replace(/\d+([.,]\d+)?/g, 'NaN');
+        });
+        if (!edits.length) return null;
+        return () => edits.forEach(([n, v]) => { try { n.nodeValue = v; } catch (e) { /* node moved on */ } });
+      } },
+    { id: 'undef', // the variables escaped: real copy renders as undefined
+      toast: ['the variables escaped. the page now renders the TRUTH: undefined.', 'les variables se sont échappées. la page affiche la VÉRITÉ : undefined.'],
+      apply(body) {
+        const LEAK = ['undefined', 'null', '[object Object]', 'NaN', '${content}', '%TITLE%'];
+        const edits = [];
+        geoTextNodes(body).forEach((n) => {
+          if (Math.random() > 0.34) return;
+          edits.push([n, n.nodeValue]);
+          n.nodeValue = LEAK[Math.floor(Math.random() * LEAK.length)];
+        });
+        if (!edits.length) return null;
+        return () => edits.forEach(([n, v]) => { try { n.nodeValue = v; } catch (e) { /* re-rendered */ } });
+      } },
+    { id: 'mojibake', // the charset fell off the truck (REAL double-encode)
+      toast: ['the charset fell off the truck. authentic mojibake, vintage 1998.', 'le charset est tombé du camion. mojibake authentique, millésime 1998.'],
+      apply(body) {
+        const edits = [];
+        geoTextNodes(body).forEach((n) => {
+          let g2;
+          try { g2 = unescape(encodeURIComponent(n.nodeValue)); } catch (e) { return; }
+          if (g2 === n.nodeValue) return; // pure ascii is immune. lucky ascii.
+          edits.push([n, n.nodeValue]);
+          n.nodeValue = g2;
+        });
+        // ascii-heavy pages still deserve SOME suffering
+        if (edits.length < 4) {
+          geoTextNodes(body).forEach((n) => {
+            if (Math.random() > 0.3) return;
+            edits.push([n, n.nodeValue]);
+            n.nodeValue = n.nodeValue.replace(/[aeiouAEIOU]/g, (c) => ({ a: 'Ã¤', e: 'Ã©', i: 'Ã¯', o: 'Ã¸', u: 'Ã¼' })[c.toLowerCase()] || c);
+          });
+        }
+        if (!edits.length) return null;
+        return () => edits.forEach(([n, v]) => { try { n.nodeValue = v; } catch (e) { /* moved on */ } });
+      } },
+    { id: 'wires', // every control in the window genuinely throws now
+      toast: ['all the wires are crossed: every button in there throws. the errors are load-bearing.', 'tous les fils sont croisés : chaque bouton lève une erreur. les erreurs sont porteuses.'],
+      apply(body, win) {
+        const strip = document.createElement('div');
+        strip.className = 'geo-real-console';
+        strip.textContent = '> console — ' + (win && win.id ? win.id : 'window') + '.htm';
+        body.appendChild(strip);
+        const page = ((win && win.id) || 'window').replace(/^win-/, '') + '.htm';
+        const onClick = (e) => {
+          const t = e.target && e.target.closest ? e.target.closest('button, a, [role="button"], input, select') : null;
+          if (!t) return;
+          e.preventDefault();
+          e.stopPropagation();
+          const tag = t.tagName.toLowerCase();
+          const name = t.id ? '#' + t.id : (typeof t.className === 'string' && t.className ? '.' + t.className.split(' ')[0] : '');
+          const line = document.createElement('div');
+          line.textContent = 'Uncaught TypeError: ' + tag + name + '.onClick is not a function\n    at handleClick (' + page + ':' + (100 + Math.floor(Math.random() * 900)) + ':' + (1 + Math.floor(Math.random() * 40)) + ')';
+          strip.appendChild(line);
+          strip.scrollTop = 1e6;
+          playTone(140, 'sawtooth', 0.09, 0, 0.04);
+        };
+        body.addEventListener('click', onClick, true);
+        return () => {
+          try { body.removeEventListener('click', onClick, true); } catch (e) { /* unplugged */ }
+          try { strip.remove(); } catch (e) { /* swept */ }
+        };
+      } },
+    { id: 'oom', // the renderer ran out of memory partway down the page
+      toast: ['the renderer ran out of memory halfway. the rest of the page exists spiritually.', 'le moteur de rendu a manqué de mémoire à mi-page. le reste existe spirituellement.'],
+      apply(body) {
+        const kids = [...body.children];
+        if (kids.length < 3) return null;
+        const keep = 1 + Math.floor(Math.random() * 2);
+        const hidden = kids.slice(keep).map((el) => [el, el.style.display]);
+        hidden.forEach(([el]) => { el.style.display = 'none'; });
+        const note = document.createElement('pre');
+        note.className = 'geo-real-src';
+        note.textContent = '<!-- renderer ran out of memory at node ' + keep + '/' + kids.length + ' — buy more RAM (1998 prices) -->';
+        body.appendChild(note);
+        return () => {
+          try { note.remove(); } catch (e) { /* budgeted */ }
+          hidden.forEach(([el, d]) => { try { el.style.display = d; } catch (e) { /* re-rendered */ } });
+        };
+      } }
+  ];
   const GEO_BREAK_FX = [
     { cls: 'geo-wreck-flip', grp: 't', toast: ['installed upside down. the TODO comment proves they KNEW.', 'installée à l\'envers. le commentaire TODO prouve qu\'ils SAVAIENT.'] },
     { cls: 'geo-wreck-mirror', grp: 't', toast: ['mirrored. “works on MY monitor” — signed, the plumber.', 'en miroir. « marche sur MON écran » — signé, le plombier.'] },
@@ -15095,16 +15227,22 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!win || !body || win.classList.contains('window-closed')) return;
     const prev = body.className.match(/\bgeo-wreck-(?!host\b|loading\b)[a-z]+\b/g) || [];
     prev.forEach((c) => body.classList.remove(c));
-    let main = GEO_BREAK_FX[Math.floor(Math.random() * GEO_BREAK_FX.length)];
-    if (prev.indexOf(main.cls) >= 0) main = GEO_BREAK_FX[(GEO_BREAK_FX.indexOf(main) + 1 + Math.floor(Math.random() * (GEO_BREAK_FX.length - 1))) % GEO_BREAK_FX.length];
-    const sides = GEO_BREAK_FX.filter((f) => f !== main && !geoWreckConflict(main.grp, f.grp));
-    const side = (Math.random() < 0.35 && sides.length) ? sides[Math.floor(Math.random() * sides.length)] : null;
+    // v179: the MAIN damage is REAL (dom/text/behavior mutation); the old
+    // cosmetic classes survive only as a 40% garnish on top
+    const mainR = GEO_REAL_FX[Math.floor(Math.random() * GEO_REAL_FX.length)];
+    const side = (Math.random() < 0.4) ? GEO_BREAK_FX[Math.floor(Math.random() * GEO_BREAK_FX.length)] : null;
     const applyFx = () => {
       if (!dreamWorld || !dreamWorld.flags.geoFix || dreamWorld.flags.geoFix.done) return;
-      body.classList.add('geo-wreck-host', main.cls);
+      const g2 = dreamWorld.flags.geoFix;
+      const rw = (g2.realWrecks = g2.realWrecks || {});
+      if (rw[wid]) { try { rw[wid](); } catch (e) { /* was already unfixed */ } delete rw[wid]; }
+      let rest = null;
+      try { rest = mainR.apply(body, win); } catch (e) { rest = null; /* even the damage broke */ }
+      if (rest) rw[wid] = rest;
+      body.classList.add('geo-wreck-host');
       if (side) body.classList.add(side.cls);
       playGlitchSound();
-      showToast('🚧 ' + trT(...main.toast) + (side ? ' ' + trT('(+ bonus damage, free of charge)', '(+ dégâts bonus, offerts)') : ''));
+      showToast('🚧 ' + trT(...mainR.toast) + (side ? ' ' + trT('(+ bonus damage, free of charge)', '(+ dégâts bonus, offerts)') : ''));
     };
     const loaded = (g.loaded = g.loaded || {});
     if (REDUCED_MOTION || loaded[wid]) { applyFx(); return; }
@@ -16272,6 +16410,7 @@ document.addEventListener('DOMContentLoaded', () => {
       lad: () => geoActLadder(), exc: () => geoActExcavator(), dig: () => geoActDig(), run: () => geoActToolRun(), truck: () => geoVehicle(),
       lunch: () => geoActLunch(), insp: () => geoActInspector(), nap: () => geoActNap(), radio: () => geoActRadio(), mixer: () => geoActMixer(),
       housecall: () => geoActHouseCall(),
+      unsmash: () => { geoFixRestore(); return 'restored'; },
       smash: (wid) => { const f = dreamWorld && dreamWorld.flags; if (!f) return 'dream first'; f.geoFix = f.geoFix || { round: 0, contract: [], wreckIds: {}, broken: [] }; f.geoFix.done = 0; geoWreckWindow(wid || 'win-pikdex'); return 'smashed ' + (wid || 'win-pikdex'); },
       show: (ms) => geoCrewWork(ms || 16000),
       inv: () => {
@@ -16307,6 +16446,13 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   // undo the outage (cones + wrecked interiors); contract effects stay until wake
   function geoFixRestore() {
+    // v179: undo the REAL damage first — text back, listeners unblocked,
+    // hidden children re-shown
+    const gR = dreamWorld && dreamWorld.flags.geoFix;
+    if (gR && gR.realWrecks) {
+      Object.keys(gR.realWrecks).forEach((k) => { try { gR.realWrecks[k](); } catch (e) { /* best effort */ } });
+      gR.realWrecks = {};
+    }
     document.querySelectorAll('.geo-broken-cone').forEach((n) => { try { n.remove(); } catch (e) { /* pocketed */ } });
     document.querySelectorAll('.geo-broken').forEach((el) => { el.classList.remove('geo-broken'); try { delete el.__geoBrokenSeen; } catch (e) { /* sticky note stays */ } });
     document.querySelectorAll('.geo-wreck-loading').forEach((n) => { try { n.remove(); } catch (e) { /* dissolved */ } });

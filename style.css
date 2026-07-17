@@ -9789,7 +9789,36 @@ html[data-theme="dark"].dream-geo .geo-broken {
   text-align: center;
   padding: 12px;
 }
-/* ---- v177: HEAVYWEIGHT wrecks — proper computer damage ---- */
+/* ---- v179: REAL damage furniture ---- */
+.geo-real-src {
+  margin: 6px;
+  padding: 8px;
+  max-height: 100%;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.68rem;
+  line-height: 1.45;
+  background: #14101f;
+  color: #7cfc00;
+  border: 2px dashed #ff8fc7;
+}
+.geo-real-console {
+  margin: 6px;
+  padding: 6px 8px;
+  max-height: 108px;
+  overflow: auto;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.66rem;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  background: #1a0e14;
+  color: #ff5f7a;
+  border-top: 3px solid #ff2f5e;
+}
+.geo-real-console > div { margin-top: 4px; }
+/* ---- v177: HEAVYWEIGHT wrecks — now the 40% GARNISH layer ---- */
 .geo-wreck-flip { transform: rotate(180deg); }
 .geo-wreck-flip::after {
   content: '/* TODO: rotate back before launch — plumber */';
