@@ -6653,6 +6653,19 @@ html[data-theme="dark"] .pik-disg-banner {
   color: #ffb3dd;
 }
 /* the disguise blows: BIG chunky pixel confetti, flying radially */
+.pik-burst-flash {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border: 3px solid #ff8fc7;
+  background: rgba(255, 214, 236, 0.55);
+  pointer-events: none;
+  animation: pik-burst-ring 0.55s ease-out forwards;
+}
+@keyframes pik-burst-ring {
+  0% { transform: scale(0.3); opacity: 1; }
+  100% { transform: scale(3.6); opacity: 0; }
+}
 .pik-burst-bit {
   position: absolute;
   width: 6px;
@@ -6678,7 +6691,7 @@ html[data-theme="dark"] .pik-disg-banner {
   100% { transform: none; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .pik-rain-bit, .pik-snow-bit, .pik-bolt-bit, .pik-baby-star, .pik-star-dust, .pik-neb-puff, .pik-burst-bit { display: none; }
+  .pik-rain-bit, .pik-snow-bit, .pik-bolt-bit, .pik-baby-star, .pik-star-dust, .pik-neb-puff, .pik-burst-bit, .pik-burst-flash { display: none; }
   .pik-star-trail { animation: none; }
   .desk-pik.pik-glitch { animation: none; }
   .pik-disg-banner > span { animation: none; padding-left: 0; }

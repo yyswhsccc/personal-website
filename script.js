@@ -31697,30 +31697,78 @@ document.addEventListener('DOMContentLoaded', () => {
           if (w.disgBannerEl) { w.disgBannerEl.remove(); w.disgBannerEl = null; }
           const hatBack = w.el.querySelector('.pik-hat');
           if (hatBack) hatBack.style.display = '';
-          for (let k = 0; k < 22; k++) { // the BIG pop: chunky pixel confetti, radial
-            const b = document.createElement('span');
-            b.className = 'pik-burst-bit';
-            b.style.background = PIK_PARTY_COLORS[k % PIK_PARTY_COLORS.length];
-            const ang = (k / 22) * 6.283 + Math.random() * 0.5;
-            const dist = 26 + Math.random() * 34;
-            b.style.setProperty('--bx', (Math.cos(ang) * dist).toFixed(1) + 'px');
-            b.style.setProperty('--by', (Math.sin(ang) * dist * 0.8 - 8).toFixed(1) + 'px');
-            b.style.setProperty('--br', Math.floor(Math.random() * 240 - 120) + 'deg');
-            b.style.left = (w.x + 19) + 'px';
-            b.style.top = (w.y + 16) + 'px';
-            DESK_PIK.layer.appendChild(b);
-            b.addEventListener('animationend', () => b.remove());
-          }
-          w.restUntil = now + 1000; w.tx = w.x; w.ty = w.y; // frozen mid-pop. deer, headlights
+          // THE POP, grander (v168): a pink flash ring, then TWO waves of
+          // chunky confetti — 24 all-colors, and 16 pure pinks a beat later
+          const bx0 = w.x, by0 = w.y;
+          const fl = document.createElement('span');
+          fl.className = 'pik-burst-flash';
+          fl.style.left = (bx0 + 10) + 'px';
+          fl.style.top = (by0 + 8) + 'px';
+          DESK_PIK.layer.appendChild(fl);
+          fl.addEventListener('animationend', () => fl.remove());
+          const burstWave = (n, dMin, dMax, cols, delay) => setTimeout(() => {
+            for (let k = 0; k < n; k++) {
+              const b = document.createElement('span');
+              b.className = 'pik-burst-bit';
+              b.style.background = cols[k % cols.length];
+              const sz = 5 + Math.floor(Math.random() * 5);
+              b.style.width = sz + 'px';
+              b.style.height = sz + 'px';
+              const ang = (k / n) * 6.283 + Math.random() * 0.5;
+              const dist = dMin + Math.random() * (dMax - dMin);
+              b.style.setProperty('--bx', (Math.cos(ang) * dist).toFixed(1) + 'px');
+              b.style.setProperty('--by', (Math.sin(ang) * dist * 0.8 - 10).toFixed(1) + 'px');
+              b.style.setProperty('--br', Math.floor(Math.random() * 300 - 150) + 'deg');
+              b.style.left = (bx0 + 19) + 'px';
+              b.style.top = (by0 + 16) + 'px';
+              DESK_PIK.layer.appendChild(b);
+              b.addEventListener('animationend', () => b.remove());
+            }
+          }, delay);
+          burstWave(24, 30, 64, PIK_PARTY_COLORS, 0);
+          burstWave(16, 16, 44, ['#ff2fae', '#ff8fc7', '#ffb3dd', '#ff5fa8'], 150);
+          w.restUntil = now + 3600; w.tx = w.x; w.ty = w.y; // ROOTED to the spot
           w.el.classList.remove('poked'); void w.el.offsetWidth; w.el.classList.add('poked');
           pikChirp();
-          const L = [
-            trT('...did something feel different just now?', '...quelque chose était différent à l\'instant, non ?'),
-            trT('I have ALWAYS been this robot', 'j\'ai TOUJOURS été ce robot'),
-            trT('you saw nothing ♡', 'tu n\'as rien vu ♡'),
-            trT('that was a bug. probably', 'c\'était un bug. sûrement')
-          ];
-          deskPikSay(w, L[Math.floor(Math.random() * L.length)]);
+          // then: two full seconds of SHIFTY EYES (left... right... left...)
+          // before it dares to say anything. eyes live at template (3,5) and
+          // (5,5) -> padded canvas (6,8)/(8,8); frames swap the pixels over
+          if (!w.shiftyFrames && w.trueSrc) {
+            const sim = new Image();
+            sim.onload = () => {
+              const mk = (dx) => {
+                const sc = document.createElement('canvas');
+                sc.width = sim.width; sc.height = sim.height;
+                const sx = sc.getContext('2d');
+                sx.drawImage(sim, 0, 0);
+                const bg = sx.getImageData(7, 8, 1, 1).data;
+                sx.fillStyle = 'rgb(' + bg[0] + ',' + bg[1] + ',' + bg[2] + ')';
+                sx.fillRect(6, 8, 1, 1); sx.fillRect(8, 8, 1, 1);
+                sx.fillStyle = '#14020e';
+                sx.fillRect(6 + dx, 8, 1, 1); sx.fillRect(8 + dx, 8, 1, 1);
+                return sc.toDataURL();
+              };
+              w.shiftyFrames = [mk(-1), mk(1)];
+            };
+            sim.src = w.trueSrc;
+          }
+          for (let g = 0; g < 6; g++) {
+            setTimeout(() => {
+              try { if (w.shiftyFrames && w.disguised < 0) w.img.src = w.shiftyFrames[g % 2]; } catch (e) { /* blinked */ }
+            }, 480 + g * 330);
+          }
+          setTimeout(() => {
+            try {
+              if (w.disguised < 0) w.img.src = w.trueSrc; // eyes front
+              const L = [
+                trT('...did something feel different just now?', '...quelque chose était différent à l\'instant, non ?'),
+                trT('I have ALWAYS been a robot', 'j\'ai TOUJOURS été un robot'),
+                trT('you saw nothing ♡', 'tu n\'as rien vu ♡'),
+                trT('that was a bug. probably', 'c\'était un bug. sûrement')
+              ];
+              deskPikSay(w, L[Math.floor(Math.random() * L.length)]);
+            } catch (e) { /* it played it TOO cool */ }
+          }, 2680);
           w.disguiseAt = now + (w.disguiseDeep ? 6500 + Math.random() * 6500 : 13000 + Math.random() * 12000);
         }
       }
