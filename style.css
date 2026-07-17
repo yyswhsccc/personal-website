@@ -6625,6 +6625,13 @@ html[data-theme="dark"] .pikdex-squad-chip:hover { box-shadow: 2px 5px 0 #1c0f2e
 .desk-pik.is-disguised .pik-hat { display: none !important; }
 /* costume footprints: paw prints, bird feet, drops, wisps — pixel art */
 .pik-track { image-rendering: pixelated; opacity: 0.85; }
+/* the bee's daisies: spinning, BRIGHT yellow halo */
+.pik-track-daisy {
+  opacity: 1;
+  filter: drop-shadow(0 0 3px #ffe066) drop-shadow(0 0 7px #ffd400);
+  animation: pik-daisy-spin 3.2s linear infinite;
+}
+@keyframes pik-daisy-spin { to { transform: rotate(360deg); } }
 /* wet tracks (drops, slime, ectoplasm) GLOW — a soft twin halo */
 .pik-track-wet {
   opacity: 0.95;
@@ -6714,6 +6721,7 @@ html[data-theme="dark"] .pik-disg-banner {
   .pik-star-trail { animation: none; }
   .desk-pik.pik-glitch { animation: none; }
   .desk-pik.pik-ringing { animation: none; }
+  .pik-track-daisy { animation: none; }
   .pik-disg-banner > span { animation: none; padding-left: 0; }
   .desk-pik-baby { animation: none; }
 }

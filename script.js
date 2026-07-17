@@ -32841,12 +32841,16 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
               w.trackFlip = !w.trackFlip; // left paw, right paw, left paw
               const s = document.createElement('img');
-              const wet = tr[0] === 'drop' || tr[0] === 'slime' || tr[0] === 'wisp' || tr[0] === 'dash'; // the bee's flight line glows too
-              s.className = 'pik-trail pik-track' + (wet ? ' pik-track-wet' : '');
+              const wet = tr[0] === 'drop' || tr[0] === 'slime' || tr[0] === 'wisp';
+              s.className = 'pik-trail pik-track' + (wet ? ' pik-track-wet' : '') + (tr[0] === 'daisy' ? ' pik-track-daisy' : '');
               if (wet) s.style.setProperty('--track-glow', tr[1]);
+              if (tr[0] === 'daisy') { // every daisy spins at its own pace
+                s.style.animationDuration = (2.4 + Math.random() * 2).toFixed(2) + 's';
+                s.style.animationDirection = w.trackFlip ? 'reverse' : 'normal';
+              }
               s.src = pikTrackSprite(tr[0], tr[1]);
               s.alt = '';
-              s.style.width = ({ paw: 10, bird: 10, drop: 8, wisp: 12, dash: 13, slime: 9 })[tr[0]] + 'px';
+              s.style.width = ({ paw: 10, bird: 10, drop: 8, wisp: 12, dash: 13, slime: 9, daisy: 13 })[tr[0]] + 'px';
               s.style.left = (cx + (w.trackFlip ? -6 : 2)) + 'px';
               s.style.top = (cy + Math.random() * 6) + 'px';
               DESK_PIK.layer.appendChild(s);
@@ -32920,7 +32924,7 @@ document.addEventListener('DOMContentLoaded', () => {
     { t: ['...........', '..D.....D..', '..BBBBBBB..', '..BeBBBeB..', '..BBBwBBB..', '.XBBBBBBBX.', '.XXBBBBBXX.', '..BBBBBBB..', '..BBBBBBB..', '...BBBBB...', '...D...D...', '...........', '...........', '...........'], c: { B: '#7fd8c8', D: '#3f9e8e', X: '#5fb8a8' }, n: ['a dragon', 'un dragon'], tr: ['drop', '#ff8a5c'] }, // dragon
     { t: ['...........', '...........', '...BBBBB...', '..BBBBBBB..', '..BeBBBeB..', '..BBBBBBB..', '..BuBBBuB..', '..BBBBBBB..', '..BBBBBBB..', '..B.BB.B...', '...........', '...........', '...........', '...........'], c: { B: '#eef2ff', D: '#b8c4e8' }, n: ['a ghost', 'un fant\u00f4me'], tr: ['wisp', '#c8d4f0'] }, // ghost (floats, no feet)
     { t: ['...........', '...........', '..BBBBBBB..', '.BBBBBBBBB.', '.BeBBBBBeB.', '.BBBwwwBBB.', '.BBBBBBBBB.', '.BBBBBBBBB.', '.B.B.B.B.B.', '.B.B.B.B.B.', '...........', '...........', '...........', '...........'], c: { B: '#c9a7f5', D: '#8f6fd0' }, n: ['an octopus', 'une pieuvre'], tr: ['drop', '#b090e8'] }, // octopus
-    { t: ['...........', '..w.....w..', '.www...www.', '..BBBBBBB..', '..BeBBBeB..', '..DDDDDDD..', '..BBBBBBB..', '..DDDDDDD..', '..BBBBBBB..', '...BBBBB...', '.....X.....', '...........', '...........', '...........'], c: { B: '#ffd94d', D: '#3a3a3a', X: '#3a3a3a' }, n: ['a bee', 'une abeille'], tr: ['dash', '#e8b820'] }, // bee
+    { t: ['...........', '..w.....w..', '.www...www.', '..BBBBBBB..', '..BeBBBeB..', '..DDDDDDD..', '..BBBBBBB..', '..DDDDDDD..', '..BBBBBBB..', '...BBBBB...', '.....X.....', '...........', '...........', '...........'], c: { B: '#ffd94d', D: '#3a3a3a', X: '#3a3a3a' }, n: ['a bee', 'une abeille'], tr: ['daisy', '#ffd400'] }, // bee
     { t: ['...........', '.e.e.......', '.B.B.......', '.BBB.XXXX..', '.BBBXXDDX..', '.BBBXDXDX..', '.BBBXXDDX..', '.BBBB.XXX..', '.BBBBBBBB..', '..BBBBBBB..', '...........', '...........', '...........', '...........'], c: { B: '#ffcf9f', D: '#c07840', X: '#e8a86a' }, f: [2, 0], n: ['a snail', 'un escargot'], tr: ['slime', '#bfe8d8'] }, // snail
     { t: ['...........', '...X.X.X...', '..BBBBBBB..', '..BeBBBeB..', '..BBBwBBB..', '..BuBBBuB..', '..BBBBBBB..', '..BBBBBBB..', '..BBBBBBB..', '...BBBBB...', '...D...D...', '...........', '...........', '...........'], c: { B: '#9fd45e', D: '#5f9e3d', X: '#ff8a5c' }, f: [7, 0], n: ['a stegosaurus', 'un st\u00e9gosaure'], tr: ['paw', '#6f9e3d'] }, // stego
     { t: ['...........', '..D.....D..', '..DB...BD..', '..BBBBBBB..', '..BeBBBeB..', '..BwwwwwB..', '..BBwwwBB..', '..BBBBBBB..', '..BBBBBBB..', '...BBBBB...', '...D...D...', '...........', '...........', '...........'], c: { B: '#ff9a56', D: '#c86a30' }, n: ['a fox', 'un renard'], tr: ['paw', '#e08a48'] }, // fox
@@ -32949,6 +32953,13 @@ document.addEventListener('DOMContentLoaded', () => {
       P(1, 1); P(2, 2); P(5, 1); P(4, 2); // side toes
     } else if (kind === 'dash') {
       [1, 2, 3, 4, 5].forEach((rx) => { P(rx, 3); P(rx, 4); }); // a flight stroke, TWO pixels thick (v174)
+    } else if (kind === 'daisy') { // a bright pixel daisy: cream petals, gold heart
+      x.fillStyle = '#fffdf5';
+      [[3, 0], [2, 1], [3, 1], [4, 1], [2, 5], [3, 5], [4, 5], [3, 6], [0, 3], [1, 2], [1, 3], [1, 4], [6, 3], [5, 2], [5, 3], [5, 4]].forEach(([a, b]) => P(a, b));
+      x.fillStyle = '#ffd400';
+      [[2, 2], [3, 2], [4, 2], [2, 3], [4, 3], [2, 4], [3, 4], [4, 4]].forEach(([a, b]) => P(a, b));
+      x.fillStyle = '#e8a800';
+      P(3, 3);
     } else if (kind === 'wisp') {
       [[2, 1], [3, 1], [4, 1], [1, 2], [5, 2], [1, 3], [5, 3], [2, 4], [3, 4], [4, 4]].forEach(([a, b]) => P(a, b)); // a hollow puff
     } else { // drop / slime: a glossy blob
