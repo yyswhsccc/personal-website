@@ -27296,7 +27296,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const kind = form >= 2 ? (kk || (spId ? 's:' + spId : 'w:' + pikSegOfHue(pikHueFromColor(color)))) : '';
     let key = color.body + '/' + stage + '/' + (spId || '') + '/' + (silhouette ? 1 : 0) + '/' + form + '/' + kind;
     if (!silhouette && form >= 2 && spId === 'lowbatt') { const bb = pikBattState(); key += '/b' + (bb.charging ? 'C' : 'D') + bb.level; }
-    if (!silhouette && form >= 2 && (spId === 'y2kbug' || spId === 'cronjob')) key += '/c' + (Math.floor(Date.now() / 900) % 4); // confetti reshuffles / the clock hand ticks
+    if (!silhouette && form >= 2 && spId === 'y2kbug') key += '/c' + (Math.floor(Date.now() / 900) % 4); // the on-body confetti reshuffles
     if (pikSpriteCache[key]) return pikSpriteCache[key];
     let rows;
     if (spId && PIK_SPECIES_TPLS[spId]) {
@@ -27366,12 +27366,12 @@ document.addEventListener('DOMContentLoaded', () => {
     darkmode: ['it brought its own night', 'il a apporté sa propre nuit'],
     gilded: ['gold master, now with MORE gold', 'version or, avec ENCORE plus d\'or'],
     cacheghost: ['cleared twice. returned twice. now it levitates', 'vidé deux fois. revenu deux fois. maintenant il lévite'],
-    cronjob: ['its belly is a real clock. the halo is its crontab: * * * * *', 'son ventre est une vraie horloge. le halo : son crontab * * * * *'],
+    cronjob: ['GOLD bells — and it rings every minute, ON the minute. the halo: its crontab', 'cloches en OR — et ça sonne chaque minute, à la minute PILE. le halo : son crontab'],
     y2kbug: ['partying like it\'s 19100, professionally', 'fait la fête comme en 19100, professionnellement'],
     bitflip: ['half of it flipped. the other half is thinking about it', 'sa moitié a basculé. l\'autre y réfléchit'],
     turbo: ['the warranty is EXTREMELY void', 'la garantie est EXTRÊMEMENT annulée'],
     dotmatrix: ['it prints its own hi-scores now', 'il imprime ses propres records maintenant'],
-    bsodjr: ['it collects crash reports AND frames them', 'il collectionne les rapports de plantage ET les encadre'],
+    bsodjr: ['collecting crash reports: 40%… at APEX its favourite one is FRAMED', 'collecte des rapports : 40 %… à l\'APEX son préféré est ENCADRÉ'],
     rgbrig: ['the FPS are still cosmetic. the GLOW is real', 'les FPS restent cosmétiques. le HALO est réel'],
     captcha: ['it is DEFINITELY not a robot (it has a FLOWER)', 'il n\'est VRAIMENT pas un robot (il a une FLEUR)'],
     kernelpg: ['it\'s free, it\'s open, it has FLIPPERS', 'il est libre, il est ouvert, il a des NAGEOIRES']
@@ -27590,20 +27590,15 @@ document.addEventListener('DOMContentLoaded', () => {
         [cx - 2, cx, cx + 2].forEach((rx) => px(rx, h, 'rgba(169,164,201,0.7)'));
         if (epic) { [cx - 3, cx - 1, cx + 1, cx + 3].forEach((rx) => px(rx, h + 0, 'rgba(169,164,201,0.45)')); rim('rgba(233,230,245,0.85)'); }
       },
-      cronjob() { // v171: the belly becomes a REAL clock — the hand ticks
-        // round the dial live (framed sprite, same clock as y2kbug's
-        // confetti). APEX: the dial turns gold, the bells get gold tips,
-        // and its crontab appears overhead, literally: * * * * *
-        const cf = Math.floor(Date.now() / 900) % 4;
-        for (let oy = -1; oy <= 1; oy++) for (let ox = -1; ox <= 1; ox++) {
-          px(cx + ox, 8 + oy, '#fff8ec'); // the dial stays WHITE — a gold dial ate the hand (v171 lesson)
-        }
-        px(cx, 8, '#3a2c20'); // the pivot
-        const HANDS = [[0, -1], [1, 0], [0, 1], [-1, 0]];
-        px(cx + HANDS[cf][0], 8 + HANDS[cf][1], '#5a4030'); // the minute hand, on duty
+      cronjob() { // v172: the belly clock read as a mystery blob (user
+        // veto) — the STORY is the bells now. ★★: the alarm bells turn
+        // to real gold (it also RINGS every minute, live, in the tick).
+        // APEX: + its crontab overhead, literally: * * * * *
+        px(3, 1, '#ffd400'); px(7, 1, '#ffd400');
+        px(2, 2, '#ffd400'); px(8, 2, '#ffd400');
+        px(3, 0, '#fff6c9'); px(7, 0, '#fff6c9'); // polished bell shine
         if (epic) {
           [[1, -1], [3, -2], [5, -3], [7, -2], [9, -1]].forEach(([hx, hy]) => px(hx, hy, '#ffd400')); // * * * * *
-          px(3, 1, '#ffd400'); px(7, 1, '#ffd400'); // gold bell tips
         }
       },
       y2kbug() { // the party is ON the body too (v166): chunky confetti
@@ -27668,10 +27663,17 @@ document.addEventListener('DOMContentLoaded', () => {
         px(cx - 2, -1, '#7c8db0'); px(cx + 2, -1, '#7c8db0');
         if (epic) { px(cx - 1, -3, '#7c8db0'); px(cx + 1, -3, '#7c8db0'); }
       },
-      bsodjr() { // the tiny :( properly drawn
-        px(cx - 1, bodyTop + 2, '#ffffff'); px(cx + 1, bodyTop + 2, '#ffffff');
-        px(cx - 1, bodyTop + 4, '#ffffff'); px(cx, bodyTop + 3, '#ffffff'); px(cx + 1, bodyTop + 4, '#ffffff');
-        if (epic) rim('#2f5fd0');
+      bsodjr() { // v172: the old white :( sat ON TOP of its face — two
+        // faces read as static. now it cosplays the REAL bluescreen:
+        // ★★ a loading bar — 'collecting crash reports: 40%'
+        [2, 3, 4, 5].forEach((rx) => px(rx, 9, '#ffffff'));
+        [6, 7, 8].forEach((rx) => px(rx, 9, '#2f5fd0'));
+        if (epic) {
+          // ★★★: its favourite crash report, FRAMED, hanging right there
+          for (let oy = 2; oy <= 4; oy++) for (let ox = 10; ox <= 12; ox++) px(ox, oy, '#2f5fd0');
+          px(11, 3, '#ffffff'); // the report (it is blank. they all are)
+          px(11, 1, '#ffd400'); // the little gold nail
+        }
       },
       rgbrig() { // the glow is real
         rim((rx, ry) => ['#ff4d6d', '#7cfc00', '#41e0ff'][(rx + ry) % 3]);
@@ -30466,7 +30468,8 @@ document.addEventListener('DOMContentLoaded', () => {
       starNebula: spId === 'pointer' && form >= 3, // APEX: the full glowing nebula
       glitchy: spId === 'bitflip' && form >= 3, glitchAt: 0, // APEX bit flip: it ACTUALLY flips
       disguiser: spId === 'captcha' && form >= 2, disguiseDeep: spId === 'captcha' && form >= 3, disguiseAt: 0, disguised: -1, // Not A Robot: the costumes
-      framedSp: (spId === 'y2kbug' || spId === 'cronjob') && form >= 2, // sprites on the 0.9s frame clock
+      framedSp: spId === 'y2kbug' && form >= 2, // sprites on the 0.9s frame clock
+      cronRing: spId === 'cronjob' && form >= 2, lastMin: -1, // it rings ON the minute
       weather: spId === 'cumulus' && form >= 2, apexWeather: spId === 'cumulus' && form >= 3, rainAt: 0, boltAt: 0,
       sp: species || null, spd: species && species.spd ? species.spd : 1, stepAt: 0,
       x: 40 + Math.random() * Math.max(120, r.width - 160),
@@ -31899,6 +31902,21 @@ document.addEventListener('DOMContentLoaded', () => {
         w.hue = ((w.hue || 5) + 30) % 360 || 5;
         w.img.src = pikSprite(hueColor(w.hue), w.stage, null, false, pikFormOfLive(w), pikKindOfLive(w));
       }
+      // evolved Cron Job: every REAL minute, on the minute, it RINGS —
+      // shakes like an alarm clock, two-tone bell, very smug about it
+      if (w.cronRing) {
+        const nowMin = new Date().getMinutes();
+        if (w.lastMin < 0) w.lastMin = nowMin;
+        else if (nowMin !== w.lastMin) {
+          w.lastMin = nowMin;
+          w.el.classList.add('pik-ringing');
+          setTimeout(() => { try { w.el.classList.remove('pik-ringing'); } catch (e) { /* snoozed */ } }, 1200);
+          playTone(1320, 'square', 0.06, 0, 0.02);
+          playTone(1320, 'square', 0.06, 0.15, 0.02);
+          playTone(1760, 'square', 0.07, 0.3, 0.02);
+          deskPikSay(w, '⏰ ' + ['RING!!', 'pik o\'clock!!', 'ON SCHEDULE ✓'][Math.floor(Math.random() * 3)]);
+        }
+      }
       // framed sprites (y2kbug confetti / cronjob clock hand): re-roll
       // the image whenever the 0.9s frame clock turns over
       if (w.framedSp && w.sp && now > (w.confAt || 0)) {
@@ -32275,7 +32293,9 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
               w.trackFlip = !w.trackFlip; // left paw, right paw, left paw
               const s = document.createElement('img');
-              s.className = 'pik-trail pik-track';
+              const wet = tr[0] === 'drop' || tr[0] === 'slime' || tr[0] === 'wisp';
+              s.className = 'pik-trail pik-track' + (wet ? ' pik-track-wet' : '');
+              if (wet) s.style.setProperty('--track-glow', tr[1]);
               s.src = pikTrackSprite(tr[0], tr[1]);
               s.alt = '';
               s.style.width = ({ paw: 10, bird: 10, drop: 8, wisp: 12, dash: 9, slime: 9 })[tr[0]] + 'px';

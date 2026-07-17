@@ -6623,6 +6623,18 @@ html[data-theme="dark"] .pikdex-squad-chip:hover { box-shadow: 2px 5px 0 #1c0f2e
 .desk-pik.is-disguised .pik-hat { display: none !important; }
 /* costume footprints: paw prints, bird feet, drops, wisps — pixel art */
 .pik-track { image-rendering: pixelated; opacity: 0.85; }
+/* wet tracks (drops, slime, ectoplasm) GLOW — a soft twin halo */
+.pik-track-wet {
+  opacity: 0.95;
+  filter: drop-shadow(0 0 3px var(--track-glow, #9fd8ff)) drop-shadow(0 0 6px var(--track-glow, #9fd8ff));
+}
+/* cron job rings ON the minute: an honest alarm-clock shake */
+.desk-pik.pik-ringing { animation: pik-ring-shake 0.14s linear 8; }
+@keyframes pik-ring-shake {
+  0%, 100% { transform: translateX(0) rotate(0deg); }
+  25% { transform: translateX(-2px) rotate(-5deg); }
+  75% { transform: translateX(2px) rotate(5deg); }
+}
 /* while disguised, the ✅ hat swaps for a tiny scrolling site-style
    banner announcing what the creature DEFINITELY is */
 .pik-disg-banner {
@@ -6699,6 +6711,7 @@ html[data-theme="dark"] .pik-disg-banner {
   .pik-rain-bit, .pik-snow-bit, .pik-bolt-bit, .pik-baby-star, .pik-star-dust, .pik-neb-puff, .pik-burst-bit, .pik-burst-flash { display: none; }
   .pik-star-trail { animation: none; }
   .desk-pik.pik-glitch { animation: none; }
+  .desk-pik.pik-ringing { animation: none; }
   .pik-disg-banner > span { animation: none; padding-left: 0; }
   .desk-pik-baby { animation: none; }
 }
