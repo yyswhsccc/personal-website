@@ -6440,7 +6440,8 @@ html[data-theme="dark"] .cloud-save {
 .pikdex-squad-chip {
   position: relative;
   width: 64px;
-  height: 78px;
+  min-height: 82px;
+  height: auto;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -6618,6 +6619,10 @@ html[data-theme="dark"] .pikdex-squad-chip:hover { box-shadow: 2px 5px 0 #1c0f2e
 }
 @keyframes pik-bolt-flash { to { opacity: 0; transform: translateY(8px); } }
 .pik-flash img { filter: brightness(1.9) drop-shadow(0 0 8px #ffd400) !important; }
+/* while disguised, NO hat may show — whatever path re-rendered it */
+.desk-pik.is-disguised .pik-hat { display: none !important; }
+/* costume footprints: paw prints, bird feet, drops, wisps — pixel art */
+.pik-track { image-rendering: pixelated; opacity: 0.85; }
 /* while disguised, the ✅ hat swaps for a tiny scrolling site-style
    banner announcing what the creature DEFINITELY is */
 .pik-disg-banner {
@@ -6643,7 +6648,7 @@ html[data-theme="dark"] .pikdex-squad-chip:hover { box-shadow: 2px 5px 0 #1c0f2e
 .pik-disg-banner > span {
   display: inline-block;
   padding-left: 100%;
-  animation: pik-disg-scroll 3.4s linear infinite;
+  animation: pik-disg-scroll 7.2s linear infinite; /* slow enough to READ */
 }
 @keyframes pik-disg-scroll { to { transform: translateX(-100%); } }
 html[data-theme="dark"] .pik-disg-banner {
@@ -6922,6 +6927,9 @@ html[data-theme="dark"] .pik-disg-banner {
   animation: window-pop-in 0.16s steps(3, end);
 }
 .pik-card-head {
+  position: sticky; /* the card scrolls; the title bar does NOT */
+  top: 0;
+  z-index: 3;
   display: flex;
   align-items: center;
   justify-content: space-between;

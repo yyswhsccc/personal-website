@@ -14801,7 +14801,7 @@ document.addEventListener('DOMContentLoaded', () => {
     { k: ['remove', 'delete', 'rid', 'enlever', 'supprimer', 'retirer', 'enlevez', 'supprimez'],
       v: ['REMOVED: the word itself. a sign now certifies its absence.', 'SUPPRIMÉ : le mot lui-même. un panneau certifie désormais son absence.'],
       loop: ['you named a WORD. words are removable. things are load-bearing.', 'vous avez nommé un MOT. les mots s\'enlèvent. les choses sont porteuses.'],
-      fx(q) { const word = (q.split(' ').filter((w) => w.length > 2).pop() || q).slice(0, 18); geoFixSign('❌ “' + word + '” — ' + trT('REMOVED ✓', 'SUPPRIMÉ ✓')); } },
+      fx(q) { const word = (q.split(' ').filter((w) => w.length > 2).pop() || q).slice(0, 18); geoFixSign(() => '❌ “' + word + '” — ' + trT('REMOVED ✓', 'SUPPRIMÉ ✓')); } },
     { k: ['cursor', 'mouse', 'pointer', 'souris', 'curseur'],
       v: ['your cursor now has a certified safety escort. hard hat included.', 'votre curseur a désormais une escorte de sécurité certifiée. casque inclus.'],
       loop: ['you said fix the cursor. it is now OSHA compliant, not obedient.', 'vous avez dit réparer le curseur. il est désormais aux normes, pas obéissant.'],
@@ -14813,7 +14813,7 @@ document.addEventListener('DOMContentLoaded', () => {
     { k: ['everything', 'whole', 'entire', 'tout', 'entier', 'ensemble'],
       v: ['we fixed EVERYTHING. "Everything" is the name of this cone. it is fully operational.', 'on a réparé TOUT. « Tout » est le nom de ce cône. il est pleinement opérationnel.'],
       loop: ['you capitalized nothing. we chose the cone.', 'vous n\'avez rien précisé. on a choisi le cône.'],
-      fx() { geoFixSign('🚧 “Everything” — ' + trT('FULLY OPERATIONAL ✓', 'PLEINEMENT OPÉRATIONNEL ✓')); } },
+      fx() { geoFixSign(() => '🚧 “Everything” — ' + trT('FULLY OPERATIONAL ✓', 'PLEINEMENT OPÉRATIONNEL ✓')); } },
     { k: ['guestbook', 'livre', 'sign'],
       v: ['the guestbook is fixed. it was lonely. it will now ask for you by name.', 'le livre d\'or est réparé. il se sentait seul. il vous demandera désormais par votre nom.'],
       loop: ['a guestbook\'s only failure mode is emptiness.', 'le seul mode de panne d\'un livre d\'or, c\'est le vide.'],
@@ -14832,13 +14832,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const GEO_FIX_FALLBACKS = [
     { fb: 1, v: ['your request has been INSTALLED: {q}. it hangs beautifully.', 'votre demande a été INSTALLÉE : {q}. elle est très bien accrochée.'],
       loop: ['"fix" was never defined. display counts.', '« réparer » n\'a jamais été défini. l\'affichage compte.'],
-      fx(q) { geoFixSign('“' + q.slice(0, 34) + '” — ' + trT('INSTALLED ✓', 'INSTALLÉ ✓')); } },
+      fx(q) { geoFixSign(() => '“' + q.slice(0, 34) + '” — ' + trT('INSTALLED ✓', 'INSTALLÉ ✓')); } },
     { fb: 1, v: ['the problem now has a full-time specialist. the specialist is NAMED after it.', 'le problème a désormais un spécialiste à temps plein. le spécialiste porte son NOM.'],
       loop: ['ownership solves everything, eventually.', 'la responsabilisation résout tout, à terme.'],
-      fx(q) { geoFixSign('⛑ ' + trT('assigned to: ', 'assigné à : ') + '“' + q.slice(0, 26) + '”'); } },
+      fx(q) { geoFixSign(() => '⛑ ' + trT('assigned to: ', 'assigné à : ') + '“' + q.slice(0, 26) + '”'); } },
     { fb: 1, v: ['shipped as {q}_FINAL_v2.htm. it is on the desktop. do not open it.', 'livré sous {q}_FINAL_v2.htm. c\'est sur le bureau. ne l\'ouvrez pas.'],
       loop: ['FINAL_v2 always works. opening it was never specified.', 'FINAL_v2 marche toujours. l\'ouvrir n\'a jamais été spécifié.'],
-      fx(q) { const word = (q.split(' ')[0] || 'fix').slice(0, 12); geoFixSign('💾 ' + word + '_FINAL_v2.htm — ' + trT('SHIPPED ✓', 'LIVRÉ ✓')); } }
+      fx(q) { const word = (q.split(' ')[0] || 'fix').slice(0, 12); geoFixSign(() => '💾 ' + word + '_FINAL_v2.htm — ' + trT('SHIPPED ✓', 'LIVRÉ ✓')); } }
   ];
   function geoFixMatch(q, gf) {
     const low = q.toLowerCase();
@@ -15043,10 +15043,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
   // a wooden certification sign, nailed wherever the crew felt like it
-  function geoFixSign(text) {
+  function geoFixSign(build) {
     const s = document.createElement('div');
-    s.className = 'geo-fix-sign';
-    s.textContent = text;
+    s.className = 'geo-fix-sign dream-reink';
+    const ink = typeof build === 'function' ? build : () => build;
+    s.textContent = ink();
+    s.__reink = () => { try { s.textContent = ink(); } catch (e) { /* the paint ran */ } };
     s.style.left = (8 + Math.random() * 55) + '%';
     s.style.top = (14 + Math.random() * 38) + '%';
     s.addEventListener('click', () => { playDreamPop(); showToast(trT('the sign is load-bearing now.', 'le panneau est porteur maintenant.')); });
@@ -27224,9 +27226,10 @@ document.addEventListener('DOMContentLoaded', () => {
       '...........', '.....S.....', '....LL.....', '....BBB....', '..BBBBBBB..',
       '..BeBBeBB..', '..BBBBBBB..', '..BuBBBuB..', '..BBBBBBB..', '..BBBBBBB..',
       '..B.BB.BB..', '...........', '...........', '...........'],
-    cronjob: [ // a round clock with bells
-      '...........', '...D...D...', '..D.....D..', '...BBBBB...', '..BBBwBBB..',
-      '.BBBBDBBBB.', '.BBeBDBeBB.', '.BBBBDDBBB.', '..BBBBBBB..', '...BBBBB...',
+    cronjob: [ // a round clock with bells (v171: the center-hand "nose"
+      // retired — the face is a face now; the CLOCK moved to its belly)
+      '...........', '...D...D...', '..D.....D..', '...BBBBB...', '..BBBBBBB..',
+      '.BBBBBBBBB.', '.BBeBBBeBB.', '.BBBBwBBBB.', '..BuBBBuB..', '...BBBBB...',
       '....D.D....', '...........', '...........', '...........'],
     y2kbug: [ // a party-hat cone that never got its apocalypse
       '.....P.....', '....PY.....', '....BB.....', '...BBBB....', '...BeBe....',
@@ -27293,7 +27296,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const kind = form >= 2 ? (kk || (spId ? 's:' + spId : 'w:' + pikSegOfHue(pikHueFromColor(color)))) : '';
     let key = color.body + '/' + stage + '/' + (spId || '') + '/' + (silhouette ? 1 : 0) + '/' + form + '/' + kind;
     if (!silhouette && form >= 2 && spId === 'lowbatt') { const bb = pikBattState(); key += '/b' + (bb.charging ? 'C' : 'D') + bb.level; }
-    if (!silhouette && form >= 2 && spId === 'y2kbug') key += '/c' + (Math.floor(Date.now() / 900) % 4); // the on-body confetti reshuffles
+    if (!silhouette && form >= 2 && (spId === 'y2kbug' || spId === 'cronjob')) key += '/c' + (Math.floor(Date.now() / 900) % 4); // confetti reshuffles / the clock hand ticks
     if (pikSpriteCache[key]) return pikSpriteCache[key];
     let rows;
     if (spId && PIK_SPECIES_TPLS[spId]) {
@@ -27359,11 +27362,11 @@ document.addEventListener('DOMContentLoaded', () => {
     cumulus: ['local sky now includes weather', 'le ciel local inclut désormais la météo'],
     feature: ['it\'s TWO features now. still not a bug', 'c\'est DEUX fonctionnalités maintenant. toujours pas un bug'],
     latency: ['it arrives with its own echo… eventually', 'il arrive avec son propre écho… éventuellement'],
-    aliased: ['the resolution went DOWN. confidence went UP', 'la résolution a BAISSÉ. la confiance a MONTÉ'],
+    aliased: ['it renders in PROUD 2×2 now. the golden pixel: a lifetime award', 'il se rend en FIERS 2×2. le pixel doré : récompense d\'une vie'],
     darkmode: ['it brought its own night', 'il a apporté sa propre nuit'],
     gilded: ['gold master, now with MORE gold', 'version or, avec ENCORE plus d\'or'],
     cacheghost: ['cleared twice. returned twice. now it levitates', 'vidé deux fois. revenu deux fois. maintenant il lévite'],
-    cronjob: ['it grew a bell. every minute, LOUDLY', 'il a poussé une cloche. chaque minute, FORT'],
+    cronjob: ['its belly is a real clock. the halo is its crontab: * * * * *', 'son ventre est une vraie horloge. le halo : son crontab * * * * *'],
     y2kbug: ['partying like it\'s 19100, professionally', 'fait la fête comme en 19100, professionnellement'],
     bitflip: ['half of it flipped. the other half is thinking about it', 'sa moitié a basculé. l\'autre y réfléchit'],
     turbo: ['the warranty is EXTREMELY void', 'la garantie est EXTRÊMEMENT annulée'],
@@ -27550,10 +27553,30 @@ document.addEventListener('DOMContentLoaded', () => {
         [0, 1, 2].forEach((k) => { px(l - 2, bodyTop + 2 + k, 'rgba(176,154,98,0.65)'); });
         if (epic) [0, 1, 2].forEach((k) => { px(l - 4 + 1, bodyTop + 3 + k, 'rgba(176,154,98,0.4)'); });
       },
-      aliased() { // chunky corners
-        const yT = bodyTop;
-        blk(edgeL(yT) - 2, yT - 2, '#8e6cc9'); blk(edgeR(yT) + 1, yT - 2, '#8e6cc9');
-        if (epic) rim((rx, ry) => ((rx + ry) % 2 ? '#8e6cc9' : '#cbb1f2'));
+      aliased() { // v171: the resolution CRASHES on purpose — the whole
+        // body re-renders in proud 2×2 blocks (anti-aliasing is a scam).
+        // faces outrank body pixels so the big blocky eyes survive
+        const TONE = { B: color.body, D: color.dark, w: '#ffffff', W: 'rgba(255,255,255,0.55)', e: '#14020e', u: 'rgba(255,120,180,0.65)', S: '#57c689', L: '#7ddba4', Y: '#ffd400', P: '#ff8fc7' };
+        const RANK = { e: 5, u: 4, w: 3, D: 2 };
+        for (let ry = 3; ry < h; ry += 2) {
+          for (let rx = 0; rx < w; rx += 2) {
+            let ch = null, best = -1;
+            [[0, 0], [1, 0], [0, 1], [1, 1]].forEach(([ox, oy]) => {
+              const row = rows[ry + oy];
+              const c2 = row && row[rx + ox];
+              if (c2 && c2 !== '.' && (RANK[c2] || 1) > best) { best = RANK[c2] || 1; ch = c2; }
+            });
+            if (!ch) continue;
+            x.clearRect(rx, ry, 2, 2);
+            x.fillStyle = TONE[ch] || color.body;
+            x.fillRect(rx, ry, 2, 2);
+          }
+        }
+        if (epic) { // APEX: it carries its own personal PIXEL. lifetime award
+          x.fillStyle = '#ffd400';
+          x.fillRect(cx - 1, -3, 3, 3);
+          px(cx + 1, -1, '#c98a2e'); // one honest shading pixel
+        }
       },
       darkmode() { // its own night: plus-stars
         star(cx + 3, -2, '#fff6c9');
@@ -27567,9 +27590,21 @@ document.addEventListener('DOMContentLoaded', () => {
         [cx - 2, cx, cx + 2].forEach((rx) => px(rx, h, 'rgba(169,164,201,0.7)'));
         if (epic) { [cx - 3, cx - 1, cx + 1, cx + 3].forEach((rx) => px(rx, h + 0, 'rgba(169,164,201,0.45)')); rim('rgba(233,230,245,0.85)'); }
       },
-      cronjob() { // the bell, properly cast
-        blk(cx - 1, bodyTop - 3, '#ffd400'); [cx - 2, cx - 1, cx, cx + 1, cx + 2].forEach((rx) => px(rx, bodyTop - 1, '#ffd400')); px(cx, bodyTop - 4 + 1, '#c98a2e');
-        if (epic) { px(cx - 3, bodyTop - 2, '#ffd400'); px(cx + 3, bodyTop - 2, '#ffd400'); }
+      cronjob() { // v171: the belly becomes a REAL clock — the hand ticks
+        // round the dial live (framed sprite, same clock as y2kbug's
+        // confetti). APEX: the dial turns gold, the bells get gold tips,
+        // and its crontab appears overhead, literally: * * * * *
+        const cf = Math.floor(Date.now() / 900) % 4;
+        for (let oy = -1; oy <= 1; oy++) for (let ox = -1; ox <= 1; ox++) {
+          px(cx + ox, 8 + oy, '#fff8ec'); // the dial stays WHITE — a gold dial ate the hand (v171 lesson)
+        }
+        px(cx, 8, '#3a2c20'); // the pivot
+        const HANDS = [[0, -1], [1, 0], [0, 1], [-1, 0]];
+        px(cx + HANDS[cf][0], 8 + HANDS[cf][1], '#5a4030'); // the minute hand, on duty
+        if (epic) {
+          [[1, -1], [3, -2], [5, -3], [7, -2], [9, -1]].forEach(([hx, hy]) => px(hx, hy, '#ffd400')); // * * * * *
+          px(3, 1, '#ffd400'); px(7, 1, '#ffd400'); // gold bell tips
+        }
       },
       y2kbug() { // the party is ON the body too (v166): chunky confetti
         // pixels that RESHUFFLE every ~0.9s — the sprite is framed via the
@@ -30431,6 +30466,7 @@ document.addEventListener('DOMContentLoaded', () => {
       starNebula: spId === 'pointer' && form >= 3, // APEX: the full glowing nebula
       glitchy: spId === 'bitflip' && form >= 3, glitchAt: 0, // APEX bit flip: it ACTUALLY flips
       disguiser: spId === 'captcha' && form >= 2, disguiseDeep: spId === 'captcha' && form >= 3, disguiseAt: 0, disguised: -1, // Not A Robot: the costumes
+      framedSp: (spId === 'y2kbug' || spId === 'cronjob') && form >= 2, // sprites on the 0.9s frame clock
       weather: spId === 'cumulus' && form >= 2, apexWeather: spId === 'cumulus' && form >= 3, rainAt: 0, boltAt: 0,
       sp: species || null, spd: species && species.spd ? species.spd : 1, stepAt: 0,
       x: 40 + Math.random() * Math.max(120, r.width - 160),
@@ -31863,8 +31899,9 @@ document.addEventListener('DOMContentLoaded', () => {
         w.hue = ((w.hue || 5) + 30) % 360 || 5;
         w.img.src = pikSprite(hueColor(w.hue), w.stage, null, false, pikFormOfLive(w), pikKindOfLive(w));
       }
-      // evolved Y2K Bug: the on-body confetti reshuffles every ~0.9s
-      if (w.party && w.sp && now > (w.confAt || 0)) {
+      // framed sprites (y2kbug confetti / cronjob clock hand): re-roll
+      // the image whenever the 0.9s frame clock turns over
+      if (w.framedSp && w.sp && now > (w.confAt || 0)) {
         w.confAt = now + 300;
         const nf = Math.floor(now / 900) % 4;
         if (nf !== w.confFrame) {
@@ -31965,6 +32002,7 @@ document.addEventListener('DOMContentLoaded', () => {
           w.img.src = pikDisguiseSprite(w.disguised);
           w.disguiseCls = ['pik-form2', 'pik-form3'].filter((cl) => w.el.classList.contains(cl));
           w.disguiseCls.forEach((cl) => w.el.classList.remove(cl));
+          w.el.classList.add('is-disguised'); // CSS belt-and-suspenders for the hat
           disgBanner();
           w.disguiseAt = now + 3800 + Math.random() * 3200;
         } else if (w.disguiseDeep && Math.random() < 0.62) { // APEX: next costume, cover intact
@@ -31977,6 +32015,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else { // the cover is BLOWN: pink pop, back to robot, play it cool
           w.disguised = -1;
           w.img.src = w.trueSrc;
+          w.el.classList.remove('is-disguised');
           if (w.disguiseCls) { w.disguiseCls.forEach((cl) => w.el.classList.add(cl)); w.disguiseCls = null; }
           if (w.disgBannerEl) { w.disgBannerEl.remove(); w.disgBannerEl = null; }
           const hatBack = w.el.querySelector('.pik-hat');
@@ -32212,6 +32251,45 @@ document.addEventListener('DOMContentLoaded', () => {
             for (let k = 0; k < trailsS.length - 120; k++) trailsS[k].remove();
             return;
           }
+          if (w.sp && w.sp.id === 'captcha' && w.disguised >= 0 && PIK_DISGUISES[w.disguised]) {
+            // in costume, the trail commits to the bit: whatever THAT
+            // creature would leave — paw prints, bird feet, slime, wisps
+            const a = PIK_DISGUISES[w.disguised];
+            const tr = a.tr || ['paw', '#c8b8a8'];
+            if (tr[0] === 'slime') w.trailAt = now + 340 + Math.random() * 200; // snails do not do gaps
+            if (tr[0] === 'spark') { // the unicorn leaves stardust. obviously.
+              for (let k = 0; k < 2; k++) {
+                const si = Math.floor(Math.random() * 18);
+                const s = document.createElement('img');
+                s.className = 'pik-trail pik-star-trail';
+                s.src = trailStarSprite(si);
+                s.alt = '';
+                s.style.width = (8 + Math.random() * 7) + 'px';
+                s.style.setProperty('--star-glow', trailStarGlow(si));
+                s.style.left = (cx + Math.random() * 22 - 11) + 'px';
+                s.style.top = (cy + Math.random() * 8) + 'px';
+                DESK_PIK.layer.appendChild(s);
+                setTimeout(() => s.classList.add('fading'), 10500);
+                setTimeout(() => s.remove(), 12000);
+              }
+            } else {
+              w.trackFlip = !w.trackFlip; // left paw, right paw, left paw
+              const s = document.createElement('img');
+              s.className = 'pik-trail pik-track';
+              s.src = pikTrackSprite(tr[0], tr[1]);
+              s.alt = '';
+              s.style.width = ({ paw: 10, bird: 10, drop: 8, wisp: 12, dash: 9, slime: 9 })[tr[0]] + 'px';
+              s.style.left = (cx + (w.trackFlip ? -6 : 2)) + 'px';
+              s.style.top = (cy + Math.random() * 6) + 'px';
+              DESK_PIK.layer.appendChild(s);
+              const life = tr[0] === 'wisp' ? 2600 : 10500; // ectoplasm evaporates
+              setTimeout(() => s.classList.add('fading'), life);
+              setTimeout(() => s.remove(), life + 1500);
+            }
+            const trailsT = DESK_PIK.layer.querySelectorAll('.pik-trail');
+            for (let k = 0; k < trailsT.length - 120; k++) trailsT[k].remove();
+            return;
+          }
           if (w.partyMax) { // the APEX celebration walks WITH it: a confetti wake
             for (let k = 0; k < 2 + Math.floor(Math.random() * 4); k++) {
               const s = document.createElement('span');
@@ -32264,25 +32342,54 @@ document.addEventListener('DOMContentLoaded', () => {
   // fancy, and mythical. no mustaches (user-decreed: too weird). the
   // tell is the antenna FLOWER every disguise keeps wearing on its head
   var PIK_DISGUISES = [
-    { t: ['...........', '...........', '..D.....D..', '..DB...BD..', '..BBBBBBB..', '..BeBBBeB..', '..BBBBBBB..', '..BuBwBuB..', '..BBBBBBB..', '...BBBBB...', '...D...D...', '...........', '...........', '...........'], c: { B: '#c3c3d6', D: '#7a7a94' }, n: ['a cat', 'un chat'] }, // cat
-    { t: ['...B...B...', '...B...B...', '...B...B...', '..BBBBBBB..', '..BeBBBeB..', '..BBBBBBB..', '..BuBwBuB..', '..BBBBBBB..', '..BBBBBBB..', '...BBBBB...', '...D...D...', '...........', '...........', '...........'], c: { B: '#f7f2f2', D: '#d8a8b8' }, n: ['a bunny', 'un lapin'] }, // bunny
-    { t: ['...........', '...........', '...BBBBB...', '..BBBBBBB..', '..BeBeBXX..', '..BBBBBXX..', '..BBBBBBB..', '..BBBBBBB..', '..BBBBBBB..', '...BBBBB...', '...X...X...', '...........', '...........', '...........'], c: { B: '#ffd94d', D: '#e0a800', X: '#ff8a3c' }, n: ['a duck', 'un canard'] }, // duck
-    { t: ['...........', '..BB...BB..', '..Be...eB..', '..BBBBBBB..', '..BBBBBBB..', '..BBBBBBB..', '..BwwwwwB..', '..BuBBBuB..', '..BBBBBBB..', '...BBBBB...', '...D...D...', '...........', '...........', '...........'], c: { B: '#8fd45e', D: '#4f9e3d' }, n: ['a frog', 'une grenouille'] }, // frog
-    { t: ['...........', '...........', '..D.....D..', '..BBBBBBB..', '..BeBBBeB..', '..BBBBBBB..', '..BXXDXXB..', '..BBBBBBB..', '..BBBBBBB..', '...BBBBB...', '...D...D...', '...........', '...........', '...........'], c: { B: '#ffb9cc', D: '#e58aa8', X: '#ff8fb0' }, n: ['a pig', 'un cochon'] }, // pig
-    { t: ['...........', '..BB...BB..', '..Bu...uB..', '..BBBBBBB..', '..BeBBBeB..', '..BBBBBBB..', '..BuBwBuB..', '..BBBBBBB..', '..BBBBBBB..', '...BBBBB...', '...D...D...', '...........', '...........', '...........'], c: { B: '#cfc3e8', D: '#8f7fc0' }, n: ['a mouse', 'une souris'] }, // mouse
-    { t: ['......X....', '.....XX....', '..P.BBB.P..', '..PBBBBBP..', '..BeBBBeB..', '..BBBwBBB..', '..BuBBBuB..', '..BBBBBBB..', '..BBBBBBB..', '...BBBBB...', '...D...D...', '...........', '...........', '...........'], c: { B: '#f7f2fa', D: '#d8b8e8', X: '#ffd400', P: '#ff9fd0' }, f: [3, 1], n: ['a UNICORN', 'une LICORNE'] }, // UNICORN
-    { t: ['...........', '..D.....D..', '..BBBBBBB..', '..BeBBBeB..', '..BBBwBBB..', '.XBBBBBBBX.', '.XXBBBBBXX.', '..BBBBBBB..', '..BBBBBBB..', '...BBBBB...', '...D...D...', '...........', '...........', '...........'], c: { B: '#7fd8c8', D: '#3f9e8e', X: '#5fb8a8' }, n: ['a dragon', 'un dragon'] }, // dragon
-    { t: ['...........', '...........', '...BBBBB...', '..BBBBBBB..', '..BeBBBeB..', '..BBBBBBB..', '..BuBBBuB..', '..BBBBBBB..', '..BBBBBBB..', '..B.BB.B...', '...........', '...........', '...........', '...........'], c: { B: '#eef2ff', D: '#b8c4e8' }, n: ['a ghost', 'un fant\u00f4me'] }, // ghost (floats, no feet)
-    { t: ['...........', '...........', '..BBBBBBB..', '.BBBBBBBBB.', '.BeBBBBBeB.', '.BBBwwwBBB.', '.BBBBBBBBB.', '.BBBBBBBBB.', '.B.B.B.B.B.', '.B.B.B.B.B.', '...........', '...........', '...........', '...........'], c: { B: '#c9a7f5', D: '#8f6fd0' }, n: ['an octopus', 'une pieuvre'] }, // octopus
-    { t: ['...........', '..w.....w..', '.www...www.', '..BBBBBBB..', '..BeBBBeB..', '..DDDDDDD..', '..BBBBBBB..', '..DDDDDDD..', '..BBBBBBB..', '...BBBBB...', '.....X.....', '...........', '...........', '...........'], c: { B: '#ffd94d', D: '#3a3a3a', X: '#3a3a3a' }, n: ['a bee', 'une abeille'] }, // bee
-    { t: ['...........', '.e.e.......', '.B.B.......', '.BBB.XXXX..', '.BBBXXDDX..', '.BBBXDXDX..', '.BBBXXDDX..', '.BBBB.XXX..', '.BBBBBBBB..', '..BBBBBBB..', '...........', '...........', '...........', '...........'], c: { B: '#ffcf9f', D: '#c07840', X: '#e8a86a' }, f: [2, 0], n: ['a snail', 'un escargot'] }, // snail
-    { t: ['...........', '...X.X.X...', '..BBBBBBB..', '..BeBBBeB..', '..BBBwBBB..', '..BuBBBuB..', '..BBBBBBB..', '..BBBBBBB..', '..BBBBBBB..', '...BBBBB...', '...D...D...', '...........', '...........', '...........'], c: { B: '#9fd45e', D: '#5f9e3d', X: '#ff8a5c' }, f: [7, 0], n: ['a stegosaurus', 'un st\u00e9gosaure'] }, // stego
-    { t: ['...........', '..D.....D..', '..DB...BD..', '..BBBBBBB..', '..BeBBBeB..', '..BwwwwwB..', '..BBwwwBB..', '..BBBBBBB..', '..BBBBBBB..', '...BBBBB...', '...D...D...', '...........', '...........', '...........'], c: { B: '#ff9a56', D: '#c86a30' }, n: ['a fox', 'un renard'] }, // fox
-    { t: ['...........', '..BB...BB..', '..BB...BB..', '..BBBBBBB..', '..BeBBBeB..', '..BBwwwBB..', '..BBwDwBB..', '..BBBBBBB..', '..BBBBBBB..', '...BBBBB...', '...D...D...', '...........', '...........', '...........'], c: { B: '#c89060', D: '#8a5a30' }, n: ['a bear', 'un ours'] }, // bear
-    { t: ['...........', '...........', '...BBBBB...', '..BBBBBBB..', '..BeBBBeB..', '..BBBXBBB..', '.BBBBBBBBB.', '.BBBBBBBBB.', '..BBBBBBB..', '...BBBBB...', '...X...X...', '...........', '...........', '...........'], c: { B: '#ffe066', D: '#e0a800', X: '#ff8a3c' }, n: ['a chick', 'un poussin'] }, // chick
-    { t: ['...........', '...BBBBB...', '...BeBeB...', '..XXXXXXX..', '..XDXDXDX..', '..XXXXXXX..', '..XDXDXDX..', '..XXXXXXX..', '..BBBBBBB..', '...B...B...', '...........', '...........', '...........', '...........'], c: { B: '#9fd45e', D: '#3f7e2d', X: '#6fae4e' }, n: ['a turtle', 'une tortue'] }, // turtle
-    { t: ['....w......', '...w.w.....', '...........', '..BBBBBBB..', '.BBBBBBBBB.', '.BeBBBBBBB.', '.BwBBBBBBB.', '.BBBBBBBBB.', '..BBBBBBB..', '...BBBB.X..', '........X..', '...........', '...........', '...........'], c: { B: '#7cb8f0', D: '#4a88c8', X: '#5a98d8' }, f: [5, 2], n: ['a whale', 'une baleine'] } // whale
+    { t: ['...........', '...........', '..D.....D..', '..DB...BD..', '..BBBBBBB..', '..BeBBBeB..', '..BBBBBBB..', '..BuBwBuB..', '..BBBBBBB..', '...BBBBB...', '...D...D...', '...........', '...........', '...........'], c: { B: '#c3c3d6', D: '#7a7a94' }, n: ['a cat', 'un chat'], tr: ['paw', '#9a9ab0'] }, // cat
+    { t: ['...B...B...', '...B...B...', '...B...B...', '..BBBBBBB..', '..BeBBBeB..', '..BBBBBBB..', '..BuBwBuB..', '..BBBBBBB..', '..BBBBBBB..', '...BBBBB...', '...D...D...', '...........', '...........', '...........'], c: { B: '#f7f2f2', D: '#d8a8b8' }, n: ['a bunny', 'un lapin'], tr: ['paw', '#e0b8c8'] }, // bunny
+    { t: ['...........', '...........', '...BBBBB...', '..BBBBBBB..', '..BeBeBXX..', '..BBBBBXX..', '..BBBBBBB..', '..BBBBBBB..', '..BBBBBBB..', '...BBBBB...', '...X...X...', '...........', '...........', '...........'], c: { B: '#ffd94d', D: '#e0a800', X: '#ff8a3c' }, n: ['a duck', 'un canard'], tr: ['bird', '#ff8a3c'] }, // duck
+    { t: ['...........', '..BB...BB..', '..Be...eB..', '..BBBBBBB..', '..BBBBBBB..', '..BBBBBBB..', '..BwwwwwB..', '..BuBBBuB..', '..BBBBBBB..', '...BBBBB...', '...D...D...', '...........', '...........', '...........'], c: { B: '#8fd45e', D: '#4f9e3d' }, n: ['a frog', 'une grenouille'], tr: ['drop', '#6fbf4a'] }, // frog
+    { t: ['...........', '...........', '..D.....D..', '..BBBBBBB..', '..BeBBBeB..', '..BBBBBBB..', '..BXXDXXB..', '..BBBBBBB..', '..BBBBBBB..', '...BBBBB...', '...D...D...', '...........', '...........', '...........'], c: { B: '#ffb9cc', D: '#e58aa8', X: '#ff8fb0' }, n: ['a pig', 'un cochon'], tr: ['paw', '#f09ab0'] }, // pig
+    { t: ['...........', '..BB...BB..', '..Bu...uB..', '..BBBBBBB..', '..BeBBBeB..', '..BBBBBBB..', '..BuBwBuB..', '..BBBBBBB..', '..BBBBBBB..', '...BBBBB...', '...D...D...', '...........', '...........', '...........'], c: { B: '#cfc3e8', D: '#8f7fc0' }, n: ['a mouse', 'une souris'], tr: ['paw', '#a898d0'] }, // mouse
+    { t: ['......X....', '.....XX....', '..P.BBB.P..', '..PBBBBBP..', '..BeBBBeB..', '..BBBwBBB..', '..BuBBBuB..', '..BBBBBBB..', '..BBBBBBB..', '...BBBBB...', '...D...D...', '...........', '...........', '...........'], c: { B: '#f7f2fa', D: '#d8b8e8', X: '#ffd400', P: '#ff9fd0' }, f: [3, 1], n: ['a UNICORN', 'une LICORNE'], tr: ['spark', ''] }, // UNICORN
+    { t: ['...........', '..D.....D..', '..BBBBBBB..', '..BeBBBeB..', '..BBBwBBB..', '.XBBBBBBBX.', '.XXBBBBBXX.', '..BBBBBBB..', '..BBBBBBB..', '...BBBBB...', '...D...D...', '...........', '...........', '...........'], c: { B: '#7fd8c8', D: '#3f9e8e', X: '#5fb8a8' }, n: ['a dragon', 'un dragon'], tr: ['drop', '#ff8a5c'] }, // dragon
+    { t: ['...........', '...........', '...BBBBB...', '..BBBBBBB..', '..BeBBBeB..', '..BBBBBBB..', '..BuBBBuB..', '..BBBBBBB..', '..BBBBBBB..', '..B.BB.B...', '...........', '...........', '...........', '...........'], c: { B: '#eef2ff', D: '#b8c4e8' }, n: ['a ghost', 'un fant\u00f4me'], tr: ['wisp', '#c8d4f0'] }, // ghost (floats, no feet)
+    { t: ['...........', '...........', '..BBBBBBB..', '.BBBBBBBBB.', '.BeBBBBBeB.', '.BBBwwwBBB.', '.BBBBBBBBB.', '.BBBBBBBBB.', '.B.B.B.B.B.', '.B.B.B.B.B.', '...........', '...........', '...........', '...........'], c: { B: '#c9a7f5', D: '#8f6fd0' }, n: ['an octopus', 'une pieuvre'], tr: ['drop', '#b090e8'] }, // octopus
+    { t: ['...........', '..w.....w..', '.www...www.', '..BBBBBBB..', '..BeBBBeB..', '..DDDDDDD..', '..BBBBBBB..', '..DDDDDDD..', '..BBBBBBB..', '...BBBBB...', '.....X.....', '...........', '...........', '...........'], c: { B: '#ffd94d', D: '#3a3a3a', X: '#3a3a3a' }, n: ['a bee', 'une abeille'], tr: ['dash', '#e8b820'] }, // bee
+    { t: ['...........', '.e.e.......', '.B.B.......', '.BBB.XXXX..', '.BBBXXDDX..', '.BBBXDXDX..', '.BBBXXDDX..', '.BBBB.XXX..', '.BBBBBBBB..', '..BBBBBBB..', '...........', '...........', '...........', '...........'], c: { B: '#ffcf9f', D: '#c07840', X: '#e8a86a' }, f: [2, 0], n: ['a snail', 'un escargot'], tr: ['slime', '#bfe8d8'] }, // snail
+    { t: ['...........', '...X.X.X...', '..BBBBBBB..', '..BeBBBeB..', '..BBBwBBB..', '..BuBBBuB..', '..BBBBBBB..', '..BBBBBBB..', '..BBBBBBB..', '...BBBBB...', '...D...D...', '...........', '...........', '...........'], c: { B: '#9fd45e', D: '#5f9e3d', X: '#ff8a5c' }, f: [7, 0], n: ['a stegosaurus', 'un st\u00e9gosaure'], tr: ['paw', '#6f9e3d'] }, // stego
+    { t: ['...........', '..D.....D..', '..DB...BD..', '..BBBBBBB..', '..BeBBBeB..', '..BwwwwwB..', '..BBwwwBB..', '..BBBBBBB..', '..BBBBBBB..', '...BBBBB...', '...D...D...', '...........', '...........', '...........'], c: { B: '#ff9a56', D: '#c86a30' }, n: ['a fox', 'un renard'], tr: ['paw', '#e08a48'] }, // fox
+    { t: ['...........', '..BB...BB..', '..BB...BB..', '..BBBBBBB..', '..BeBBBeB..', '..BBwwwBB..', '..BBwDwBB..', '..BBBBBBB..', '..BBBBBBB..', '...BBBBB...', '...D...D...', '...........', '...........', '...........'], c: { B: '#c89060', D: '#8a5a30' }, n: ['a bear', 'un ours'], tr: ['paw', '#a87848'] }, // bear
+    { t: ['...........', '...........', '...BBBBB...', '..BBBBBBB..', '..BeBBBeB..', '..BBBXBBB..', '.BBBBBBBBB.', '.BBBBBBBBB.', '..BBBBBBB..', '...BBBBB...', '...X...X...', '...........', '...........', '...........'], c: { B: '#ffe066', D: '#e0a800', X: '#ff8a3c' }, n: ['a chick', 'un poussin'], tr: ['bird', '#e8a830'] }, // chick
+    { t: ['...........', '...BBBBB...', '...BeBeB...', '..XXXXXXX..', '..XDXDXDX..', '..XXXXXXX..', '..XDXDXDX..', '..XXXXXXX..', '..BBBBBBB..', '...B...B...', '...........', '...........', '...........', '...........'], c: { B: '#9fd45e', D: '#3f7e2d', X: '#6fae4e' }, n: ['a turtle', 'une tortue'], tr: ['drop', '#5f9e6f'] }, // turtle
+    { t: ['....w......', '...w.w.....', '...........', '..BBBBBBB..', '.BBBBBBBBB.', '.BeBBBBBBB.', '.BwBBBBBBB.', '.BBBBBBBBB.', '..BBBBBBB..', '...BBBB.X..', '........X..', '...........', '...........', '...........'], c: { B: '#7cb8f0', D: '#4a88c8', X: '#5a98d8' }, f: [5, 2], n: ['a whale', 'une baleine'], tr: ['drop', '#78a8e0'] } // whale
   ];
+  // footprint sprites for the costumes: paws, bird feet, drops, wisps,
+  // dashes — each cached per kind+color
+  var pikTrackCache = {};
+  function pikTrackSprite(kind, colr) {
+    const key = kind + colr;
+    if (pikTrackCache[key]) return pikTrackCache[key];
+    const c = document.createElement('canvas');
+    c.width = 7; c.height = 7;
+    const x = c.getContext('2d');
+    const P = (qx, qy) => x.fillRect(qx, qy, 1, 1);
+    x.fillStyle = colr;
+    if (kind === 'paw') {
+      P(1, 1); P(3, 0); P(5, 1); // three toes
+      [2, 3, 4].forEach((rx) => { P(rx, 3); P(rx, 4); });
+      P(3, 5); // the pad
+    } else if (kind === 'bird') {
+      P(3, 1); P(3, 2); P(3, 3); P(3, 4); // middle toe
+      P(1, 1); P(2, 2); P(5, 1); P(4, 2); // side toes
+    } else if (kind === 'dash') {
+      [1, 2, 3, 4, 5].forEach((rx) => P(rx, 3)); // a flight stroke
+    } else if (kind === 'wisp') {
+      [[2, 1], [3, 1], [4, 1], [1, 2], [5, 2], [1, 3], [5, 3], [2, 4], [3, 4], [4, 4]].forEach(([a, b]) => P(a, b)); // a hollow puff
+    } else { // drop / slime: a glossy blob
+      [[2, 1], [3, 1], [4, 1], [1, 2], [2, 2], [3, 2], [4, 2], [5, 2], [2, 3], [3, 3], [4, 3]].forEach(([a, b]) => P(a, b));
+      x.fillStyle = 'rgba(255,255,255,0.8)';
+      P(2, 1);
+    }
+    return (pikTrackCache[key] = c.toDataURL());
+  }
   var pikDisguiseCache = null;
   function pikDisguiseSprite(i) {
     if (!pikDisguiseCache) {
