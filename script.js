@@ -14907,8 +14907,8 @@ document.addEventListener('DOMContentLoaded', () => {
       s.style.color = ['#ffd23f', '#ff8fc7', '#dff0ff'][Math.floor(Math.random() * 3)];
       document.body.appendChild(s);
       s.addEventListener('animationend', () => s.remove());
-    }, 380);
-    dT(() => { clearInterval(sparks); try { w.remove(); } catch (e) { /* clocked out */ } }, ms || 3400);
+    }, 700);
+    dT(() => { clearInterval(sparks); try { w.remove(); } catch (e) { /* clocked out */ } }, ms || 10200);
     return w;
   }
   // heavy machinery v173: CHUNKY canvas pixel rigs (same coarse grain as
@@ -14981,7 +14981,7 @@ document.addEventListener('DOMContentLoaded', () => {
     return { v, rig };
   }
   function geoRigBeeper(v) {
-    return dI(() => { if (document.body.contains(v)) playTone(700, 'square', 0.06, 0, 0.02); }, 900);
+    return dI(() => { if (document.body.contains(v)) playTone(700, 'square', 0.06, 0, 0.02); }, 1600);
   }
   function geoVehicle() { // the dump truck: drives in, STOPS, tips the bed, delivers
     if (!dreamWorld || REDUCED_MOTION) return;
@@ -14997,7 +14997,7 @@ document.addEventListener('DOMContentLoaded', () => {
     v.style.top = topY + 'px';
     v.style.left = x0 + 'px';
     const beep = geoRigBeeper(v);
-    geoLerp(v, x0, topY, stopX, topY, 2800, () => {
+    geoLerp(v, x0, topY, stopX, topY, 8400, () => {
       if (!document.body.contains(v)) { clearInterval(beep); return; }
       rig.src = geoRigFrame('truck', 1); // TIP
       playTone(220, 'sawtooth', 0.3, 0, 0.04);
@@ -15013,7 +15013,7 @@ document.addEventListener('DOMContentLoaded', () => {
           s.style.background = ['#8a6a4a', '#ff8a5c', '#a3805c'][k % 3];
           document.body.appendChild(s);
           s.addEventListener('animationend', () => s.remove());
-        }, 150 + k * 130);
+        }, 450 + k * 390);
       }
       dT(() => { // the delivered pile. a modest, proud heap
         if (!dreamWorld) return;
@@ -15032,14 +15032,14 @@ document.addEventListener('DOMContentLoaded', () => {
         cone.style.top = (topY + 48) + 'px';
         document.body.appendChild(cone);
         dN(cone);
-        dT(() => { try { mound.remove(); } catch (e) { /* recycled */ } try { cone.remove(); } catch (e) { /* re-inventoried */ } }, 9000);
-      }, 1250);
+        dT(() => { try { mound.remove(); } catch (e) { /* recycled */ } try { cone.remove(); } catch (e) { /* re-inventoried */ } }, 27000);
+      }, 3750);
       dT(() => {
         if (!document.body.contains(v)) { clearInterval(beep); return; }
         rig.src = geoRigFrame('truck', 0); // bed down
         geoChirp(stopX + 40, topY - 14, '✓');
-        dT(() => geoLerp(v, stopX, topY, ltr ? iw + W : -W, topY, 2800, () => { clearInterval(beep); try { v.remove(); } catch (e) { /* garaged */ } }), 500);
-      }, 2100);
+        dT(() => geoLerp(v, stopX, topY, ltr ? iw + W : -W, topY, 8400, () => { clearInterval(beep); try { v.remove(); } catch (e) { /* garaged */ } }), 1500);
+      }, 6300);
     });
   }
   // non-window comedy: buttons that still work, but the construction shows
@@ -15288,7 +15288,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const topPx = Math.max(80, Math.round(window.innerHeight * 0.56)) + 'px';
     par.style.top = topPx;
     if (REDUCED_MOTION) { par.style.left = x1 + 'px'; dT(geoWorkOrder, 1400); return; }
-    const x0 = -W0 - 40, DUR = 8000, t0 = Date.now();
+    const x0 = -W0 - 40, DUR = 16000, t0 = Date.now(); // they arrive in NO hurry (v175)
     par.style.left = x0 + 'px';
     let lastBeep = 0;
     const iv = dI(() => {
@@ -15300,7 +15300,8 @@ document.addEventListener('DOMContentLoaded', () => {
       if (p >= 1) { clearInterval(iv); dT(geoWorkOrder, 700); }
     }, 60);
   }
-  // ---- the construction ballet: a 15-25s composed show. every run draws
+  // ---- the construction ballet: a 36-54s composed show at 1/3 tempo
+  // (owner decree v175: they saunter, the customer fumes). every run draws
   // a different set of acts from the repertoire (owner decree v155:
   // "give them time to actually BUILD") ----
   function geoChirp(x, y, txt) {
@@ -15313,7 +15314,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.body.appendChild(s);
     dN(s);
     playTone(1200 + Math.random() * 400, 'triangle', 0.05, 0, 0.02);
-    dT(() => { try { s.remove(); } catch (e) { /* popped */ } }, 1500);
+    dT(() => { try { s.remove(); } catch (e) { /* popped */ } }, 3000);
   }
   function geoLerp(el, x0, y0, x1, y1, ms, onDone) {
     const t0 = Date.now();
@@ -15345,28 +15346,28 @@ document.addEventListener('DOMContentLoaded', () => {
         ? spots[Math.floor(Math.random() * spots.length)]
         : [cx - 260 + Math.random() * 520, cy - 90 + Math.random() * 230];
       const tool = pool.length ? pool.splice(Math.floor(Math.random() * pool.length), 1)[0] : '🔨';
-      dT(() => geoWorkerAt(spot[0], spot[1], tool, workMs + Math.random() * 900), i * 160);
+      dT(() => geoWorkerAt(spot[0], spot[1], tool, workMs + Math.random() * 2700), i * 480);
     }
   }
   /* ---- the repertoire: little jobsite scenes, drawn at random ---- */
   function geoActMeasure() { // two piks measure everything, conclude nothing
     const iw = window.innerWidth || 1200, ih = window.innerHeight || 800;
     const x = 90 + Math.random() * Math.max(200, iw - 420), y = ih * (0.3 + Math.random() * 0.3);
-    geoWorkerAt(x, y, '📏', 5600);
-    geoWorkerAt(x + 60, y, '📐', 5600);
-    dT(() => geoChirp(x + 30, y - 40, 'pik…?'), 2400);
-    dT(() => geoChirp(x + 66, y - 40, '?!'), 3800);
+    geoWorkerAt(x, y, '📏', 16800);
+    geoWorkerAt(x + 60, y, '📐', 16800);
+    dT(() => geoChirp(x + 30, y - 40, 'pik…?'), 7200);
+    dT(() => geoChirp(x + 66, y - 40, '?!'), 11400);
   }
   function geoActCoffee() { // union-mandated five seconds
     geoSaySite(['BREAK!! union rules. five seconds.', 'PAUSE !! règles du syndicat. cinq secondes.']);
     const iw = window.innerWidth || 1200, ih = window.innerHeight || 800;
-    geoWorkerAt(iw / 2 - 60 + Math.random() * 40, ih * 0.5, '☕', 3600);
-    geoWorkerAt(iw / 2 + 30 + Math.random() * 40, ih * 0.5, '☕', 3600);
+    geoWorkerAt(iw / 2 - 60 + Math.random() * 40, ih * 0.5, '☕', 10800);
+    geoWorkerAt(iw / 2 + 30 + Math.random() * 40, ih * 0.5, '☕', 10800);
     dT(() => {
       geoSaySite(['BREAK OVER!! double speed!!', 'PAUSE FINIE !! double vitesse !!']);
       [0, 1, 2, 3, 4, 5].forEach((i) => playTone(i % 2 ? 260 : 340, 'square', 0.05, i * 0.14, 0.045));
-      geoWave(3, 4200);
-    }, 3600);
+      geoWave(3, 12600);
+    }, 10800);
   }
   function geoActCrane() { // the crane lifts one (1) cone, majestically
     if (REDUCED_MOTION) return;
@@ -15387,28 +15388,28 @@ document.addEventListener('DOMContentLoaded', () => {
     document.body.appendChild(cone);
     dN(cone);
     [0, 1, 2].forEach((i) => playTone(740, 'square', 0.06, i * 0.8, 0.02));
-    geoLerp(cone, cx + 12, ih - 138, cx + 12, ih * 0.25, 2800, () => {
+    geoLerp(cone, cx + 12, ih - 138, cx + 12, ih * 0.25, 8400, () => {
       dT(() => {
-        geoLerp(cone, cx + 12, ih * 0.25, cx + 40, ih - 150, 600, () => {
+        geoLerp(cone, cx + 12, ih * 0.25, cx + 40, ih - 150, 1800, () => {
           playTone(160, 'square', 0.12, 0, 0.05);
           document.body.classList.add('rescue-quake-sm');
           dT(() => document.body.classList.remove('rescue-quake-sm'), 280);
           geoChirp(cx + 40, ih - 190, '✓');
-          dT(() => { try { cone.remove(); } catch (e) {} try { rig.remove(); } catch (e) {} }, 1400);
+          dT(() => { try { cone.remove(); } catch (e) {} try { rig.remove(); } catch (e) {} }, 4200);
         });
-      }, 900);
+      }, 2700);
     });
   }
   function geoActJackhammer() { // the percussion section
     const iw = window.innerWidth || 1200, ih = window.innerHeight || 800;
     const x = 120 + Math.random() * Math.max(200, iw - 420), y = ih * 0.6;
-    [0, 1, 2].forEach((k) => geoWorkerAt(x + k * 46, y, '⛏️', 4800));
+    [0, 1, 2].forEach((k) => geoWorkerAt(x + k * 46, y, '⛏️', 14400));
     [0, 1].forEach((burst) => dT(() => {
       if (!dreamWorld) return;
       for (let i = 0; i < 6; i++) playTone(300 + (i % 2) * 60, 'square', 0.04, i * 0.09, 0.05);
       document.body.classList.add('rescue-quake-sm');
       dT(() => document.body.classList.remove('rescue-quake-sm'), 260);
-    }, 900 + burst * 2000));
+    }, 2700 + burst * 6000));
   }
   function geoActDynamite() { // absolutely not. we TALKED about this.
     if (REDUCED_MOTION) return;
@@ -15434,13 +15435,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 240);
     dT(() => {
       clearInterval(fizz);
-      geoWorkerAt(x - 80, y + 8, '🧯', 2400);
+      geoWorkerAt(x - 80, y + 8, '🧯', 7200);
       dT(() => {
         try { dyn.remove(); } catch (e) { /* confiscated */ }
         geoChirp(x, y - 34, 'NO.');
         geoSaySite(['…we TALKED about this. no dynamite on HOMEPAGES.', '…on en avait PARLÉ. pas de dynamite sur les PAGES PERSO.']);
-      }, 1000);
-    }, 2200);
+      }, 3000);
+    }, 6600);
   }
   function geoActBlueprint() { // the plans are for a different website
     if (REDUCED_MOTION) return;
@@ -15457,20 +15458,20 @@ document.addEventListener('DOMContentLoaded', () => {
     grp.style.top = (ih * 0.55) + 'px';
     document.body.appendChild(grp);
     dN(grp);
-    geoLerp(grp, -110, ih * 0.55, iw + 110, ih * 0.55, 6200, () => { try { grp.remove(); } catch (e) { /* filed */ } });
+    geoLerp(grp, -110, ih * 0.55, iw + 110, ih * 0.55, 18600, () => { try { grp.remove(); } catch (e) { /* filed */ } });
   }
   function geoActConeParade() { // cone delivery, single file, very proud
     [0, 1, 2, 3].forEach((i) => dT(() => {
       if (!dreamWorld) return;
-      dreamCritter({ emoji: '🚧', hop: 3, ms: 6500, label: [['cone delivery', 'livraison de cônes'], ['cone №2', 'cône nº2'], ['cone №3', 'cône nº3'], ['management', 'la direction']][i] });
-    }, i * 420));
+      dreamCritter({ emoji: '🚧', hop: 3, ms: 19500, label: [['cone delivery', 'livraison de cônes'], ['cone №2', 'cône nº2'], ['cone №3', 'cône nº3'], ['management', 'la direction']][i] });
+    }, i * 1260));
   }
   function geoActPaint() { // fresh coat on the nearest disaster
     if (REDUCED_MOTION) return;
     const hosts = [...document.querySelectorAll('.geo-wreck-host')].map((b) => b.getBoundingClientRect()).filter((r) => r.width);
     const iw = window.innerWidth || 1200, ih = window.innerHeight || 800;
     const r = hosts.length ? hosts[Math.floor(Math.random() * hosts.length)] : { left: iw * 0.25, top: ih * 0.35, width: iw * 0.4 };
-    geoWorkerAt(r.left - 24, r.top + 6, '🖌️', 3400);
+    geoWorkerAt(r.left - 24, r.top + 6, '🖌️', 10200);
     for (let i = 0; i < 10; i++) {
       dT(() => {
         const s = document.createElement('span');
@@ -15481,7 +15482,7 @@ document.addEventListener('DOMContentLoaded', () => {
         s.style.color = ['#ff8fc7', '#ffd23f', '#41e0ff'][i % 3];
         document.body.appendChild(s);
         s.addEventListener('animationend', () => s.remove());
-      }, 300 + i * 150);
+      }, 900 + i * 450);
     }
   }
   function geoActLadder() { // a REAL ladder, actually climbed, rung by rung
@@ -15519,7 +15520,7 @@ document.addEventListener('DOMContentLoaded', () => {
     playTone(300, 'square', 0.08, 0, 0.03); // ladder CLONK against the wall
     const rungs = Math.max(4, Math.floor((H - 36) / 14));
     let i = 0;
-    const up = dI(() => {
+    const up = dI(() => { // one careful rung at a time — safety FIRST, speed never
       if (!document.body.contains(pik)) { clearInterval(up); return; }
       i++;
       pik.style.top = (y0 - i * 14) + 'px';
@@ -15528,7 +15529,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (i < rungs) return;
       clearInterval(up);
       geoChirp(x + 16, y0 - i * 14 - 26, 'pik!!');
-      dT(() => { [0, 1, 2].forEach((k) => playTone(880 - k * 90, 'square', 0.05, k * 0.16, 0.02)); }, 500); // wrench time at the top
+      dT(() => { [0, 1, 2].forEach((k) => playTone(880 - k * 90, 'square', 0.05, k * 0.48, 0.02)); }, 1500); // wrench time at the top (unhurried)
       dT(() => { // and back DOWN, rung by rung — safety first
         let j = i;
         const down = dI(() => {
@@ -15538,11 +15539,11 @@ document.addEventListener('DOMContentLoaded', () => {
           pik.classList.toggle('geo-ladder-sway');
           if (j > 0) return;
           clearInterval(down);
-          geoLerp(pik, x - 6, y0, x < iw / 2 ? -60 : iw + 60, y0, 1400, () => { try { pik.remove(); } catch (e) { /* clocked out */ } });
-          dT(() => { try { lad.remove(); } catch (e) { /* returned to the van */ } }, 1500);
-        }, 200);
-      }, 2100);
-    }, 260);
+          geoLerp(pik, x - 6, y0, x < iw / 2 ? -60 : iw + 60, y0, 4200, () => { try { pik.remove(); } catch (e) { /* clocked out */ } });
+          dT(() => { try { lad.remove(); } catch (e) { /* returned to the van */ } }, 4500);
+        }, 600);
+      }, 6300);
+    }, 780);
   }
   function geoActExcavator() { // the BIG RIG v173: chunky canvas pixel
     // excavator — drives in, STOPS, digs three honest scoops (dirt
@@ -15561,7 +15562,7 @@ document.addEventListener('DOMContentLoaded', () => {
     v.style.left = x0 + 'px';
     const beep = geoRigBeeper(v);
     geoSaySite(['HEAVY MACHINERY COMING THROUGH!! leaves INSIDE the vehicle!!', 'ENGIN LOURD EN APPROCHE !! les feuilles À L\'INTÉRIEUR !!']);
-    geoLerp(v, x0, topY, stopX, topY, 3000, () => {
+    geoLerp(v, x0, topY, stopX, topY, 9000, () => {
       if (!document.body.contains(v)) { clearInterval(beep); return; }
       geoSaySite(['DIG. RIGHT THERE. no — THERE.', 'CREUSE. LÀ. non — LÀ.']);
       const bucketX = () => stopX + (ltr ? W - 30 : 8); // where the bucket bites
@@ -15580,8 +15581,8 @@ document.addEventListener('DOMContentLoaded', () => {
       let scoop = 0;
       const digCycle = () => {
         if (!document.body.contains(v)) { clearInterval(beep); return; }
-        rig.src = geoRigFrame('exc', 1); // arm down…
-        playTone(180, 'sawtooth', 0.22, 0, 0.04);
+        rig.src = geoRigFrame('exc', 1); // arm down… slowly… savoring it…
+        playTone(180, 'sawtooth', 0.4, 0, 0.03);
         dT(() => {
           if (!document.body.contains(v)) return;
           rig.src = geoRigFrame('exc', 2); // …BITE
@@ -15606,26 +15607,26 @@ document.addEventListener('DOMContentLoaded', () => {
               if (!document.body.contains(v)) return;
               rig.src = geoRigFrame('exc', 0); // …and up
               scoop++;
-              if (scoop < 3) { dT(digCycle, 480); return; }
+              if (scoop < 3) { dT(digCycle, 1440); return; }
               geoChirp(stopX + 60, topY - 12, 'pik!! ✓');
               playSparkleSound();
               dT(() => {
-                geoLerp(v, stopX, topY, ltr ? iw + W : -W, topY, 3000, () => { clearInterval(beep); try { v.remove(); } catch (e) { /* parked at HQ */ } });
-                dT(() => { try { mound.remove(); } catch (e) { /* landscaped */ } }, 6500);
-              }, 650);
-            }, 340);
-          }, 460);
-        }, 430);
+                geoLerp(v, stopX, topY, ltr ? iw + W : -W, topY, 9000, () => { clearInterval(beep); try { v.remove(); } catch (e) { /* parked at HQ */ } });
+                dT(() => { try { mound.remove(); } catch (e) { /* landscaped */ } }, 19500);
+              }, 1950);
+            }, 1020);
+          }, 1380);
+        }, 1290);
       };
-      dT(digCycle, 400);
+      dT(digCycle, 1200);
     });
   }
   function geoActDig() { // ACTUAL digging: dirt flies, a mound grows, treasure appears
     if (REDUCED_MOTION) return;
     const iw = window.innerWidth || 1200, ih = window.innerHeight || 800;
     const x = iw * (0.3 + Math.random() * 0.4), y = ih * 0.58;
-    const a = geoWorkerAt(x - 36, y, '⛏️', 7800);
-    const b = geoWorkerAt(x + 30, y, '🥄', 7800); // one of them brought a spoon
+    const a = geoWorkerAt(x - 36, y, '⛏️', 23400);
+    const b = geoWorkerAt(x + 30, y, '🥄', 23400); // one of them brought a spoon
     [a, b].forEach((w) => { if (w) w.classList.add('geo-crew-digger'); });
     const yBase = y + 34;
     const mound = document.createElement('div');
@@ -15655,7 +15656,7 @@ document.addEventListener('DOMContentLoaded', () => {
         s.addEventListener('animationend', () => s.remove());
       }
       playTone(220 + Math.random() * 60, 'square', 0.03, 0, 0.03);
-    }, 520);
+    }, 1560);
     dT(() => {
       clearInterval(dig);
       const find = document.createElement('span'); // they found something!!
@@ -15665,12 +15666,12 @@ document.addEventListener('DOMContentLoaded', () => {
       find.style.top = (y + 8) + 'px';
       document.body.appendChild(find);
       dN(find);
-      geoLerp(find, x, y + 8, x, y - 46, 700);
+      geoLerp(find, x, y + 8, x, y - 46, 2100);
       geoChirp(x + 12, y - 36, 'pik!!!');
       playSparkleSound();
       geoSaySite(['ARCHAEOLOGY!! bill it as archaeology!!', 'ARCHÉOLOGIE !! facturez ça en archéologie !!']);
-      dT(() => { try { find.remove(); } catch (e) { /* pocketed */ } try { mound.remove(); } catch (e) { /* swept */ } }, 2600);
-    }, 6200);
+      dT(() => { try { find.remove(); } catch (e) { /* pocketed */ } try { mound.remove(); } catch (e) { /* swept */ } }, 7800);
+    }, 18600);
   }
   function geoActToolRun() { // the tool relay: piks SPRINT the site carrying inventory
     if (REDUCED_MOTION) return;
@@ -15697,11 +15698,11 @@ document.addEventListener('DOMContentLoaded', () => {
         w.style.left = x0 + 'px';
         document.body.appendChild(w);
         dN(w);
-        geoLerp(w, x0, y, x1, y + (Math.random() * 60 - 30), 2400 + Math.random() * 1200, () => { try { w.remove(); } catch (e) { /* delivered */ } });
+        geoLerp(w, x0, y, x1, y + (Math.random() * 60 - 30), 7200 + Math.random() * 3600, () => { try { w.remove(); } catch (e) { /* delivered */ } });
         [0, 1, 2, 3].forEach((k) => playTone(420 + (k % 2) * 80, 'square', 0.025, k * 0.3, 0.02));
-      }, i * 700);
+      }, i * 2100);
     }
-    dT(() => geoChirp(iw / 2, ih * 0.35, 'hup hup hup!!'), 900);
+    dT(() => geoChirp(iw / 2, ih * 0.35, 'hup… hup… hup…'), 2700);
   }
   const GEO_FOREMAN_LINES = [
     ['lift with the leaves!! read the request AS WRITTEN!!', 'soulevez avec les feuilles !! lisez la demande TELLE QUELLE !!'],
@@ -15717,22 +15718,22 @@ document.addEventListener('DOMContentLoaded', () => {
     ['invoice every spark!! the sparkles are BILLABLE!!', 'facturez chaque étincelle !! les paillettes sont FACTURABLES !!']
   ];
   // the conductor: schedules waves, machinery, acts and foreman lines
-  // across the whole 15-25s window — a different programme every night
+  // across the whole 36-54s window — a different programme every night
   function geoCrewWork(showMs) {
     if (!dreamWorld) return;
     const S = Math.max(4000, showMs || 16000);
     geoSaySite(['ROGER THAT. crew!! DEPLOY!!', 'BIEN REÇU. équipe !! DÉPLOIEMENT !!']);
     // the percussion score: hammer clusters + chainsaw, all show long
-    for (let t = 400; t < S - 2200; t += 2600 + Math.random() * 1500) {
+    for (let t = 400; t < S - 2200; t += 5200 + Math.random() * 3000) {
       dT(() => { if (dreamWorld) [0, 1, 2].forEach((i) => playTone(i % 2 ? 240 : 320, 'square', 0.05, i * 0.22, 0.035)); }, t);
     }
-    for (let t = 1100; t < S - 3200; t += 5200 + Math.random() * 2800) {
+    for (let t = 1100; t < S - 3200; t += 10400 + Math.random() * 5600) {
       dT(() => { if (dreamWorld) playTone(90 + Math.random() * 45, 'sawtooth', 0.4, 0, 0.03); }, t);
     }
     // foreman keeps shouting the whole time (shuffled, no repeats)
     const bank = GEO_FOREMAN_LINES.slice();
     for (let i = bank.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = bank[i]; bank[i] = bank[j]; bank[j] = t; }
-    for (let i = 0, t = 2800; t < S - 3400 && i < bank.length; i++, t += 4200) {
+    for (let i = 0, t = 2800; t < S - 3400 && i < bank.length; i++, t += 5200) {
       const ln = bank[i];
       dT(() => { geoSaySite(ln); playTone(660 + Math.random() * 120, 'triangle', 0.05, 0, 0.02); }, t);
     }
@@ -15745,7 +15746,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // draw tonight's programme from the repertoire
     const ACTS = [geoActMeasure, geoActCoffee, geoActCrane, geoActJackhammer, geoActDynamite, geoActBlueprint, geoActConeParade, geoActPaint, geoActLadder, geoActDig, geoActToolRun, geoActExcavator];
     for (let i = ACTS.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = ACTS[i]; ACTS[i] = ACTS[j]; ACTS[j] = t; }
-    const nActs = S > 20000 ? 5 : 4;
+    const nActs = S > 45000 ? 5 : 4;
     const slots = [0.14, 0.3, 0.47, 0.64, 0.8];
     for (let i = 0; i < nActs; i++) {
       const act = ACTS[i];
@@ -15834,7 +15835,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // dialog leaves the stage, no new popup may open — the ballet plays.
       // v155: the show runs a proper 15-25s — construction takes TIME
       dreamWorld.flags.geoShowtime = 1;
-      const T_SHOW = REDUCED_MOTION ? 1700 : 15000 + Math.floor(Math.random() * 10000);
+      const T_SHOW = REDUCED_MOTION ? 1700 : 36000 + Math.floor(Math.random() * 18000); // v175: the crew works at 1/3 speed — the CUSTOMER does the hurrying
       const T_RESOLVE = REDUCED_MOTION ? 900 : T_SHOW - 2400;
       const T_CURTAIN = T_SHOW;
       const hidden = [...document.querySelectorAll('.dream-dlg')].filter((x) => x.style.display !== 'none');
@@ -16071,7 +16072,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const par = gf && gf.par;
     if (!par || !document.body.contains(par)) return;
     if (REDUCED_MOTION) { try { par.remove(); } catch (e) {} return; }
-    const x0 = parseFloat(par.style.left) || 18, t0 = Date.now(), DUR = 6000;
+    const x0 = parseFloat(par.style.left) || 18, t0 = Date.now(), DUR = 18000; // they leave the way they work: unhurried
     const W = par.getBoundingClientRect().width + 80;
     const iv = dI(() => {
       const p = Math.min(1, (Date.now() - t0) / DUR);

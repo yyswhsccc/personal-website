@@ -9815,13 +9815,13 @@ html[data-theme="dark"].dream-geo .geo-broken {
   align-items: flex-end;
   filter: drop-shadow(0 0 5px #ffd23f);
 }
-.geo-crew-worker img { image-rendering: pixelated; animation: bsod-hero-bob 0.34s steps(2) infinite; }
+.geo-crew-worker img { image-rendering: pixelated; animation: bsod-hero-bob 1.05s steps(2) infinite; } /* v175: 1/3 tempo — they bob like they have ALL night */
 .geo-crew-worker-rtl img { transform: scaleX(-1); }
 .geo-crew-tool {
   font-size: 1.05rem;
   margin-left: -7px;
   transform-origin: 20% 85%;
-  animation: geo-tool-swing 0.46s ease-in-out infinite;
+  animation: geo-tool-swing 1.4s ease-in-out infinite; /* v175: leisurely swings */
 }
 @keyframes geo-tool-swing { 0%, 100% { transform: rotate(8deg); } 50% { transform: rotate(-52deg) translateY(-3px); } }
 .geo-crew-vehicle { position: fixed; z-index: 2688; pointer-events: none; }
@@ -9845,11 +9845,11 @@ html[data-theme="dark"].dream-geo .geo-broken {
 .geo-rig-img { display: block; image-rendering: pixelated; }
 .geo-rig-exc { width: 170px; }
 .geo-rig-truck { width: 150px; }
-.geo-rig-driver { position: absolute; width: 26px; image-rendering: pixelated; animation: bsod-hero-bob 0.34s steps(2) infinite; }
+.geo-rig-driver { position: absolute; width: 26px; image-rendering: pixelated; animation: bsod-hero-bob 1.05s steps(2) infinite; }
 .geo-rig-driver-exc { left: 58%; top: -14px; }
 .geo-rig-driver-truck { left: 74%; top: -12px; }
 /* v170: real digging — crouching piks, arcing dirt, a growing mound */
-.geo-crew-digger img { animation: geo-dig-crouch 0.52s ease-in-out infinite; }
+.geo-crew-digger img { animation: geo-dig-crouch 1.56s ease-in-out infinite; }
 @keyframes geo-dig-crouch { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(3px) rotate(14deg); } }
 .geo-dig-mound {
   position: fixed;
@@ -9874,8 +9874,8 @@ html[data-theme="dark"].dream-geo .geo-broken {
   100% { transform: translate(var(--dx, 20px), 6px); opacity: 0; }
 }
 /* v170: the tool relay — a full-tilt sprint, leaning into it */
-.geo-crew-runner img { animation: geo-run-bob 0.18s steps(2) infinite; }
-.geo-crew-worker-rtl.geo-crew-runner img { animation: geo-run-bob-rtl 0.18s steps(2) infinite; }
+.geo-crew-runner img { animation: geo-run-bob 0.54s steps(2) infinite; }
+.geo-crew-worker-rtl.geo-crew-runner img { animation: geo-run-bob-rtl 0.54s steps(2) infinite; }
 @keyframes geo-run-bob { 0%, 100% { transform: translateY(0) rotate(8deg); } 50% { transform: translateY(-4px) rotate(8deg); } }
 @keyframes geo-run-bob-rtl { 0%, 100% { transform: translateY(0) rotate(-8deg) scaleX(-1); } 50% { transform: translateY(-4px) rotate(-8deg) scaleX(-1); } }
 .geo-crew-carry { animation: none; transform: rotate(-14deg) translateY(-6px); }
