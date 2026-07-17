@@ -9838,21 +9838,16 @@ html[data-theme="dark"].dream-geo .geo-broken {
 }
 .geo-ladder-pik { z-index: 2691; transition: top 0.22s steps(2); }
 .geo-ladder-sway img { transform: scaleX(-1); }
-/* v170: the BIG RIG — a chunky pixel excavator built from honest boxes */
-.geo-exc { position: fixed; z-index: 2690; width: 200px; height: 100px; pointer-events: none; filter: drop-shadow(0 0 6px rgba(255, 210, 63, 0.5)); }
-.geo-exc-rtl { transform: scaleX(-1); }
-.geo-exc-cab { position: absolute; left: 82px; top: 16px; width: 66px; height: 36px; background: #ffd23f; border: 3px solid #201a10; border-radius: 4px 12px 2px 2px; box-shadow: inset -7px -7px 0 #e8a800; }
-.geo-exc-glass { position: absolute; left: 122px; top: 22px; width: 18px; height: 15px; background: #bfeaff; border: 3px solid #201a10; }
-.geo-exc-base { position: absolute; left: 70px; top: 54px; width: 90px; height: 12px; background: #e8a800; border: 3px solid #201a10; }
-.geo-exc-track { position: absolute; left: 60px; top: 66px; width: 110px; height: 24px; border: 3px solid #201a10; border-radius: 12px; background: repeating-linear-gradient(90deg, #3a3348 0 8px, #55496b 8px 16px); animation: geo-exc-roll 0.5s linear infinite; }
-@keyframes geo-exc-roll { to { background-position: 16px 0; } }
-.geo-exc-boom { position: absolute; left: 32px; top: 26px; width: 60px; height: 12px; background: #ffd23f; border: 3px solid #201a10; transform-origin: 92% 50%; animation: geo-exc-dig 2.4s ease-in-out infinite; }
-.geo-exc-arm { position: absolute; left: 20px; top: 42px; width: 12px; height: 36px; background: #ffd23f; border: 3px solid #201a10; transform-origin: 50% 6%; animation: geo-exc-dig2 2.4s ease-in-out infinite; }
-.geo-exc-bucket { position: absolute; left: 8px; top: 76px; width: 26px; height: 15px; background: #55496b; border: 3px solid #201a10; border-radius: 0 0 12px 4px; animation: geo-exc-dig3 2.4s ease-in-out infinite; }
-@keyframes geo-exc-dig { 0%, 100% { transform: rotate(24deg); } 50% { transform: rotate(38deg); } }
-@keyframes geo-exc-dig2 { 0%, 100% { transform: rotate(-12deg); } 50% { transform: rotate(8deg); } }
-@keyframes geo-exc-dig3 { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-9px) rotate(-20deg); } }
-.geo-exc-driver { position: absolute; left: 98px; top: -6px; width: 26px; image-rendering: pixelated; animation: bsod-hero-bob 0.34s steps(2) infinite; }
+/* v173: the rigs are CANVAS pixel art now — tiny bitmaps, huge pixels,
+   same coarse grain as the pikmin themselves */
+.geo-rig { position: fixed; z-index: 2690; pointer-events: none; filter: drop-shadow(0 0 6px rgba(255, 210, 63, 0.5)); }
+.geo-rig-flip { transform: scaleX(-1); }
+.geo-rig-img { display: block; image-rendering: pixelated; }
+.geo-rig-exc { width: 170px; }
+.geo-rig-truck { width: 150px; }
+.geo-rig-driver { position: absolute; width: 26px; image-rendering: pixelated; animation: bsod-hero-bob 0.34s steps(2) infinite; }
+.geo-rig-driver-exc { left: 58%; top: -14px; }
+.geo-rig-driver-truck { left: 74%; top: -12px; }
 /* v170: real digging — crouching piks, arcing dirt, a growing mound */
 .geo-crew-digger img { animation: geo-dig-crouch 0.52s ease-in-out infinite; }
 @keyframes geo-dig-crouch { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(3px) rotate(14deg); } }

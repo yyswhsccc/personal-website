@@ -5898,6 +5898,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!w) { termLine(trT(`dream: never dreamed of "${dreamQuery}" (try: win95 · scp · matrix · gameboy · geo · bsod · amber)`, `dream : jamais rêvé de « ${dreamQuery} » (essayez : win95 · scp · matrix · gameboy · geo · bsod · amber)`), 't-err'); return; }
       if (document.body.classList.contains('terminal-only')) { termLine(trT('the door hates redecorating. come back once you\'re inside.', 'la porte déteste qu\'on redécore. revenez une fois entré·e.'), 't-err'); return; }
       store.set('yos-dream-cd', 0);
+      store.set('yos-dream', null); // a MANUAL pick discards any pending resume — no more matrix hijacks mid-ritual
       if (slimeBody) slimeBody.classList.add('is-ghost-hidden');
       startDreamWalk(w);
       termLine(trT(`💤 shhh… the ${w.id} dream deepens…`, `💤 chuuut… le rêve ${w.id} s'approfondit…`), 't-accent');
@@ -14910,36 +14911,136 @@ document.addEventListener('DOMContentLoaded', () => {
     dT(() => { clearInterval(sparks); try { w.remove(); } catch (e) { /* clocked out */ } }, ms || 3400);
     return w;
   }
-  // heavy machinery: a pink pik drives the rig across the bottom of the site
-  function geoVehicle() {
-    if (!dreamWorld || REDUCED_MOTION) return;
+  // heavy machinery v173: CHUNKY canvas pixel rigs (same coarse grain as
+  // the pik sprites — tiny canvas, big CSS pixels) that actually WORK:
+  // the excavator stops and DIGS, the dump truck stops and DUMPS.
+  var geoRigFrames = {};
+  function geoRigFrame(kind, f) {
+    const key = kind + f;
+    if (geoRigFrames[key]) return geoRigFrames[key];
+    const D = '#201a10', Y = '#ffd23f', S = '#e8a800', G = '#bfeaff', T = '#3a3348', TT = '#55496b', O = '#ff8a5c';
+    const c = document.createElement('canvas');
+    if (kind === 'exc') c.width = 34; else c.width = 30;
+    c.height = kind === 'exc' ? 18 : 16;
+    const x = c.getContext('2d');
+    const R = (col, x0, y0, w0, h0) => { x.fillStyle = col; x.fillRect(x0, y0, w0, h0); };
+    if (kind === 'exc') { // facing LEFT
+      R(D, 11, 11, 22, 7); R(T, 12, 12, 20, 5); // tracks
+      for (let i = 0; i < 10; i++) { R(TT, 13 + i * 2, 12, 1, 1); R(TT, 13 + i * 2, 16, 1, 1); }
+      R(TT, 13, 14, 2, 2); R(TT, 29, 14, 2, 2); // hubs
+      R(D, 12, 8, 21, 4); R(Y, 13, 9, 19, 2); // deck
+      R(D, 19, 0, 13, 10); R(Y, 20, 1, 11, 8); R(S, 28, 2, 3, 7); // cab
+      R(D, 21, 2, 7, 5); R(G, 22, 3, 5, 3); // glass
+      R(D, 32, 4, 2, 4); // exhaust
+      const P = [15, 8];
+      const EB = [[[7, 3], [3, 6]], [[6, 6], [2, 10]], [[6, 8], [2, 13]]][f];
+      const seg = (a, b, col, w2, off) => {
+        const n = Math.max(Math.abs(a[0] - b[0]), Math.abs(a[1] - b[1]), 1);
+        for (let i = 0; i <= n; i++) {
+          const lx = Math.round(a[0] + (b[0] - a[0]) * i / n), ly = Math.round(a[1] + (b[1] - a[1]) * i / n);
+          R(col, lx + off, ly + off, w2, w2);
+        }
+      };
+      seg(P, EB[0], D, 3, 0); seg(EB[0], EB[1], D, 3, 0); // boom + arm, dark shell
+      seg(P, EB[0], Y, 1, 1); seg(EB[0], EB[1], Y, 1, 1); // yellow core
+      const bx = EB[1][0], by = EB[1][1];
+      R(D, bx - 1, by + 1, 5, 4); R(T, bx, by + 2, 3, 2); // the bucket
+    } else { // 'truck', facing RIGHT — f0 flat bed, f1 TIPPED
+      R(D, 4, 11, 5, 5); R(TT, 6, 13, 1, 1); // rear wheel
+      R(D, 20, 11, 5, 5); R(TT, 22, 13, 1, 1); // front wheel
+      R(D, 1, 10, 28, 3); // chassis
+      R(D, 21, 2, 8, 9); R(Y, 22, 3, 6, 7); R(D, 23, 4, 4, 4); R(G, 24, 5, 2, 2); // cab + glass
+      if (f === 0) {
+        R(D, 1, 3, 19, 8); R(Y, 2, 4, 17, 6); // bed
+        R(T, 3, 4, 15, 2); // the load
+        for (let i = 0; i < 5; i++) R(O, 4 + i * 3, 4, 1, 1); // cones peeking out
+      } else {
+        for (let i = 0; i < 9; i++) R(D, 2 + i * 2, 9 - i, 4, 4); // bed, tipped
+        for (let i = 0; i < 9; i++) R(Y, 3 + i * 2, 10 - i, 2, 2);
+        R(D, 1, 8, 2, 5); // tailgate swung open
+      }
+    }
+    geoRigFrames[key] = c.toDataURL();
+    return geoRigFrames[key];
+  }
+  function geoRigBuild(kind) {
     const v = document.createElement('div');
-    v.className = 'geo-crew-vehicle';
-    const driver = document.createElement('img');
-    driver.className = 'geo-crew-vehicle-driver';
-    driver.alt = '';
-    try { driver.src = pikSprite(hueColor(324), 2, null); } catch (e) { /* the rig drives itself */ }
-    const rig = document.createElement('span');
-    rig.className = 'geo-crew-vehicle-rig';
-    rig.textContent = ['🚜', '🏗️', '🚚'][Math.floor(Math.random() * 3)];
-    v.appendChild(driver);
+    v.className = 'geo-rig';
+    const rig = document.createElement('img');
+    rig.className = 'geo-rig-img geo-rig-' + kind;
+    rig.alt = '';
+    rig.src = geoRigFrame(kind, 0);
+    const drv = document.createElement('img');
+    drv.className = 'geo-rig-driver geo-rig-driver-' + kind;
+    drv.alt = '';
+    try { drv.src = pikSprite(hueColor(318 + Math.random() * 14), 2, null); } catch (e) { /* self-driving */ }
     v.appendChild(rig);
-    const ltr = Math.random() < 0.5;
-    if (!ltr) v.classList.add('geo-crew-vehicle-rtl');
-    v.style.top = Math.max(80, (window.innerHeight || 800) - 116) + 'px';
+    v.appendChild(drv);
     document.body.appendChild(v);
     dN(v);
-    const W = 80, iw = window.innerWidth || 1200;
-    const x0 = ltr ? -W : iw + W, x1 = ltr ? iw + W : -W;
-    const t0 = Date.now(), DUR = 6000;
-    let lastBeep = 0;
-    const iv = dI(() => {
-      const p = Math.min(1, (Date.now() - t0) / DUR);
-      v.style.left = (x0 + (x1 - x0) * p) + 'px';
-      const now = Date.now();
-      if (now - lastBeep > 900) { lastBeep = now; playTone(740, 'square', 0.07, 0, 0.02); } // reverse beeper
-      if (p >= 1) { clearInterval(iv); try { v.remove(); } catch (e) { /* parked */ } }
-    }, 60);
+    return { v, rig };
+  }
+  function geoRigBeeper(v) {
+    return dI(() => { if (document.body.contains(v)) playTone(700, 'square', 0.06, 0, 0.02); }, 900);
+  }
+  function geoVehicle() { // the dump truck: drives in, STOPS, tips the bed, delivers
+    if (!dreamWorld || REDUCED_MOTION) return;
+    const iw = window.innerWidth || 1200, ih = window.innerHeight || 800;
+    const built = geoRigBuild('truck');
+    const v = built.v, rig = built.rig;
+    const ltr = Math.random() < 0.5; // the truck faces right natively
+    if (!ltr) v.classList.add('geo-rig-flip');
+    const topY = Math.max(80, ih - 150);
+    const W = 150;
+    const x0 = ltr ? -W : iw + W;
+    const stopX = iw * (0.3 + Math.random() * 0.4);
+    v.style.top = topY + 'px';
+    v.style.left = x0 + 'px';
+    const beep = geoRigBeeper(v);
+    geoLerp(v, x0, topY, stopX, topY, 2800, () => {
+      if (!document.body.contains(v)) { clearInterval(beep); return; }
+      rig.src = geoRigFrame('truck', 1); // TIP
+      playTone(220, 'sawtooth', 0.3, 0, 0.04);
+      const dumpX = stopX + (ltr ? 8 : W - 46); // the open-tailgate end
+      for (let k = 0; k < 8; k++) {
+        dT(() => {
+          if (!dreamWorld) return;
+          const s = document.createElement('span');
+          s.className = 'geo-dig-dirt';
+          s.style.left = (dumpX + Math.random() * 26) + 'px';
+          s.style.top = (topY + 42) + 'px';
+          s.style.setProperty('--dx', (Math.random() * 30 - 15).toFixed(0) + 'px');
+          s.style.background = ['#8a6a4a', '#ff8a5c', '#a3805c'][k % 3];
+          document.body.appendChild(s);
+          s.addEventListener('animationend', () => s.remove());
+        }, 150 + k * 130);
+      }
+      dT(() => { // the delivered pile. a modest, proud heap
+        if (!dreamWorld) return;
+        const mound = document.createElement('div');
+        mound.className = 'geo-dig-mound';
+        mound.style.left = (dumpX + 2) + 'px';
+        mound.style.top = (topY + 64) + 'px';
+        mound.style.width = '34px';
+        mound.style.height = '14px';
+        document.body.appendChild(mound);
+        dN(mound);
+        const cone = document.createElement('span');
+        cone.className = 'geo-crew-rig-fixed';
+        cone.textContent = '🚧';
+        cone.style.left = (dumpX + 10) + 'px';
+        cone.style.top = (topY + 48) + 'px';
+        document.body.appendChild(cone);
+        dN(cone);
+        dT(() => { try { mound.remove(); } catch (e) { /* recycled */ } try { cone.remove(); } catch (e) { /* re-inventoried */ } }, 9000);
+      }, 1250);
+      dT(() => {
+        if (!document.body.contains(v)) { clearInterval(beep); return; }
+        rig.src = geoRigFrame('truck', 0); // bed down
+        geoChirp(stopX + 40, topY - 14, '✓');
+        dT(() => geoLerp(v, stopX, topY, ltr ? iw + W : -W, topY, 2800, () => { clearInterval(beep); try { v.remove(); } catch (e) { /* garaged */ } }), 500);
+      }, 2100);
+    });
   }
   // non-window comedy: buttons that still work, but the construction shows
   const GEO_MISC_COMEDY = {
@@ -15443,49 +15544,81 @@ document.addEventListener('DOMContentLoaded', () => {
       }, 2100);
     }, 260);
   }
-  function geoActExcavator() { // the BIG RIG: a full pixel excavator crosses the site
+  function geoActExcavator() { // the BIG RIG v173: chunky canvas pixel
+    // excavator — drives in, STOPS, digs three honest scoops (dirt
+    // flies, screen rumbles, a heap grows), then rolls off satisfied
     if (REDUCED_MOTION) return;
     const iw = window.innerWidth || 1200, ih = window.innerHeight || 800;
-    const v = document.createElement('div');
-    v.className = 'geo-exc';
-    ['geo-exc-boom', 'geo-exc-arm', 'geo-exc-bucket', 'geo-exc-cab', 'geo-exc-glass', 'geo-exc-base', 'geo-exc-track'].forEach((cls) => {
-      const s = document.createElement('div');
-      s.className = cls;
-      v.appendChild(s);
-    });
-    const drv = document.createElement('img');
-    drv.className = 'geo-exc-driver';
-    drv.alt = '';
-    try { drv.src = pikSprite(hueColor(324), 2, null); } catch (e) { /* it drives itself */ }
-    v.appendChild(drv);
-    const ltr = Math.random() < 0.5;
-    if (!ltr) v.classList.add('geo-exc-rtl');
-    v.style.top = Math.max(70, ih - 168) + 'px';
-    document.body.appendChild(v);
-    dN(v);
+    const built = geoRigBuild('exc');
+    const v = built.v, rig = built.rig;
+    const ltr = Math.random() < 0.5; // the excavator faces LEFT natively
+    if (ltr) v.classList.add('geo-rig-flip');
+    const topY = Math.max(70, ih - 168);
+    const W = 190;
+    const x0 = ltr ? -W : iw + W;
+    const stopX = iw * (0.3 + Math.random() * 0.4);
+    v.style.top = topY + 'px';
+    v.style.left = x0 + 'px';
+    const beep = geoRigBeeper(v);
     geoSaySite(['HEAVY MACHINERY COMING THROUGH!! leaves INSIDE the vehicle!!', 'ENGIN LOURD EN APPROCHE !! les feuilles À L\'INTÉRIEUR !!']);
-    const W = 200;
-    const x0 = ltr ? -W : iw + W, x1 = ltr ? iw + W : -W;
-    const t0 = Date.now(), DUR = 9000;
-    let lastBeep = 0, lastPuff = 0;
-    const iv = dI(() => {
-      if (!document.body.contains(v)) { clearInterval(iv); return; }
-      const p = Math.min(1, (Date.now() - t0) / DUR);
-      v.style.left = (x0 + (x1 - x0) * p) + 'px';
-      const nw = Date.now();
-      if (nw - lastBeep > 800) { lastBeep = nw; playTone(660, 'square', 0.07, 0, 0.02); }
-      if (nw - lastPuff > 420) { // exhaust puffs off the tail end
-        lastPuff = nw;
-        const s = document.createElement('span');
-        s.className = 'trail-sparkle';
-        s.textContent = Math.random() < 0.5 ? '💨' : '·';
-        s.style.left = (parseFloat(v.style.left) + (ltr ? 4 : W - 20)) + 'px';
-        s.style.top = (parseFloat(v.style.top) + 44 + Math.random() * 22) + 'px';
-        document.body.appendChild(s);
-        s.addEventListener('animationend', () => s.remove());
-      }
-      if (p >= 1) { clearInterval(iv); try { v.remove(); } catch (e) { /* parked at HQ */ } }
-    }, 50);
+    geoLerp(v, x0, topY, stopX, topY, 3000, () => {
+      if (!document.body.contains(v)) { clearInterval(beep); return; }
+      geoSaySite(['DIG. RIGHT THERE. no — THERE.', 'CREUSE. LÀ. non — LÀ.']);
+      const bucketX = () => stopX + (ltr ? W - 30 : 8); // where the bucket bites
+      const mound = document.createElement('div');
+      mound.className = 'geo-dig-mound';
+      document.body.appendChild(mound);
+      dN(mound);
+      let mh = 0;
+      const moundStep = () => {
+        mh = Math.min(26, mh + 7);
+        mound.style.height = mh + 'px';
+        mound.style.width = Math.round(mh * 2.4) + 'px';
+        mound.style.left = Math.round(bucketX() + (ltr ? 34 : -34) - mh * 1.2) + 'px';
+        mound.style.top = (topY + 96 - mh) + 'px';
+      };
+      let scoop = 0;
+      const digCycle = () => {
+        if (!document.body.contains(v)) { clearInterval(beep); return; }
+        rig.src = geoRigFrame('exc', 1); // arm down…
+        playTone(180, 'sawtooth', 0.22, 0, 0.04);
+        dT(() => {
+          if (!document.body.contains(v)) return;
+          rig.src = geoRigFrame('exc', 2); // …BITE
+          playTone(120, 'square', 0.16, 0, 0.05);
+          document.body.classList.add('rescue-quake-sm');
+          dT(() => document.body.classList.remove('rescue-quake-sm'), 240);
+          for (let k = 0; k < 6; k++) { // dirt out of the trench
+            const s = document.createElement('span');
+            s.className = 'geo-dig-dirt';
+            s.style.left = (bucketX() + Math.random() * 22 - 6) + 'px';
+            s.style.top = (topY + 76) + 'px';
+            s.style.setProperty('--dx', (Math.random() * 56 - 28).toFixed(0) + 'px');
+            s.style.background = ['#8a6a4a', '#6e5238', '#a3805c'][k % 3];
+            document.body.appendChild(s);
+            s.addEventListener('animationend', () => s.remove());
+          }
+          moundStep();
+          dT(() => {
+            if (!document.body.contains(v)) return;
+            rig.src = geoRigFrame('exc', 1); // lift…
+            dT(() => {
+              if (!document.body.contains(v)) return;
+              rig.src = geoRigFrame('exc', 0); // …and up
+              scoop++;
+              if (scoop < 3) { dT(digCycle, 480); return; }
+              geoChirp(stopX + 60, topY - 12, 'pik!! ✓');
+              playSparkleSound();
+              dT(() => {
+                geoLerp(v, stopX, topY, ltr ? iw + W : -W, topY, 3000, () => { clearInterval(beep); try { v.remove(); } catch (e) { /* parked at HQ */ } });
+                dT(() => { try { mound.remove(); } catch (e) { /* landscaped */ } }, 6500);
+              }, 650);
+            }, 340);
+          }, 460);
+        }, 430);
+      };
+      dT(digCycle, 400);
+    });
   }
   function geoActDig() { // ACTUAL digging: dirt flies, a mound grows, treasure appears
     if (REDUCED_MOTION) return;
@@ -15913,7 +16046,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // works inside the geo dream; same pattern as __yosARC)
   try {
     window.__yosGeo = {
-      lad: () => geoActLadder(), exc: () => geoActExcavator(), dig: () => geoActDig(), run: () => geoActToolRun(),
+      lad: () => geoActLadder(), exc: () => geoActExcavator(), dig: () => geoActDig(), run: () => geoActToolRun(), truck: () => geoVehicle(),
       show: (ms) => geoCrewWork(ms || 16000),
       inv: () => {
         if (!dreamWorld) return 'enter the geo dream first';
@@ -16793,7 +16926,7 @@ document.addEventListener('DOMContentLoaded', () => {
     store.set('yos-dream-acd', dreamAcdLeft);
   }
   function dreamResume() {
-    if (dreamWorld) return;
+    if (dreamWorld || sleepwalkActive) return; // never hijack a dream ritual in progress
     const saved = store.get('yos-dream', null);
     if (!saved || !saved.id) return;
     const remain = saved.until - Date.now();
@@ -32023,7 +32156,7 @@ document.addEventListener('DOMContentLoaded', () => {
           w.el.classList.add('is-disguised'); // CSS belt-and-suspenders for the hat
           disgBanner();
           w.disguiseAt = now + 3800 + Math.random() * 3200;
-        } else if (w.disguiseDeep && Math.random() < 0.62) { // APEX: next costume, cover intact
+        } else if (w.disguiseDeep && Math.random() < 0.82) { // APEX: next costume, cover intact (rarely blows it — v173)
           let nx;
           do { nx = Math.floor(Math.random() * PIK_DISGUISES.length); } while (nx === w.disguised);
           w.disguised = nx;
