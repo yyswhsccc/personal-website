@@ -28228,7 +28228,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // are macarons seen through morning fog
         const MAC = ['#fae3ea', '#e0f2e9', '#faf3dd', '#ece5f7', '#e4eff7'];
         rim((rx, ry) => MAC[(rx + ry) % MAC.length]);
-        if (epic) { star(cx - 3, -1, '#ece5f7'); star(cx + 3, -1, '#fae3ea'); }
+        if (epic) { star(cx - 3, -1, '#c9a7f5'); star(cx + 3, -1, '#ff8fc7'); } // stars stay LEGIBLE (owner decree) — only the rim is foggy
       },
       captcha() { // the human disguise (v165): no glasses, no mustache
         // (both user-decreed too weird). the antenna does the talking:
