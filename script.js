@@ -32066,7 +32066,10 @@ document.addEventListener('DOMContentLoaded', () => {
       img.alt = '';
       const nm = document.createElement('span');
       nm.className = 'pikdex-cell-name';
-      nm.textContent = name;
+      const nmInner = document.createElement('span');
+      nmInner.className = 'pikdex-cell-name-inner';
+      nmInner.textContent = name;
+      nm.appendChild(nmInner);
       if (p.a) {
         const star = document.createElement('span');
         star.className = 'pikdex-cell-star';
@@ -32147,6 +32150,19 @@ document.addEventListener('DOMContentLoaded', () => {
         mys.append(shadow, nm);
         grid.appendChild(mys);
       }
+    });
+    // v192: long names SCROLL instead of clipping (owner order) — only
+    // the ones that actually overflow get the ping-pong marquee
+    requestAnimationFrame(() => {
+      document.querySelectorAll('#win-pikdex .pikdex-cell-name-inner').forEach((el) => {
+        const host = el.parentElement;
+        if (!host) return;
+        const over = el.scrollWidth - host.clientWidth;
+        if (over > 0) { // any real clipping earns the marquee
+          el.style.setProperty('--nscroll', (-(over + 6)) + 'px');
+          el.classList.add('is-scrolling');
+        }
+      });
     });
     const hint = document.getElementById('pikdex-hint');
     if (hint) {

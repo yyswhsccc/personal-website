@@ -6919,6 +6919,14 @@ html[data-theme="dark"].dream-gameboy .pik-swap-arrow { color: #0f380f; }
   color: var(--text);
   line-height: 1.1;
 }
+.pikdex-cell-name-inner { display: inline-block; white-space: nowrap; }
+.pikdex-cell-name-inner.is-scrolling { animation: pik-name-scroll 5.5s ease-in-out infinite; }
+@keyframes pik-name-scroll {
+  0%, 18% { transform: translateX(0); }
+  46%, 68% { transform: translateX(var(--nscroll, -20px)); }
+  96%, 100% { transform: translateX(0); }
+}
+@media (prefers-reduced-motion: reduce) { .pikdex-cell-name-inner.is-scrolling { animation: none; } }
 .pikdex-cell-star {
   position: absolute;
   bottom: -7px;
