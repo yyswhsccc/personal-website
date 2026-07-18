@@ -12160,7 +12160,7 @@ document.addEventListener('DOMContentLoaded', () => {
         arText(g2, mode === 'won' ? trT('YOU WIN!!', 'GAGNÉ !!') : trT('GAME OVER', 'GAME OVER'), 44, 26, 0, 14);
         const line = mode === 'won' ? game.win : game.lose;
         arTextWrap(g2, trT(line[0], line[1]), 10, 44, 1, 8, 142, 10);
-        arText(g2, trT('[A] again · [◄][►] browse the shelf', '[A] encore · [◄][►] parcourir'), 12, 88, 0, 8);
+        arText(g2, trT('[return] again · [◄][►] browse the shelf', '[entrée] encore · [◄][►] parcourir'), 12, 88, 0, 8); // v188: Enter always worked — now the label says so
         if (inp.a) { mode = 'ready'; mT = 0; }
         else if (inp.rightEdge) bootGame(1);
         else if (inp.leftEdge) bootGame(-1);
