@@ -7435,6 +7435,17 @@ html[data-theme="dark"] .pikdex-float-btn.is-picked { background: var(--purple-d
   90%, 96% { transform: rotate(84deg) translateY(4px); }
 }
 .pikfx-rgbcycle { animation: pikfx-rgbcycle 3.2s linear infinite; }
+/* rgbrig v190.3: its DESK glow was the real offender — hue-rotate spun
+   the halo (and body) through full-sat orange. new fx: true-color body,
+   morning-fog macaron glow breathing through four pales */
+.pikfx-macaroncycle { animation: pikfx-macaroncycle 6s ease-in-out infinite; }
+@keyframes pikfx-macaroncycle {
+  0%, 100% { filter: drop-shadow(0 0 4px rgba(250, 227, 234, 0.95)); }
+  25% { filter: drop-shadow(0 0 4px rgba(224, 242, 233, 0.95)); }
+  50% { filter: drop-shadow(0 0 4px rgba(236, 229, 247, 0.95)); }
+  75% { filter: drop-shadow(0 0 4px rgba(228, 239, 247, 0.95)); }
+}
+@media (prefers-reduced-motion: reduce) { .pikfx-macaroncycle { animation: none; } }
 @keyframes pikfx-rgbcycle {
   from { filter: hue-rotate(0deg) drop-shadow(0 0 4px rgba(255, 143, 199, 0.7)); }
   to { filter: hue-rotate(360deg) drop-shadow(0 0 4px rgba(255, 143, 199, 0.7)); }
