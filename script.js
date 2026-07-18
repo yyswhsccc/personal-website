@@ -31048,8 +31048,8 @@ document.addEventListener('DOMContentLoaded', () => {
           f.style.left = (w.x + 14 + Math.cos(ang) * 20 - size / 2) + 'px';
           f.style.top = (w.y + 34 + Math.abs(Math.sin(ang)) * 16) + 'px';
           DESK_PIK.layer.appendChild(f);
-          setTimeout(() => f.classList.add('fading'), 10500);
-          setTimeout(() => f.remove(), 12000);
+          setTimeout(() => f.classList.add('fading'), 6500);
+          setTimeout(() => f.remove(), 8000);
         }
       }
     });
@@ -31475,6 +31475,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // their bloom trails stay on the desk, and a pikmin standing away from
     // its own footprints reads as a glitch, not a homecoming.
     const seats = DESK_PIK.walkers.map((w) => ({ x: w.x, y: w.y, tx: w.tx, ty: w.ty }));
+    const docHidden = document.hidden; // v187: hidden tabs pause CSS
+    // animations but NOT these spawners — skipping while hidden stops the
+    // particle mountain that used to greet the user on return
     DESK_PIK.walkers.forEach((w) => {
       try { if (w.bubbleEl) w.bubbleEl.remove(); if (w.babyEl) w.babyEl.remove(); w.el.remove(); } catch (e) { /* already gone */ }
     });
@@ -32521,7 +32524,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
       // evolved Y2K Bug never stops partying: confetti bits float off it
-      if (w.party && now > w.partyAt) {
+      if (!docHidden && w.party && now > w.partyAt) {
         w.partyAt = now + 260 + Math.random() * 260;
         const cf = document.createElement('span');
         cf.className = 'pik-party-bit';
@@ -32572,7 +32575,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         w.babyEl.style.left = w.babyX + 'px';
         w.babyEl.style.top = w.babyY + 'px';
-        if (!stalled && now > w.babyStarAt && Math.hypot(bTx - w.babyX, bTy - w.babyY) > 3) {
+        if (!docHidden && !stalled && now > w.babyStarAt && Math.hypot(bTx - w.babyX, bTy - w.babyY) > 3) {
           w.babyStarAt = now + 260 + Math.random() * 220; // the baby's own GLOWING stardust wake
           const bsi = Math.floor(Math.random() * 18);
           const bs = document.createElement('img');
@@ -32726,7 +32729,7 @@ document.addEventListener('DOMContentLoaded', () => {
           w.wxModeAt = now + 8000 + Math.random() * 7000;
         }
         const wx = w.apexWeather ? (w.wxMode || 'rain') : 'rain';
-        if (now > w.rainAt) {
+        if (!docHidden && now > w.rainAt) {
           if (wx === 'rain' || wx === 'storm') {
             const rd = document.createElement('span');
             rd.className = 'pik-rain-bit';
@@ -32754,7 +32757,7 @@ document.addEventListener('DOMContentLoaded', () => {
             w.rainAt = now + 420 + Math.random() * 380;
           }
         }
-        if (wx === 'storm' && now > w.boltAt) {
+        if (!docHidden && wx === 'storm' && now > w.boltAt) {
           w.boltAt = now + 2200 + Math.random() * 1600;
           const bl = document.createElement('span');
           bl.className = 'pik-bolt-bit';
@@ -32804,7 +32807,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // footprint blooms: RAINBOW confetti-flowers, 1-10 per step —
         // 3+ cluster into a round posy. Always UNDER the walker's feet,
         // never on its body; the whole patch melts away in 7 seconds.
-        if (now > (w.trailAt || 0)) {
+        if (!docHidden && now > (w.trailAt || 0)) {
           w.trailAt = now + 750 + Math.random() * 450; // airier cadence
           const n = 1 + Math.floor(Math.random() * 10);
           const cx = w.x + 14, cy = w.y + 34; // strictly below the sprite
@@ -32812,8 +32815,8 @@ document.addEventListener('DOMContentLoaded', () => {
             // nine nebula colorways, two star shapes, each twinkling on its
             // own clock. APEX adds big stars + soft pixel nebula puffs (v162)
             const deep = w.starNebula;
-            w.trailAt = now + 520 + Math.random() * 380; // a denser field
-            for (let k = 0; k < (deep ? 2 : 1) + Math.floor(Math.random() * 3); k++) {
+            w.trailAt = now + 700 + Math.random() * 450; // dense, but paint-friendly (v187)
+            for (let k = 0; k < (deep ? 2 : 1) + Math.floor(Math.random() * 2); k++) {
               const si = Math.floor(Math.random() * 18);
               const s = document.createElement('img');
               s.className = 'pik-trail pik-star-trail';
@@ -32827,11 +32830,11 @@ document.addEventListener('DOMContentLoaded', () => {
               s.style.left = (cx + Math.random() * 28 - 14 - sz / 2) + 'px';
               s.style.top = (cy + Math.random() * 8) + 'px';
               DESK_PIK.layer.appendChild(s);
-              setTimeout(() => s.classList.add('fading'), 10500);
-              setTimeout(() => s.remove(), 12000);
+              setTimeout(() => s.classList.add('fading'), 6500);
+              setTimeout(() => s.remove(), 8000);
             }
             // stardust: tiny glowing motes scattered between the stars
-            for (let k = 0; k < 2 + Math.floor(Math.random() * (deep ? 4 : 2)); k++) {
+            for (let k = 0; k < 1 + Math.floor(Math.random() * (deep ? 2 : 1)); k++) {
               const gi = Math.floor(Math.random() * 9);
               const d = document.createElement('span');
               d.className = 'pik-trail pik-star-dust';
@@ -32843,7 +32846,7 @@ document.addEventListener('DOMContentLoaded', () => {
               d.style.top = (cy - 2 + Math.random() * 12) + 'px';
               DESK_PIK.layer.appendChild(d);
               setTimeout(() => d.classList.add('fading'), 9000);
-              setTimeout(() => d.remove(), 10500);
+              setTimeout(() => d.remove(), 8000);
             }
             // APEX only: soft pixel nebula puffs — the "cloud" in star-cloud
             if (deep && Math.random() < 0.5) {
@@ -32861,7 +32864,7 @@ document.addEventListener('DOMContentLoaded', () => {
               setTimeout(() => p.remove(), 8600);
             }
             const trailsS = DESK_PIK.layer.querySelectorAll('.pik-trail');
-            for (let k = 0; k < trailsS.length - 120; k++) trailsS[k].remove();
+            for (let k = 0; k < trailsS.length - 70; k++) trailsS[k].remove();
             return;
           }
           if (w.sp && w.sp.id === 'captcha' && w.disguised >= 0 && PIK_DISGUISES[w.disguised]) {
@@ -32882,8 +32885,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 s.style.left = (cx + Math.random() * 22 - 11) + 'px';
                 s.style.top = (cy + Math.random() * 8) + 'px';
                 DESK_PIK.layer.appendChild(s);
-                setTimeout(() => s.classList.add('fading'), 10500);
-                setTimeout(() => s.remove(), 12000);
+                setTimeout(() => s.classList.add('fading'), 6500);
+                setTimeout(() => s.remove(), 8000);
               }
             } else {
               w.trackFlip = !w.trackFlip; // left paw, right paw, left paw
@@ -32901,12 +32904,12 @@ document.addEventListener('DOMContentLoaded', () => {
               s.style.left = (cx + (w.trackFlip ? -6 : 2)) + 'px';
               s.style.top = (cy + Math.random() * 6) + 'px';
               DESK_PIK.layer.appendChild(s);
-              const life = tr[0] === 'wisp' ? 2600 : 10500; // ectoplasm evaporates
+              const life = tr[0] === 'wisp' ? 2600 : 6500; // ectoplasm evaporates
               setTimeout(() => s.classList.add('fading'), life);
               setTimeout(() => s.remove(), life + 1500);
             }
             const trailsT = DESK_PIK.layer.querySelectorAll('.pik-trail');
-            for (let k = 0; k < trailsT.length - 120; k++) trailsT[k].remove();
+            for (let k = 0; k < trailsT.length - 70; k++) trailsT[k].remove();
             return;
           }
           if (w.partyMax) { // the APEX celebration walks WITH it: a confetti wake
@@ -32918,11 +32921,11 @@ document.addEventListener('DOMContentLoaded', () => {
               s.style.top = (cy + Math.random() * 10) + 'px';
               s.style.transform = 'rotate(' + Math.floor(Math.random() * 90) + 'deg)';
               DESK_PIK.layer.appendChild(s);
-              setTimeout(() => s.classList.add('fading'), 10500);
-              setTimeout(() => s.remove(), 12000);
+              setTimeout(() => s.classList.add('fading'), 6500);
+              setTimeout(() => s.remove(), 8000);
             }
             const trailsP = DESK_PIK.layer.querySelectorAll('.pik-trail');
-            for (let k = 0; k < trailsP.length - 120; k++) trailsP[k].remove();
+            for (let k = 0; k < trailsP.length - 70; k++) trailsP[k].remove();
             return;
           }
           const posyR = n > 2 ? 15 + n * 3 : 0; // roomy, breathable posies
@@ -32944,11 +32947,11 @@ document.addEventListener('DOMContentLoaded', () => {
             f.style.left = (cx + ox - size / 2) + 'px';
             f.style.top = (cy + oy) + 'px';
             DESK_PIK.layer.appendChild(f);
-            setTimeout(() => f.classList.add('fading'), 10500);
-            setTimeout(() => f.remove(), 12000);
+            setTimeout(() => f.classList.add('fading'), 6500);
+            setTimeout(() => f.remove(), 8000);
           }
           const trails = DESK_PIK.layer.querySelectorAll('.pik-trail');
-          for (let k = 0; k < trails.length - 120; k++) trails[k].remove(); // tidy meadow
+          for (let k = 0; k < trails.length - 70; k++) trails[k].remove(); // tidy meadow
         }
       }
     });
