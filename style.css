@@ -9646,6 +9646,19 @@ html[data-theme="dark"].dream-gameboy .search-result {
 html[data-theme="dark"].dream-gameboy .search-result .sr-title { color: #0f380f; text-shadow: none; }
 html[data-theme="dark"].dream-gameboy .search-result a { color: #0f380f; }
 html[data-theme="dark"].dream-gameboy .quest-rank { color: #9bbc0f; }
+/* v186: DMG CONTRAST PASS, round two — the pik dossier, squad row and
+   swap picker were still wearing midnight purple (hard-coded dark-theme
+   hexes) and sank into the olive. all re-dressed in cartridge greens. */
+html[data-theme="dark"].dream-gameboy .pik-card { background: #9bbc0f; box-shadow: 5px 5px 0 #0f380f; }
+html[data-theme="dark"].dream-gameboy .pik-card-portrait { background: #8bac0f; box-shadow: inset 0 0 0 3px #306230, 3px 3px 0 #0f380f; }
+html[data-theme="dark"].dream-gameboy .pik-card-skill { background: #8bac0f; box-shadow: 2px 2px 0 #0f380f; }
+html[data-theme="dark"].dream-gameboy .pik-card-bio { background: #8bac0f; }
+html[data-theme="dark"].dream-gameboy .pikdex-squadrow { background: #96b512; }
+html[data-theme="dark"].dream-gameboy .pikdex-squad-chip { background: #9bbc0f; }
+html[data-theme="dark"].dream-gameboy .pikdex-squad-name { color: #0f380f; text-shadow: none; }
+html[data-theme="dark"].dream-gameboy .pik-swap-pick { background: #96b512; }
+html[data-theme="dark"].dream-gameboy .pik-swap-pick-title { color: #0f380f; }
+html[data-theme="dark"].dream-gameboy .pik-swap-chip { background: #9bbc0f; color: #0f380f; }
 html[data-theme="dark"].dream-gameboy .resto-vote {
   background: #9bbc0f;
   color: #0f380f;
