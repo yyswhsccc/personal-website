@@ -28221,9 +28221,12 @@ document.addEventListener('DOMContentLoaded', () => {
           px(11, 1, '#ffd400'); // the little gold nail
         }
       },
-      rgbrig() { // the glow is real
-        rim((rx, ry) => ['#ff4d6d', '#7cfc00', '#41e0ff'][(rx + ry) % 3]);
-        if (epic) { star(cx - 3, -1, '#ff4d6d'); star(cx + 3, -1, '#41e0ff'); }
+      rgbrig() { // the glow is real — v190: macaron edition. the full-sat
+        // RGB cycle read as ugly speckle (owner veto); the rig upgraded
+        // its lighting profile to low-saturation pastels. still RGB. softer
+        const MAC = ['#f7cdd8', '#c8e8d8', '#f7ecc8', '#ddd0f0', '#cfe4f2'];
+        rim((rx, ry) => MAC[(rx + ry) % MAC.length]);
+        if (epic) { star(cx - 3, -1, '#ddd0f0'); star(cx + 3, -1, '#f7cdd8'); }
       },
       captcha() { // the human disguise (v165): no glasses, no mustache
         // (both user-decreed too weird). the antenna does the talking:
