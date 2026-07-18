@@ -31478,9 +31478,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // their bloom trails stay on the desk, and a pikmin standing away from
     // its own footprints reads as a glitch, not a homecoming.
     const seats = DESK_PIK.walkers.map((w) => ({ x: w.x, y: w.y, tx: w.tx, ty: w.ty }));
-    const docHidden = document.hidden; // v187: hidden tabs pause CSS
-    // animations but NOT these spawners — skipping while hidden stops the
-    // particle mountain that used to greet the user on return
     DESK_PIK.walkers.forEach((w) => {
       try { if (w.bubbleEl) w.bubbleEl.remove(); if (w.babyEl) w.babyEl.remove(); w.el.remove(); } catch (e) { /* already gone */ }
     });
@@ -32529,6 +32526,9 @@ document.addEventListener('DOMContentLoaded', () => {
       DESK_PIK.sproutAt = now + 16000 + Math.random() * 16000; // brisk regrowth (16-32s)
       deskSprout();
     }
+    // v187.1: this const previously landed in deskPikResync by mistake —
+    // every tick then threw a swallowed ReferenceError and FROZE the desk
+    const docHidden = document.hidden;
     DESK_PIK.walkers.forEach((w) => {
       // the chameleon never settles on a colour — cycles the wheel
       if (w.chameleon && now > w.hueAt) {
