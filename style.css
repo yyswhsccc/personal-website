@@ -6726,6 +6726,44 @@ html[data-theme="dark"] .pik-disg-banner {
   .desk-pik-baby { animation: none; }
 }
 
+/* full-squad swap picker: tap a member, it rests, this pik joins */
+.pik-swap-pick {
+  margin: 8px 10px 12px;
+  padding: 8px;
+  border: 2px dashed var(--purple);
+  border-radius: 4px;
+  background: var(--panel-purple);
+}
+.pik-swap-pick-title {
+  font-family: var(--font-pixel);
+  font-size: 0.8rem;
+  color: var(--purple-dark);
+  text-align: center;
+  margin-bottom: 6px;
+}
+.pik-swap-pick-row { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.pik-swap-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  width: 62px;
+  padding: 6px 2px 5px;
+  background: linear-gradient(180deg, var(--panel), var(--panel-pink));
+  border: 2px solid var(--pink-hot);
+  border-radius: 4px;
+  box-shadow: 2px 2px 0 var(--purple);
+  cursor: pointer;
+  font-family: var(--font-pixel);
+  font-size: 0.62rem;
+  color: var(--ink);
+  transition: transform 0.1s ease;
+}
+.pik-swap-chip img { width: 34px; image-rendering: pixelated; }
+.pik-swap-chip:hover { transform: translateY(-2px); }
+html[data-theme="dark"] .pik-swap-pick { background: #33204a; }
+html[data-theme="dark"] .pik-swap-pick-title { color: var(--purple); }
+html[data-theme="dark"] .pik-swap-chip { background: #2a1440; color: #f6efff; }
 /* the dossier's appearance picker: lock any earned form, purely cosmetic */
 .pik-card-formpick {
   display: flex;

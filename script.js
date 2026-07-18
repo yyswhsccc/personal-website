@@ -32340,11 +32340,51 @@ document.addEventListener('DOMContentLoaded', () => {
       swap.addEventListener('click', () => { pikdexSetActive(ix, false); pikProfileHide(); });
     } else {
       const room = pikdexActives(dex).length < PIK_MAX;
-      swap.textContent = room
-        ? trT('⭐ join the squad', '⭐ rejoindre l\'escouade')
-        : trT('⭐ squad full (6) — rest someone first', '⭐ escouade pleine (6) — repose quelqu\'un');
-      swap.disabled = !room;
-      if (room) swap.addEventListener('click', () => { pikdexSetActive(ix, true); pikProfileHide(); });
+      if (room) {
+        swap.textContent = trT('⭐ join the squad', '⭐ rejoindre l\'escouade');
+        swap.addEventListener('click', () => { pikdexSetActive(ix, true); pikProfileHide(); });
+      } else {
+        // v185: full squad is no longer a dead end — the button OPENS a
+        // picker of the six on duty; tap one to swap it out for this pik
+        swap.textContent = trT('⭐ squad full (6) — swap someone out', '⭐ escouade pleine (6) — échange quelqu\'un');
+        swap.addEventListener('click', () => {
+          const had = card.querySelector('.pik-swap-pick');
+          if (had) { had.remove(); return; } // second tap folds it back up
+          const pick = document.createElement('div');
+          pick.className = 'pik-swap-pick';
+          const tt = document.createElement('div');
+          tt.className = 'pik-swap-pick-title';
+          tt.textContent = trT('who rests? tap a member ↓', 'qui se repose ? touche un membre ↓');
+          pick.appendChild(tt);
+          const rowP = document.createElement('div');
+          rowP.className = 'pik-swap-pick-row';
+          pick.appendChild(rowP);
+          dex.forEach((q, qi) => {
+            if (!q.a) return;
+            const c = document.createElement('button');
+            c.type = 'button';
+            c.className = 'pik-swap-chip';
+            const qForm = typeof pikFormOf === 'function' ? pikFormOf(q) : 1;
+            const im = document.createElement('img');
+            try { im.src = pikSprite(q.sp ? pikEntryColor(q) : hueColor(pikHueOf(q)), q.s || 0, q.sp || null, false, qForm, pikKindKey(q)); } catch (e) { /* sprite shy */ }
+            im.alt = '';
+            c.appendChild(im);
+            const nmq = document.createElement('span');
+            nmq.textContent = pikNameOf(dex, qi);
+            c.appendChild(nmq);
+            c.addEventListener('click', () => {
+              pikdexSetActive(qi, false);
+              pikdexSetActive(ix, true);
+              playSparkleSound();
+              showToast('⭐ ' + trT(pikNameOf(dex, ix) + ' joins — ' + pikNameOf(dex, qi) + ' naps in the deck ♡', pikNameOf(dex, ix) + ' rejoint — ' + pikNameOf(dex, qi) + ' fait la sieste ♡'));
+              pikProfileHide();
+            });
+            rowP.appendChild(c);
+          });
+          card.appendChild(pick);
+          try { pick.scrollIntoView({ block: 'nearest' }); } catch (e) { /* short card */ }
+        });
+      }
     }
     actions.appendChild(swap);
     body.append(port, info);
