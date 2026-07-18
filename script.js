@@ -28072,21 +28072,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (epic && bb.level >= 8) rim('#8fe89b'); // APEX glows only at full charge
       },
-      post() { // v191: the BEEP drawn LOUD — the pale bubbles read as
-        // invisible white flowers (owner veto). now a chunky golden
-        // eighth-note pops off the speaker; APEX adds the pink duet
-        const N = (bx, by, col) => { // a 4×5 pixel eighth-note
-          px(bx, by + 3, col); px(bx + 1, by + 3, col); px(bx, by + 4, col); px(bx + 1, by + 4, col); // head
-          px(bx + 2, by, col); px(bx + 2, by + 1, col); px(bx + 2, by + 2, col); px(bx + 2, by + 3, col); // stem
-          px(bx + 3, by, col); px(bx + 3, by + 1, col); // flag
-        };
-        const r = edgeR(bodyTop + 2), yN = bodyTop - 3;
-        N(r + 1, yN, '#ff9d2e');
-        if (epic) {
-          const l = edgeL(bodyTop + 2);
-          N(l - 5, yN - 1, '#ff5fa8');
-          px(cx, -2, '#ffd400'); px(cx + 1, -1, '#ffd400'); // the POST chime spark
-        }
+      post() { // round beep-bubbles, warm and chubby — SAME petal shape the
+        // owner likes (v191.1: only the colours deepened so they read;
+        // the note experiment was vetoed, shape restored exactly)
+        const r = edgeR(bodyTop + 1);
+        blob(r + 2, bodyTop - 1, '#ffc94d', '#c98a2e');
+        if (epic) { const l = edgeL(bodyTop + 1); blob(l - 2, bodyTop - 2, '#ff9fce', '#e0348a'); px(cx, -2, '#ffd400'); px(cx + 1, -1, '#ffd400'); }
       },
       cumulus() { // v161.8: it grew WEATHER — a pixel rainbow over the cloud
         // (white puffs on a white cloud were pure camouflage)
