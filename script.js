@@ -32374,10 +32374,17 @@ document.addEventListener('DOMContentLoaded', () => {
             c.appendChild(nmq);
             c.addEventListener('click', () => {
               pikdexSetActive(qi, false);
-              pikdexSetActive(ix, true);
+              pikdexSetActive(ix, true); // ONE tap: they rest, THIS pik joins
               playSparkleSound();
               showToast('⭐ ' + trT(pikNameOf(dex, ix) + ' joins — ' + pikNameOf(dex, qi) + ' naps in the deck ♡', pikNameOf(dex, ix) + ' rejoint — ' + pikNameOf(dex, qi) + ' fait la sieste ♡'));
               pikProfileHide();
+              // make the arrival unmissable: the new member's chip flashes gold
+              const nmNew = pikNameOf(dex, ix);
+              const chip = [...document.querySelectorAll('#pikdex-squadrow .pikdex-squad-chip')].find((ch) => (ch.textContent || '').includes(nmNew));
+              if (chip) {
+                chip.classList.add('pik-chip-newjoin');
+                setTimeout(() => { try { chip.classList.remove('pik-chip-newjoin'); } catch (e) { /* row re-rendered */ } }, 2800);
+              }
             });
             rowP.appendChild(c);
           });

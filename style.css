@@ -6764,6 +6764,12 @@ html[data-theme="dark"] .pik-disg-banner {
 html[data-theme="dark"] .pik-swap-pick { background: #33204a; }
 html[data-theme="dark"] .pik-swap-pick-title { color: var(--purple); }
 html[data-theme="dark"] .pik-swap-chip { background: #2a1440; color: #f6efff; }
+/* the fresh recruit's chip flashes gold so the join is unmissable */
+.pikdex-squad-chip.pik-chip-newjoin { animation: pik-newjoin-flash 0.65s ease-in-out 4; }
+@keyframes pik-newjoin-flash {
+  50% { box-shadow: 0 0 0 3px #ffd400, 2px 2px 0 var(--purple), 0 0 16px #ffd400; transform: translateY(-3px); }
+}
+@media (prefers-reduced-motion: reduce) { .pikdex-squad-chip.pik-chip-newjoin { animation: none; } }
 /* the dossier's appearance picker: lock any earned form, purely cosmetic */
 .pik-card-formpick {
   display: flex;
