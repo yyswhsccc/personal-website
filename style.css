@@ -6764,6 +6764,24 @@ html[data-theme="dark"] .pik-disg-banner {
 html[data-theme="dark"] .pik-swap-pick { background: #33204a; }
 html[data-theme="dark"] .pik-swap-pick-title { color: var(--purple); }
 html[data-theme="dark"] .pik-swap-chip { background: #2a1440; color: #f6efff; }
+/* the in-picker trade ceremony (v189): old member naps out, new one flashes in */
+.pik-swap-scene { display: flex; align-items: center; justify-content: center; gap: 14px; margin: 4px 0 2px; }
+.pik-swap-arrow { font-family: var(--font-pixel); font-size: 1.4rem; color: var(--purple-dark); }
+.pik-swap-out { position: relative; filter: grayscale(0.7); animation: pik-swap-droop 0.9s ease forwards; }
+@keyframes pik-swap-droop { to { transform: translateY(4px) rotate(-5deg); opacity: 0.55; } }
+.pik-swap-in { animation: pik-newjoin-flash 0.65s ease-in-out 4; }
+.pik-swap-zz { position: absolute; top: -9px; right: -7px; font-size: 0.85rem; }
+.pik-swap-line {
+  font-family: var(--font-pixel);
+  font-size: 0.8rem;
+  color: var(--ink);
+  text-align: center;
+  margin-top: 7px;
+}
+html[data-theme="dark"] .pik-swap-line { color: #f6efff; }
+html[data-theme="dark"].dream-gameboy .pik-swap-line { color: #0f380f; }
+html[data-theme="dark"].dream-gameboy .pik-swap-arrow { color: #0f380f; }
+@media (prefers-reduced-motion: reduce) { .pik-swap-out, .pik-swap-in { animation: none; } }
 /* the fresh recruit's chip flashes gold so the join is unmissable */
 .pikdex-squad-chip.pik-chip-newjoin { animation: pik-newjoin-flash 0.65s ease-in-out 4; }
 @keyframes pik-newjoin-flash {

@@ -32362,8 +32362,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const rowP = document.createElement('div');
           rowP.className = 'pik-swap-pick-row';
           pick.appendChild(rowP);
-          dex.forEach((q, qi) => {
-            if (!q.a) return;
+          const buildChip = (q, qi) => {
             const c = document.createElement('button');
             c.type = 'button';
             c.className = 'pik-swap-chip';
@@ -32375,19 +32374,55 @@ document.addEventListener('DOMContentLoaded', () => {
             const nmq = document.createElement('span');
             nmq.textContent = pikNameOf(dex, qi);
             c.appendChild(nmq);
+            return c;
+          };
+          dex.forEach((q, qi) => {
+            if (!q.a) return;
+            const c = buildChip(q, qi);
             c.addEventListener('click', () => {
+              if (pick.__done) return;
+              pick.__done = 1;
               pikdexSetActive(qi, false);
               pikdexSetActive(ix, true); // ONE tap: they rest, THIS pik joins
               playSparkleSound();
-              showToast('⭐ ' + trT(pikNameOf(dex, ix) + ' joins — ' + pikNameOf(dex, qi) + ' naps in the deck ♡', pikNameOf(dex, ix) + ' rejoint — ' + pikNameOf(dex, qi) + ' fait la sieste ♡'));
-              pikProfileHide();
-              // make the arrival unmissable: the new member's chip flashes gold
-              const nmNew = pikNameOf(dex, ix);
+              // v189: the ceremony plays RIGHT HERE in the picker — the
+              // corner toast was invisible (owner decree). scene: the old
+              // member drifts off to nap, the new one flashes in, big line
+              const nmNew = pikNameOf(dex, ix), nmOld = pikNameOf(dex, qi);
+              while (pick.firstChild) pick.removeChild(pick.firstChild);
+              const tt2 = document.createElement('div');
+              tt2.className = 'pik-swap-pick-title';
+              tt2.textContent = trT('⭐ TRADE COMPLETE ⭐', '⭐ ÉCHANGE CONCLU ⭐');
+              pick.appendChild(tt2);
+              const scene = document.createElement('div');
+              scene.className = 'pik-swap-scene';
+              const outChip = buildChip(q, qi);
+              outChip.disabled = true;
+              outChip.classList.add('pik-swap-out');
+              const zz = document.createElement('span');
+              zz.className = 'pik-swap-zz';
+              zz.textContent = '💤';
+              outChip.appendChild(zz);
+              const arrow = document.createElement('span');
+              arrow.className = 'pik-swap-arrow';
+              arrow.textContent = '→';
+              const inChip = buildChip(dex[ix], ix);
+              inChip.disabled = true;
+              inChip.classList.add('pik-swap-in');
+              scene.appendChild(outChip);
+              scene.appendChild(arrow);
+              scene.appendChild(inChip);
+              pick.appendChild(scene);
+              const line = document.createElement('div');
+              line.className = 'pik-swap-line';
+              line.textContent = trT(nmNew + ' joins the squad!! ' + nmOld + ' naps in the deck ♡', nmNew + ' rejoint l\'escouade !! ' + nmOld + ' fait la sieste ♡');
+              pick.appendChild(line);
               const chip = [...document.querySelectorAll('#pikdex-squadrow .pikdex-squad-chip')].find((ch) => (ch.textContent || '').includes(nmNew));
               if (chip) {
                 chip.classList.add('pik-chip-newjoin');
                 setTimeout(() => { try { chip.classList.remove('pik-chip-newjoin'); } catch (e) { /* row re-rendered */ } }, 2800);
               }
+              setTimeout(() => { try { pikProfileHide(); } catch (e) { /* already closed */ } }, 3000);
             });
             rowP.appendChild(c);
           });
