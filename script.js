@@ -28224,9 +28224,11 @@ document.addEventListener('DOMContentLoaded', () => {
       rgbrig() { // the glow is real — v190: macaron edition. the full-sat
         // RGB cycle read as ugly speckle (owner veto); the rig upgraded
         // its lighting profile to low-saturation pastels. still RGB. softer
-        const MAC = ['#f7cdd8', '#c8e8d8', '#f7ecc8', '#ddd0f0', '#cfe4f2'];
+        // v190.1: paler still (owner: saturation STILL too high) — these
+        // are macarons seen through morning fog
+        const MAC = ['#fae3ea', '#e0f2e9', '#faf3dd', '#ece5f7', '#e4eff7'];
         rim((rx, ry) => MAC[(rx + ry) % MAC.length]);
-        if (epic) { star(cx - 3, -1, '#ddd0f0'); star(cx + 3, -1, '#f7cdd8'); }
+        if (epic) { star(cx - 3, -1, '#ece5f7'); star(cx + 3, -1, '#fae3ea'); }
       },
       captcha() { // the human disguise (v165): no glasses, no mustache
         // (both user-decreed too weird). the antenna does the talking:
