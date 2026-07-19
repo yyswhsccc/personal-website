@@ -6710,11 +6710,12 @@ html[data-theme="dark"] .pik-disg-banner {
 .pik-bsod-pane {
   position: absolute;
   width: 64px;
-  height: 46px;
-  background: rgba(8, 39, 160, 0.45);
-  backdrop-filter: grayscale(1) brightness(1.15) sepia(1) hue-rotate(185deg) saturate(2.6);
-  -webkit-backdrop-filter: grayscale(1) brightness(1.15) sepia(1) hue-rotate(185deg) saturate(2.6);
-  border: 2px solid rgba(8, 39, 160, 0.6);
+  height: 44px;
+  /* v196: a PURE bluescreen, the bsod dream's own colors — solid
+     #0a23a8, white frame, white type. no translucency (owner decree) */
+  background: #0a23a8;
+  border: 2px solid #ffffff;
+  box-shadow: 2px 2px 0 rgba(0, 0, 30, 0.6);
   border-radius: 2px;
   overflow: hidden;
   pointer-events: none;
@@ -6722,10 +6723,10 @@ html[data-theme="dark"] .pik-disg-banner {
   font-family: var(--font-pixel);
   font-size: 7px;
   line-height: 1.15;
-  color: #dfe9ff;
+  color: #ffffff;
   animation: pik-bsod-hover 2.8s ease-in-out infinite alternate;
 }
-.pik-bsod-frag { position: absolute; white-space: nowrap; text-shadow: 1px 1px 0 rgba(4, 16, 70, 0.85); }
+.pik-bsod-frag { position: absolute; white-space: nowrap; color: #ffffff; }
 @keyframes pik-bsod-hover { from { transform: translateY(0); } to { transform: translateY(-4px); } }
 @media (prefers-reduced-motion: reduce) { .pik-bsod-pane { animation: none; } }
 /* Merge APEX (v193): translucent when full — you can SEE the branches */
@@ -6733,8 +6734,8 @@ html[data-theme="dark"] .pik-disg-banner {
   opacity: 0.68;
   filter: drop-shadow(0 0 6px rgba(201, 167, 245, 0.85));
 }
-.desk-pik.pik-merge-full { transition: transform 0.5s ease; transform-origin: 50% 80%; }
-.desk-pik.pik-swallowed { pointer-events: none; transform: scale(0.68); transition: transform 0.4s ease; }
+.desk-pik.pik-merge-full { transition: transform 0.5s ease; transform-origin: 50% 50%; }
+.desk-pik.pik-swallowed { pointer-events: none; transform: scale(0.5); transition: transform 0.4s ease; }
 .desk-pik.pik-conflict-bounce { animation: pik-conflict-fling 0.8s cubic-bezier(0.2, 0.8, 0.3, 1); }
 @keyframes pik-conflict-fling {
   0% { transform: scale(1) rotate(0deg); }

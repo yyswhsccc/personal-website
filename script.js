@@ -32593,8 +32593,10 @@ document.addEventListener('DOMContentLoaded', () => {
       // CSS animations still running ("animation照常"), everything else off
       if (w.swallowedBy) {
         const host = w.swallowedBy;
-        w.x = host.x + (w.bellyOx || 8);
-        w.y = host.y + (w.bellyOy || 14);
+        const hw = host.el.offsetWidth || 44, hh = host.el.offsetHeight || 48;
+        const vw = (w.el.offsetWidth || 44) * 0.5, vh = (w.el.offsetHeight || 48) * 0.5;
+        w.x = host.x + hw / 2 - vw / 2 + (w.bellyJx || 0);
+        w.y = host.y + hh * 0.52 - vh / 2 + (w.bellyJy || 0);
         w.tx = w.x; w.ty = w.y;
         w.el.style.left = w.x + 'px';
         w.el.style.top = w.y + 'px';
@@ -32823,8 +32825,9 @@ document.addEventListener('DOMContentLoaded', () => {
       // BSOD Jr. APEX: the pocket bluescreen drifts after it (lagged lerp,
       // so it trails), and every few seconds a DIFFERENT crash peeks out
       if (w.bsodPane) {
-        w.paneX += ((w.x - 34) - w.paneX) * 0.07;
-        w.paneY += (w.y - w.paneY) * 0.07;
+        const bw = w.el.offsetWidth || 44;
+        w.paneX += ((w.x + bw / 2 - 32) - w.paneX) * 0.09; // centered overhead
+        w.paneY += ((w.y - 54) - w.paneY) * 0.09;
         w.bsodPane.style.left = w.paneX + 'px';
         w.bsodPane.style.top = w.paneY + 'px';
         if (!docHidden && now > (w.bsodFragAt || 0)) {
@@ -32868,15 +32871,17 @@ document.addEventListener('DOMContentLoaded', () => {
               playTone(140, 'sawtooth', 0.12, 0.12, 0.05);
             } else { // merged. swallowed whole. both are kept ♡
               t.swallowedBy = w;
-              t.bellyOx = 5 + Math.random() * 15;
-              t.bellyOy = 11 + Math.random() * 10;
+              t.bellyJx = Math.random() * 20 - 10; // jitter around the CENTER
+              t.bellyJy = Math.random() * 14 - 2;
               t.el.classList.add('pik-swallowed');
               t.el.style.zIndex = 4;
               w.el.style.zIndex = 5;
               w.belly = w.belly || [];
               w.belly.push(t);
               w.el.classList.add('pik-merge-full');
-              w.el.style.transform = 'scale(' + Math.min(1.9, 1 + w.belly.length * 0.13) + ')';
+              // v196: REAL growth — first merge balloons it to 1.6x, each
+              // extra branch +0.25x, so the square body fully WRAPS its meals
+              w.el.style.transform = 'scale(' + Math.min(2.4, 1.35 + w.belly.length * 0.25) + ')';
               deskPikSay(w, trT('branch merged ♡', 'branche fusionnée ♡'));
               playTone(520, 'triangle', 0.08, 0, 0.03);
               playTone(300, 'triangle', 0.1, 0.11, 0.05); // the gulp
@@ -32908,7 +32913,7 @@ document.addEventListener('DOMContentLoaded', () => {
             deskPikSay(w, trT('git revert — maintenance ✗', 'git revert — maintenance ✗'));
             playTone(400, 'square', 0.07, 0, 0.03);
             playTone(640, 'square', 0.06, 0.09, 0.02); // pop!
-            if (w.belly.length) w.el.style.transform = 'scale(' + Math.min(1.9, 1 + w.belly.length * 0.13) + ')';
+            if (w.belly.length) w.el.style.transform = 'scale(' + Math.min(2.4, 1.35 + w.belly.length * 0.25) + ')';
             else { w.el.classList.remove('pik-merge-full'); w.el.style.transform = ''; }
           }
         }
