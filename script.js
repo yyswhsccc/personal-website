@@ -32861,7 +32861,9 @@ document.addEventListener('DOMContentLoaded', () => {
         w.bsodPane.style.top = w.paneY + 'px';
         if (!docHidden && now > (w.bsodFragAt || 0)) {
           w.bsodFragAt = now + 2400 + Math.random() * 2600;
-          const FRAGS = [':(', 'IRQL_NOT_LESS_OR_EQUAL', '0x0000007B', 'CRITICAL_PROCESS_DIED', 'collecting error info… 43%', 'PAGE_FAULT_IN_NONPAGED_AREA', '*** STOP: 0x0000001E', 'physical memory dump ♡', 'KMODE_EXCEPTION_NOT_HANDLED', '100% complete (it is not)'];
+          // v198: NO words on the bluescreen (owner decree) — only crash
+          // kaomoji and symbols. the red ❌ was specifically requested
+          const FRAGS = [':(', ':-(', '(×_×)', '>_<', '(ToT)', '❌', '⚠️', '⛔', '💥', '❗', '❌❌', '(ó_ò)'];
           w.bsodFrag.textContent = FRAGS[Math.floor(Math.random() * FRAGS.length)];
           const corner = Math.floor(Math.random() * 4);
           w.bsodFrag.style.left = corner % 2 ? 'auto' : '3px';

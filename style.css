@@ -6726,7 +6726,7 @@ html[data-theme="dark"] .pik-disg-banner {
   color: #ffffff;
   animation: pik-bsod-hover 2.8s ease-in-out infinite alternate;
 }
-.pik-bsod-frag { position: absolute; white-space: nowrap; color: #ffffff; }
+.pik-bsod-frag { position: absolute; white-space: nowrap; color: #ffffff; font-size: 12px; } /* v198: kaomoji-sized */
 @keyframes pik-bsod-hover { from { transform: translateY(0); } to { transform: translateY(-4px); } }
 @media (prefers-reduced-motion: reduce) { .pik-bsod-pane { animation: none; } }
 /* Merge APEX (v193): translucent when full — you can SEE the branches */
