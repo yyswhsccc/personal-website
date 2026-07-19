@@ -31064,6 +31064,27 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
     });
+    // BSOD Jr. APEX (v194): a pocket bluescreen pane floats in its wake.
+    // real backdrop-filter — whatever drifts underneath goes full BSOD
+    if (spId === 'bsodjr' && form >= 3) {
+      const pane = document.createElement('div');
+      pane.className = 'pik-bsod-pane';
+      const frag = document.createElement('span');
+      frag.className = 'pik-bsod-frag';
+      frag.textContent = ':(';
+      frag.style.left = '3px';
+      frag.style.top = '2px';
+      pane.appendChild(frag);
+      DESK_PIK.layer.appendChild(pane);
+      el.style.zIndex = 3; // the owner walks ABOVE its own filter
+      w.bsodPane = pane;
+      w.bsodFrag = frag;
+      w.paneX = (w.x || 40) - 34;
+      w.paneY = (w.y || 40) + 2;
+      w.bsodFragAt = 0;
+      pane.style.left = w.paneX + 'px';
+      pane.style.top = w.paneY + 'px';
+    }
     // the pointer family (v161.8): a pink baby cursor toddles behind
     if (spId === 'pointer' && form >= 2) {
       const be = document.createElement('div');
@@ -31487,7 +31508,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // its own footprints reads as a glitch, not a homecoming.
     const seats = DESK_PIK.walkers.map((w) => ({ x: w.x, y: w.y, tx: w.tx, ty: w.ty }));
     DESK_PIK.walkers.forEach((w) => {
-      try { if (w.bubbleEl) w.bubbleEl.remove(); if (w.babyEl) w.babyEl.remove(); w.el.remove(); } catch (e) { /* already gone */ }
+      try { if (w.bubbleEl) w.bubbleEl.remove(); if (w.babyEl) w.babyEl.remove(); if (w.bsodPane) w.bsodPane.remove(); w.el.remove(); } catch (e) { /* already gone */ }
     });
     DESK_PIK.walkers = [];
     deskRoster().slice(0, PIK_MAX).forEach((rr, i) => {
@@ -32783,6 +32804,24 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (e) { /* it played it TOO cool */ }
           }, 2680);
           w.disguiseAt = now + (w.disguiseDeep ? 6500 + Math.random() * 6500 : 13000 + Math.random() * 12000);
+        }
+      }
+      // BSOD Jr. APEX: the pocket bluescreen drifts after it (lagged lerp,
+      // so it trails), and every few seconds a DIFFERENT crash peeks out
+      if (w.bsodPane) {
+        w.paneX += ((w.x - 34) - w.paneX) * 0.07;
+        w.paneY += (w.y - w.paneY) * 0.07;
+        w.bsodPane.style.left = w.paneX + 'px';
+        w.bsodPane.style.top = w.paneY + 'px';
+        if (!docHidden && now > (w.bsodFragAt || 0)) {
+          w.bsodFragAt = now + 2400 + Math.random() * 2600;
+          const FRAGS = [':(', 'IRQL_NOT_LESS_OR_EQUAL', '0x0000007B', 'CRITICAL_PROCESS_DIED', 'collecting error info… 43%', 'PAGE_FAULT_IN_NONPAGED_AREA', '*** STOP: 0x0000001E', 'physical memory dump ♡', 'KMODE_EXCEPTION_NOT_HANDLED', '100% complete (it is not)'];
+          w.bsodFrag.textContent = FRAGS[Math.floor(Math.random() * FRAGS.length)];
+          const corner = Math.floor(Math.random() * 4);
+          w.bsodFrag.style.left = corner % 2 ? 'auto' : '3px';
+          w.bsodFrag.style.right = corner % 2 ? '3px' : 'auto';
+          w.bsodFrag.style.top = corner < 2 ? '2px' : 'auto';
+          w.bsodFrag.style.bottom = corner < 2 ? 'auto' : '2px';
         }
       }
       if (w.swallowedBy) return; // digesting: no behaviors of its own

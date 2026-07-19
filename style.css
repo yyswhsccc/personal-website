@@ -6705,6 +6705,29 @@ html[data-theme="dark"] .pik-disg-banner {
   70% { opacity: 1; }
   100% { transform: translate(var(--bx, 0px), var(--by, -20px)) rotate(var(--br, 90deg)); opacity: 0; }
 }
+/* BSOD Jr. APEX (v194): the pocket bluescreen — a REAL backdrop filter.
+   whatever it floats over is rendered in honest crash-blue */
+.pik-bsod-pane {
+  position: absolute;
+  width: 64px;
+  height: 46px;
+  background: rgba(8, 39, 160, 0.45);
+  backdrop-filter: grayscale(1) brightness(1.15) sepia(1) hue-rotate(185deg) saturate(2.6);
+  -webkit-backdrop-filter: grayscale(1) brightness(1.15) sepia(1) hue-rotate(185deg) saturate(2.6);
+  border: 2px solid rgba(8, 39, 160, 0.6);
+  border-radius: 2px;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 2;
+  font-family: var(--font-pixel);
+  font-size: 7px;
+  line-height: 1.15;
+  color: #dfe9ff;
+  animation: pik-bsod-hover 2.8s ease-in-out infinite alternate;
+}
+.pik-bsod-frag { position: absolute; white-space: nowrap; text-shadow: 1px 1px 0 rgba(4, 16, 70, 0.85); }
+@keyframes pik-bsod-hover { from { transform: translateY(0); } to { transform: translateY(-4px); } }
+@media (prefers-reduced-motion: reduce) { .pik-bsod-pane { animation: none; } }
 /* Merge APEX (v193): translucent when full — you can SEE the branches */
 .desk-pik.pik-merge-full img {
   opacity: 0.68;
