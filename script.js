@@ -4641,9 +4641,11 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   function cloudGet(name, strict) {
     // strict callers get null on a failed read — a consume ledger must never
-    // mistake "rate-limited / offline" for "zero, replay the whole history"
+    // mistake "rate-limited / offline" for "zero, replay the whole history".
+    // v195: 404 is different — the abacus is ANSWERING "this key was never
+    // created", which is a definitive honest zero, not an ambiguity
     return fetch(`${ACHV_API}/get/${ACHV_NS}/${name}`)
-      .then((r) => (r.ok ? r.json() : null))
+      .then((r) => (r.ok ? r.json() : (r.status === 404 ? { value: 0 } : null)))
       .then((d) => (d && typeof d.value === 'number' ? d.value : (strict ? null : 0)))
       .catch(() => (strict ? null : 0));
   }
@@ -31333,22 +31335,32 @@ document.addEventListener('DOMContentLoaded', () => {
   function pikCountTotal() { const c = pikCounts(); let t = 0; Object.keys(c).forEach((k) => { t += c[k] || 0; }); return t; }
   const PIKLB_TIERS = [10, 30, 72, 100, 140, 200, 300];
   function pikLbTier(total) { let ix = 0; PIKLB_TIERS.forEach((t, i) => { if (total >= t) ix = i + 1; }); return ix; }
-  var pikLbInflight = {};
+  var pikLbChainBusy = false;
   function pikLbMaybeHit() {
+    // v195: tier balloons go up ONE at a time, 1.3s apart — the old
+    // burst-of-four tripped the abacus rate limit (429), the mark never
+    // advanced, and every subsequent pluck re-fired the whole storm.
+    // any failure now naps the whole chain for 90s
+    if (Date.now() < store.get('yos-piklb-cool', 0)) return;
     const tier = pikLbTier(pikCountTotal());
     const sent = store.get('yos-piklb-sent', 0);
-    if (tier > sent && navigator.onLine) {
-      // the mark advances only when the abacus ANSWERS: a hit lost mid-flight
-      // retries on the next pluck instead of ghosting the gardener forever
-      for (let i = sent + 1; i <= tier; i++) {
-        if (pikLbInflight[i]) continue; // one balloon per tier per flight
-        pikLbInflight[i] = true;
-        fetch(`${ACHV_API}/hit/${ACHV_NS}/piklb-t${i}`)
-          .then((r) => { if (r.ok) store.set('yos-piklb-sent', Math.max(store.get('yos-piklb-sent', 0), i)); })
-          .catch(() => {})
-          .then(() => { delete pikLbInflight[i]; });
-      }
-    }
+    if (tier <= sent || !navigator.onLine || pikLbChainBusy) return;
+    pikLbChainBusy = true;
+    const next = (i) => {
+      if (i > pikLbTier(pikCountTotal())) { pikLbChainBusy = false; return; }
+      fetch(`${ACHV_API}/hit/${ACHV_NS}/piklb-t${i}`)
+        .then((r) => {
+          if (r.ok) {
+            store.set('yos-piklb-sent', Math.max(store.get('yos-piklb-sent', 0), i));
+            setTimeout(() => next(i + 1), 1300);
+          } else {
+            store.set('yos-piklb-cool', Date.now() + 90000);
+            pikLbChainBusy = false;
+          }
+        })
+        .catch(() => { store.set('yos-piklb-cool', Date.now() + 90000); pikLbChainBusy = false; });
+    };
+    next(sent + 1);
   }
   function pikEvolveCelebrate(entry, key, form) {
     const sp = entry.sp && pikSpecies(entry.sp);
@@ -31906,7 +31918,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!navigator.onLine) { el.textContent = mine + ' · ' + trT('🌍 the worldwide meadow needs internet ♡', '🌍 la prairie mondiale a besoin d\'internet ♡'); return; }
     el.textContent = mine + ' · ' + trT('🌍 contacting the worldwide meadow…', '🌍 contact de la prairie mondiale…');
     Promise.all(Array.from({ length: PIKLB_TIERS.length + 1 }, (_, i) =>
-      fetch(`${ACHV_API}/get/${ACHV_NS}/piklb-t${i}`).then((r) => (r.ok ? r.json() : { value: 0 })).then((d) => Math.max(0, Number(d.value) || 0)).catch(() => 0)
+      i === 0
+        ? Promise.resolve(0) // tier 0 is "no tier": never written, eternally 404 — stop asking
+        : fetch(`${ACHV_API}/get/${ACHV_NS}/piklb-t${i}`).then((r) => (r.ok ? r.json() : { value: 0 })).then((d) => Math.max(0, Number(d.value) || 0)).catch(() => 0)
     )).then((counts) => { pikLbCache = counts; pikLbCacheAt = Date.now(); paint(counts); })
       .catch(() => { el.textContent = mine; });
   }
@@ -34627,6 +34641,8 @@ document.addEventListener('DOMContentLoaded', () => {
   function watchPullArm() {
     if (watchPullTimer) return;
     if (!store.get('yos-watch-paired', 0)) return;
+    store.set('yos-wpull-next', 0); // a fresh arm always starts eager
+    store.set('yos-wpull-idle', 0);
     watchPullTimer = setInterval(watchPullSync, 60000); // v86: 150s felt like dial-up — the wrist deserves a minute
     setTimeout(watchPullSync, 5000);
     if (!watchVisWired) {
@@ -34639,6 +34655,7 @@ document.addEventListener('DOMContentLoaded', () => {
   var watchPullBusy = false;
   function watchPullSync() {
     if (watchPullBusy || !navigator.onLine || !cloudSlot || !store.get('yos-watch-paired', 0)) return;
+    if (Date.now() < store.get('yos-wpull-next', 0)) return; // v195: dormant-wrist backoff — no fetches while the ledger sleeps
     // cross-tab lock: watchPullBusy only guards THIS tab — two tabs of the
     // same save reading the ledger in the same breath each granted the same
     // plucks twice. localStorage has no compare-and-swap, so a same-instant
@@ -34651,7 +34668,13 @@ document.addEventListener('DOMContentLoaded', () => {
       .then(([wgp, wgs, wpt, wps]) => {
         // any failed read ABORTS the pull: a wgs/wps that "reads" 0 on a
         // freshly re-paired device would replay all consumed history as new
-        if (wgp === null || wgs === null || wpt === null || wps === null) return;
+        if (wgp === null || wgs === null || wpt === null || wps === null) { store.set('yos-wpull-next', Date.now() + 120000); return; } // abacus grumpy: give it 2 minutes
+        // v195: a wrist with nothing on it yet gets polled gently — 2min,
+        // 4min, capped at 5min; ANY sign of life resets to the eager 60s
+        const wristAlive = (wgp || 0) > 0 || (wpt || 0) > 0;
+        const idleRuns = wristAlive ? 0 : store.get('yos-wpull-idle', 0) + 1;
+        store.set('yos-wpull-idle', idleRuns);
+        store.set('yos-wpull-next', wristAlive ? 0 : Date.now() + Math.min(300000, 120000 * idleRuns));
         const seenP = Math.max(store.get('yos-wgp-seen', 0), wgs || 0);
         const deltaP = Math.max(0, (wgp || 0) - seenP);
         const newPlucks = Math.min(deltaP, 12);
