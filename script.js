@@ -31020,6 +31020,10 @@ document.addEventListener('DOMContentLoaded', () => {
       starTrail: spId === 'pointer' && form >= 2, // the pointer family walks on stardust
       starNebula: spId === 'pointer' && form >= 3, // APEX: the full glowing nebula
       glitchy: spId === 'bitflip' && form >= 3, glitchAt: 0, // APEX bit flip: it ACTUALLY flips
+      // the wheel pik NAMED Merge (hue bucket 35 of 48): at APEX it merges
+      // BRANCHES — i.e. swallows colleagues whole. see the tick (v193)
+      mergeApex: !spId && !chameleon && hue !== null && Math.floor((((hue % 360) + 360) % 360) / 7.5) === 35 && form >= 3,
+      mergeAt: 0, revertAt: 0, mergeTarget: null, belly: null,
       disguiser: spId === 'captcha' && form >= 2, disguiseDeep: spId === 'captcha' && form >= 3, disguiseAt: Date.now() + 4000 + Math.random() * 5000, disguised: -1, // Not A Robot: the costumes (fresh walkers idle first — a resync mid-reveal must not cut the show)
       framedSp: spId === 'y2kbug' && form >= 2, // sprites on the 0.9s frame clock
       cronRing: spId === 'cronjob' && form >= 2, lastMin: -1, // it rings ON the minute
@@ -32550,6 +32554,18 @@ document.addEventListener('DOMContentLoaded', () => {
     // every tick then threw a swallowed ReferenceError and FROZE the desk
     const docHidden = document.hidden;
     DESK_PIK.walkers.forEach((w) => {
+      // v193: swallowed piks live INSIDE the Merge — pinned to its belly,
+      // CSS animations still running ("animation照常"), everything else off
+      if (w.swallowedBy) {
+        const host = w.swallowedBy;
+        w.x = host.x + (w.bellyOx || 8);
+        w.y = host.y + (w.bellyOy || 14);
+        w.tx = w.x; w.ty = w.y;
+        w.el.style.left = w.x + 'px';
+        w.el.style.top = w.y + 'px';
+      }
+    });
+    DESK_PIK.walkers.forEach((w) => {
       // the chameleon never settles on a colour — cycles the wheel
       if (w.chameleon && now > w.hueAt) {
         w.hueAt = now + 480;
@@ -32767,6 +32783,81 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (e) { /* it played it TOO cool */ }
           }, 2680);
           w.disguiseAt = now + (w.disguiseDeep ? 6500 + Math.random() * 6500 : 13000 + Math.random() * 12000);
+        }
+      }
+      if (w.swallowedBy) return; // digesting: no behaviors of its own
+      // Merge APEX (v193): it merges BRANCHES. it stalks a colleague,
+      // swallows it whole (translucent belly, voices inside, animations
+      // intact), grows with every merge, sometimes hits a MERGE CONFLICT
+      // and bounces off, and occasionally git-reverts one back out
+      if (w.mergeApex) {
+        if (now > (w.mergeAt || 0)) {
+          w.mergeAt = now + 9000 + Math.random() * 7000;
+          const prey = DESK_PIK.walkers.filter((v) => v !== w && !v.swallowedBy && !v.mergeApex);
+          if (prey.length) w.mergeTarget = prey[Math.floor(Math.random() * prey.length)];
+        }
+        const t = w.mergeTarget;
+        if (t && (t.swallowedBy || DESK_PIK.walkers.indexOf(t) < 0)) w.mergeTarget = null;
+        else if (t) {
+          w.tx = t.x; w.ty = t.y; // the stalk
+          if (Math.hypot(t.x - w.x, t.y - w.y) < 34) {
+            w.mergeTarget = null;
+            if (Math.random() < 0.3) { // MERGE CONFLICT — both refuse to combine
+              t.el.classList.add('pik-conflict-bounce');
+              setTimeout(() => { try { t.el.classList.remove('pik-conflict-bounce'); } catch (e) { /* resolved */ } }, 800);
+              const ang = Math.atan2(t.y - w.y, t.x - w.x) || Math.random() * 6.283;
+              const rB = DESK_PIK.layer.getBoundingClientRect();
+              t.x = Math.max(8, Math.min(Math.max(60, rB.width - 50), t.x + Math.cos(ang) * 130));
+              t.y = Math.max(8, Math.min(Math.max(60, rB.height - 50), t.y + Math.sin(ang) * 130));
+              t.tx = t.x; t.ty = t.y;
+              deskPikSay(w, trT('MERGE CONFLICT!!', 'CONFLIT DE MERGE !!'));
+              playTone(180, 'sawtooth', 0.12, 0, 0.05);
+              playTone(140, 'sawtooth', 0.12, 0.12, 0.05);
+            } else { // merged. swallowed whole. both are kept ♡
+              t.swallowedBy = w;
+              t.bellyOx = 5 + Math.random() * 15;
+              t.bellyOy = 11 + Math.random() * 10;
+              t.el.classList.add('pik-swallowed');
+              t.el.style.zIndex = 4;
+              w.el.style.zIndex = 5;
+              w.belly = w.belly || [];
+              w.belly.push(t);
+              w.el.classList.add('pik-merge-full');
+              w.el.style.transform = 'scale(' + Math.min(1.9, 1 + w.belly.length * 0.13) + ')';
+              deskPikSay(w, trT('branch merged ♡', 'branche fusionnée ♡'));
+              playTone(520, 'triangle', 0.08, 0, 0.03);
+              playTone(300, 'triangle', 0.1, 0.11, 0.05); // the gulp
+              t.sayAt = now + 4000 + Math.random() * 4000;
+              w.revertAt = now + 11000 + Math.random() * 8000; // digestion grace
+            }
+          }
+        }
+        // muffled voices from inside the belly
+        (w.belly || []).forEach((v) => {
+          if (now > (v.sayAt || 0)) {
+            v.sayAt = now + 7000 + Math.random() * 6000;
+            if (!docHidden) deskPikSay(v, 'pik…?');
+            playTone(700 + Math.random() * 200, 'triangle', 0.03, 0, 0.02);
+          }
+        });
+        // git revert: the maintenance cost got too high
+        if ((w.belly || []).length && now > (w.revertAt || 0)) {
+          w.revertAt = now + 12000 + Math.random() * 9000;
+          if (Math.random() < 0.45) {
+            const v = w.belly.pop();
+            v.swallowedBy = null;
+            v.el.classList.remove('pik-swallowed');
+            v.el.style.zIndex = '';
+            const rV = DESK_PIK.layer.getBoundingClientRect();
+            v.x = Math.max(8, Math.min(Math.max(60, rV.width - 50), w.x + (Math.random() * 120 - 60)));
+            v.y = Math.max(8, Math.min(Math.max(60, rV.height - 50), w.y + 26 + Math.random() * 40));
+            v.tx = v.x; v.ty = v.y;
+            deskPikSay(w, trT('git revert — maintenance ✗', 'git revert — maintenance ✗'));
+            playTone(400, 'square', 0.07, 0, 0.03);
+            playTone(640, 'square', 0.06, 0.09, 0.02); // pop!
+            if (w.belly.length) w.el.style.transform = 'scale(' + Math.min(1.9, 1 + w.belly.length * 0.13) + ')';
+            else { w.el.classList.remove('pik-merge-full'); w.el.style.transform = ''; }
+          }
         }
       }
       // bit flip APEX: every few seconds the bit ACTUALLY flips — a glitch

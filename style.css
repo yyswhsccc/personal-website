@@ -6705,6 +6705,21 @@ html[data-theme="dark"] .pik-disg-banner {
   70% { opacity: 1; }
   100% { transform: translate(var(--bx, 0px), var(--by, -20px)) rotate(var(--br, 90deg)); opacity: 0; }
 }
+/* Merge APEX (v193): translucent when full — you can SEE the branches */
+.desk-pik.pik-merge-full img {
+  opacity: 0.68;
+  filter: drop-shadow(0 0 6px rgba(201, 167, 245, 0.85));
+}
+.desk-pik.pik-merge-full { transition: transform 0.5s ease; transform-origin: 50% 80%; }
+.desk-pik.pik-swallowed { pointer-events: none; transform: scale(0.68); transition: transform 0.4s ease; }
+.desk-pik.pik-conflict-bounce { animation: pik-conflict-fling 0.8s cubic-bezier(0.2, 0.8, 0.3, 1); }
+@keyframes pik-conflict-fling {
+  0% { transform: scale(1) rotate(0deg); }
+  30% { transform: scale(1.18) rotate(-16deg); }
+  60% { transform: scale(0.92) rotate(12deg); }
+  100% { transform: scale(1) rotate(0deg); }
+}
+@media (prefers-reduced-motion: reduce) { .desk-pik.pik-conflict-bounce { animation: none; } }
 /* bit flip APEX: the bit ACTUALLY flips — a mirrored glitch stutter.
    lives on the WRAPPER (the img owns pik-bob + species fx filters) */
 .desk-pik.pik-glitch { animation: pik-glitch-jolt 0.42s steps(5); }
