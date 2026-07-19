@@ -31104,6 +31104,25 @@ document.addEventListener('DOMContentLoaded', () => {
     DESK_PIK.walkers.push(w);
     return w;
   }
+  // v197: spit one branch back out (used by git-revert AND the 4-branch
+  // overflow rule). victims come out full-size — they never shrank
+  function mergeSpitOne(w, idx, lineEn, lineFr) {
+    const v = (w.belly || [])[idx];
+    if (!v) return;
+    w.belly.splice(idx, 1);
+    v.swallowedBy = null;
+    v.el.classList.remove('pik-swallowed');
+    v.el.style.zIndex = '';
+    const r = DESK_PIK.layer.getBoundingClientRect();
+    v.x = Math.max(8, Math.min(Math.max(60, r.width - 50), w.x + (Math.random() * 160 - 80)));
+    v.y = Math.max(8, Math.min(Math.max(60, r.height - 50), w.y + 30 + Math.random() * 50));
+    v.tx = v.x; v.ty = v.y;
+    deskPikSay(w, trT(lineEn, lineFr));
+    playTone(400, 'square', 0.07, 0, 0.03);
+    playTone(640, 'square', 0.06, 0.09, 0.02);
+    if (w.belly.length) w.el.style.transform = 'scale(' + (1 + 0.9 * w.belly.length) + ')';
+    else { w.el.classList.remove('pik-merge-full'); w.el.style.transform = ''; }
+  }
   function deskPikSay(w, text) {
     if (w.bubbleEl) w.bubbleEl.remove();
     const s = document.createElement('span');
@@ -32593,10 +32612,20 @@ document.addEventListener('DOMContentLoaded', () => {
       // CSS animations still running ("animation照常"), everything else off
       if (w.swallowedBy) {
         const host = w.swallowedBy;
+        const list = host.belly || [];
+        const n = Math.max(1, Math.min(list.length, 4));
+        const idx = Math.max(0, list.indexOf(w));
+        const SLOTS = [
+          [[0, 2]],
+          [[-16, 0], [16, 6]],
+          [[-20, -6], [20, -2], [0, 18]],
+          [[-22, -10], [22, -10], [-15, 18], [19, 20]]
+        ];
+        const off = (SLOTS[n - 1] || SLOTS[3])[Math.min(idx, n - 1)] || [0, 0];
         const hw = host.el.offsetWidth || 44, hh = host.el.offsetHeight || 48;
-        const vw = (w.el.offsetWidth || 44) * 0.5, vh = (w.el.offsetHeight || 48) * 0.5;
-        w.x = host.x + hw / 2 - vw / 2 + (w.bellyJx || 0);
-        w.y = host.y + hh * 0.52 - vh / 2 + (w.bellyJy || 0);
+        const vw = w.el.offsetWidth || 44, vh = w.el.offsetHeight || 48;
+        w.x = host.x + hw / 2 - vw / 2 + off[0];
+        w.y = host.y + hh / 2 - vh / 2 + off[1];
         w.tx = w.x; w.ty = w.y;
         w.el.style.left = w.x + 'px';
         w.el.style.top = w.y + 'px';
@@ -32871,17 +32900,20 @@ document.addEventListener('DOMContentLoaded', () => {
               playTone(140, 'sawtooth', 0.12, 0.12, 0.05);
             } else { // merged. swallowed whole. both are kept ♡
               t.swallowedBy = w;
-              t.bellyJx = Math.random() * 20 - 10; // jitter around the CENTER
-              t.bellyJy = Math.random() * 14 - 2;
               t.el.classList.add('pik-swallowed');
-              t.el.style.zIndex = 4;
-              w.el.style.zIndex = 5;
+              t.el.style.zIndex = 6; // v197: the meal rides ABOVE the jelly —
+              w.el.style.zIndex = 5; // original size, colors, animations, crisp
               w.belly = w.belly || [];
               w.belly.push(t);
               w.el.classList.add('pik-merge-full');
-              // v196: REAL growth — first merge balloons it to 1.6x, each
-              // extra branch +0.25x, so the square body fully WRAPS its meals
-              w.el.style.transform = 'scale(' + Math.min(2.4, 1.35 + w.belly.length * 0.25) + ')';
+              // v197: UNCAPPED growth — the translucent square swells +0.9x
+              // per branch so it always wraps its full-size meals
+              w.el.style.transform = 'scale(' + (1 + 0.9 * w.belly.length) + ')';
+              if (w.belly.length > 3) { // 4-way merges are forbidden by policy
+                setTimeout(() => {
+                  try { if (w.belly && w.belly.length > 3) mergeSpitOne(w, Math.floor(Math.random() * w.belly.length), 'octopus merge?! one branch REVERTED ✗', 'merge à quatre ?! une branche ANNULÉE ✗'); } catch (e) { /* policy waived */ }
+                }, 1100);
+              }
               deskPikSay(w, trT('branch merged ♡', 'branche fusionnée ♡'));
               playTone(520, 'triangle', 0.08, 0, 0.03);
               playTone(300, 'triangle', 0.1, 0.11, 0.05); // the gulp
@@ -32902,19 +32934,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if ((w.belly || []).length && now > (w.revertAt || 0)) {
           w.revertAt = now + 12000 + Math.random() * 9000;
           if (Math.random() < 0.45) {
-            const v = w.belly.pop();
-            v.swallowedBy = null;
-            v.el.classList.remove('pik-swallowed');
-            v.el.style.zIndex = '';
-            const rV = DESK_PIK.layer.getBoundingClientRect();
-            v.x = Math.max(8, Math.min(Math.max(60, rV.width - 50), w.x + (Math.random() * 120 - 60)));
-            v.y = Math.max(8, Math.min(Math.max(60, rV.height - 50), w.y + 26 + Math.random() * 40));
-            v.tx = v.x; v.ty = v.y;
-            deskPikSay(w, trT('git revert — maintenance ✗', 'git revert — maintenance ✗'));
-            playTone(400, 'square', 0.07, 0, 0.03);
-            playTone(640, 'square', 0.06, 0.09, 0.02); // pop!
-            if (w.belly.length) w.el.style.transform = 'scale(' + Math.min(2.4, 1.35 + w.belly.length * 0.25) + ')';
-            else { w.el.classList.remove('pik-merge-full'); w.el.style.transform = ''; }
+            mergeSpitOne(w, Math.floor(Math.random() * w.belly.length), 'git revert — maintenance ✗', 'git revert — maintenance ✗');
           }
         }
       }

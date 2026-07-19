@@ -6713,10 +6713,10 @@ html[data-theme="dark"] .pik-disg-banner {
   height: 44px;
   /* v196: a PURE bluescreen, the bsod dream's own colors — solid
      #0a23a8, white frame, white type. no translucency (owner decree) */
-  background: #0a23a8;
-  border: 2px solid #ffffff;
-  box-shadow: 2px 2px 0 rgba(0, 0, 30, 0.6);
-  border-radius: 2px;
+  background: #0a23a8; /* v197: PURE blue — no frame, no shadow (owner decree) */
+  border: none;
+  box-shadow: none;
+  border-radius: 0;
   overflow: hidden;
   pointer-events: none;
   z-index: 2;
@@ -6735,7 +6735,7 @@ html[data-theme="dark"] .pik-disg-banner {
   filter: drop-shadow(0 0 6px rgba(201, 167, 245, 0.85));
 }
 .desk-pik.pik-merge-full { transition: transform 0.5s ease; transform-origin: 50% 50%; }
-.desk-pik.pik-swallowed { pointer-events: none; transform: scale(0.5); transition: transform 0.4s ease; }
+.desk-pik.pik-swallowed { pointer-events: none; } /* v197: ORIGINAL size, colors, animations — untouched */
 .desk-pik.pik-conflict-bounce { animation: pik-conflict-fling 0.8s cubic-bezier(0.2, 0.8, 0.3, 1); }
 @keyframes pik-conflict-fling {
   0% { transform: scale(1) rotate(0deg); }
