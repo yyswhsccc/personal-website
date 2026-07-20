@@ -32694,16 +32694,43 @@ document.addEventListener('DOMContentLoaded', () => {
     // v187.1: this const previously landed in deskPikResync by mistake —
     // every tick then threw a swallowed ReferenceError and FROZE the desk
     const docHidden = document.hidden;
-    // v206: swallowed piks are now DOM CHILDREN of the Merge — contained
-    // by construction, no per-tick pinning, no way to drift outside.
-    // their state coords just mirror the host so babies etc. still follow
+    // v206/v208: swallowed piks are DOM children of the Merge. this loop
+    // mirrors their state coords AND heals every orphan flavor: no host,
+    // host without belly entry, or el not actually inside the host
+    const LRT = DESK_PIK.layer.getBoundingClientRect();
     DESK_PIK.walkers.forEach((w) => {
-      if (w.swallowedBy && document.body.contains(w.swallowedBy.el)) {
-        w.x = w.swallowedBy.x + 20;
-        w.y = w.swallowedBy.y + 60;
+      if (!w.swallowedBy) return;
+      const host = w.swallowedBy;
+      const owned = host && host.belly && host.belly.indexOf(w) >= 0 && document.body.contains(host.el) && w.el.parentElement === host.el;
+      if (owned) {
+        w.x = host.x + 20;
+        w.y = host.y + 60;
         w.tx = w.x; w.ty = w.y;
+        return;
       }
+      w.swallowedBy = null; // orphan: walk free at REAL coords
+      w.el.classList.remove('pik-swallowed');
+      w.el.style.zIndex = '';
+      if (w.el.parentElement !== DESK_PIK.layer) { try { DESK_PIK.layer.appendChild(w.el); } catch (e) { /* gone */ } }
+      if (LRT.width > 60 && LRT.height > 60) {
+        w.x = Math.max(8, Math.min(LRT.width - 50, w.x));
+        w.y = Math.max(8, Math.min(LRT.height - 54, w.y));
+      }
+      w.tx = w.x; w.ty = w.y;
+      w.el.style.left = w.x + 'px';
+      w.el.style.top = w.y + 'px';
     });
+    // v208: hard bounds — no free walker may leave the layer, whatever
+    // wrote its coords. (three piks strolled off the bottom edge — owner)
+    if (LRT.width > 60 && LRT.height > 60) {
+      DESK_PIK.walkers.forEach((w) => {
+        if (w.swallowedBy) return;
+        w.x = Math.max(2, Math.min(LRT.width - 46, w.x));
+        w.y = Math.max(2, Math.min(LRT.height - 52, w.y));
+        w.tx = Math.max(2, Math.min(LRT.width - 46, w.tx));
+        w.ty = Math.max(2, Math.min(LRT.height - 52, w.ty));
+      });
+    }
     DESK_PIK.walkers.forEach((w) => {
       // the chameleon never settles on a colour — cycles the wheel
       if (w.chameleon && now > w.hueAt) {
@@ -33003,6 +33030,8 @@ document.addEventListener('DOMContentLoaded', () => {
               // construction. the veil (the img) sits above it via z-index
               w.el.appendChild(t.el);
               t.el.style.zIndex = '1';
+              t.el.style.left = '20px'; // v208: safe in-jelly coords the INSTANT
+              t.el.style.top = '60px';  // it reparents — layout refines after
               // v199/v200: hand-drawn swollen sprite, PALE lavender so the
               // meal reads clearly through the high-transparency belly
               if (!w.mergeTrueSrc) { w.mergeTrueSrc = w.img.src; w.mergeTrueW = w.el.style.width || ''; }
@@ -33010,7 +33039,7 @@ document.addEventListener('DOMContentLoaded', () => {
               w.el.style.width = ((20 + w.belly.length * 7) * 4) + 'px';
               w.el.style.height = ((28 + w.belly.length * 5) * 4) + 'px';
               w.el.style.transform = '';
-              mergeLayoutBelly(w);
+              try { mergeLayoutBelly(w); } catch (e) { /* the safe coords hold */ }
               if (w.belly.length > 3) { // 4-way merges are forbidden by policy
                 setTimeout(() => {
                   try { if (w.belly && w.belly.length > 3) mergeSpitOne(w, Math.floor(Math.random() * w.belly.length), 'octopus merge?! one branch REVERTED ✗', 'merge à quatre ?! une branche ANNULÉE ✗'); } catch (e) { /* policy waived */ }
