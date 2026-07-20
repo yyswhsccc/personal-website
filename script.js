@@ -31111,7 +31111,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function mergeBellySprite(n, bodyCol, darkCol) {
     const key = n + '/' + bodyCol;
     if (mergeBellyCache[key]) return mergeBellyCache[key];
-    const W = 15 + n * 5, H = 13 + n * 4;
+    const W = 18 + n * 7, H = 15 + n * 5; // v200: roomy — one meal fills well under half
     const c = document.createElement('canvas');
     c.width = W; c.height = H + 2;
     const x = c.getContext('2d');
@@ -31154,9 +31154,8 @@ document.addEventListener('DOMContentLoaded', () => {
     playTone(400, 'square', 0.07, 0, 0.03);
     playTone(640, 'square', 0.06, 0.09, 0.02);
     if (w.belly.length) {
-      const hcS = hueColor(w.hue != null ? w.hue : 265);
-      w.img.src = mergeBellySprite(w.belly.length, hcS.body, hcS.dark);
-      w.el.style.width = ((15 + w.belly.length * 5) * 4) + 'px';
+      w.img.src = mergeBellySprite(w.belly.length, '#e0cff6', '#bb9ce4');
+      w.el.style.width = ((18 + w.belly.length * 7) * 4) + 'px';
     } else {
       w.el.classList.remove('pik-merge-full');
       if (w.mergeTrueSrc) w.img.src = w.mergeTrueSrc;
@@ -32946,17 +32945,16 @@ document.addEventListener('DOMContentLoaded', () => {
             } else { // merged. swallowed whole. both are kept ♡
               t.swallowedBy = w;
               t.el.classList.add('pik-swallowed');
-              t.el.style.zIndex = 6; // v197: the meal rides ABOVE the jelly —
-              w.el.style.zIndex = 5; // original size, colors, animations, crisp
+              t.el.style.zIndex = 4; // v200: the meal lives UNDER the veil —
+              w.el.style.zIndex = 5; // covered by the pale translucent belly
               w.belly = w.belly || [];
               w.belly.push(t);
               w.el.classList.add('pik-merge-full');
-              // v199: swap in the hand-drawn swollen sprite (crisp pixels,
-              // uncapped ladder) — no more blurry CSS zoom
+              // v199/v200: hand-drawn swollen sprite, PALE lavender so the
+              // meal reads clearly through the high-transparency belly
               if (!w.mergeTrueSrc) { w.mergeTrueSrc = w.img.src; w.mergeTrueW = w.el.style.width || ''; }
-              const hcM = hueColor(w.hue != null ? w.hue : 265);
-              w.img.src = mergeBellySprite(w.belly.length, hcM.body, hcM.dark);
-              w.el.style.width = ((15 + w.belly.length * 5) * 4) + 'px';
+              w.img.src = mergeBellySprite(w.belly.length, '#e0cff6', '#bb9ce4');
+              w.el.style.width = ((18 + w.belly.length * 7) * 4) + 'px';
               w.el.style.transform = '';
               if (w.belly.length > 3) { // 4-way merges are forbidden by policy
                 setTimeout(() => {

@@ -6731,7 +6731,7 @@ html[data-theme="dark"] .pik-disg-banner {
 @media (prefers-reduced-motion: reduce) { .pik-bsod-pane { animation: none; } }
 /* Merge APEX (v193): translucent when full — you can SEE the branches */
 .desk-pik.pik-merge-full img {
-  opacity: 0.68;
+  opacity: 0.5; /* v200: a HIGH-transparency pale veil — the meal reads through */
   filter: drop-shadow(0 0 6px rgba(201, 167, 245, 0.85));
 }
 .desk-pik.pik-merge-full { transition: width 0.45s ease; } /* v199: growth = real sprite swap, width eases */
