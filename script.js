@@ -33152,21 +33152,6 @@ document.addEventListener('DOMContentLoaded', () => {
               setTimeout(() => d.classList.add('fading'), 9000);
               setTimeout(() => d.remove(), 8000);
             }
-            // APEX only: soft pixel nebula puffs — the "cloud" in star-cloud
-            if (deep && Math.random() < 0.5) {
-              const p = document.createElement('img');
-              p.className = 'pik-trail pik-neb-puff';
-              p.src = trailNebPuffSprite(Math.floor(Math.random() * 3));
-              p.alt = '';
-              const pw = 22 + Math.random() * 14;
-              p.style.width = pw + 'px';
-              p.style.setProperty('--star-glow', ['#c9a7f5', '#ff8fc7', '#41e0ff'][Math.floor(Math.random() * 3)]);
-              p.style.left = (cx + Math.random() * 30 - 15 - pw / 2) + 'px';
-              p.style.top = (cy - 2 + Math.random() * 10) + 'px';
-              DESK_PIK.layer.appendChild(p);
-              setTimeout(() => p.classList.add('fading'), 7000);
-              setTimeout(() => p.remove(), 8600);
-            }
             const trailsS = DESK_PIK.layer.querySelectorAll('.pik-trail');
             for (let k = 0; k < trailsS.length - 70; k++) trailsS[k].remove();
             return;
@@ -33393,22 +33378,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   function trailStarGlow(i) { return TRAIL_STAR_COLS[i % TRAIL_STAR_COLS.length][0]; }
   // soft pixel nebula puffs, three cosmic colorways (violet / rose / ice)
-  var trailNebCache = null;
-  function trailNebPuffSprite(i) {
-    if (!trailNebCache) {
-      trailNebCache = [['#c9a7f5', '#8a6cf0'], ['#ffb3dd', '#ff5fa8'], ['#9be8ff', '#41b8e8']].map(([a, b]) => {
-        const c = document.createElement('canvas');
-        c.width = 9; c.height = 5;
-        const x = c.getContext('2d');
-        x.fillStyle = b; // deeper underlayer
-        x.fillRect(2, 2, 6, 2); x.fillRect(1, 3, 7, 1);
-        x.fillStyle = a; // bright crown
-        x.fillRect(1, 1, 5, 2); x.fillRect(3, 0, 4, 2); x.fillRect(6, 1, 2, 2);
-        return c.toDataURL();
-      });
-    }
-    return trailNebCache[i % trailNebCache.length];
-  }
   var trailBloomCache = null;
   function trailBloomSprite(i) {
     if (!trailBloomCache) {
