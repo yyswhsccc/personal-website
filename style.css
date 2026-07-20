@@ -6734,7 +6734,7 @@ html[data-theme="dark"] .pik-disg-banner {
   opacity: 0.68;
   filter: drop-shadow(0 0 6px rgba(201, 167, 245, 0.85));
 }
-.desk-pik.pik-merge-full { transition: transform 0.5s ease; transform-origin: 50% 50%; }
+.desk-pik.pik-merge-full { transition: width 0.45s ease; } /* v199: growth = real sprite swap, width eases */
 .desk-pik.pik-swallowed { pointer-events: none; } /* v197: ORIGINAL size, colors, animations — untouched */
 .desk-pik.pik-conflict-bounce { animation: pik-conflict-fling 0.8s cubic-bezier(0.2, 0.8, 0.3, 1); }
 @keyframes pik-conflict-fling {

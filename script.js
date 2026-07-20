@@ -31104,6 +31104,39 @@ document.addEventListener('DOMContentLoaded', () => {
     DESK_PIK.walkers.push(w);
     return w;
   }
+  // v199: the SWOLLEN Merge is a real sprite, not a blurry CSS zoom —
+  // drawn fresh per belly-size at normal pixel density: giant rounded
+  // jelly body, rice-grain sprout, comically tiny feet
+  var mergeBellyCache = {};
+  function mergeBellySprite(n, bodyCol, darkCol) {
+    const key = n + '/' + bodyCol;
+    if (mergeBellyCache[key]) return mergeBellyCache[key];
+    const W = 15 + n * 5, H = 13 + n * 4;
+    const c = document.createElement('canvas');
+    c.width = W; c.height = H + 2;
+    const x = c.getContext('2d');
+    const px = (a, b, col) => { x.fillStyle = col; x.fillRect(a, b, 1, 1); };
+    const cxT = Math.floor(W / 2);
+    px(cxT, 0, '#57c689'); px(cxT - 1, 1, '#7ddba4'); px(cxT, 1, '#7ddba4'); // the sprout stays TINY
+    const skip = { [0 + ',' + 2]: 1, [(W - 1) + ',' + 2]: 1, [0 + ',' + (H - 1)]: 1, [(W - 1) + ',' + (H - 1)]: 1 };
+    for (let ry = 2; ry < H; ry++) for (let rx = 0; rx < W; rx++) {
+      if (skip[rx + ',' + ry]) continue;
+      px(rx, ry, bodyCol);
+    }
+    for (let rx = 1; rx < W - 1; rx++) px(rx, H - 1, darkCol); // belly shade
+    for (let ry = 4; ry < H - 1; ry++) px(W - 1, ry, darkCol); // side shade
+    for (let rx = 2; rx < 7 + n; rx++) px(rx, 3, 'rgba(255,255,255,0.3)'); // jelly shine
+    const eyeY = 5 + n;
+    [[cxT - 3 - n, eyeY], [cxT + 2 + n, eyeY]].forEach(([ex, ey]) => {
+      px(ex, ey, '#14020e'); px(ex + 1, ey, '#14020e'); px(ex, ey + 1, '#14020e'); px(ex + 1, ey + 1, '#14020e');
+    });
+    px(cxT - 5 - n, eyeY + 2, '#ff9fce'); px(cxT + 5 + n, eyeY + 2, '#ff9fce'); // blush
+    px(cxT - 1, eyeY + 3, '#3a2c50'); px(cxT, eyeY + 3, '#3a2c50'); // a small full smile
+    const fL = Math.floor(W * 0.3), fR = Math.floor(W * 0.7);
+    px(fL, H, darkCol); px(fL + 1, H, darkCol); // comically tiny feet
+    px(fR - 1, H, darkCol); px(fR, H, darkCol);
+    return (mergeBellyCache[key] = c.toDataURL());
+  }
   // v197: spit one branch back out (used by git-revert AND the 4-branch
   // overflow rule). victims come out full-size — they never shrank
   function mergeSpitOne(w, idx, lineEn, lineFr) {
@@ -31120,8 +31153,16 @@ document.addEventListener('DOMContentLoaded', () => {
     deskPikSay(w, trT(lineEn, lineFr));
     playTone(400, 'square', 0.07, 0, 0.03);
     playTone(640, 'square', 0.06, 0.09, 0.02);
-    if (w.belly.length) w.el.style.transform = 'scale(' + (1 + 0.9 * w.belly.length) + ')';
-    else { w.el.classList.remove('pik-merge-full'); w.el.style.transform = ''; }
+    if (w.belly.length) {
+      const hcS = hueColor(w.hue != null ? w.hue : 265);
+      w.img.src = mergeBellySprite(w.belly.length, hcS.body, hcS.dark);
+      w.el.style.width = ((15 + w.belly.length * 5) * 4) + 'px';
+    } else {
+      w.el.classList.remove('pik-merge-full');
+      if (w.mergeTrueSrc) w.img.src = w.mergeTrueSrc;
+      w.el.style.width = w.mergeTrueW || '';
+      w.el.style.transform = '';
+    }
   }
   function deskPikSay(w, text) {
     if (w.bubbleEl) w.bubbleEl.remove();
@@ -32621,7 +32662,9 @@ document.addEventListener('DOMContentLoaded', () => {
           [[-20, -6], [20, -2], [0, 18]],
           [[-22, -10], [22, -10], [-15, 18], [19, 20]]
         ];
-        const off = (SLOTS[n - 1] || SLOTS[3])[Math.min(idx, n - 1)] || [0, 0];
+        const off0 = (SLOTS[n - 1] || SLOTS[3])[Math.min(idx, n - 1)] || [0, 0];
+        const spread = 0.7 + 0.35 * n; // the jelly got roomier — spread out
+        const off = [off0[0] * spread, off0[1] * spread];
         const hw = host.el.offsetWidth || 44, hh = host.el.offsetHeight || 48;
         const vw = w.el.offsetWidth || 44, vh = w.el.offsetHeight || 48;
         w.x = host.x + hw / 2 - vw / 2 + off[0];
@@ -32908,9 +32951,13 @@ document.addEventListener('DOMContentLoaded', () => {
               w.belly = w.belly || [];
               w.belly.push(t);
               w.el.classList.add('pik-merge-full');
-              // v197: UNCAPPED growth — the translucent square swells +0.9x
-              // per branch so it always wraps its full-size meals
-              w.el.style.transform = 'scale(' + (1 + 0.9 * w.belly.length) + ')';
+              // v199: swap in the hand-drawn swollen sprite (crisp pixels,
+              // uncapped ladder) — no more blurry CSS zoom
+              if (!w.mergeTrueSrc) { w.mergeTrueSrc = w.img.src; w.mergeTrueW = w.el.style.width || ''; }
+              const hcM = hueColor(w.hue != null ? w.hue : 265);
+              w.img.src = mergeBellySprite(w.belly.length, hcM.body, hcM.dark);
+              w.el.style.width = ((15 + w.belly.length * 5) * 4) + 'px';
+              w.el.style.transform = '';
               if (w.belly.length > 3) { // 4-way merges are forbidden by policy
                 setTimeout(() => {
                   try { if (w.belly && w.belly.length > 3) mergeSpitOne(w, Math.floor(Math.random() * w.belly.length), 'octopus merge?! one branch REVERTED ✗', 'merge à quatre ?! une branche ANNULÉE ✗'); } catch (e) { /* policy waived */ }
