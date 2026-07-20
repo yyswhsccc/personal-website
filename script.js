@@ -31144,6 +31144,20 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   // v197: spit one branch back out (used by git-revert AND the 4-branch
   // overflow rule). victims come out full-size — they never shrank
+  // v209: restore the TRUE form deterministically — regenerated from the
+  // hue, never from captured values (a corrupted capture once left a
+  // merge stuck GIANT in its true sprite — owner report)
+  function mergeRestoreTrue(w) {
+    w.el.classList.remove('pik-merge-full');
+    try {
+      w.img.src = pikSprite(hueColor(w.hue != null ? w.hue : 265), w.stage || 0, null, false, pikFormOfLive(w), pikKindOfLive(w));
+    } catch (e) {
+      if (w.mergeTrueSrc) w.img.src = w.mergeTrueSrc; // last-ditch fallback
+    }
+    w.el.style.width = '';
+    w.el.style.height = '';
+    w.el.style.transform = '';
+  }
   // v206: lay the belly children out INSIDE the jelly — absolute coords
   // relative to the merge el itself. called on every swallow/spit
   function mergeLayoutBelly(w) {
@@ -31203,11 +31217,7 @@ document.addEventListener('DOMContentLoaded', () => {
       w.el.style.height = ((28 + w.belly.length * 5) * 4) + 'px';
       mergeLayoutBelly(w);
     } else {
-      w.el.classList.remove('pik-merge-full');
-      if (w.mergeTrueSrc) w.img.src = w.mergeTrueSrc;
-      w.el.style.width = w.mergeTrueW || '';
-      w.el.style.height = '';
-      w.el.style.transform = '';
+      mergeRestoreTrue(w);
     }
   }
   function deskPikSay(w, text) {
@@ -32991,11 +33001,7 @@ document.addEventListener('DOMContentLoaded', () => {
           });
         }
         if ((!w.belly || !w.belly.length) && w.el.classList.contains('pik-merge-full')) {
-          w.el.classList.remove('pik-merge-full');
-          if (w.mergeTrueSrc) w.img.src = w.mergeTrueSrc;
-          w.el.style.width = w.mergeTrueW || '';
-          w.el.style.height = '';
-          w.el.style.transform = '';
+          mergeRestoreTrue(w);
         }
         if (now > (w.mergeAt || 0)) {
           w.mergeAt = now + 9000 + Math.random() * 7000;
@@ -33034,7 +33040,7 @@ document.addEventListener('DOMContentLoaded', () => {
               t.el.style.top = '60px';  // it reparents — layout refines after
               // v199/v200: hand-drawn swollen sprite, PALE lavender so the
               // meal reads clearly through the high-transparency belly
-              if (!w.mergeTrueSrc) { w.mergeTrueSrc = w.img.src; w.mergeTrueW = w.el.style.width || ''; }
+              if (!w.mergeTrueSrc && w.img.src && !w.el.style.width) w.mergeTrueSrc = w.img.src; // fallback only; restore is regenerative now
               w.img.src = mergeBellySprite(w.belly.length, '#e0cff6', '#bb9ce4');
               w.el.style.width = ((20 + w.belly.length * 7) * 4) + 'px';
               w.el.style.height = ((28 + w.belly.length * 5) * 4) + 'px';
