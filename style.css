@@ -6730,6 +6730,9 @@ html[data-theme="dark"] .pik-disg-banner {
 @keyframes pik-bsod-hover { from { transform: translateY(0); } to { transform: translateY(-4px); } }
 @media (prefers-reduced-motion: reduce) { .pik-bsod-pane { animation: none; } }
 /* Merge APEX (v193): translucent when full — you can SEE the branches */
+.desk-pik.pik-merge-full { overflow: visible; }
+.desk-pik.pik-merge-full > img { position: relative; z-index: 2; } /* v206: the veil paints ABOVE the belly children */
+.desk-pik.pik-merge-full .desk-pik.pik-swallowed { position: absolute; z-index: 1; }
 .desk-pik.pik-merge-full img {
   /* v201: transparency lives IN the sprite's belly pixels now — the img
      itself stays fully opaque so face, sprout and feet keep their color */
