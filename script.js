@@ -32741,6 +32741,15 @@ document.addEventListener('DOMContentLoaded', () => {
         w.ty = Math.max(2, Math.min(LRT.height - 52, w.ty));
       });
     }
+    // v210 SIZE FENCE: only a currently-swollen merge may wear inline
+    // dimensions. anyone else caught with them — WHATEVER wrote them —
+    // is stripped back to class sizing within one beat
+    DESK_PIK.walkers.forEach((w) => {
+      if (!w.el.classList.contains('pik-merge-full') && (w.el.style.width || w.el.style.height)) {
+        w.el.style.width = '';
+        w.el.style.height = '';
+      }
+    });
     DESK_PIK.walkers.forEach((w) => {
       // the chameleon never settles on a colour — cycles the wheel
       if (w.chameleon && now > w.hueAt) {
