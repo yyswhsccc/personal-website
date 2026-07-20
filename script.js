@@ -31315,7 +31315,42 @@ document.addEventListener('DOMContentLoaded', () => {
     return null;
   }
 
-  function pikdexGet() { const d = store.get('yos-pikdex', []); return Array.isArray(d) ? d : []; }
+  function pikdexGet() {
+    const d = store.get('yos-pikdex', []);
+    if (!Array.isArray(d)) return [];
+    // v212 SELF-HEAL: the dex is ONE SLOT PER KIND — that is the whole
+    // point of the 72 shelves. duplicate entries used to slip in (any
+    // pluck of an owned kind before the dex was full), and two entries
+    // of one kind could both be flagged active — which put two IDENTICAL
+    // pikmin on the desktop. merge them on read so old saves repair
+    // themselves; the evolution ledger is untouched (it counts plucks,
+    // not entries, so nobody loses an inch of progress)
+    if (pikdexHealing) return d;
+    const seen = {};
+    const merged = [];
+    let dirty = false;
+    d.forEach((p) => {
+      if (!p || typeof p !== 'object') { dirty = true; return; }
+      const k = pikKindKey(p);
+      const keep = seen[k];
+      if (!keep) { seen[k] = p; merged.push(p); return; }
+      dirty = true; // fold the duplicate INTO the survivor, then drop it
+      if ((p.s || 0) > (keep.s || 0)) keep.s = p.s;
+      if (!keep.k && p.k) keep.k = p.k;
+      if (p.t && (!keep.t || p.t < keep.t)) keep.t = p.t;
+      if (p.a && !keep.a && merged.filter((q) => q.a).length < PIK_MAX) keep.a = 1;
+    });
+    if (dirty) {
+      pikdexHealing = 1;
+      try {
+        store.set('yos-pikdex', merged);
+        if (typeof pikdexRosterProject === 'function') pikdexRosterProject();
+      } catch (e) { /* the shelf keeps its ghosts one more session */ }
+      pikdexHealing = 0;
+    }
+    return merged;
+  }
+  var pikdexHealing = 0;
   function pikdexSave(d) { store.set('yos-pikdex', d); }
 
   /* ===== EVOLUTION LEDGER — every pluck of a KIND counts, forever =====
@@ -31499,6 +31534,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // fullness = distinct KINDS, not entries: merged duplicates must never
     // wedge the deck shut while '?' slots are still waiting
     if (!entry.ch && pikdexKindCount(dex) >= PIKDEX_CAP) return 'dup';
+    // v212: one slot per KIND, always — plucking a kind you already own is
+    // ledger fuel, never a second shelf (two entries of one kind could both
+    // go active and put two IDENTICAL pikmin on the desktop)
+    const kk = pikKindKey(entry);
+    if (dex.some((p) => pikKindKey(p) === kk)) return 'dup';
     const before = pikdexWheelPct(dex);
     entry.a = pikdexActives(dex).length < PIK_MAX ? 1 : 0;
     entry.t = Date.now();
