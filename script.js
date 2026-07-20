@@ -31025,7 +31025,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // the wheel pik NAMED Merge (hue bucket 35 of 48): at APEX it merges
       // BRANCHES — i.e. swallows colleagues whole. see the tick (v193)
       mergeApex: !spId && !chameleon && hue !== null && Math.floor((((hue % 360) + 360) % 360) / 7.5) === 35 && form >= 3,
-      mergeAt: 0, revertAt: 0, mergeTarget: null, belly: null,
+      mergeAt: 0, revertAt: 0, mergeTarget: null, chain: null, chainOf: null, chainLink: null,
       disguiser: spId === 'captcha' && form >= 2, disguiseDeep: spId === 'captcha' && form >= 3, disguiseAt: Date.now() + 4000 + Math.random() * 5000, disguised: -1, // Not A Robot: the costumes (fresh walkers idle first — a resync mid-reveal must not cut the show)
       framedSp: spId === 'y2kbug' && form >= 2, // sprites on the 0.9s frame clock
       cronRing: spId === 'cronjob' && form >= 2, lastMin: -1, // it rings ON the minute
@@ -31106,119 +31106,19 @@ document.addEventListener('DOMContentLoaded', () => {
     DESK_PIK.walkers.push(w);
     return w;
   }
-  // v199: the SWOLLEN Merge is a real sprite, not a blurry CSS zoom —
-  // drawn fresh per belly-size at normal pixel density: giant rounded
-  // jelly body, rice-grain sprout, comically tiny feet
-  var mergeBellyCache = {};
-  function mergeBellySprite(n, bodyCol, darkCol) {
-    const key = 'v202/' + n + '/' + bodyCol;
-    if (mergeBellyCache[key]) return mergeBellyCache[key];
-    const W = 20 + n * 7, H = 26 + n * 5; // v202: TALL — the whole sub-mouth belly can hold a full meal
-    const c = document.createElement('canvas');
-    c.width = W; c.height = H + 2;
-    const x = c.getContext('2d');
-    const px = (a, b, col) => { x.fillStyle = col; x.fillRect(a, b, 1, 1); };
-    const cxT = Math.floor(W / 2);
-    // v201: ONLY the belly is translucent — its alpha is baked per-pixel
-    // right here. sprout, face and feet stay opaque, full-strength colors
-    const hexA = (hex, a) => 'rgba(' + parseInt(hex.slice(1, 3), 16) + ',' + parseInt(hex.slice(3, 5), 16) + ',' + parseInt(hex.slice(5, 7), 16) + ',' + a + ')';
-    px(cxT, 0, '#57c689'); px(cxT - 1, 1, '#7ddba4'); px(cxT, 1, '#7ddba4'); // the sprout stays TINY (and vivid)
-    const skip = { [0 + ',' + 2]: 1, [(W - 1) + ',' + 2]: 1, [0 + ',' + (H - 1)]: 1, [(W - 1) + ',' + (H - 1)]: 1 };
-    for (let ry = 2; ry < H; ry++) for (let rx = 0; rx < W; rx++) {
-      if (skip[rx + ',' + ry]) continue;
-      px(rx, ry, hexA(bodyCol, 0.5)); // the see-through belly
-    }
-    for (let rx = 1; rx < W - 1; rx++) px(rx, H - 1, hexA(darkCol, 0.55)); // belly shade
-    for (let ry = 4; ry < H - 1; ry++) px(W - 1, ry, hexA(darkCol, 0.55)); // side shade
-    for (let rx = 2; rx < 7 + n; rx++) px(rx, 3, 'rgba(255,255,255,0.3)'); // jelly shine
-    const eyeY = 5 + n;
-    [[cxT - 3 - n, eyeY], [cxT + 2 + n, eyeY]].forEach(([ex, ey]) => {
-      px(ex, ey, '#14020e'); px(ex + 1, ey, '#14020e'); px(ex, ey + 1, '#14020e'); px(ex + 1, ey + 1, '#14020e');
-    });
-    px(cxT - 5 - n, eyeY + 2, '#ff9fce'); px(cxT + 5 + n, eyeY + 2, '#ff9fce'); // blush
-    px(cxT - 1, eyeY + 3, '#3a2c50'); px(cxT, eyeY + 3, '#3a2c50'); // a small full smile
-    const fL = Math.floor(W * 0.3), fR = Math.floor(W * 0.7);
-    px(fL, H, '#8a5fc0'); px(fL + 1, H, '#8a5fc0'); // comically tiny feet, OPAQUE
-    px(fR - 1, H, '#8a5fc0'); px(fR, H, '#8a5fc0');
-    return (mergeBellyCache[key] = c.toDataURL());
-  }
-  // v197: spit one branch back out (used by git-revert AND the 4-branch
-  // overflow rule). victims come out full-size — they never shrank
-  // v209: restore the TRUE form deterministically — regenerated from the
-  // hue, never from captured values (a corrupted capture once left a
-  // merge stuck GIANT in its true sprite — owner report)
-  function mergeRestoreTrue(w) {
-    w.el.classList.remove('pik-merge-full');
-    try {
-      w.img.src = pikSprite(hueColor(w.hue != null ? w.hue : 265), w.stage || 0, null, false, pikFormOfLive(w), pikKindOfLive(w));
-    } catch (e) {
-      if (w.mergeTrueSrc) w.img.src = w.mergeTrueSrc; // last-ditch fallback
-    }
-    w.el.style.width = '';
-    w.el.style.height = '';
-    w.el.style.transform = '';
-  }
-  // v206: lay the belly children out INSIDE the jelly — absolute coords
-  // relative to the merge el itself. called on every swallow/spit
-  function mergeLayoutBelly(w) {
-    const list = w.belly || [];
-    const n = Math.max(1, list.length);
-    const hw = (20 + n * 7) * 4;
-    const hh = (28 + n * 5) * 4;
-    const bellyTopPx = (10 + n) * 4;
-    const SLOTS = [
-      [[0, 0]],
-      [[-18, 0], [18, 4]],
-      [[-24, -4], [24, 0], [0, 16]],
-      [[-26, -8], [26, -8], [-18, 16], [20, 18]]
-    ];
-    list.forEach((v, idx) => {
-      const off = (SLOTS[n - 1] || SLOTS[3])[Math.min(idx, n - 1)] || [0, 0];
-      const vw = 44, vh = 52;
-      const zoneH = Math.max(vh, hh - bellyTopPx - 10);
-      v.el.style.left = Math.max(2, hw / 2 - vw / 2 + off[0]) + 'px';
-      v.el.style.top = (bellyTopPx + Math.max(0, (zoneH - vh) / 2) + off[1]) + 'px';
-    });
-  }
-  function mergeSpitOne(w, idx, lineEn, lineFr) {
-    const v = (w.belly || [])[idx];
+  // v211: release the last car of the branch train (git revert)
+  function mergeReleaseOne(w, lineEn, lineFr) {
+    const v = (w.chain || []).pop();
     if (!v) return;
-    w.belly.splice(idx, 1);
-    v.swallowedBy = null;
-    v.el.classList.remove('pik-swallowed');
-    v.el.style.zIndex = '';
-    DESK_PIK.layer.appendChild(v.el); // v206: back to the open world
+    v.chainOf = null;
+    if (v.chainLink) { try { v.chainLink.remove(); } catch (e) { /* gone */ } v.chainLink = null; }
     const r = DESK_PIK.layer.getBoundingClientRect();
-    v.x = Math.max(8, Math.min(Math.max(60, r.width - 50), w.x + (Math.random() * 160 - 80)));
-    v.y = Math.max(8, Math.min(Math.max(60, r.height - 50), w.y + 30 + Math.random() * 50));
-    v.tx = v.x; v.ty = v.y;
-    v.el.style.left = v.x + 'px';
-    v.el.style.top = v.y + 'px';
-    // v207: the RELEASE must read as a release — the stale in-belly
-    // 'pik…?' bubble made freed piks look like escapees (owner report)
-    if (v.bubbleEl) { try { v.bubbleEl.remove(); } catch (e) { /* popped */ } v.bubbleEl = null; }
-    deskPikSay(v, trT('reverted!! FREE!!', 'annulé !! LIBRE !!'));
-    v.el.classList.remove('poked'); void v.el.offsetWidth; v.el.classList.add('poked');
-    for (let k = 0; k < 8; k++) { // a little pink pop at the exit hatch
-      const b = document.createElement('span');
-      b.className = 'pik-party-bit';
-      b.style.background = ['#ff8fc7', '#ffb3dd', '#c9a7f5', '#ffd9ec'][k % 4];
-      b.style.left = (v.x + 4 + Math.random() * 24) + 'px';
-      b.style.top = (v.y + Math.random() * 24) + 'px';
-      DESK_PIK.layer.appendChild(b);
-      b.addEventListener('animationend', () => b.remove());
-    }
+    v.tx = Math.max(8, Math.min(Math.max(60, r.width - 50), v.x + (Math.random() * 200 - 100)));
+    v.ty = Math.max(8, Math.min(Math.max(60, r.height - 50), v.y + (Math.random() * 120 - 60)));
     deskPikSay(w, trT(lineEn, lineFr));
+    setTimeout(() => { try { deskPikSay(v, trT('reverted!! FREE!!', 'annulé !! LIBRE !!')); } catch (e) { /* already off */ } }, 500);
     playTone(400, 'square', 0.07, 0, 0.03);
     playTone(640, 'square', 0.06, 0.09, 0.02);
-    if (w.belly.length) {
-      w.img.src = mergeBellySprite(w.belly.length, '#e0cff6', '#bb9ce4');
-      w.el.style.width = ((20 + w.belly.length * 7) * 4) + 'px';
-      w.el.style.height = ((28 + w.belly.length * 5) * 4) + 'px';
-      mergeLayoutBelly(w);
-    } else {
-      mergeRestoreTrue(w);
-    }
   }
   function deskPikSay(w, text) {
     if (w.bubbleEl) w.bubbleEl.remove();
@@ -31636,7 +31536,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // its own footprints reads as a glitch, not a homecoming.
     const seats = DESK_PIK.walkers.map((w) => ({ x: w.x, y: w.y, tx: w.tx, ty: w.ty }));
     DESK_PIK.walkers.forEach((w) => {
-      try { if (w.bubbleEl) w.bubbleEl.remove(); if (w.babyEl) w.babyEl.remove(); if (w.bsodPane) w.bsodPane.remove(); w.el.remove(); } catch (e) { /* already gone */ }
+      try { if (w.bubbleEl) w.bubbleEl.remove(); if (w.babyEl) w.babyEl.remove(); if (w.bsodPane) w.bsodPane.remove(); if (w.chainLink) w.chainLink.remove(); w.el.remove(); } catch (e) { /* already gone */ }
     });
     DESK_PIK.walkers = [];
     deskRoster().slice(0, PIK_MAX).forEach((rr, i) => {
@@ -32704,37 +32604,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // v187.1: this const previously landed in deskPikResync by mistake —
     // every tick then threw a swallowed ReferenceError and FROZE the desk
     const docHidden = document.hidden;
-    // v206/v208: swallowed piks are DOM children of the Merge. this loop
-    // mirrors their state coords AND heals every orphan flavor: no host,
-    // host without belly entry, or el not actually inside the host
     const LRT = DESK_PIK.layer.getBoundingClientRect();
-    DESK_PIK.walkers.forEach((w) => {
-      if (!w.swallowedBy) return;
-      const host = w.swallowedBy;
-      const owned = host && host.belly && host.belly.indexOf(w) >= 0 && document.body.contains(host.el) && w.el.parentElement === host.el;
-      if (owned) {
-        w.x = host.x + 20;
-        w.y = host.y + 60;
-        w.tx = w.x; w.ty = w.y;
-        return;
-      }
-      w.swallowedBy = null; // orphan: walk free at REAL coords
-      w.el.classList.remove('pik-swallowed');
-      w.el.style.zIndex = '';
-      if (w.el.parentElement !== DESK_PIK.layer) { try { DESK_PIK.layer.appendChild(w.el); } catch (e) { /* gone */ } }
-      if (LRT.width > 60 && LRT.height > 60) {
-        w.x = Math.max(8, Math.min(LRT.width - 50, w.x));
-        w.y = Math.max(8, Math.min(LRT.height - 54, w.y));
-      }
-      w.tx = w.x; w.ty = w.y;
-      w.el.style.left = w.x + 'px';
-      w.el.style.top = w.y + 'px';
-    });
     // v208: hard bounds — no free walker may leave the layer, whatever
     // wrote its coords. (three piks strolled off the bottom edge — owner)
     if (LRT.width > 60 && LRT.height > 60) {
       DESK_PIK.walkers.forEach((w) => {
-        if (w.swallowedBy) return;
         w.x = Math.max(2, Math.min(LRT.width - 46, w.x));
         w.y = Math.max(2, Math.min(LRT.height - 52, w.y));
         w.tx = Math.max(2, Math.min(LRT.width - 46, w.tx));
@@ -32745,7 +32619,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // dimensions. anyone else caught with them — WHATEVER wrote them —
     // is stripped back to class sizing within one beat
     DESK_PIK.walkers.forEach((w) => {
-      if (!w.el.classList.contains('pik-merge-full') && (w.el.style.width || w.el.style.height)) {
+      if (w.el.style.width || w.el.style.height) { // v211: NOBODY wears inline sizes anymore
         w.el.style.width = '';
         w.el.style.height = '';
       }
@@ -32991,39 +32865,61 @@ document.addEventListener('DOMContentLoaded', () => {
           w.bsodFrag.style.bottom = corner < 2 ? 'auto' : '2px';
         }
       }
-      if (w.swallowedBy) return; // digesting: no behaviors of its own
       // Merge APEX (v193): it merges BRANCHES. it stalks a colleague,
       // swallows it whole (translucent belly, voices inside, animations
       // intact), grows with every merge, sometimes hits a MERGE CONFLICT
       // and bounces off, and occasionally git-reverts one back out
       if (w.mergeApex) {
-        // v204 WATCHDOG: self-heal any state desync every beat —
-        // (a) drop belly entries whose el left the dom, (b) an empty
-        // belly may NEVER stay swollen, (c) orphans get freed below
-        if (w.belly && w.belly.length) {
-          w.belly = w.belly.filter((v) => {
-            const ok = v && v.el && document.body.contains(v.el) && v.swallowedBy === w;
-            if (!ok && v && v.el && v.el.parentElement === w.el) {
-              try { DESK_PIK.layer.appendChild(v.el); v.el.classList.remove('pik-swallowed'); } catch (e) { /* gone */ }
-            }
+        // v211 THE BRANCH TRAIN (owner decree: swallowing is DEAD).
+        // merged piks queue behind the Merge, joined by pink dashed
+        // branch lines — a git graph on legs. conflict still bounces,
+        // revert still frees the caboose
+        if (w.chain && w.chain.length) {
+          w.chain = w.chain.filter((v) => {
+            const ok = v && DESK_PIK.walkers.indexOf(v) >= 0 && v.chainOf === w;
+            if (!ok && v && v.chainLink) { try { v.chainLink.remove(); } catch (e) { /* gone */ } v.chainLink = null; }
             return ok;
           });
-        }
-        if ((!w.belly || !w.belly.length) && w.el.classList.contains('pik-merge-full')) {
-          mergeRestoreTrue(w);
+          let ahead = w;
+          w.chain.forEach((v) => {
+            const dx = v.x - ahead.x, dy = v.y - ahead.y;
+            const d = Math.hypot(dx, dy) || 1;
+            const gx = ahead.x + (dx / d) * 46;
+            const gy = ahead.y + (dy / d) * 46;
+            const ox = v.x, oy = v.y;
+            v.x += (gx - v.x) * 0.18;
+            v.y += (gy - v.y) * 0.18;
+            v.tx = v.x; v.ty = v.y;
+            v.el.style.left = v.x + 'px';
+            v.el.style.top = v.y + 'px';
+            v.el.classList.toggle('walking', Math.hypot(v.x - ox, v.y - oy) > 0.4);
+            if (!v.chainLink) {
+              const ln = document.createElement('div');
+              ln.className = 'pik-chain-link';
+              DESK_PIK.layer.appendChild(ln);
+              v.chainLink = ln;
+            }
+            const ax = ahead.x + 22, ay = ahead.y + 26, bx2 = v.x + 22, by2 = v.y + 26;
+            const len = Math.hypot(bx2 - ax, by2 - ay);
+            v.chainLink.style.left = ax + 'px';
+            v.chainLink.style.top = ay + 'px';
+            v.chainLink.style.width = Math.max(0, len - 10) + 'px';
+            v.chainLink.style.transform = 'rotate(' + Math.atan2(by2 - ay, bx2 - ax) + 'rad)';
+            ahead = v;
+          });
         }
         if (now > (w.mergeAt || 0)) {
           w.mergeAt = now + 9000 + Math.random() * 7000;
-          const prey = DESK_PIK.walkers.filter((v) => v !== w && !v.swallowedBy && !v.mergeApex);
+          const prey = DESK_PIK.walkers.filter((v) => v !== w && !v.chainOf && !v.mergeApex);
           if (prey.length) w.mergeTarget = prey[Math.floor(Math.random() * prey.length)];
         }
         const t = w.mergeTarget;
-        if (t && (t.swallowedBy || DESK_PIK.walkers.indexOf(t) < 0)) w.mergeTarget = null;
+        if (t && (t.chainOf || DESK_PIK.walkers.indexOf(t) < 0)) w.mergeTarget = null;
         else if (t) {
           w.tx = t.x; w.ty = t.y; // the stalk
-          if (Math.hypot(t.x - w.x, t.y - w.y) < 34) {
+          if (Math.hypot(t.x - w.x, t.y - w.y) < 40) {
             w.mergeTarget = null;
-            if (Math.random() < 0.3) { // MERGE CONFLICT — both refuse to combine
+            if (Math.random() < 0.3) { // MERGE CONFLICT — refuses to combine
               t.el.classList.add('pik-conflict-bounce');
               setTimeout(() => { try { t.el.classList.remove('pik-conflict-bounce'); } catch (e) { /* resolved */ } }, 800);
               const ang = Math.atan2(t.y - w.y, t.x - w.x) || Math.random() * 6.283;
@@ -33034,54 +32930,22 @@ document.addEventListener('DOMContentLoaded', () => {
               deskPikSay(w, trT('MERGE CONFLICT!!', 'CONFLIT DE MERGE !!'));
               playTone(180, 'sawtooth', 0.12, 0, 0.05);
               playTone(140, 'sawtooth', 0.12, 0.12, 0.05);
-            } else { // merged. swallowed whole. both are kept ♡
-              t.swallowedBy = w;
-              t.el.classList.add('pik-swallowed');
-              w.el.style.zIndex = 5;
-              w.belly = w.belly || [];
-              w.belly.push(t);
-              w.el.classList.add('pik-merge-full');
-              // v206: the meal becomes a CHILD of the jelly — contained by
-              // construction. the veil (the img) sits above it via z-index
-              w.el.appendChild(t.el);
-              t.el.style.zIndex = '1';
-              t.el.style.left = '20px'; // v208: safe in-jelly coords the INSTANT
-              t.el.style.top = '60px';  // it reparents — layout refines after
-              // v199/v200: hand-drawn swollen sprite, PALE lavender so the
-              // meal reads clearly through the high-transparency belly
-              if (!w.mergeTrueSrc && w.img.src && !w.el.style.width) w.mergeTrueSrc = w.img.src; // fallback only; restore is regenerative now
-              w.img.src = mergeBellySprite(w.belly.length, '#e0cff6', '#bb9ce4');
-              w.el.style.width = ((20 + w.belly.length * 7) * 4) + 'px';
-              w.el.style.height = ((28 + w.belly.length * 5) * 4) + 'px';
-              w.el.style.transform = '';
-              try { mergeLayoutBelly(w); } catch (e) { /* the safe coords hold */ }
-              if (w.belly.length > 3) { // 4-way merges are forbidden by policy
-                setTimeout(() => {
-                  try { if (w.belly && w.belly.length > 3) mergeSpitOne(w, Math.floor(Math.random() * w.belly.length), 'octopus merge?! one branch REVERTED ✗', 'merge à quatre ?! une branche ANNULÉE ✗'); } catch (e) { /* policy waived */ }
-                }, 1100);
-              }
+            } else { // merged: welcome to the branch train ♡
+              t.chainOf = w;
+              w.chain = w.chain || [];
+              w.chain.push(t);
               deskPikSay(w, trT('branch merged ♡', 'branche fusionnée ♡'));
+              setTimeout(() => { try { deskPikSay(t, trT('merged ♡', 'fusionné ♡')); } catch (e) { /* shy */ } }, 600);
               playTone(520, 'triangle', 0.08, 0, 0.03);
-              playTone(300, 'triangle', 0.1, 0.11, 0.05); // the gulp
-              t.sayAt = now + 4000 + Math.random() * 4000;
-              w.revertAt = now + 11000 + Math.random() * 8000; // digestion grace
+              playTone(660, 'triangle', 0.08, 0.12, 0.03); // a happy chime
+              w.revertAt = now + 12000 + Math.random() * 9000;
             }
           }
         }
-        // muffled voices from inside the belly
-        (w.belly || []).forEach((v) => {
-          if (now > (v.sayAt || 0)) {
-            v.sayAt = now + 7000 + Math.random() * 6000;
-            if (!docHidden) deskPikSay(v, 'pik…?');
-            playTone(700 + Math.random() * 200, 'triangle', 0.03, 0, 0.02);
-          }
-        });
-        // git revert: the maintenance cost got too high
-        if ((w.belly || []).length && now > (w.revertAt || 0)) {
+        // git revert: the train occasionally loses its caboose
+        if ((w.chain || []).length && now > (w.revertAt || 0)) {
           w.revertAt = now + 12000 + Math.random() * 9000;
-          if (Math.random() < 0.45) {
-            mergeSpitOne(w, Math.floor(Math.random() * w.belly.length), 'git revert — maintenance ✗', 'git revert — maintenance ✗');
-          }
+          if (Math.random() < 0.45) mergeReleaseOne(w, 'git revert — maintenance ✗', 'git revert — maintenance ✗');
         }
       }
       // bit flip APEX: every few seconds the bit ACTUALLY flips — a glitch
@@ -33143,6 +33007,7 @@ document.addEventListener('DOMContentLoaded', () => {
           setTimeout(() => { try { w.el.classList.remove('pik-flash'); } catch (e) { /* thundered off */ } }, 320);
         }
       }
+      if (w.chainOf) return; // riding the branch train: charm on, wandering off
       if (now < w.restUntil) return;
       const dx = w.tx - w.x, dy = w.ty - w.y;
       const d = Math.hypot(dx, dy);
