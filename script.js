@@ -23991,7 +23991,26 @@ document.addEventListener('DOMContentLoaded', () => {
       },
       game() { return GAME; } // raw state, for scripted playtests only
     };
-    window.__yosPik = { roll: pikRollSprout, counts: pikCounts, add: pikdexAdd, total: pikCountTotal, form: pikFormOfKind, th: pikThresholds, pull: watchPullSync, enc: pikCountsEncode, dec: pikCountsMergeRemote, evo: pikEvolveCelebrate, cinema: pikEvolveCinema };
+    window.__yosPik = { roll: pikRollSprout, counts: pikCounts, add: pikdexAdd, total: pikCountTotal, form: pikFormOfKind, th: pikThresholds, pull: watchPullSync, enc: pikCountsEncode, dec: pikCountsMergeRemote, evo: pikEvolveCelebrate, cinema: pikEvolveCinema,
+      // v216 debug: make the APEX Pointer commit the heist right now
+      steal: () => {
+        const w = DESK_PIK.walkers.find((v) => v.iconThief);
+        if (!w) return 'no APEX Pointer on the desktop';
+        const icons = [...document.querySelectorAll('.desktop-icon-btn')].filter((b) => !b.style.transform);
+        if (!icons.length) return 'no icons to steal';
+        const t = icons[Math.floor(Math.random() * icons.length)];
+        const r = t.getBoundingClientRect();
+        const lr = DESK_PIK.layer.getBoundingClientRect();
+        w.x = r.left - lr.left + r.width / 2 - 22;
+        w.y = r.top - lr.top + r.height / 2 - 26;
+        w.tx = w.x; w.ty = w.y;
+        w.el.style.left = w.x + 'px';
+        w.el.style.top = w.y + 'px';
+        w.thiefIcon = t;
+        w.thiefPhase = 1;
+        w.thiefAt = 0;
+        return 'pointer teleported onto ' + (t.textContent || '').trim().slice(0, 20) + ' — grab lands next tick';
+      } };
   } catch (e) { /* no window, no toys */ }
 
   /* — the random checkpoint disk: catch it mid-fight, keep your progress
@@ -28040,7 +28059,7 @@ document.addEventListener('DOMContentLoaded', () => {
       pointer() { // the LIVE pink baby is the show — the parent just wears
         // a little heart for it (gold at APEX)
         const yH = bodyTop + 2, r = edgeR(yH);
-        const HC = epic ? '#ffd400' : '#ff8fc7', HL = epic ? '#fff6c9' : '#ffb3dd';
+        const HC = '#ff8fc7', HL = '#ffb3dd'; // v216: pink at every form — no gold upgrade
         px(r + 2, yH, HC); px(r + 4, yH, HC);
         px(r + 2, yH + 1, HC); px(r + 3, yH + 1, HL); px(r + 4, yH + 1, HC);
         px(r + 3, yH + 2, HC);
@@ -31024,7 +31043,7 @@ document.addEventListener('DOMContentLoaded', () => {
       el, img, hue: hue !== null ? hue : null, chameleon: !!chameleon, hueAt: 0, stage: stage || 0,
       party: spId === 'y2kbug' && form >= 2, partyMax: spId === 'y2kbug' && form >= 3, partyAt: 0, // evolved Y2K Bug: a walking celebration (the wake is APEX-only)
       starTrail: spId === 'pointer' && form >= 2, // the pointer family walks on stardust
-      starNebula: spId === 'pointer' && form >= 3, // APEX: the full glowing nebula
+      iconThief: spId === 'pointer' && form >= 3, thiefAt: 0, thiefPhase: 0, thiefIcon: null, thiefHome: null, // APEX: your cursor has OPINIONS about your desktop layout
       glitchy: spId === 'bitflip' && form >= 3, glitchAt: 0, // APEX bit flip: it ACTUALLY flips
       // the wheel pik NAMED Merge (hue bucket 35 of 48): at APEX it merges
       // BRANCHES — i.e. swallows colleagues whole. see the tick (v193)
@@ -31109,6 +31128,69 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     DESK_PIK.walkers.push(w);
     return w;
+  }
+  // v216: the APEX Pointer STEALS a desktop icon, carries it around, then
+  // puts it back. icons live in a CSS grid, so the carry is done purely
+  // with transform — zero layout damage, still clickable the whole time
+  function pointerDropIcon(w, instant) {
+    const ic = w.thiefIcon;
+    w.thiefIcon = null;
+    w.thiefHome = null;
+    w.thiefPhase = 0;
+    if (!ic) return;
+    try {
+      ic.classList.remove('pik-icon-grabbed');
+      ic.style.transition = instant ? '' : 'transform 0.5s cubic-bezier(0.3, 1.4, 0.5, 1)';
+      ic.style.transform = '';
+      if (!instant) setTimeout(() => { try { ic.style.transition = ''; } catch (e) { /* gone */ } }, 600);
+    } catch (e) { /* the icon left the desktop */ }
+  }
+  function pointerThiefTick(w, now, docHidden) {
+    const ic = w.thiefIcon;
+    // an icon that vanished (dream swap, language rerender) is forgotten
+    if (ic && !document.body.contains(ic)) { w.thiefIcon = null; w.thiefHome = null; w.thiefPhase = 0; }
+    if (w.thiefPhase === 1) { // walking toward the mark
+      const t = w.thiefIcon;
+      if (!t) { w.thiefPhase = 0; return; }
+      const r = t.getBoundingClientRect();
+      const lr = DESK_PIK.layer.getBoundingClientRect();
+      const gx = r.left - lr.left + r.width / 2 - 22;
+      const gy = r.top - lr.top + r.height / 2 - 26;
+      w.tx = gx; w.ty = gy;
+      if (Math.hypot(gx - w.x, gy - w.y) < 30) { // GRAB
+        w.thiefPhase = 2;
+        w.thiefHome = { x: w.x, y: w.y };
+        w.thiefAt = now + 5000 + Math.random() * 5000;
+        t.classList.add('pik-icon-grabbed');
+        deskPikSay(w, trT('mine now', 'à moi maintenant'));
+        playTone(880, 'triangle', 0.05, 0, 0.02);
+      }
+      return;
+    }
+    if (w.thiefPhase === 2) { // carrying: the icon rides the cursor
+      const t = w.thiefIcon;
+      if (!t || !w.thiefHome) { pointerDropIcon(w, 1); return; }
+      t.style.transform = 'translate(' + Math.round(w.x - w.thiefHome.x) + 'px,' + Math.round(w.y - w.thiefHome.y) + 'px)';
+      if (now > w.thiefAt) { // put it back, politely
+        pointerDropIcon(w);
+        deskPikSay(w, trT('…put it back ♡', '…remis en place ♡'));
+        playTone(660, 'triangle', 0.05, 0, 0.02);
+        playTone(440, 'triangle', 0.06, 0.1, 0.02);
+        w.thiefAt = now + 22000 + Math.random() * 18000;
+      }
+      return;
+    }
+    // idle: pick a new mark now and then
+    if (docHidden || now < (w.thiefAt || 0)) return;
+    w.thiefAt = now + 22000 + Math.random() * 18000;
+    const icons = [...document.querySelectorAll('.desktop-icon-btn')].filter((b) => {
+      if (b.style.transform || b.classList.contains('pik-icon-grabbed')) return false;
+      const r = b.getBoundingClientRect();
+      return r.width > 10 && r.top < (window.innerHeight || 800);
+    });
+    if (!icons.length) return;
+    w.thiefIcon = icons[Math.floor(Math.random() * icons.length)];
+    w.thiefPhase = 1;
   }
   // v213: the head of the train wears its merge count in plain git —
   // '+1 MERGED', '+2 MERGED'… one glance says exactly what happened
@@ -31600,7 +31682,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // its own footprints reads as a glitch, not a homecoming.
     const seats = DESK_PIK.walkers.map((w) => ({ x: w.x, y: w.y, tx: w.tx, ty: w.ty }));
     DESK_PIK.walkers.forEach((w) => {
-      try { if (w.bubbleEl) w.bubbleEl.remove(); if (w.babyEl) w.babyEl.remove(); if (w.bsodPane) w.bsodPane.remove(); if (w.chainLink) w.chainLink.remove(); if (w.mergeBadge) w.mergeBadge.remove(); w.el.remove(); } catch (e) { /* already gone */ }
+      try { if (w.thiefIcon) pointerDropIcon(w, 1); if (w.bubbleEl) w.bubbleEl.remove(); if (w.babyEl) w.babyEl.remove(); if (w.bsodPane) w.bsodPane.remove(); if (w.chainLink) w.chainLink.remove(); if (w.mergeBadge) w.mergeBadge.remove(); w.el.remove(); } catch (e) { /* already gone */ }
     });
     DESK_PIK.walkers = [];
     deskRoster().slice(0, PIK_MAX).forEach((rr, i) => {
@@ -32933,6 +33015,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // swallows it whole (translucent belly, voices inside, animations
       // intact), grows with every merge, sometimes hits a MERGE CONFLICT
       // and bounces off, and occasionally git-reverts one back out
+      if (w.iconThief) pointerThiefTick(w, now, docHidden);
       if (w.mergeApex) {
         // v211 THE BRANCH TRAIN (owner decree: swallowing is DEAD).
         // merged piks queue behind the Merge, joined by pink dashed
@@ -33118,15 +33201,16 @@ document.addEventListener('DOMContentLoaded', () => {
           if (w.starTrail) { // the pointer family walks on GLOWING stardust —
             // nine nebula colorways, two star shapes, each twinkling on its
             // own clock. APEX adds big stars + soft pixel nebula puffs (v162)
-            const deep = w.starNebula;
-            w.trailAt = now + 700 + Math.random() * 450; // dense, but paint-friendly (v187)
-            for (let k = 0; k < (deep ? 2 : 1) + Math.floor(Math.random() * 2); k++) {
+            // v216: the trail is the SAME at ★★ and APEX — the APEX gift is
+            // the icon-stealing, not a denser sky (owner decree)
+            w.trailAt = now + 700 + Math.random() * 450;
+            for (let k = 0; k < 1 + Math.floor(Math.random() * 2); k++) {
               const si = Math.floor(Math.random() * 18);
               const s = document.createElement('img');
               s.className = 'pik-trail pik-star-trail';
               s.src = trailStarSprite(si);
               s.alt = '';
-              const sz = (deep && Math.random() < 0.22) ? 17 + Math.random() * 7 : 8 + Math.random() * 8;
+              const sz = 8 + Math.random() * 8;
               s.style.width = sz + 'px';
               s.style.setProperty('--star-glow', trailStarGlow(si));
               s.style.setProperty('--tw', (1.1 + Math.random() * 1.6).toFixed(2) + 's');
@@ -33138,7 +33222,7 @@ document.addEventListener('DOMContentLoaded', () => {
               setTimeout(() => s.remove(), 8000);
             }
             // stardust: tiny glowing motes scattered between the stars
-            for (let k = 0; k < 1 + Math.floor(Math.random() * (deep ? 2 : 1)); k++) {
+            for (let k = 0; k < 1 + Math.floor(Math.random() * 1); k++) {
               const gi = Math.floor(Math.random() * 9);
               const d = document.createElement('span');
               d.className = 'pik-trail pik-star-dust';
