@@ -23991,7 +23991,7 @@ document.addEventListener('DOMContentLoaded', () => {
       },
       game() { return GAME; } // raw state, for scripted playtests only
     };
-    window.__yosPik = { roll: pikRollSprout, counts: pikCounts, add: pikdexAdd, total: pikCountTotal, form: pikFormOfKind, th: pikThresholds, pull: watchPullSync, enc: pikCountsEncode, dec: pikCountsMergeRemote, evo: pikEvolveCelebrate, cinema: pikEvolveCinema,
+    window.__yosPik = { roll: pikRollSprout, counts: pikCounts, add: pikdexAdd, total: pikCountTotal, form: pikFormOfKind, th: pikThresholds, pull: watchPullSync, enc: pikCountsEncode, dec: pikCountsMergeRemote, evo: pikEvolveCelebrate, cinema: pikEvolveCinema, rite: pikEvolveRite,
       // v216 debug: make the APEX Pointer commit the heist right now
       steal: () => {
         const w = DESK_PIK.walkers.find((v) => v.iconThief);
@@ -28306,13 +28306,16 @@ document.addEventListener('DOMContentLoaded', () => {
   function pikFormOfLive(o) {
     try { return pikFormOfKind(pikKindOfLive(o)); } catch (e) { return 1; }
   }
-  // the moment a kind crosses a form threshold: fanfare, confetti, and the
-  // meadow re-dresses INSTANTLY (v156 — evolution must be SEEN, not implied)
-  function pikEvolveCelebrate(kk, cnt) {
+  // the moment a kind crosses a form threshold: confetti, the fullscreen
+  // cinema, and the meadow re-dresses INSTANTLY (v156 — evolution must be
+  // SEEN, not implied). v218: renamed from pikEvolveCelebrate — a later
+  // same-named banner fn shadowed this one for months, so the cinema never
+  // played organically and every dup pluck mis-fired the banner. no own
+  // fanfare here: pikCountBump's celebrate already played it a tick ago.
+  function pikEvolveRite(kk, cnt) {
     const th = pikThresholds(kk);
     if (cnt !== th[0] && cnt !== th[1]) return false;
     const apex = cnt === th[1];
-    playFanfare();
     cheatFall(apex ? ['👑', '✨', '⭐'] : ['✨', '⭐'], 14);
     try { pikEvolveCinema(kk, apex); } catch (e) { /* the ceremony is optional; the gold is not */ }
     showBubble((apex
@@ -28624,7 +28627,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const cnt = pikCounts()[kk] || 1;
       const th = pikThresholds(kk);
       const nxt = cnt >= th[1] ? null : (cnt >= th[0] ? th[1] : th[0]);
-      if (!pikEvolveCelebrate(kk, cnt)) showBubble(nxt
+      if (!pikEvolveRite(kk, cnt)) showBubble(nxt
         ? trT(`+1 of that kind!! ${cnt}/${nxt} toward its next form ♡`, `+1 de cette espèce !! ${cnt}/${nxt} vers sa prochaine forme ♡`)
         : trT('+1 for an APEX legend — pure leaderboard fuel ♡', '+1 pour une légende APEX — pur carburant de classement ♡'), 2600);
       gainFollowers(1);
@@ -32724,7 +32727,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const th = pikThresholds(kk);
         const nxt = cnt >= th[1] ? null : (cnt >= th[0] ? th[1] : th[0]);
         achvBump('plucks');
-        if (!pikEvolveCelebrate(kk, cnt) && !pet.sleeping) showBubble(nxt
+        if (!pikEvolveRite(kk, cnt) && !pet.sleeping) showBubble(nxt
           ? trT(`+1 of that kind!! ${cnt}/${nxt} toward its next form ♡`, `+1 de cette espèce !! ${cnt}/${nxt} vers sa prochaine forme ♡`)
           : trT('+1 for an APEX legend — pure leaderboard fuel ♡', '+1 pour une légende APEX — pur carburant de classement ♡'), 2600);
         return;
