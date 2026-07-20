@@ -32658,6 +32658,18 @@ document.addEventListener('DOMContentLoaded', () => {
       if (w.swallowedBy) {
         const host = w.swallowedBy;
         const list = host.belly || [];
+        // v204: orphan check — if the host no longer owns me (or died),
+        // walk free instead of haunting the desktop
+        if (list.indexOf(w) < 0 || !document.body.contains(host.el)) {
+          w.swallowedBy = null;
+          w.el.classList.remove('pik-swallowed');
+          w.el.style.zIndex = '';
+          w.tx = w.x; w.ty = w.y;
+          return;
+        }
+        // re-assert the containment dress code every beat (idempotent)
+        if (!w.el.classList.contains('pik-swallowed')) w.el.classList.add('pik-swallowed');
+        if (w.el.style.zIndex !== '4') w.el.style.zIndex = 4;
         const n = Math.max(1, Math.min(list.length, 4));
         const idx = Math.max(0, list.indexOf(w));
         const SLOTS = [
@@ -32930,6 +32942,19 @@ document.addEventListener('DOMContentLoaded', () => {
       // intact), grows with every merge, sometimes hits a MERGE CONFLICT
       // and bounces off, and occasionally git-reverts one back out
       if (w.mergeApex) {
+        // v204 WATCHDOG: self-heal any state desync every beat —
+        // (a) drop belly entries whose el left the dom, (b) an empty
+        // belly may NEVER stay swollen, (c) orphans get freed below
+        if (w.belly && w.belly.length) {
+          w.belly = w.belly.filter((v) => v && v.el && document.body.contains(v.el) && v.swallowedBy === w);
+        }
+        if ((!w.belly || !w.belly.length) && w.el.classList.contains('pik-merge-full')) {
+          w.el.classList.remove('pik-merge-full');
+          if (w.mergeTrueSrc) w.img.src = w.mergeTrueSrc;
+          w.el.style.width = w.mergeTrueW || '';
+          w.el.style.height = '';
+          w.el.style.transform = '';
+        }
         if (now > (w.mergeAt || 0)) {
           w.mergeAt = now + 9000 + Math.random() * 7000;
           const prey = DESK_PIK.walkers.filter((v) => v !== w && !v.swallowedBy && !v.mergeApex);
