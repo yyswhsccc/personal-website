@@ -31109,7 +31109,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // jelly body, rice-grain sprout, comically tiny feet
   var mergeBellyCache = {};
   function mergeBellySprite(n, bodyCol, darkCol) {
-    const key = n + '/' + bodyCol;
+    const key = 'v201/' + n + '/' + bodyCol;
     if (mergeBellyCache[key]) return mergeBellyCache[key];
     const W = 18 + n * 7, H = 15 + n * 5; // v200: roomy — one meal fills well under half
     const c = document.createElement('canvas');
@@ -31117,14 +31117,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const x = c.getContext('2d');
     const px = (a, b, col) => { x.fillStyle = col; x.fillRect(a, b, 1, 1); };
     const cxT = Math.floor(W / 2);
-    px(cxT, 0, '#57c689'); px(cxT - 1, 1, '#7ddba4'); px(cxT, 1, '#7ddba4'); // the sprout stays TINY
+    // v201: ONLY the belly is translucent — its alpha is baked per-pixel
+    // right here. sprout, face and feet stay opaque, full-strength colors
+    const hexA = (hex, a) => 'rgba(' + parseInt(hex.slice(1, 3), 16) + ',' + parseInt(hex.slice(3, 5), 16) + ',' + parseInt(hex.slice(5, 7), 16) + ',' + a + ')';
+    px(cxT, 0, '#57c689'); px(cxT - 1, 1, '#7ddba4'); px(cxT, 1, '#7ddba4'); // the sprout stays TINY (and vivid)
     const skip = { [0 + ',' + 2]: 1, [(W - 1) + ',' + 2]: 1, [0 + ',' + (H - 1)]: 1, [(W - 1) + ',' + (H - 1)]: 1 };
     for (let ry = 2; ry < H; ry++) for (let rx = 0; rx < W; rx++) {
       if (skip[rx + ',' + ry]) continue;
-      px(rx, ry, bodyCol);
+      px(rx, ry, hexA(bodyCol, 0.5)); // the see-through belly
     }
-    for (let rx = 1; rx < W - 1; rx++) px(rx, H - 1, darkCol); // belly shade
-    for (let ry = 4; ry < H - 1; ry++) px(W - 1, ry, darkCol); // side shade
+    for (let rx = 1; rx < W - 1; rx++) px(rx, H - 1, hexA(darkCol, 0.55)); // belly shade
+    for (let ry = 4; ry < H - 1; ry++) px(W - 1, ry, hexA(darkCol, 0.55)); // side shade
     for (let rx = 2; rx < 7 + n; rx++) px(rx, 3, 'rgba(255,255,255,0.3)'); // jelly shine
     const eyeY = 5 + n;
     [[cxT - 3 - n, eyeY], [cxT + 2 + n, eyeY]].forEach(([ex, ey]) => {
@@ -31133,8 +31136,8 @@ document.addEventListener('DOMContentLoaded', () => {
     px(cxT - 5 - n, eyeY + 2, '#ff9fce'); px(cxT + 5 + n, eyeY + 2, '#ff9fce'); // blush
     px(cxT - 1, eyeY + 3, '#3a2c50'); px(cxT, eyeY + 3, '#3a2c50'); // a small full smile
     const fL = Math.floor(W * 0.3), fR = Math.floor(W * 0.7);
-    px(fL, H, darkCol); px(fL + 1, H, darkCol); // comically tiny feet
-    px(fR - 1, H, darkCol); px(fR, H, darkCol);
+    px(fL, H, '#8a5fc0'); px(fL + 1, H, '#8a5fc0'); // comically tiny feet, OPAQUE
+    px(fR - 1, H, '#8a5fc0'); px(fR, H, '#8a5fc0');
     return (mergeBellyCache[key] = c.toDataURL());
   }
   // v197: spit one branch back out (used by git-revert AND the 4-branch
