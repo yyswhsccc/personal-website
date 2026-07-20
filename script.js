@@ -31079,6 +31079,8 @@ document.addEventListener('DOMContentLoaded', () => {
       pane.appendChild(frag);
       DESK_PIK.layer.appendChild(pane);
       el.style.zIndex = 3; // the owner walks ABOVE its own filter
+      const hatB = el.querySelector('.pik-hat');
+      if (hatB) hatB.style.display = 'none'; // v205: the pane IS the hat now — the 💙 was clutter
       w.bsodPane = pane;
       w.bsodFrag = frag;
       w.paneX = (w.x || 40) - 34;
