@@ -9632,15 +9632,15 @@ html[data-theme="dark"].dream-matrix {
   --blue: #0f3d24; --blue-dark: #39d353;
   --mint: #0f7a3a; --yellow: #b8ff5e;
   --bg: #010a04; --cream: #03130a;
-  --text: #26e57a; --text-soft: #12a350;
-  --border: #0f7a3a; --ink: #26e57a;
+  --text: #3dff92; --text-soft: #2ecc74; /* v203: full phosphor — the dim greens washed out */
+  --border: #17a04e; --ink: #3dff92;
   --panel: #031508; --panel-pink: #041c0c; --panel-purple: #041a0b; --panel-blue: #03180d;
   --shadow: rgba(0, 0, 0, 0.85);
   --dither-pink: conic-gradient(rgba(43, 255, 143, 0.07) 25%, transparent 0 50%, rgba(43, 255, 143, 0.07) 0 75%, transparent 0);
   --dither-purple: conic-gradient(rgba(57, 211, 83, 0.08) 25%, transparent 0 50%, rgba(57, 211, 83, 0.08) 0 75%, transparent 0);
   /* collapse-then-tint: greyscale FIRST so every sprite lands on phosphor
      green (a naked hue-rotate would just respin the rainbow — v10 bug) */
-  --lite: #7dffb8; /* guaranteed-readable accent on dark panels */
+  --lite: #a6ffcf; /* guaranteed-readable accent on dark panels */
   --dream-grade: grayscale(1) brightness(0.85) sepia(1) saturate(2.8) hue-rotate(100deg) brightness(0.95);
   /* the venue sky the stage & habitat wear while dreaming here */
   --dream-venue-bg: linear-gradient(180deg, #010a04 0%, #010a04 34%, #02120a 34%, #02120a 62%, #03170c 62%, #03170c 84%, #041c0c 84%, #041c0c 100%);

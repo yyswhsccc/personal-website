@@ -31109,9 +31109,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // jelly body, rice-grain sprout, comically tiny feet
   var mergeBellyCache = {};
   function mergeBellySprite(n, bodyCol, darkCol) {
-    const key = 'v201/' + n + '/' + bodyCol;
+    const key = 'v202/' + n + '/' + bodyCol;
     if (mergeBellyCache[key]) return mergeBellyCache[key];
-    const W = 18 + n * 7, H = 15 + n * 5; // v200: roomy — one meal fills well under half
+    const W = 20 + n * 7, H = 26 + n * 5; // v202: TALL — the whole sub-mouth belly can hold a full meal
     const c = document.createElement('canvas');
     c.width = W; c.height = H + 2;
     const x = c.getContext('2d');
@@ -31158,11 +31158,13 @@ document.addEventListener('DOMContentLoaded', () => {
     playTone(640, 'square', 0.06, 0.09, 0.02);
     if (w.belly.length) {
       w.img.src = mergeBellySprite(w.belly.length, '#e0cff6', '#bb9ce4');
-      w.el.style.width = ((18 + w.belly.length * 7) * 4) + 'px';
+      w.el.style.width = ((20 + w.belly.length * 7) * 4) + 'px';
+      w.el.style.height = ((28 + w.belly.length * 5) * 4) + 'px';
     } else {
       w.el.classList.remove('pik-merge-full');
       if (w.mergeTrueSrc) w.img.src = w.mergeTrueSrc;
       w.el.style.width = w.mergeTrueW || '';
+      w.el.style.height = '';
       w.el.style.transform = '';
     }
   }
@@ -32665,12 +32667,17 @@ document.addEventListener('DOMContentLoaded', () => {
           [[-22, -10], [22, -10], [-15, 18], [19, 20]]
         ];
         const off0 = (SLOTS[n - 1] || SLOTS[3])[Math.min(idx, n - 1)] || [0, 0];
-        const spread = 0.7 + 0.35 * n; // the jelly got roomier — spread out
-        const off = [off0[0] * spread, off0[1] * spread];
-        const hw = host.el.offsetWidth || 44, hh = host.el.offsetHeight || 48;
+        const spread = 0.7 + 0.35 * n;
+        const off = [off0[0] * spread, off0[1] * 0.4];
+        // v202.1: host geometry DERIVED from the belly count — the el's CSS
+        // height lies (base class pins it), the sprite math never does
+        const hw = (20 + n * 7) * 4;
+        const hh = (28 + n * 5) * 4;
         const vw = w.el.offsetWidth || 44, vh = w.el.offsetHeight || 48;
+        const bellyTopPx = (10 + n) * 4;
+        const zoneH = Math.max(vh, hh - bellyTopPx - 10);
         w.x = host.x + hw / 2 - vw / 2 + off[0];
-        w.y = host.y + hh / 2 - vh / 2 + off[1];
+        w.y = host.y + bellyTopPx + Math.max(0, (zoneH - vh) / 2) + off[1];
         w.tx = w.x; w.ty = w.y;
         w.el.style.left = w.x + 'px';
         w.el.style.top = w.y + 'px';
@@ -32957,7 +32964,8 @@ document.addEventListener('DOMContentLoaded', () => {
               // meal reads clearly through the high-transparency belly
               if (!w.mergeTrueSrc) { w.mergeTrueSrc = w.img.src; w.mergeTrueW = w.el.style.width || ''; }
               w.img.src = mergeBellySprite(w.belly.length, '#e0cff6', '#bb9ce4');
-              w.el.style.width = ((18 + w.belly.length * 7) * 4) + 'px';
+              w.el.style.width = ((20 + w.belly.length * 7) * 4) + 'px';
+              w.el.style.height = ((28 + w.belly.length * 5) * 4) + 'px';
               w.el.style.transform = '';
               if (w.belly.length > 3) { // 4-way merges are forbidden by policy
                 setTimeout(() => {
