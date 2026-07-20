@@ -31025,7 +31025,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // the wheel pik NAMED Merge (hue bucket 35 of 48): at APEX it merges
       // BRANCHES — i.e. swallows colleagues whole. see the tick (v193)
       mergeApex: !spId && !chameleon && hue !== null && Math.floor((((hue % 360) + 360) % 360) / 7.5) === 35 && form >= 3,
-      mergeAt: 0, revertAt: 0, mergeTarget: null, chain: null, chainOf: null, chainLink: null,
+      mergeAt: 0, revertAt: 0, mergeTarget: null, chain: null, chainOf: null, chainLink: null, mergeBadge: null,
       disguiser: spId === 'captcha' && form >= 2, disguiseDeep: spId === 'captcha' && form >= 3, disguiseAt: Date.now() + 4000 + Math.random() * 5000, disguised: -1, // Not A Robot: the costumes (fresh walkers idle first — a resync mid-reveal must not cut the show)
       framedSp: spId === 'y2kbug' && form >= 2, // sprites on the 0.9s frame clock
       cronRing: spId === 'cronjob' && form >= 2, lastMin: -1, // it rings ON the minute
@@ -31106,12 +31106,32 @@ document.addEventListener('DOMContentLoaded', () => {
     DESK_PIK.walkers.push(w);
     return w;
   }
+  // v213: the head of the train wears its merge count in plain git —
+  // '+1 MERGED', '+2 MERGED'… one glance says exactly what happened
+  function mergeBadgeUpdate(w) {
+    const n = (w.chain || []).length;
+    if (!n) {
+      if (w.mergeBadge) { try { w.mergeBadge.remove(); } catch (e) { /* gone */ } w.mergeBadge = null; }
+      return;
+    }
+    if (!w.mergeBadge) {
+      const b = document.createElement('span');
+      b.className = 'pik-merge-badge';
+      w.el.appendChild(b);
+      w.mergeBadge = b;
+    }
+    w.mergeBadge.textContent = '+' + n + ' MERGED';
+    w.mergeBadge.classList.remove('is-pop');
+    void w.mergeBadge.offsetWidth;
+    w.mergeBadge.classList.add('is-pop');
+  }
   // v211: release the last car of the branch train (git revert)
   function mergeReleaseOne(w, lineEn, lineFr) {
     const v = (w.chain || []).pop();
     if (!v) return;
     v.chainOf = null;
     if (v.chainLink) { try { v.chainLink.remove(); } catch (e) { /* gone */ } v.chainLink = null; }
+    mergeBadgeUpdate(w);
     const r = DESK_PIK.layer.getBoundingClientRect();
     v.tx = Math.max(8, Math.min(Math.max(60, r.width - 50), v.x + (Math.random() * 200 - 100)));
     v.ty = Math.max(8, Math.min(Math.max(60, r.height - 50), v.y + (Math.random() * 120 - 60)));
@@ -31576,7 +31596,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // its own footprints reads as a glitch, not a homecoming.
     const seats = DESK_PIK.walkers.map((w) => ({ x: w.x, y: w.y, tx: w.tx, ty: w.ty }));
     DESK_PIK.walkers.forEach((w) => {
-      try { if (w.bubbleEl) w.bubbleEl.remove(); if (w.babyEl) w.babyEl.remove(); if (w.bsodPane) w.bsodPane.remove(); if (w.chainLink) w.chainLink.remove(); w.el.remove(); } catch (e) { /* already gone */ }
+      try { if (w.bubbleEl) w.bubbleEl.remove(); if (w.babyEl) w.babyEl.remove(); if (w.bsodPane) w.bsodPane.remove(); if (w.chainLink) w.chainLink.remove(); if (w.mergeBadge) w.mergeBadge.remove(); w.el.remove(); } catch (e) { /* already gone */ }
     });
     DESK_PIK.walkers = [];
     deskRoster().slice(0, PIK_MAX).forEach((rr, i) => {
@@ -32959,7 +32979,7 @@ document.addEventListener('DOMContentLoaded', () => {
           w.tx = t.x; w.ty = t.y; // the stalk
           if (Math.hypot(t.x - w.x, t.y - w.y) < 40) {
             w.mergeTarget = null;
-            if (Math.random() < 0.3) { // MERGE CONFLICT — refuses to combine
+            if (Math.random() < 0.1) { // MERGE CONFLICT — rare now (v213): the QUEUE is the show
               t.el.classList.add('pik-conflict-bounce');
               setTimeout(() => { try { t.el.classList.remove('pik-conflict-bounce'); } catch (e) { /* resolved */ } }, 800);
               const ang = Math.atan2(t.y - w.y, t.x - w.x) || Math.random() * 6.283;
@@ -32974,6 +32994,7 @@ document.addEventListener('DOMContentLoaded', () => {
               t.chainOf = w;
               w.chain = w.chain || [];
               w.chain.push(t);
+              mergeBadgeUpdate(w);
               deskPikSay(w, trT('branch merged ♡', 'branche fusionnée ♡'));
               setTimeout(() => { try { deskPikSay(t, trT('merged ♡', 'fusionné ♡')); } catch (e) { /* shy */ } }, 600);
               playTone(520, 'triangle', 0.08, 0, 0.03);
@@ -32982,10 +33003,11 @@ document.addEventListener('DOMContentLoaded', () => {
             }
           }
         }
-        // git revert: the train occasionally loses its caboose
-        if ((w.chain || []).length && now > (w.revertAt || 0)) {
+        // git revert: only once the train is a REAL train — under four
+        // cars the queue never gets to exist (owner decree v213)
+        if ((w.chain || []).length >= 4 && now > (w.revertAt || 0)) {
           w.revertAt = now + 12000 + Math.random() * 9000;
-          if (Math.random() < 0.45) mergeReleaseOne(w, 'git revert — maintenance ✗', 'git revert — maintenance ✗');
+          if (Math.random() < 0.35) mergeReleaseOne(w, 'git revert — maintenance ✗', 'git revert — maintenance ✗');
         }
       }
       // bit flip APEX: every few seconds the bit ACTUALLY flips — a glitch

@@ -6729,6 +6729,31 @@ html[data-theme="dark"] .pik-disg-banner {
 .pik-bsod-frag { position: absolute; white-space: nowrap; color: #ffffff; font-size: 12px; } /* v198: kaomoji-sized */
 @keyframes pik-bsod-hover { from { transform: translateY(0); } to { transform: translateY(-4px); } }
 @media (prefers-reduced-motion: reduce) { .pik-bsod-pane { animation: none; } }
+/* Merge v213: the head car wears its merge count in plain git */
+.pik-merge-badge {
+  position: absolute;
+  left: 50%;
+  top: -18px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-family: var(--font-pixel);
+  font-size: 0.6rem;
+  line-height: 1;
+  padding: 2px 5px;
+  background: #ff8fc7;
+  color: #2a0a20;
+  border: 2px solid #2a0a20;
+  box-shadow: 2px 2px 0 rgba(20, 2, 14, 0.35);
+  pointer-events: none;
+  z-index: 8;
+}
+.pik-merge-badge.is-pop { animation: pik-merge-badge-pop 0.4s ease-out; }
+@keyframes pik-merge-badge-pop {
+  0% { transform: translateX(-50%) scale(0.4); opacity: 0; }
+  60% { transform: translateX(-50%) scale(1.25); opacity: 1; }
+  100% { transform: translateX(-50%) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) { .pik-merge-badge.is-pop { animation: none; } }
 /* Merge v211: the branch train — pink dashed lines between the cars */
 .pik-chain-link {
   position: absolute;
