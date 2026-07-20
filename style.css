@@ -6722,11 +6722,13 @@ html[data-theme="dark"] .pik-disg-banner {
 .pik-bsod-frag { position: absolute; white-space: nowrap; color: #ffffff; font-size: 12px; } /* v198: kaomoji-sized */
 @keyframes pik-bsod-hover { from { transform: translateY(0); } to { transform: translateY(-4px); } }
 @media (prefers-reduced-motion: reduce) { .pik-bsod-pane { animation: none; } }
-/* v216: an icon in the APEX Pointer's grip — tilted, lifted, still yours */
+/* v216: an icon in the APEX Pointer's grip — tilted, lifted, still yours.
+   v217: transition glides the 90ms getaway hops into one smooth flight */
 .desktop-icon-btn.pik-icon-grabbed {
   z-index: 30;
   filter: drop-shadow(2px 4px 0 rgba(214, 83, 155, 0.4));
   animation: pik-icon-wobble 0.5s ease-in-out infinite;
+  transition: transform 0.12s linear;
 }
 @keyframes pik-icon-wobble {
   0%, 100% { rotate: -4deg; }

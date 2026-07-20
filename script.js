@@ -31136,6 +31136,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const ic = w.thiefIcon;
     w.thiefIcon = null;
     w.thiefHome = null;
+    w.thiefWp = null;
     w.thiefPhase = 0;
     if (!ic) return;
     try {
@@ -31152,6 +31153,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (w.thiefPhase === 1) { // walking toward the mark
       const t = w.thiefIcon;
       if (!t) { w.thiefPhase = 0; return; }
+      w.restUntil = 0; // committed — no dawdling mid-approach
       const r = t.getBoundingClientRect();
       const lr = DESK_PIK.layer.getBoundingClientRect();
       const gx = r.left - lr.left + r.width / 2 - 22;
@@ -31160,16 +31162,32 @@ document.addEventListener('DOMContentLoaded', () => {
       if (Math.hypot(gx - w.x, gy - w.y) < 30) { // GRAB
         w.thiefPhase = 2;
         w.thiefHome = { x: w.x, y: w.y };
-        w.thiefAt = now + 5000 + Math.random() * 5000;
+        w.thiefWp = null;
+        w.thiefAt = now + 8000 + Math.random() * 6000;
         t.classList.add('pik-icon-grabbed');
         deskPikSay(w, trT('mine now', 'à moi maintenant'));
         playTone(880, 'triangle', 0.05, 0, 0.02);
       }
       return;
     }
-    if (w.thiefPhase === 2) { // carrying: the icon rides the cursor
+    if (w.thiefPhase === 2) { // the GETAWAY: sprint to far random spots
       const t = w.thiefIcon;
       if (!t || !w.thiefHome) { pointerDropIcon(w, 1); return; }
+      w.restUntil = 0; // you do not stop to smell flowers with stolen goods
+      // v217: each leg is a real haul — a point anywhere on the desktop,
+      // at least ~45% of the diagonal away, so the icon tours the screen
+      const lr = DESK_PIK.layer.getBoundingClientRect();
+      if (!w.thiefWp || Math.hypot(w.thiefWp.x - w.x, w.thiefWp.y - w.y) < 10) {
+        const minD = Math.hypot(lr.width, lr.height) * 0.45;
+        let bx = w.x, by = w.y;
+        for (let tries = 0; tries < 12; tries++) {
+          bx = 8 + Math.random() * Math.max(60, lr.width - 68);
+          by = 60 + Math.random() * Math.max(60, lr.height - 130);
+          if (Math.hypot(bx - w.x, by - w.y) >= minD) break;
+        }
+        w.thiefWp = { x: bx, y: by };
+      }
+      w.tx = w.thiefWp.x; w.ty = w.thiefWp.y;
       t.style.transform = 'translate(' + Math.round(w.x - w.thiefHome.x) + 'px,' + Math.round(w.y - w.thiefHome.y) + 'px)';
       if (now > w.thiefAt) { // put it back, politely
         pointerDropIcon(w);
@@ -33181,7 +33199,9 @@ document.addEventListener('DOMContentLoaded', () => {
           w.x += (dx / d) * hopLen;
           w.y += (dy / d) * hopLen;
         } else {
-          const sp = 1.6 * (w.spd || 1);
+          // v217: a pointer fleeing with a stolen icon RUNS (3x on top of
+          // its dart-species 1.7 — a cursor is the fastest thing you own)
+          const sp = 1.6 * (w.spd || 1) * (w.thiefPhase === 2 ? 3 : 1);
           w.x += (dx / d) * sp;
           w.y += (dy / d) * sp;
         }
