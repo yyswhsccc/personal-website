@@ -31001,7 +31001,11 @@ document.addEventListener('DOMContentLoaded', () => {
     img.alt = '';
     el.appendChild(img);
     if (form >= 2) el.classList.add('pik-form' + form);
-    if (form === 3 && !species) {
+    // v214: the Merge wears its merge count, not a crown — one head, one
+    // ornament (and no gold halo either; the badge is the statement)
+    const isMergeHead = !spId && !chameleon && hue !== null && Math.floor((((hue % 360) + 360) % 360) / 7.5) === 35 && form === 3;
+    if (isMergeHead) el.classList.add('pik-merge-head');
+    if (form === 3 && !species && !isMergeHead) {
       const crown = document.createElement('span');
       crown.className = 'pik-crown';
       crown.textContent = '👑';

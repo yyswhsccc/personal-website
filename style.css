@@ -8028,6 +8028,10 @@ html[data-theme="dark"] .pik-buddy.walking.pik-form3 img { animation: pik-bob 0.
 }
 .desk-pik.pik-form3 img,
 .pik-buddy.pik-form3 img { animation: pik-apex-shine 1.6s ease-in-out infinite; }
+/* v214: the Merge opts out of the APEX gold halo — its +N MERGED badge
+   is the whole statement (higher specificity beats the form-3 rules) */
+.desk-pik.pik-merge-head.pik-form3 img { animation: none; filter: none; }
+.desk-pik.walking.pik-merge-head.pik-form3 img { animation: pik-bob 0.42s steps(2) infinite; filter: none; }
 @keyframes pik-apex-shine {
   0%, 100% { filter: drop-shadow(0 0 3px #ffffff) drop-shadow(0 0 7px #ffd400); }
   50% { filter: drop-shadow(0 0 4px #ffffff) drop-shadow(0 0 13px #ffd400) drop-shadow(0 0 20px rgba(255, 212, 0, 0.7)); }
