@@ -31180,6 +31180,20 @@ document.addEventListener('DOMContentLoaded', () => {
     v.tx = v.x; v.ty = v.y;
     v.el.style.left = v.x + 'px';
     v.el.style.top = v.y + 'px';
+    // v207: the RELEASE must read as a release — the stale in-belly
+    // 'pik…?' bubble made freed piks look like escapees (owner report)
+    if (v.bubbleEl) { try { v.bubbleEl.remove(); } catch (e) { /* popped */ } v.bubbleEl = null; }
+    deskPikSay(v, trT('reverted!! FREE!!', 'annulé !! LIBRE !!'));
+    v.el.classList.remove('poked'); void v.el.offsetWidth; v.el.classList.add('poked');
+    for (let k = 0; k < 8; k++) { // a little pink pop at the exit hatch
+      const b = document.createElement('span');
+      b.className = 'pik-party-bit';
+      b.style.background = ['#ff8fc7', '#ffb3dd', '#c9a7f5', '#ffd9ec'][k % 4];
+      b.style.left = (v.x + 4 + Math.random() * 24) + 'px';
+      b.style.top = (v.y + Math.random() * 24) + 'px';
+      DESK_PIK.layer.appendChild(b);
+      b.addEventListener('animationend', () => b.remove());
+    }
     deskPikSay(w, trT(lineEn, lineFr));
     playTone(400, 'square', 0.07, 0, 0.03);
     playTone(640, 'square', 0.06, 0.09, 0.02);
