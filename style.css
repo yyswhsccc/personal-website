@@ -6901,6 +6901,52 @@ html[data-theme="dark"] .pik-disg-banner {
    (mirrors the merge-head opt-out; the 👑 emoji stays as the id card) */
 .desk-pik.pik-wheel-apex.pik-form3 img { animation: none; filter: none; }
 .desk-pik.pik-wheel-apex.pik-form3.walking img { animation: pik-bob 0.42s steps(2) infinite; filter: none; }
+/* v231: duet & chain stagecraft — pixel props */
+.pik-rise {
+  position: absolute;
+  font-family: var(--font-pixel);
+  font-size: 11px;
+  line-height: 1;
+  pointer-events: none;
+  z-index: 7;
+  animation: pik-rise-up 2.2s ease-out forwards;
+}
+@keyframes pik-rise-up { to { transform: translateY(-58px); opacity: 0; } }
+.pik-fly {
+  position: absolute;
+  font-family: var(--font-pixel);
+  font-size: 12px;
+  line-height: 1;
+  pointer-events: none;
+  z-index: 7;
+}
+.pik-fly.pik-ray { color: #fff6c9; text-shadow: 0 0 6px #ffd400, 0 0 12px #41e0ff; font-size: 15px; }
+.pik-sqring {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  border: 2px solid #4f9edb;
+  pointer-events: none;
+  z-index: 6;
+  animation: pik-sqring 1s ease-out forwards;
+}
+@keyframes pik-sqring { from { transform: scale(0.3); opacity: 0.9; } to { transform: scale(1.7); opacity: 0; } }
+.pik-membit { position: absolute; width: 8px; height: 8px; pointer-events: none; z-index: 6; box-shadow: 1px 1px 0 rgba(20, 2, 14, 0.3); }
+.pik-lockbar { position: absolute; width: 4px; height: 26px; background: #4a3a5e; border: 1px solid #241335; pointer-events: none; z-index: 6; }
+.pik-lockbar.is-break { animation: pik-paper-fall 0.9s ease-in forwards; }
+.pik-rainbowbar {
+  position: absolute;
+  width: 48px;
+  height: 7px;
+  background: linear-gradient(90deg, #ff4d6d, #ffd400, #7cfc00, #41e0ff, #c9a7f5);
+  border: 1px solid #2a0a20;
+  pointer-events: none;
+  z-index: 7;
+}
+.pik-shard { position: absolute; width: 16px; height: 7px; border: 1px solid #2a0a20; pointer-events: none; z-index: 7; animation: pik-paper-fall 1s ease-in forwards; }
+@media (prefers-reduced-motion: reduce) {
+  .pik-rise, .pik-sqring, .pik-lockbar.is-break, .pik-shard { animation: none; opacity: 0.6; }
+}
 /* v230: the group photo FLASH */
 .pik-photo-flash {
   position: absolute;

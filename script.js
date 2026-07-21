@@ -24103,7 +24103,12 @@ document.addEventListener('DOMContentLoaded', () => {
           const d = pikDuetFor(w);
           if (!d) continue;
           if (w.show) pikShowEnd(w, Date.now());
-          w.show = { def: d.def, t0: Date.now(), els: [], undos: [], data: { p: d.partner }, beat: 0 };
+          // debug convenience: teleport the lead beside its partner so the
+          // beats start immediately (mirrors the steal() hook)
+          w.x = d.partner.x + 42; w.y = d.partner.y;
+          w.tx = w.x; w.ty = w.y;
+          w.el.style.left = w.x + 'px'; w.el.style.top = w.y + 'px';
+          w.show = { def: d.def, t0: Date.now(), els: [], undos: [], data: { p: d.partner, lead0: d.lead0 }, beat: 0 };
           d.partner.showGuestUntil = Date.now() + 5000;
           pikShowSeen(d.def.id);
           return 'duet: ' + d.def.id;
@@ -31680,7 +31685,7 @@ document.addEventListener('DOMContentLoaded', () => {
     w.restUntil = 0; // curtain releases the actor
     w.show = null;
     w.showAt = now + 16000 + Math.random() * 26000;
-    pikShowChain(s.def.id, now); // v228: some finales tip the next domino
+    pikShowChain(s.def.id, now, w); // v228: some finales tip the next domino (v231: with a visible projectile)
   }
   function pikShowTick(w, now, docHidden) {
     w.dbgTick = (w.dbgTick || 0) + 1; // v229 temp debug
@@ -31720,7 +31725,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // solo bill can wait
       const duet = pikDuetFor(w);
       if (duet && Math.random() < 0.35) {
-        w.show = { def: duet.def, t0: now, els: [], undos: [], data: { p: duet.partner }, beat: 0 };
+        w.show = { def: duet.def, t0: now, els: [], undos: [], data: { p: duet.partner, lead0: duet.lead0 }, beat: 0 };
         duet.partner.showGuestUntil = Date.now() + 5000;
         pikShowSeen(duet.def.id);
         pikShowAudience(w, now);
@@ -33612,47 +33617,212 @@ document.addEventListener('DOMContentLoaded', () => {
         end(w) { deskPikSay(w, trT('fixed it live. probably.', 'réparé en direct. sans doute.')); } },
     ],
   };
+  // ————— v231: STAGECRAFT PRIMITIVES for duets & chains — pixel props —————
+  function showRise(s, x, y, text, color) { // a glyph floating UP and away
+    const g = document.createElement('span');
+    g.className = 'pik-rise';
+    g.textContent = text;
+    if (color) g.style.color = color;
+    g.style.left = x + 'px'; g.style.top = y + 'px';
+    DESK_PIK.layer.appendChild(g);
+    if (s) s.els.push(g);
+    setTimeout(() => { try { g.remove(); } catch (e) { /* rose */ } }, 2600);
+  }
+  function showFly(s, x1, y1, x2, y2, text, ms, cls) { // a prop IN FLIGHT
+    const g = document.createElement('span');
+    g.className = 'pik-fly' + (cls ? ' ' + cls : '');
+    g.textContent = text;
+    g.style.left = x1 + 'px'; g.style.top = y1 + 'px';
+    g.style.transition = 'left ' + ms + 'ms linear, top ' + ms + 'ms linear';
+    DESK_PIK.layer.appendChild(g);
+    if (s) s.els.push(g);
+    setTimeout(() => { try { g.style.left = x2 + 'px'; g.style.top = y2 + 'px'; } catch (e) { /* grounded */ } }, 40);
+    setTimeout(() => { try { g.remove(); } catch (e) { /* landed */ } }, ms + 500);
+    return g;
+  }
+  // named pixel set-pieces — A0/A1 are the actors in REGISTRY key order
+  const PIK_DUET_ANIMS = {
+    diffrise(A0, A1, s) { // red − sinks, green + rises between the pair
+      const mx = (A0.x + A1.x) / 2 + 14, my = (A0.y + A1.y) / 2;
+      for (let k = 0; k < 3; k++) {
+        setTimeout(() => {
+          try {
+            showDrop(null, s, mx - 16 + Math.random() * 14, my + 4, '−', '#d64545');
+            showRise(s, mx + 6 + Math.random() * 14, my + 18, '+', '#4fae6e');
+          } catch (e) { /* merged */ }
+        }, k * 550);
+      }
+    },
+    memblocks(A0, A1, s) { // Stack: a NEAT column. Heap: confetti of allocs
+      for (let k = 0; k < 3; k++) {
+        setTimeout(() => {
+          try {
+            const b = document.createElement('span');
+            b.className = 'pik-membit';
+            b.style.background = '#7cb1ff';
+            b.style.left = (A0.x - 12) + 'px';
+            b.style.top = (A0.y + 22 - k * 9) + 'px';
+            DESK_PIK.layer.appendChild(b);
+            s.els.push(b);
+            const h = document.createElement('span');
+            h.className = 'pik-membit';
+            h.style.background = '#c9a7f5';
+            h.style.left = (A1.x + 34 + Math.random() * 18) + 'px';
+            h.style.top = (A1.y + 4 + Math.random() * 26) + 'px';
+            DESK_PIK.layer.appendChild(h);
+            s.els.push(h);
+            playTone(420 + k * 80, 'triangle', 0.02, 0, 0.02);
+          } catch (e) { /* freed */ }
+        }, k * 420);
+      }
+    },
+    ptrvisit(A0, A1, s) { // the pointer visits BOTH houses
+      showFly(s, A0.x + 26, A0.y + 8, A1.x + 2, A1.y + 8, '→', 1000);
+      setTimeout(() => { try { showFly(s, A1.x + 2, A1.y + 8, A0.x + 26, A0.y + 8, '←', 1000); } catch (e) { /* dangling */ } }, 1400);
+    },
+    cookiefly(A0, A1, s) { // the cookie is CONSUMED into the cache. forever
+      showFly(s, A1.x + 10, A1.y + 4, A0.x + 12, A0.y + 10, '🍪', 1200);
+      setTimeout(() => { try { showRise(s, A0.x + 14, A0.y - 4, '∞', '#c9992e'); } catch (e) { /* expired */ } }, 1400);
+    },
+    lockbars(A0, A1, s) { // a pixel fence rises between them
+      s.data.bars = [];
+      const mx = (A0.x + A1.x) / 2 + 12, my = (A0.y + A1.y) / 2 + 4;
+      for (let k = 0; k < 3; k++) {
+        const b = document.createElement('span');
+        b.className = 'pik-lockbar';
+        b.style.left = (mx + k * 7) + 'px';
+        b.style.top = my + 'px';
+        DESK_PIK.layer.appendChild(b);
+        s.els.push(b);
+        s.data.bars.push(b);
+      }
+      playTone(200, 'square', 0.04, 0, 0.08);
+    },
+    barsbreak(A0, A1, s) { // freedom: the fence shatters
+      for (const b of (s.data.bars || [])) { try { b.classList.add('is-break'); setTimeout(() => { try { b.remove(); } catch (e2) { /* dust */ } }, 1000); } catch (e) { /* gone */ } }
+      s.data.bars = [];
+      showRise(s, (A0.x + A1.x) / 2 + 10, (A0.y + A1.y) / 2, '✨', '#ffd400');
+      playTone(760, 'triangle', 0.04, 0, 0.05);
+    },
+    saltfall(A0, A1, s) { // the shaker TILTS. the grains FALL
+      showStyle({ show: s }, A1.img, 'transform', 'rotate(-24deg)', 1600);
+      for (let k = 0; k < 8; k++) {
+        setTimeout(() => { try { showDrop(null, s, A0.x + 6 + Math.random() * 22, A0.y - 12 - Math.random() * 8, '·', '#ffffff'); } catch (e) { /* seasoned */ } }, k * 180);
+      }
+    },
+    rainbowbreak(A0, A1, s) { // the rainbow table appears… and SHATTERS
+      const mx = (A0.x + A1.x) / 2 - 6, my = (A0.y + A1.y) / 2 - 22;
+      const bar = document.createElement('span');
+      bar.className = 'pik-rainbowbar';
+      bar.style.left = mx + 'px'; bar.style.top = my + 'px';
+      DESK_PIK.layer.appendChild(bar);
+      s.els.push(bar);
+      setTimeout(() => {
+        try {
+          bar.remove();
+          const COLS = ['#ff4d6d', '#ffd400', '#41e0ff'];
+          for (let k = 0; k < 3; k++) {
+            const sh = document.createElement('span');
+            sh.className = 'pik-shard';
+            sh.style.background = COLS[k];
+            sh.style.left = (mx + k * 16) + 'px'; sh.style.top = my + 'px';
+            DESK_PIK.layer.appendChild(sh);
+            setTimeout(() => { try { sh.remove(); } catch (e2) { /* crumbs */ } }, 1100);
+          }
+          playTone(300, 'square', 0.04, 0, 0.06);
+        } catch (e) { /* uncrackable */ }
+      }, 900);
+    },
+    ringlease(A0, A1, s) { // the router BROADCASTS, the lease flies
+      for (let k = 0; k < 2; k++) {
+        setTimeout(() => {
+          try {
+            const r = document.createElement('span');
+            r.className = 'pik-sqring';
+            r.style.left = (A1.x + 2) + 'px'; r.style.top = (A1.y + 2) + 'px';
+            DESK_PIK.layer.appendChild(r);
+            setTimeout(() => { try { r.remove(); } catch (e2) { /* faded */ } }, 1100);
+          } catch (e) { /* offline */ }
+        }, k * 450);
+      }
+      setTimeout(() => { try { showFly(s, A1.x + 10, A1.y + 2, A0.x + 12, A0.y + 6, '✉', 1100); } catch (e) { /* lost mail */ } }, 900);
+    },
+    barsfill(A0, A1, s) { // Signal's meter fills, one glorious bar at a time
+      const GL = ['▂', '▄', '▆'];
+      for (let k = 0; k < 3; k++) {
+        setTimeout(() => {
+          try {
+            const b = document.createElement('span');
+            b.className = 'pik-rise';
+            b.style.animation = 'none';
+            b.textContent = GL[k];
+            b.style.color = '#7cfc00';
+            b.style.left = (A0.x + 8 + k * 9) + 'px'; b.style.top = (A0.y - 16) + 'px';
+            DESK_PIK.layer.appendChild(b);
+            s.els.push(b);
+            playTone(520 + k * 140, 'triangle', 0.03, 0, 0.03);
+            setTimeout(() => { try { b.remove(); } catch (e2) { /* bars fade */ } }, 3200);
+          } catch (e) { /* no signal */ }
+        }, k * 450);
+      }
+    },
+    packetpong(A0, A1, s) { // a real pixel packet, shrinking with each echo
+      const legs = [
+        [A0, A1, 12, 0], [A1, A0, 10, 1300], [A0, A1, 8, 2600], [A1, A0, 6, 3900],
+      ];
+      for (const [from, to, size, delay] of legs) {
+        setTimeout(() => {
+          try {
+            const g = showFly(s, from.x + 14, from.y + 6, to.x + 14, to.y + 6, '▣', 1100);
+            g.style.fontSize = size + 'px';
+            g.style.color = '#41e0ff';
+            playTone(880 - delay / 10, 'triangle', 0.03, 0, 0.03);
+          } catch (e) { /* dropped */ }
+        }, delay);
+      }
+    },
+  };
   // ————— v228: DESTINED DUETS — when two pikmin whose identities belong
   // together share the desk, fate may hand them a private two-hander —————
   const PIK_DUETS = [
     { keys: ['n33', 'n32'], id: 'duet-changelog', dur: 16000, beats: [ // Diff & Patch
-      { who: 0, at: 400, say: ['- the old you', '- l’ancien toi'], badge: ['- removed', 'red'] },
+      { who: 0, at: 400, say: ['- the old you', '- l’ancien toi'], badge: ['- removed', 'red'], anim: 'diffrise' },
       { who: 1, at: 3200, say: ['+ the better you ♡', '+ le meilleur toi ♡'], badge: ['+ added', 'green'] },
       { who: 0, at: 6400, say: ['together we are the changelog', 'ensemble on est le changelog'] },
       { who: 1, at: 9200, badge: ['v1.0.1 ✓', 'gold'], tone: 660 },
     ] },
     { keys: ['n24', 'n25'], id: 'duet-memory-lane', dur: 16000, beats: [ // Stack & Heap
-      { who: 0, at: 400, say: ['the locals live with ME', 'les locales vivent chez MOI'] },
+      { who: 0, at: 400, say: ['the locals live with ME', 'les locales vivent chez MOI'], anim: 'memblocks' },
       { who: 1, at: 3200, say: ['the objects live with ME', 'les objets vivent chez MOI'] },
-      { who: 0, at: 6400, say: ['…the pointers visit us both', '…les pointeurs nous visitent tous deux'] },
+      { who: 0, at: 6400, say: ['…the pointers visit us both', '…les pointeurs nous visitent tous deux'], anim: 'ptrvisit' },
       { who: 1, at: 9200, say: ['family ♡', 'famille ♡'], tone: 620 },
     ] },
     { keys: ['n9', 'n10'], id: 'duet-expiry-date', dur: 16000, beats: [ // Cache & Cookie
       { who: 1, at: 400, say: ['store me? i expire in 30 days', 'stocke-moi ? j’expire dans 30 jours'] },
-      { who: 0, at: 3200, badge: ['cached ✓ TTL: ∞', 'green'], say: ['cached. forever.', 'en cache. pour toujours.'] },
+      { who: 0, at: 3200, badge: ['cached ✓ TTL: ∞', 'green'], say: ['cached. forever.', 'en cache. pour toujours.'], anim: 'cookiefly' },
       { who: 1, at: 6400, say: ['that is not how i work…', 'ce n’est pas comme ça que je marche…'] },
       { who: 0, at: 9200, say: ['DENIAL is a strategy ♡', 'le DÉNI est une stratégie ♡'], tone: 520 },
     ] },
     { keys: ['n44', 'n45'], id: 'duet-eternal-war', dur: 17000, beats: [ // Mutex & Async
       { who: 1, at: 400, say: ['just let me run PAST you', 'laisse-moi juste PASSER'] },
-      { who: 0, at: 3200, badge: ['🔒', 'gold'], say: ['acquire the lock like everyone', 'prends le verrou comme tout le monde'] },
+      { who: 0, at: 3200, badge: ['🔒', 'gold'], say: ['acquire the lock like everyone', 'prends le verrou comme tout le monde'], anim: 'lockbars' },
       { who: 1, at: 6400, badge: ['await…', 'red'], say: ['this is why deadlocks happen', 'voilà pourquoi les deadlocks existent'] },
-      { who: 0, at: 9600, badge: ['🔓', 'green'], say: ['…fine. race responsibly', '…bon. course prudente'], tone: 700 },
+      { who: 0, at: 9600, badge: ['🔓', 'green'], say: ['…fine. race responsibly', '…bon. course prudente'], tone: 700, anim: 'barsbreak' },
     ] },
     { keys: ['n27', 'n28'], id: 'duet-bcrypt', dur: 15000, beats: [ // Hash & Salt
-      { who: 1, at: 400, say: ['hold still, i will season you', 'bouge pas, je t’assaisonne'] },
+      { who: 1, at: 400, say: ['hold still, i will season you', 'bouge pas, je t’assaisonne'], anim: 'saltfall' },
       { who: 0, at: 3200, badge: ['#a91f…', 'dark'], say: ['i feel… unguessable', 'je me sens… indevinable'] },
-      { who: 1, at: 6400, say: ['rainbow tables HATE us ♡', 'les rainbow tables nous DÉTESTENT ♡'], tone: 640 },
+      { who: 1, at: 6400, say: ['rainbow tables HATE us ♡', 'les rainbow tables nous DÉTESTENT ♡'], tone: 640, anim: 'rainbowbreak' },
       { who: 0, at: 9200, badge: ['bcrypt ✓', 'gold'] },
     ] },
     { keys: ['wifi', 'n15'], id: 'duet-full-bars', dur: 15000, beats: [ // Signal & Router
-      { who: 1, at: 400, say: ['come here. lease for you', 'viens là. un bail pour toi'], badge: ['DHCP ✓', 'blue'] },
+      { who: 1, at: 400, say: ['come here. lease for you', 'viens là. un bail pour toi'], badge: ['DHCP ✓', 'blue'], anim: 'ringlease' },
       { who: 0, at: 3200, badge: ['192.168.0.7', 'green'], say: ['an ADDRESS. my own!!', 'une ADRESSE. la mienne !!'] },
       { who: 1, at: 6400, say: ['full bars, kid ♡', 'toutes les barres, petit ♡'] },
-      { who: 0, at: 9200, badge: ['📶📶📶', 'green'], tone: 760 },
+      { who: 0, at: 9200, badge: ['📶📶📶', 'green'], tone: 760, anim: 'barsfill' },
     ] },
     { keys: ['n13', 'n36'], id: 'duet-call-response', dur: 15000, beats: [ // Ping & Echo
-      { who: 0, at: 400, badge: ['PING →', 'blue'], tone: 880 },
+      { who: 0, at: 400, badge: ['PING →', 'blue'], tone: 880, anim: 'packetpong' },
       { who: 1, at: 2600, badge: ['ping', 'dark'], tone: 660 },
       { who: 1, at: 4800, badge: ['ping…', 'dark'], tone: 520 },
       { who: 1, at: 7000, badge: ['…ping', 'dark'], tone: 400 },
@@ -33713,14 +33883,17 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!s.data.met && showGoto(w, p.x, p.y)) { s.data.met = 1; s.data.at = t; }
         if (!s.data.met) return;
         showHold(w, now, 900); showHold(p, now, 900);
+        const lead0 = s.data.lead0 !== false; // v231: roles follow the REGISTRY key order, not draw order
+        const A0 = lead0 ? w : p, A1 = lead0 ? p : w;
         for (let i = 0; i < d.beats.length; i++) {
           const b = d.beats[i];
           if (cue(s, 'b' + i, t, s.data.at + b.at)) {
-            const actor = b.who ? p : w;
+            const actor = b.who ? A1 : A0;
             if (b.say) deskPikSay(actor, trT(b.say[0], b.say[1]));
             if (b.badge) showBadge(w, actor, b.badge[0], b.badge[1] || 'dark', 3000);
             if (b.tone) playTone(b.tone, 'triangle', 0.04, 0, 0.04);
             if (b.fx === 'ghost') showAfterimage(actor, 1300); // v230: fork bombs need ghosts
+            if (b.anim && PIK_DUET_ANIMS[b.anim]) { try { PIK_DUET_ANIMS[b.anim](A0, A1, s); } catch (e) { /* prop jammed */ } } // v231
           }
         }
       },
@@ -33732,11 +33905,11 @@ document.addEventListener('DOMContentLoaded', () => {
       const i = d.keys.indexOf(w.showKey);
       if (i < 0) continue;
       const p = DESK_PIK.walkers.find((v) => v !== w && v.showKey === d.keys[1 - i] && !pikBusy(v));
-      if (p) return { def: pikDuetDef(d), partner: p };
+      if (p) return { def: pikDuetDef(d), partner: p, lead0: i === 0 };
     }
     // v230: no registered pair — but a DUPLICATE of yourself beats any script
     const twin = DESK_PIK.walkers.find((v) => v !== w && v.showKey && v.showKey === w.showKey && !pikBusy(v));
-    if (twin) return { def: pikDuetDef(PIK_TWIN_MIRROR), partner: twin };
+    if (twin) return { def: pikDuetDef(PIK_TWIN_MIRROR), partner: twin, lead0: true };
     return null;
   }
   // v230: THE GROUP PHOTO — with 10+ pikmin on the desk, someone eventually
@@ -33791,17 +33964,26 @@ document.addEventListener('DOMContentLoaded', () => {
   };
   // v228: CHAIN REACTIONS — some finales knock over the next domino
   const PIK_CHAINS = {
-    'rm-rf-scare': { key: 'bsodjr', show: 'crowdstrike', chance: 0.5 },  // the scare crashed the fragile one
-    'dial-up': { key: 'wifi', sig: 'wifidrop', chance: 0.55 },           // the scream killed the wifi
-    'overflow-255': { key: 'bitflip', sig: 'jolt', chance: 0.5 },        // overflow flips a nearby bit
-    'this-is-fine': { key: 'cumulus', sig: 'storm', chance: 0.5 },       // the fire summons the rain
-    'overflow-tower': { key: 'n47', show: 'sigsegv', chance: 0.5 },      // the tower lands on the guard page
+    'rm-rf-scare': { key: 'bsodjr', show: 'crowdstrike', chance: 0.5, anim: 'shock' },  // the scare crashed the fragile one
+    'dial-up': { key: 'wifi', sig: 'wifidrop', chance: 0.55, anim: 'soundwave' },        // the scream killed the wifi
+    'overflow-255': { key: 'bitflip', sig: 'jolt', chance: 0.5, anim: 'cosmicray' },     // overflow flips a nearby bit
+    'this-is-fine': { key: 'cumulus', sig: 'storm', chance: 0.5, anim: 'embers' },       // the fire summons the rain
+    'overflow-tower': { key: 'n47', show: 'sigsegv', chance: 0.5, anim: 'debris' },      // the tower lands on the guard page
   };
-  function pikShowChain(defId, now) {
+  // v231: causality made VISIBLE — a projectile carries the blame
+  const PIK_CHAIN_ANIMS = {
+    shock(src, v) { showFly(null, src.x + 14, src.y + 4, v.x + 14, v.y + 8, '❗', 800).style.color = '#d64545'; },
+    soundwave(src, v) { for (let k = 0; k < 3; k++) setTimeout(() => { try { showFly(null, src.x + 22, src.y + 8, v.x + 10, v.y + 8, ')', 800).style.color = '#ff8a5c'; } catch (e) { /* muted */ } }, k * 260); },
+    cosmicray(src, v) { showFly(null, v.x + 90, v.y - 150, v.x + 14, v.y + 10, '✧', 620, 'pik-ray'); setTimeout(() => { try { showRise(null, v.x + 12, v.y - 6, '✦', '#ffd400'); } catch (e) { /* absorbed */ } }, 700); },
+    embers(src, v) { for (let k = 0; k < 3; k++) setTimeout(() => { try { showRise(null, src.x + 6 + Math.random() * 20, src.y - 6, '·', '#ff8a5c'); } catch (e) { /* doused */ } }, k * 300); },
+    debris(src, v) { for (let k = 0; k < 2; k++) setTimeout(() => { try { showFly(null, src.x + 10 + k * 10, src.y - 20, v.x + 12 + k * 8, v.y + 8, '▪', 750).style.color = '#7c8db0'; } catch (e) { /* settled */ } }, k * 220); },
+  };
+  function pikShowChain(defId, now, src) {
     const c = PIK_CHAINS[defId];
     if (!c || Math.random() > c.chance) return;
     const v = DESK_PIK.walkers.find((x) => x.showKey === c.key && !pikBusy(x));
     if (!v) return;
+    if (c.anim && src && PIK_CHAIN_ANIMS[c.anim]) { try { PIK_CHAIN_ANIMS[c.anim](src, v); } catch (e) { /* prop jammed */ } } // v231
     setTimeout(() => { // a beat of causality before the domino tips
       try {
         if (DESK_PIK.walkers.indexOf(v) < 0 || pikBusy(v)) return;
