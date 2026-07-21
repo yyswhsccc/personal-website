@@ -23995,6 +23995,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // v219 debug: drop the APEX Signal's wifi / convene the APEX Feature standup right now
       wifidrop: () => { const w = DESK_PIK.walkers.find((v) => v.wifiApex); if (!w) return 'no APEX Signal on the desktop'; w.wifiAt = 1; return 'signal lost — next tick'; },
       argue: () => { const w = DESK_PIK.walkers.find((v) => v.featureApex); if (!w) return 'no APEX Feature on the desktop'; w.featArgAt = 1; return 'standup convened — next tick'; },
+      lecture: () => { const w = DESK_PIK.walkers.find((v) => v.lecturer); if (!w) return 'no APEX Penguin Core on the desktop'; w.lecAt = 1; w.lecTarget = null; return 'a colleague is about to learn about GNU/Linux'; },
       // v216 debug: make the APEX Pointer commit the heist right now
       steal: () => {
         const w = DESK_PIK.walkers.find((v) => v.iconThief);
@@ -31061,6 +31062,7 @@ document.addEventListener('DOMContentLoaded', () => {
       weather: spId === 'cumulus' && form >= 2, apexWeather: spId === 'cumulus' && form >= 3, rainAt: 0, boltAt: 0,
       wifiApex: spId === 'wifi' && form >= 3, wifiAt: 0, wifiDownAt: 0, wifiPhase: 0, wifiSpin: null, wifiSpinAt: 0, wifiFlickAt: 0, // v219 APEX Signal: the bars are REAL now
       featureApex: spId === 'feature' && form >= 3, featArgAt: 0, featPhase: 0, featBeatAt: 0, featBeat: 0, featWigAt: 0, // v219 APEX Feature: two heads, one route, zero consensus
+      lecturer: spId === 'kernelpg' && form >= 3, lecAt: 0, lecTarget: null, lecBeat: 0, lecBeatAt: 0, lastLec: null, // v220 APEX Penguin Core: will explain itself. unprompted. AT you
       sp: species || null, spd: species && species.spd ? species.spd : 1, stepAt: 0,
       x: 40 + Math.random() * Math.max(120, r.width - 160),
       y: r.height * 0.35 + Math.random() * (r.height * 0.5),
@@ -31322,6 +31324,74 @@ document.addEventListener('DOMContentLoaded', () => {
       w.featPhase = 0;
       w.featArgAt = now + 20000 + Math.random() * 25000;
     }
+  }
+  // v220 APEX Penguin Core: the lore made flesh — 'monolithic, open-source,
+  // will explain itself unprompted'. it corners a colleague and delivers
+  // the full GNU/Linux interjection while they inch away. it follows.
+  const KERNEL_LECTURE = [
+    ['quick interjection —', 'petite interjection —'],
+    ["it's GNU/Linux, actually", "c'est GNU/Linux, en fait"],
+    ['the kernel is MONOLITHIC', 'le noyau est MONOLITHIQUE'],
+    ['i compiled myself. from source', 'auto-compilé. depuis les sources'],
+    ['btw i use arch', "j'utilise arch, btw"],
+    ['read the man pages ♡', 'lis les pages man ♡'],
+    ["it's all in the wiki", 'tout est dans le wiki'],
+    ['questions? no? great talk ♡', 'des questions ? non ? super ♡'],
+  ];
+  function kernelLectureTick(w, now, docHidden) {
+    if (!w.lecTarget) {
+      if (!w.lecAt) { w.lecAt = now + 9000 + Math.random() * 14000; return; }
+      if (docHidden || now < w.lecAt) return;
+      // EVERY colleague gets the talk — just not the same one twice in a row
+      const all = DESK_PIK.walkers.filter((v) => v !== w);
+      const pool = all.filter((v) => v !== w.lastLec);
+      const pick = (pool.length ? pool : all);
+      if (!pick.length) { w.lecAt = now + 12000; return; }
+      w.lecTarget = pick[Math.floor(Math.random() * pick.length)];
+      w.lecBeat = -1; // -1 = walking over, radiating intent
+      w.lecBeatAt = 0;
+      return;
+    }
+    const t = w.lecTarget;
+    if (DESK_PIK.walkers.indexOf(t) < 0) { // victim despawned mid-talk
+      w.lecTarget = null; w.lecAt = now + 8000 + Math.random() * 8000;
+      return;
+    }
+    const d = Math.hypot(t.x - w.x, t.y - w.y);
+    w.restUntil = 0; // knowledge does not rest
+    if (w.lecBeat === -1) { // the approach
+      w.tx = t.x; w.ty = t.y;
+      if (d < 46) { w.lecBeat = 0; w.lecBeatAt = 0; }
+      return;
+    }
+    if (d > 150) { // the victim got away (train, dream, sheer will)
+      deskPikSay(w, trT('they always leave mid-lecture…', 'ils partent toujours en plein exposé…'));
+      playTone(220, 'triangle', 0.04, 0, 0.02);
+      w.lastLec = t; w.lecTarget = null;
+      w.lecAt = now + 15000 + Math.random() * 15000;
+      return;
+    }
+    // hold a polite 30px podium distance; the victim keeps inching away
+    if (d > 4) { const ux = (w.x - t.x) / d, uy = (w.y - t.y) / d; w.tx = t.x + ux * 30; w.ty = t.y + uy * 30; }
+    if (!t.chainOf && !t.thiefPhase) {
+      const lr = DESK_PIK.layer.getBoundingClientRect();
+      const fx = t.x + (t.x - w.x) * 0.9, fy = t.y + (t.y - w.y) * 0.9;
+      t.tx = Math.max(6, Math.min(lr.width - 46, fx));
+      t.ty = Math.max(60, Math.min(lr.height - 70, fy));
+    }
+    if (now < w.lecBeatAt) return;
+    const beat = KERNEL_LECTURE[w.lecBeat];
+    if (!beat) { // lecture delivered in full. a good day
+      deskPikSay(t, '…');
+      w.lastLec = t; w.lecTarget = null;
+      w.lecAt = now + 16000 + Math.random() * 18000;
+      return;
+    }
+    deskPikSay(w, trT(beat[0], beat[1]));
+    playTone(340 + (w.lecBeat % 3) * 70, 'triangle', 0.03, 0, 0.015);
+    if (w.lecBeat === 3) deskPikSay(t, 'pik…'); // a polite hostage
+    w.lecBeat++;
+    w.lecBeatAt = now + 1900;
   }
   // v213: the head of the train wears its merge count in plain git —
   // '+1 MERGED', '+2 MERGED'… one glance says exactly what happened
@@ -33149,6 +33219,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (w.iconThief) pointerThiefTick(w, now, docHidden);
       if (w.wifiApex) wifiApexTick(w, now, docHidden);
       if (w.featureApex) featureArgueTick(w, now, docHidden);
+      if (w.lecturer) kernelLectureTick(w, now, docHidden);
       if (w.mergeApex) {
         // v211 THE BRANCH TRAIN (owner decree: swallowing is DEAD).
         // merged piks queue behind the Merge, joined by pink dashed
