@@ -31223,7 +31223,11 @@ document.addEventListener('DOMContentLoaded', () => {
       ic.classList.remove('pik-icon-grabbed');
       ic.style.transition = instant ? '' : 'transform 0.5s cubic-bezier(0.3, 1.4, 0.5, 1)';
       ic.style.transform = '';
-      if (!instant) setTimeout(() => { try { ic.style.transition = ''; } catch (e) { /* gone */ } }, 600);
+      // v227: keep the grid lifted until the springy return lands — dropping
+      // the z mid-flight would sink the icon behind the sidebar again
+      const cont = ic.closest('.desktop-icons-container');
+      if (instant) { if (cont) cont.classList.remove('pik-heist-lift'); ic.style.transition = ''; }
+      else setTimeout(() => { try { ic.style.transition = ''; if (cont) cont.classList.remove('pik-heist-lift'); } catch (e) { /* gone */ } }, 600);
     } catch (e) { /* the icon left the desktop */ }
   }
   function pointerThiefTick(w, now, docHidden) {
@@ -31245,6 +31249,9 @@ document.addEventListener('DOMContentLoaded', () => {
         w.thiefWp = null;
         w.thiefAt = now + 8000 + Math.random() * 6000;
         t.classList.add('pik-icon-grabbed');
+        // v227: lift the whole icon grid above the sidebar (z 5 → 45) for
+        // the ride — a stolen file must never vanish BEHIND the furniture
+        try { const c = t.closest('.desktop-icons-container'); if (c) c.classList.add('pik-heist-lift'); } catch (e) { /* flat desk */ }
         deskPikSay(w, trT('mine now', 'à moi maintenant'));
         playTone(880, 'triangle', 0.05, 0, 0.02);
       }

@@ -6722,6 +6722,10 @@ html[data-theme="dark"] .pik-disg-banner {
 .pik-bsod-frag { position: absolute; white-space: nowrap; color: #ffffff; font-size: 12px; } /* v198: kaomoji-sized */
 @keyframes pik-bsod-hover { from { transform: translateY(0); } to { transform: translateY(-4px); } }
 @media (prefers-reduced-motion: reduce) { .pik-bsod-pane { animation: none; } }
+/* v227: while a heist is in progress the whole icon grid rides above the
+   sidebar (z 5 → 45, still under the pik layer's 50) — a stolen file must
+   stay visible wherever the pointer hauls it */
+.desktop-icons-container.pik-heist-lift { z-index: 45; }
 /* v216: an icon in the APEX Pointer's grip — tilted, lifted, still yours.
    v217: transition glides the 90ms getaway hops into one smooth flight */
 .desktop-icon-btn.pik-icon-grabbed {
