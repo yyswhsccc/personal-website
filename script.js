@@ -31097,6 +31097,9 @@ document.addEventListener('DOMContentLoaded', () => {
       if (w.showDodge) { // v221 Neo: bullet time — your first click MISSES
         w.showDodge = false;
         el.classList.add('pik-dodge');
+        // v223: slow-mo afterimages during the lean — pure Matrix
+        showAfterimage(w, 600);
+        setTimeout(() => { try { showAfterimage(w, 600); } catch (e) { /* frame skipped */ } }, 220);
         setTimeout(() => { try { el.classList.remove('pik-dodge'); } catch (e) { /* recovered */ } }, 950);
         deskPikSay(w, trT('too slow ♡', 'trop lent ♡'));
         playTone(170, 'sine', 0.05, 0, 0.05);
@@ -31546,21 +31549,37 @@ document.addEventListener('DOMContentLoaded', () => {
         } },
     ],
     matrix: [
-      { id: 'bullet-time', dur: 9000, // the first click MISSES
+      { id: 'bullet-time', dur: 9000, // the first click MISSES (v223: with
+        // slow-mo afterimages on the dodge — see the poke hook)
         start(w, s, now) { w.showDodge = true; showBadge(w, w, 'bullet time', 'green', 8500); } },
-      { id: 'code-vision', dur: 8000, // it sees everyone as glyphs
+      { id: 'code-vision', dur: 8000, // v223: it RAINS — everyone is glyphs
         start(w, s, now) {
           showRoot(w, now, 7000);
           showBadge(w, w, '01011', 'green', 7000);
           deskPikSay(w, trT('i can see the code', 'je vois le code'));
           for (const v of pikOthers(w, 160)) showStyle(w, v.img, 'filter', 'sepia(1) saturate(3.2) hue-rotate(68deg) brightness(0.9)', 6500);
+        },
+        tick(w, s, now, t) {
+          if (t > 6200 || now < (s.data.at || 0)) return;
+          s.data.at = now + 480;
+          const GLYPHS = 'ﾊﾐﾋｰｳｼﾅ01ｱｶﾈ';
+          const g = document.createElement('span');
+          g.className = 'pik-code-drop';
+          g.textContent = GLYPHS[Math.floor(Math.random() * GLYPHS.length)];
+          g.style.left = (w.x + 14 + (Math.random() * 160 - 80)) + 'px';
+          g.style.top = (w.y - 40 - Math.random() * 30) + 'px';
+          DESK_PIK.layer.appendChild(g);
+          setTimeout(() => { try { g.remove(); } catch (e) { /* dissolved */ } }, 2500);
         } },
       { id: 'white-rabbit', dur: 12000, // follow it. always follow it
         start(w, s) {
           const all = pikOthers(w);
           const pink = all.filter((v) => v.hue !== null && Math.abs(((v.hue % 360) + 360) % 360 - 330) < 45);
           s.data.v = (pink.length ? pink : all)[Math.floor(Math.random() * (pink.length ? pink.length : all.length))] || null;
-          if (s.data.v) deskPikSay(w, trT('the rabbit…!!', 'le lapin… !!'));
+          if (s.data.v) {
+            deskPikSay(w, trT('the rabbit…!!', 'le lapin… !!'));
+            showBadge(w, w, '🐇 follow…', 'green', 11000); // v223: the tail is labelled
+          }
         },
         tick(w, s) {
           const v = s.data.v;

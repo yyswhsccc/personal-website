@@ -6893,9 +6893,23 @@ html[data-theme="dark"] .pik-disg-banner {
   z-index: 6;
 }
 .pik-afterimage { position: absolute; opacity: 0.3; pointer-events: none; z-index: 2; filter: saturate(0.5); }
+.pik-code-drop {
+  position: absolute;
+  color: #2ea043;
+  text-shadow: 0 0 4px rgba(126, 231, 135, 0.8);
+  font-family: var(--font-pixel);
+  font-size: 11px;
+  pointer-events: none;
+  z-index: 3;
+  animation: pik-code-fall 2.4s linear forwards;
+}
+@keyframes pik-code-fall {
+  from { transform: translateY(0); opacity: 1; }
+  to { transform: translateY(95px); opacity: 0; }
+}
 .pik-lost-tag { position: absolute; left: auto; top: auto; transform: none; z-index: 9; }
 @media (prefers-reduced-motion: reduce) {
-  .pik-goldflash img, .pik-rgbspin img, .pik-paper-bit.is-falling, .pik-spinwait img, .pik-shakefind { animation: none; }
+  .pik-goldflash img, .pik-rgbspin img, .pik-paper-bit.is-falling, .pik-spinwait img, .pik-shakefind, .pik-code-drop { animation: none; }
   .desk-pik.pik-dodge { transition: none; }
 }
 
