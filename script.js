@@ -4265,7 +4265,10 @@ document.addEventListener('DOMContentLoaded', () => {
     { id: 'rescued', icon: '🛟', n: ['Plot Armor', 'Armure Scénaristique'], d: ['got trapped in the digital cage — and was personally rescued by the slime of legend.', 'piégé·e dans la cage numérique — et personnellement sauvé·e par le slime légendaire.'], t: ['the villain is fine. mostly. his ego returned a 500.', 'le méchant va bien. presque. son ego a renvoyé un 500.'] },
     // appended LAST on purpose: cloud saves pack achievements by array index
     { id: 'dreamgeo', icon: '🚧', n: ['You Stopped The MIDI', 'Tu As Arrêté Le MIDI'], d: ['out-stubborned the unstoppable 1998 midi. it said "(fine.)" — a webmaster first.', 'a été plus têtu·e que le midi inarrêtable de 1998. il a dit « (bon, d\'accord.) » — une première pour un webmestre.'], t: ['inside the 1998 dream, the midi cannot be stopped. stop it anyway.', 'dans le rêve de 1998, le midi ne peut pas être arrêté. arrête-le quand même.'] },
-    { id: 'goblinfix', icon: '🔨', n: ['Delivered As Specified', 'Livré Comme Spécifié'], d: ['hired slime & sons for three repairs. every word of the contract was honored. every. single. word.', 'a embauché slime & sons pour trois réparations. chaque mot du contrat a été respecté. chaque. mot.'], t: ['on renovation night, break three things — then choose your words carefully.', 'la nuit des rénovations, casse trois choses — puis choisis bien tes mots.'] }
+    { id: 'goblinfix', icon: '🔨', n: ['Delivered As Specified', 'Livré Comme Spécifié'], d: ['hired slime & sons for three repairs. every word of the contract was honored. every. single. word.', 'a embauché slime & sons pour trois réparations. chaque mot du contrat a été respecté. chaque. mot.'], t: ['on renovation night, break three things — then choose your words carefully.', 'la nuit des rénovations, casse trois choses — puis choisis bien tes mots.'] },
+    { id: 'showgoer', icon: '🎟️', n: ['Opening Night', 'Soir de Première'], d: ['witnessed 10 different pikmin shows. the desktop is a theatre now.', 'a vu 10 spectacles de pikmin différents. le bureau est un théâtre.'], t: ['APEX pikmin perform. stay a while.', 'les pikmin APEX jouent. reste un peu.'] },
+    { id: 'frontrow', icon: '🍿', n: ['Front Row Forever', 'Premier Rang à Vie'], d: ['witnessed 40 different shows. the pikmin recognize you at the door.', 'a vu 40 spectacles différents. les pikmin te reconnaissent à l’entrée.'], t: ['every name has its own act.', 'chaque nom a son propre numéro.'] },
+    { id: 'seasonticket', icon: '🎭', n: ['Season Ticket Holder', 'Abonné·e à la Saison'], d: ['witnessed 100 different shows — duets, disasters, dial-up and all.', 'a vu 100 spectacles — duos, désastres, 56k et tout le reste.'], t: ['the bill reshuffles every dawn. collect it all.', 'l’affiche change à l’aube. collectionne tout.'] }
   ];
 
   // ---- metric engine: count things, achievements pop themselves ----
@@ -24008,6 +24011,21 @@ document.addEventListener('DOMContentLoaded', () => {
         try { if (def.start) def.start(w, w.show, Date.now()); } catch (e) { pikShowEnd(w, Date.now()); return 'show crashed on start: ' + e.message; }
         return 'now playing: ' + spId + '/' + def.id;
       },
+      // v228 debug: the playbill collection + forcing a destined duet
+      seen: () => { const s = store.get('yos-pik-shows-seen', {}); return Object.keys(s).length + ' shows collected: ' + Object.keys(s).join(', '); },
+      duet: () => {
+        for (const w of DESK_PIK.walkers) {
+          if (!w.showPool || w.show || pikBusy(w)) continue;
+          const d = pikDuetFor(w);
+          if (!d) continue;
+          if (w.show) pikShowEnd(w, Date.now());
+          w.show = { def: d.def, t0: Date.now(), els: [], undos: [], data: { p: d.partner }, beat: 0 };
+          d.partner.showGuestUntil = Date.now() + 5000;
+          pikShowSeen(d.def.id);
+          return 'duet: ' + d.def.id;
+        }
+        return 'no destined pair on the desk right now';
+      },
       bill: (spId) => { // today's odds for a species (or all)
         const one = (id) => {
           const d = new Date();
@@ -31488,17 +31506,52 @@ document.addEventListener('DOMContentLoaded', () => {
     w.restUntil = 0; w.tx = x; w.ty = y;
     return Math.hypot(x - w.x, y - w.y) < 42;
   }
-  function pikNearest(w, maxD) {
-    let best = null, bd = maxD || 1e9;
+  function pikBusy(v) { // v228: an actor mid-scene must never be conscripted —
+    // yanking a frozen Signal out of its dropout ruins BOTH shows
+    return !!(v.show || v.chainOf || v.thiefPhase || v.wifiPhase || v.featPhase || v.lecTarget || v.disguised >= 0 || (v.showGuestUntil || 0) > Date.now());
+  }
+  function pikNearest(w, maxD) { // prefers a FREE colleague; falls back to anyone
+    let best = null, bd = maxD || 1e9, bestFree = null, bfd = maxD || 1e9;
     for (const v of DESK_PIK.walkers) {
       if (v === w) continue;
       const d = Math.hypot(v.x - w.x, v.y - w.y);
       if (d < bd) { bd = d; best = v; }
+      if (d < bfd && !pikBusy(v)) { bfd = d; bestFree = v; }
     }
-    return best;
+    return bestFree || best;
   }
   function pikOthers(w, maxD) {
     return DESK_PIK.walkers.filter((v) => v !== w && Math.hypot(v.x - w.x, v.y - w.y) <= (maxD || 1e9));
+  }
+  function pikShowAudience(w, now) { // v228: a show DRAWS A CROWD — nearby
+    // idlers drift over to watch; one might 👀. no holds, pure charm
+    if (Math.random() < 0.4) return;
+    const fans = pikOthers(w, 240).filter((v) => !pikBusy(v)).slice(0, 2);
+    for (const v of fans) {
+      if (Math.random() < 0.45) continue;
+      const ang = Math.random() * Math.PI * 2;
+      v.restUntil = 0;
+      v.tx = Math.max(6, w.x + Math.cos(ang) * 72);
+      v.ty = Math.max(60, w.y + Math.sin(ang) * 52);
+      if (Math.random() < 0.4) {
+        setTimeout(() => {
+          try { if (DESK_PIK.walkers.indexOf(v) >= 0 && !pikBusy(v)) deskPikSay(v, '👀'); } catch (e) { /* left early */ }
+        }, 1400 + Math.random() * 1200);
+      }
+    }
+  }
+  function pikShowSeen(id) { // v228: the collection — every distinct show a
+    // visitor witnesses goes in the playbill; milestones unlock achievements
+    try {
+      const seen = store.get('yos-pik-shows-seen', {});
+      if (seen[id]) return;
+      seen[id] = 1;
+      store.set('yos-pik-shows-seen', seen);
+      const n = Object.keys(seen).length;
+      if (n >= 10) achvUnlock('showgoer');
+      if (n >= 40) achvUnlock('frontrow');
+      if (n >= 100) achvUnlock('seasonticket');
+    } catch (e) { /* the usher lost the stub */ }
   }
   function cue(s, key, t, at) { // fire exactly once when t crosses `at`
     if (t >= at && !s.data[key]) { s.data[key] = 1; return true; }
@@ -31519,12 +31572,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const s = w.show;
     if (!s) return;
     try { if (s.def.end) s.def.end(w, s, now); } catch (e) { /* the show must end anyway */ }
-    for (const u of s.undos) { try { u(); } catch (e) { /* already struck */ } }
+    // v228 FIX: undos must replay in REVERSE — shows that restyle the same
+    // property repeatedly (feature-creep width, moores-law, memory-leak)
+    // push undo-to-original FIRST; forward replay left an intermediate
+    // value applied and the sprite stuck fat until resync
+    for (let i = s.undos.length - 1; i >= 0; i--) { try { s.undos[i](); } catch (e) { /* already struck */ } }
     for (const el of s.els) { try { el.remove(); } catch (e) { /* already struck */ } }
     w.showSpd = 1; w.showDodge = false; w.showLagPoke = false; w.showPokeLine = null; w.showUnflip = false;
     w.restUntil = 0; // curtain releases the actor
     w.show = null;
     w.showAt = now + 16000 + Math.random() * 26000;
+    pikShowChain(s.def.id, now); // v228: some finales tip the next domino
   }
   function pikShowTick(w, now, docHidden) {
     if (!w.show) {
@@ -31534,9 +31592,35 @@ document.addEventListener('DOMContentLoaded', () => {
       if (w.sp && w.sp.id === 'captcha' && w.disguised >= 0) { w.showAt = now + 6000; return; } // mid-costume
       // v222: never upstage a signature act already on stage
       if (w.thiefPhase || w.wifiPhase || w.featPhase || w.lecTarget) { w.showAt = now + 7000; return; }
+      if ((w.showGuestUntil || 0) > now) { w.showAt = now + 6000; return; } // v228: starring in someone's duet
+      // v228: the daily bill toast — once per day, the marquee goes up
+      if (!DESK_PIK.billToasted && store.get('yos-pik-bill-day', '') !== new Date().toDateString()) {
+        DESK_PIK.billToasted = 1;
+        store.set('yos-pik-bill-day', new Date().toDateString());
+        const pool = PIK_SHOWCASE[w.showKey] || [];
+        if (pool.length) {
+          const toast = document.createElement('div');
+          toast.className = 'pik-sys-toast';
+          toast.textContent = trT("📋 tonight's featured show: ", '📋 à l’affiche ce soir : ') + pikShowDraw(w.showKey).id;
+          DESK_PIK.layer.appendChild(toast);
+          setTimeout(() => { try { toast.remove(); } catch (e) { /* struck */ } }, 6500);
+        }
+      }
+      // v228: DESTINED DUETS — if the fated partner shares the desk, the
+      // solo bill can wait
+      const duet = pikDuetFor(w);
+      if (duet && Math.random() < 0.35) {
+        w.show = { def: duet.def, t0: now, els: [], undos: [], data: { p: duet.partner }, beat: 0 };
+        duet.partner.showGuestUntil = Date.now() + 5000;
+        pikShowSeen(duet.def.id);
+        pikShowAudience(w, now);
+        return;
+      }
       const def = pikShowDraw(w.showKey); // v225: species id OR archetype key
       if (!def) { w.showAt = now + 60000; return; }
       w.show = { def, t0: now, els: [], undos: [], data: {}, beat: 0 };
+      pikShowSeen(def.id); // v228: into the collection it goes
+      pikShowAudience(w, now); // v228: and the neighbors drift over
       try { if (def.start) def.start(w, w.show, now); } catch (e) { pikShowEnd(w, now); }
       return;
     }
@@ -31934,7 +32018,7 @@ document.addEventListener('DOMContentLoaded', () => {
         start(w, s, now) {
           showRoot(w, now, 4000);
           showBadge(w, w, '0 * * * *', 'green', 6000);
-          for (const v of pikOthers(w)) { if (!v.chainOf) { v.restUntil = now + 1300; v.tx = v.x; v.ty = v.y; v.el.classList.remove('walking'); } }
+          for (const v of pikOthers(w)) { if (!pikBusy(v)) { v.restUntil = now + 1300; v.tx = v.x; v.ty = v.y; v.el.classList.remove('walking'); } }
           deskPikSay(w, trT('scheduled sync. thank you all', 'sync planifiée. merci à tous'));
           playTone(760, 'square', 0.04, 0, 0.05);
         } },
@@ -32107,7 +32191,7 @@ document.addEventListener('DOMContentLoaded', () => {
           showRoot(w, now, 3200);
           showBadge(w, w, ':(', 'blue', 4000);
           const v = pikNearest(w, 999);
-          if (v && !v.chainOf) {
+          if (v && !pikBusy(v)) {
             v.restUntil = now + 1400; v.tx = v.x; v.ty = v.y;
             showBadge(w, v, ':(', 'blue', 2200);
             setTimeout(() => { try { deskPikSay(v, trT('wait, why me', 'attends, pourquoi moi')); } catch (e) { /* rebooted */ } }, 1050);
@@ -32128,7 +32212,7 @@ document.addEventListener('DOMContentLoaded', () => {
         start(w, s, now) {
           deskPikSay(w, trT('sorry. the update went out', 'désolé. la mise à jour est partie'));
           for (const v of pikOthers(w)) {
-            if (v.chainOf) continue;
+            if (pikBusy(v)) continue; // v228
             v.restUntil = now + 1400; v.tx = v.x; v.ty = v.y; v.el.classList.remove('walking');
             showBadge(w, v, ':(', 'blue', 2400);
           }
@@ -32541,8 +32625,8 @@ document.addEventListener('DOMContentLoaded', () => {
           if (cue(s, 'wrap', t, 5400)) {
             s.data.b.textContent = '0?!';
             s.data.b.classList.add('is-red');
-            showStyle(w, w.img, 'transform', 'rotate(360deg)', 1500);
             showStyle(w, w.img, 'transition', 'transform 0.9s', 1500);
+            showStyle(w, w.img, 'transform', 'rotate(360deg)', 1500);
             deskPikSay(w, trT('i overflowed. i am reborn ♡', 'j’ai débordé. je renais ♡'));
           }
         } },
@@ -32705,7 +32789,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const crowd = pikOthers(w, 190);
           s.data.crowd = crowd;
           crowd.forEach((v, i) => {
-            if (v.chainOf) return;
+            if (pikBusy(v)) return; // v228
             const ang = (i / Math.max(1, crowd.length)) * Math.PI - Math.PI / 2;
             v.restUntil = 0;
             v.tx = w.x + Math.cos(ang) * 62;
@@ -32715,7 +32799,7 @@ document.addEventListener('DOMContentLoaded', () => {
         tick(w, s, now, t) {
           if (cue(s, 'bow', t, 5000)) {
             for (const v of (s.data.crowd || [])) {
-              if (DESK_PIK.walkers.indexOf(v) < 0 || v.chainOf) continue;
+              if (DESK_PIK.walkers.indexOf(v) < 0 || pikBusy(v)) continue; // v228
               showHold(v, now, 3000);
               showBadge(w, v, '🙇', 'dark', 3000);
             }
@@ -32815,7 +32899,7 @@ document.addEventListener('DOMContentLoaded', () => {
           playTone(180, 'sawtooth', 0.05, 0, 0.2);
           const lr = DESK_PIK.layer.getBoundingClientRect();
           for (const v of pikOthers(w)) {
-            if (v.chainOf) continue;
+            if (pikBusy(v)) continue; // v228: never yank someone mid-scene
             const d = Math.hypot(v.x - w.x, v.y - w.y) || 1;
             v.restUntil = 0;
             v.tx = Math.max(8, Math.min(lr.width - 46, v.x + ((v.x - w.x) / d) * 140));
@@ -32985,7 +33069,7 @@ document.addEventListener('DOMContentLoaded', () => {
     ],
     n26: [ // QUEUE — order is sacred
       { id: 'fifo', dur: 13000,
-        start(w, s) { s.data.q = pikOthers(w).slice(0, 2); },
+        start(w, s) { s.data.q = pikOthers(w).filter((v) => !pikBusy(v)).slice(0, 2); },
         tick(w, s, now, t) {
           const q = (s.data.q || []).filter((v) => DESK_PIK.walkers.indexOf(v) >= 0);
           if (!q.length) return false;
@@ -33038,8 +33122,8 @@ document.addEventListener('DOMContentLoaded', () => {
         start(w, s, now) {
           showRoot(w, now, 7500);
           showBadge(w, w, 'nonce: 8f21', 'gold', 3000);
-          showStyle(w, w.img, 'transform', 'rotate(360deg)', 1500);
           showStyle(w, w.img, 'transition', 'transform 1.2s', 1500);
+          showStyle(w, w.img, 'transform', 'rotate(360deg)', 1500);
         },
         tick(w, s, now, t) {
           if (cue(s, 'spent', t, 3600)) {
@@ -33319,11 +33403,11 @@ document.addEventListener('DOMContentLoaded', () => {
           showBadge(w, w, '🔒 acquired', 'gold', 4500);
           const v = pikNearest(w, 999);
           s.data.v = v;
-          if (v && !v.chainOf) { v.restUntil = 0; v.tx = w.x + 40; v.ty = w.y; }
+          if (v && !pikBusy(v)) { v.restUntil = 0; v.tx = w.x + 40; v.ty = w.y; }
         },
         tick(w, s, now, t) {
           const v = s.data.v;
-          if (v && DESK_PIK.walkers.indexOf(v) >= 0 && !v.chainOf && t > 2500 && t < 7500) {
+          if (v && DESK_PIK.walkers.indexOf(v) >= 0 && !v.chainOf && !v.show && t > 2500 && t < 7500) {
             showHold(v, now, 900);
             if (cue(s, 'wait', t, 3000)) showBadge(w, v, 'waiting…', 'red', 4200);
           }
@@ -33409,6 +33493,115 @@ document.addEventListener('DOMContentLoaded', () => {
         end(w) { deskPikSay(w, trT('fixed it live. probably.', 'réparé en direct. sans doute.')); } },
     ],
   };
+  // ————— v228: DESTINED DUETS — when two pikmin whose identities belong
+  // together share the desk, fate may hand them a private two-hander —————
+  const PIK_DUETS = [
+    { keys: ['n33', 'n32'], id: 'duet-changelog', dur: 16000, beats: [ // Diff & Patch
+      { who: 0, at: 400, say: ['- the old you', '- l’ancien toi'], badge: ['- removed', 'red'] },
+      { who: 1, at: 3200, say: ['+ the better you ♡', '+ le meilleur toi ♡'], badge: ['+ added', 'green'] },
+      { who: 0, at: 6400, say: ['together we are the changelog', 'ensemble on est le changelog'] },
+      { who: 1, at: 9200, badge: ['v1.0.1 ✓', 'gold'], tone: 660 },
+    ] },
+    { keys: ['n24', 'n25'], id: 'duet-memory-lane', dur: 16000, beats: [ // Stack & Heap
+      { who: 0, at: 400, say: ['the locals live with ME', 'les locales vivent chez MOI'] },
+      { who: 1, at: 3200, say: ['the objects live with ME', 'les objets vivent chez MOI'] },
+      { who: 0, at: 6400, say: ['…the pointers visit us both', '…les pointeurs nous visitent tous deux'] },
+      { who: 1, at: 9200, say: ['family ♡', 'famille ♡'], tone: 620 },
+    ] },
+    { keys: ['n9', 'n10'], id: 'duet-expiry-date', dur: 16000, beats: [ // Cache & Cookie
+      { who: 1, at: 400, say: ['store me? i expire in 30 days', 'stocke-moi ? j’expire dans 30 jours'] },
+      { who: 0, at: 3200, badge: ['cached ✓ TTL: ∞', 'green'], say: ['cached. forever.', 'en cache. pour toujours.'] },
+      { who: 1, at: 6400, say: ['that is not how i work…', 'ce n’est pas comme ça que je marche…'] },
+      { who: 0, at: 9200, say: ['DENIAL is a strategy ♡', 'le DÉNI est une stratégie ♡'], tone: 520 },
+    ] },
+    { keys: ['n44', 'n45'], id: 'duet-eternal-war', dur: 17000, beats: [ // Mutex & Async
+      { who: 1, at: 400, say: ['just let me run PAST you', 'laisse-moi juste PASSER'] },
+      { who: 0, at: 3200, badge: ['🔒', 'gold'], say: ['acquire the lock like everyone', 'prends le verrou comme tout le monde'] },
+      { who: 1, at: 6400, badge: ['await…', 'red'], say: ['this is why deadlocks happen', 'voilà pourquoi les deadlocks existent'] },
+      { who: 0, at: 9600, badge: ['🔓', 'green'], say: ['…fine. race responsibly', '…bon. course prudente'], tone: 700 },
+    ] },
+    { keys: ['n27', 'n28'], id: 'duet-bcrypt', dur: 15000, beats: [ // Hash & Salt
+      { who: 1, at: 400, say: ['hold still, i will season you', 'bouge pas, je t’assaisonne'] },
+      { who: 0, at: 3200, badge: ['#a91f…', 'dark'], say: ['i feel… unguessable', 'je me sens… indevinable'] },
+      { who: 1, at: 6400, say: ['rainbow tables HATE us ♡', 'les rainbow tables nous DÉTESTENT ♡'], tone: 640 },
+      { who: 0, at: 9200, badge: ['bcrypt ✓', 'gold'] },
+    ] },
+    { keys: ['wifi', 'n15'], id: 'duet-full-bars', dur: 15000, beats: [ // Signal & Router
+      { who: 1, at: 400, say: ['come here. lease for you', 'viens là. un bail pour toi'], badge: ['DHCP ✓', 'blue'] },
+      { who: 0, at: 3200, badge: ['192.168.0.7', 'green'], say: ['an ADDRESS. my own!!', 'une ADRESSE. la mienne !!'] },
+      { who: 1, at: 6400, say: ['full bars, kid ♡', 'toutes les barres, petit ♡'] },
+      { who: 0, at: 9200, badge: ['📶📶📶', 'green'], tone: 760 },
+    ] },
+    { keys: ['n13', 'n36'], id: 'duet-call-response', dur: 15000, beats: [ // Ping & Echo
+      { who: 0, at: 400, badge: ['PING →', 'blue'], tone: 880 },
+      { who: 1, at: 2600, badge: ['ping', 'dark'], tone: 660 },
+      { who: 1, at: 4800, badge: ['ping…', 'dark'], tone: 520 },
+      { who: 1, at: 7000, badge: ['…ping', 'dark'], tone: 400 },
+      { who: 0, at: 9200, say: ['…close enough ♡', '…ça compte ♡'] },
+    ] },
+  ];
+  function pikDuetDef(d) { // one generic runner performs every duet
+    if (d.__def) return d.__def;
+    d.__def = {
+      id: d.id, dur: d.dur,
+      tick(w, s, now, t) {
+        const p = s.data.p;
+        if (!p || DESK_PIK.walkers.indexOf(p) < 0) return false;
+        p.showGuestUntil = Date.now() + 4000; // partner is spoken for
+        if (!s.data.met && showGoto(w, p.x, p.y)) { s.data.met = 1; s.data.at = t; }
+        if (!s.data.met) return;
+        showHold(w, now, 900); showHold(p, now, 900);
+        for (let i = 0; i < d.beats.length; i++) {
+          const b = d.beats[i];
+          if (cue(s, 'b' + i, t, s.data.at + b.at)) {
+            const actor = b.who ? p : w;
+            if (b.say) deskPikSay(actor, trT(b.say[0], b.say[1]));
+            if (b.badge) showBadge(w, actor, b.badge[0], b.badge[1] || 'dark', 3000);
+            if (b.tone) playTone(b.tone, 'triangle', 0.04, 0, 0.04);
+          }
+        }
+      },
+    };
+    return d.__def;
+  }
+  function pikDuetFor(w) {
+    for (const d of PIK_DUETS) {
+      const i = d.keys.indexOf(w.showKey);
+      if (i < 0) continue;
+      const p = DESK_PIK.walkers.find((v) => v !== w && v.showKey === d.keys[1 - i] && !pikBusy(v));
+      if (p) return { def: pikDuetDef(d), partner: p };
+    }
+    return null;
+  }
+  // v228: CHAIN REACTIONS — some finales knock over the next domino
+  const PIK_CHAINS = {
+    'rm-rf-scare': { key: 'bsodjr', show: 'crowdstrike', chance: 0.5 },  // the scare crashed the fragile one
+    'dial-up': { key: 'wifi', sig: 'wifidrop', chance: 0.55 },           // the scream killed the wifi
+    'overflow-255': { key: 'bitflip', sig: 'jolt', chance: 0.5 },        // overflow flips a nearby bit
+    'this-is-fine': { key: 'cumulus', sig: 'storm', chance: 0.5 },       // the fire summons the rain
+  };
+  function pikShowChain(defId, now) {
+    const c = PIK_CHAINS[defId];
+    if (!c || Math.random() > c.chance) return;
+    const v = DESK_PIK.walkers.find((x) => x.showKey === c.key && !pikBusy(x));
+    if (!v) return;
+    setTimeout(() => { // a beat of causality before the domino tips
+      try {
+        if (DESK_PIK.walkers.indexOf(v) < 0 || pikBusy(v)) return;
+        if (c.sig === 'wifidrop') { v.wifiAt = 1; return; }
+        if (c.sig === 'jolt') { v.el.classList.add('pik-glitch'); setTimeout(() => { try { v.el.classList.remove('pik-glitch'); } catch (e2) { /* ok */ } }, 440); deskPikSay(v, '?!'); return; }
+        if (c.sig === 'storm') { v.wxMode = 'storm'; v.wxModeAt = Date.now() + 11000; v.boltAt = 0; return; }
+        if (c.show) {
+          const pool = PIK_SHOWCASE[c.key] || [];
+          const def = pool.find((s) => s.id === c.show);
+          if (!def || v.show) return;
+          v.show = { def, t0: Date.now(), els: [], undos: [], data: {}, beat: 0 };
+          pikShowSeen(def.id);
+          if (def.start) def.start(v, v.show, Date.now());
+        }
+      } catch (e) { /* the domino wobbled and stood */ }
+    }, 900);
+  }
   // v220 APEX Penguin Core: the lore made flesh — 'monolithic, open-source,
   // will explain itself unprompted'. it corners a colleague and delivers
   // the full GNU/Linux interjection while they inch away. it follows.
