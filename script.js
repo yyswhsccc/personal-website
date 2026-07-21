@@ -524,6 +524,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function minimizeWindow(win) {
+    // audit: a minimized dreamlog must not keep the 60fps arcade running blind
+    if (win.id === 'win-dreamlog' && typeof dlGbArcadeStop === 'function') { try { dlGbArcadeStop(); } catch (e) { /* nothing spun up */ } }
     if (win.id === 'win-live' && typeof liveExit === 'function') {
       liveExit();
       if (typeof deskPikResync === 'function') deskPikResync(); // squad walks home
@@ -4940,7 +4942,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // pull would abort, and older clients would decode a short/stale deck)
     piks.chunks.forEach((v, j) => { p = p.then(() => cloudSet(`sv2-${u}-pk${j}`, v)); });
     p = p.then(() => cloudSet(`sv2-${u}-pkn`, piks.n))
-      .then(() => cloudSet(`sv2-${u}-pkv`, 3)); // wire-format version (v3 = 24-skill pack)
+      .then(() => cloudSet(`sv2-${u}-pkv`, 3)) // wire-format version (v3 = 24-skill pack)
+      .then(() => { const sent = store.get('yos-piklb-sent', 0); return sent > 0 ? cloudSet(`sv2-${u}-lbt`, sent + 1) : null; }); // audit: tier mark syncs (+1 offset, 0 = never)
     p = p.then(() => cloudSet(`sv2-${u}-pcn`, pcs.length));
     pcs.forEach((v, j) => { p = p.then(() => cloudSet(`sv2-${u}-pc${j}`, v)); });
     p = p.then(() => cloudSet(`sv2-${u}-wst`, wst));
@@ -4949,8 +4952,11 @@ document.addEventListener('DOMContentLoaded', () => {
   function cloudExtraPull() {
     if (!cloudSlot) return;
     const u = cloudSlot.uid;
-    Promise.all([cloudGet(`sv2-${u}-b2`), cloudGet(`sv2-${u}-b3`), cloudGet(`sv2-${u}-b4`), cloudGet(`sv2-${u}-spn`), cloudGet(`sv2-${u}-pkn`), cloudGet(`sv2-${u}-pkv`), cloudGet(`sv2-${u}-pcn`), cloudGet(`sv2-${u}-b5`)])
-      .then(([b2, b3, b4, spn, pkn, pkv, pcn, b5]) => {
+    Promise.all([cloudGet(`sv2-${u}-b2`), cloudGet(`sv2-${u}-b3`), cloudGet(`sv2-${u}-b4`), cloudGet(`sv2-${u}-spn`), cloudGet(`sv2-${u}-pkn`), cloudGet(`sv2-${u}-pkv`, true), cloudGet(`sv2-${u}-pcn`), cloudGet(`sv2-${u}-b5`), cloudGet(`sv2-${u}-lbt`)])
+      .then(([b2, b3, b4, spn, pkn, pkv, pcn, b5, lbt]) => {
+        // audit: the leaderboard tier mark rides the cloud too — a restore
+        // must not re-fire every tier hit from zero
+        if (lbt > 0) store.set('yos-piklb-sent', Math.max(store.get('yos-piklb-sent', 0), (Number(lbt) || 0) - 1));
         [[b2, 18], [b3, 68], [b4, 118], [b5, 168]].forEach(([bits, off]) => {
           for (let i = 0; bits > 0 && i < 50; i++) {
             if (Math.floor(bits / Math.pow(2, i)) % 2 === 1 && ACHV[off + i]) achvUnlock(ACHV[off + i].id, true, true);
@@ -4971,7 +4977,7 @@ document.addEventListener('DOMContentLoaded', () => {
               if (changed) store.set('yos-cheat-renames', local);
             }));
         }
-        if (pkn > 0) {
+        if (pkn > 0 && pkv != null) { // audit: a failed strict pkv read skips the merge — next pull retries
           const nChunks = Math.ceil(Math.min(pkn, 78) / (pkv >= 2 ? 2 : 3));
           // strict reads: a failed/absent chunk comes back null instead of 0
           jobs.push(Promise.all(Array.from({ length: nChunks }, (_, j) => cloudGet(`sv2-${u}-pk${j}`, true)))
@@ -6220,6 +6226,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (persist) store.set('yos-lang', yosLang);
     if (persist && yosLang === 'fr') achvUnlock('frenchie');
     document.documentElement.lang = yosLang;
+    // audit: if i18n.js failed to load, the inline-authored English UI must
+    // survive — overwriting every node with raw dictionary keys is a wipeout
+    if (typeof window.YOS_I18N === 'undefined' || !window.YOS_I18N) return;
 
     document.querySelectorAll('[data-i18n]').forEach((el) => { el.textContent = t(el.dataset.i18n); });
     document.querySelectorAll('[data-i18n-html]').forEach((el) => { el.innerHTML = t(el.dataset.i18nHtml); });
@@ -6378,7 +6387,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (tabTitle) tabTitle.innerHTML = 'YongshanOS&nbsp;♡';
     if (tabIcon) tabIcon.textContent = '🌐';
     if (secureIcon) secureIcon.textContent = '🔒';
-    document.title = t('meta.title');
+    if (window.YOS_I18N) document.title = t('meta.title'); // audit: keep the HTML title if the dictionary is absent
   }
 
 
@@ -24074,8 +24083,9 @@ document.addEventListener('DOMContentLoaded', () => {
       lecture: () => { const w = DESK_PIK.walkers.find((v) => v.lecturer); if (!w) return 'no APEX Penguin Core on the desktop'; w.lecAt = 1; w.lecTarget = null; return 'a colleague is about to learn about GNU/Linux'; },
       // v221 debug: force a specific show — __yosPik.showplay('turbo', 'benchmark'); omit showId for a weighted draw
       showplay: (spId, showId) => {
-        const w = DESK_PIK.walkers.find((v) => v.showPool && v.showKey === spId); // v225: also accepts a0..a12
+        const w = DESK_PIK.walkers.find((v) => v.showPool && v.showKey === spId); // v225: also accepts n0..n47
         if (!w) return 'no APEX ' + spId + ' on the desktop';
+        if (w.thiefPhase || w.wifiPhase || w.featPhase || w.lecTarget || w.chainOf || w.disguised >= 0 || (w.showGuestUntil || 0) > Date.now()) return 'signature act on stage — try later'; // audit
         if (w.show) pikShowEnd(w, Date.now());
         const pool = PIK_SHOWCASE[spId] || [];
         const def = showId ? pool.find((d) => d.id === showId) : pikShowDraw(spId);
@@ -24110,7 +24120,6 @@ document.addEventListener('DOMContentLoaded', () => {
           w.el.style.left = w.x + 'px'; w.el.style.top = w.y + 'px';
           w.show = { def: d.def, t0: Date.now(), els: [], undos: [], data: { p: d.partner, lead0: d.lead0 }, beat: 0 };
           d.partner.showGuestUntil = Date.now() + 5000;
-          pikShowSeen(d.def.id);
           return 'duet: ' + d.def.id;
         }
         return 'no destined pair on the desk right now';
@@ -28670,7 +28679,7 @@ document.addEventListener('DOMContentLoaded', () => {
       btn.appendChild(tease);
     }
     if (chameleon) { // even the sprout can't hold a colour
-      btn._hueTimer = setInterval(() => { img.src = pikSprite(hueColor(hue + Date.now() / 14 % 360), 0); }, 420);
+      btn._hueTimer = setInterval(() => { img.src = pikSprite(hueColor(Math.round(hue + Date.now() / 14 % 360)), 0); }, 420); // audit: integer hue = bounded sprite cache
     }
     const stageW = liveStage.clientWidth || 500;
     const x = 30 + Math.random() * Math.max(60, stageW - 90);
@@ -31394,7 +31403,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     // idle: pick a new mark now and then
-    if (docHidden || w.show || now < (w.thiefAt || 0)) return; // v222: shows have the stage
+    if (docHidden || w.show || (w.showGuestUntil || 0) > now || now < (w.thiefAt || 0)) return; // v222/audit
     if (pikStageBusyNear(w)) { w.thiefAt = now + 5000; return; } // v229: queue behind the running scene
     w.thiefAt = now + 22000 + Math.random() * 18000;
     const icons = [...document.querySelectorAll('.desktop-icon-btn')].filter((b) => {
@@ -31417,7 +31426,7 @@ document.addEventListener('DOMContentLoaded', () => {
         w.img.style.opacity = (0.55 + Math.random() * 0.45).toFixed(2);
       }
       if (!w.wifiAt) { w.wifiAt = now + 16000 + Math.random() * 26000; return; }
-      if (docHidden || w.show || now < w.wifiAt) return; // v222: not during a show
+      if (docHidden || w.show || (w.showGuestUntil || 0) > now || now < w.wifiAt) return; // v222/audit: not during a show or duet
       if (pikStageBusyNear(w)) { w.wifiAt = now + 5000; return; } // v229: queue
       // the wifi dies. it ALWAYS dies at the worst moment
       w.wifiPhase = 1;
@@ -31468,7 +31477,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function featureArgueTick(w, now, docHidden) {
     if (w.featPhase === 0) {
       if (!w.featArgAt) { w.featArgAt = now + 14000 + Math.random() * 22000; return; }
-      if (docHidden || w.show || now < w.featArgAt) return; // v222: not during a show
+      if (docHidden || w.show || (w.showGuestUntil || 0) > now || now < w.featArgAt) return; // v222/audit
       if (pikStageBusyNear(w)) { w.featArgAt = now + 5000; return; } // v229: queue
       w.featPhase = 1; w.featBeat = 0; w.featBeatAt = now;
       w.restUntil = now + 60000; w.tx = w.x; w.ty = w.y; // meeting in session
@@ -31546,6 +31555,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const b = document.createElement('span');
     b.className = 'pik-show-badge' + (mod ? ' is-' + mod : '');
     b.textContent = text;
+    const nb = target.el.querySelectorAll('.pik-show-badge').length; // audit: stack, don't overprint
+    if (nb) b.style.top = (-16 - 14 * nb) + 'px';
     target.el.appendChild(b);
     if (w.show) w.show.els.push(b);
     if (ms) setTimeout(() => { try { b.remove(); } catch (e) { /* struck */ } }, ms * SHOW_TEMPO);
@@ -31595,9 +31606,9 @@ document.addEventListener('DOMContentLoaded', () => {
     DESK_PIK.layer.appendChild(g);
     setTimeout(() => { try { g.remove(); } catch (e) { /* fell */ } }, 3750);
   }
-  function showGoto(w, x, y) { // per-tick walk-to; returns true on arrival
+  function showGoto(w, x, y, r) { // per-tick walk-to; returns true on arrival
     w.restUntil = 0; w.tx = x; w.ty = y;
-    return Math.hypot(x - w.x, y - w.y) < 42;
+    return Math.hypot(x - w.x, y - w.y) < (r || 42); // audit: tight patterns pass r=8
   }
   function pikBusy(v) { // v228: an actor mid-scene must never be conscripted —
     // yanking a frozen Signal out of its dropout ruins BOTH shows
@@ -31682,7 +31693,7 @@ document.addEventListener('DOMContentLoaded', () => {
     for (let i = s.undos.length - 1; i >= 0; i--) { try { s.undos[i](); } catch (e) { /* already struck */ } }
     for (const el of s.els) { try { el.remove(); } catch (e) { /* already struck */ } }
     w.showSpd = 1; w.showDodge = false; w.showLagPoke = false; w.showPokeLine = null; w.showUnflip = false;
-    w.restUntil = 0; // curtain releases the actor
+    if (!(w.thiefPhase || w.wifiPhase || w.featPhase || w.lecTarget)) w.restUntil = 0; // audit: a curtain must not un-root a signature act
     w.show = null;
     w.showAt = now + 16000 + Math.random() * 26000;
     pikShowChain(s.def.id, now, w); // v228: some finales tip the next domino (v231: with a visible projectile)
@@ -31717,7 +31728,6 @@ document.addEventListener('DOMContentLoaded', () => {
       // v230: with a CROWD on the desk, someone eventually calls a photo
       if (DESK_PIK.walkers.length >= 10 && Date.now() > (DESK_PIK.photoCoolUntil || 0) && Math.random() < 0.08) {
         w.show = { def: PIK_GROUP_PHOTO, t0: now, els: [], undos: [], data: {}, beat: 0 };
-        pikShowSeen('group-photo');
         try { PIK_GROUP_PHOTO.start(w, w.show, now); } catch (e) { pikShowEnd(w, now); }
         return;
       }
@@ -31727,14 +31737,12 @@ document.addEventListener('DOMContentLoaded', () => {
       if (duet && Math.random() < 0.35) {
         w.show = { def: duet.def, t0: now, els: [], undos: [], data: { p: duet.partner, lead0: duet.lead0 }, beat: 0 };
         duet.partner.showGuestUntil = Date.now() + 5000;
-        pikShowSeen(duet.def.id);
         pikShowAudience(w, now);
         return;
       }
       const def = pikShowDraw(w.showKey); // v225: species id OR archetype key
       if (!def) { w.showAt = now + 60000; return; }
       w.show = { def, t0: now, els: [], undos: [], data: {}, beat: 0 };
-      pikShowSeen(def.id); // v228: into the collection it goes
       pikShowAudience(w, now); // v228: and the neighbors drift over
       try { if (def.start) def.start(w, w.show, now); } catch (e) { pikShowEnd(w, now); }
       return;
@@ -31744,6 +31752,7 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       if (s.def.tick && s.def.tick(w, s, now, t) === false) { pikShowEnd(w, now); return; }
     } catch (e) { pikShowEnd(w, now); return; }
+    if (!s.credited) { s.credited = 1; pikShowSeen(s.def.id); } // audit: credit only shows that survive tick 1
     if (t >= s.def.dur) pikShowEnd(w, now);
   }
   // ————————— v221 THE BILL — 54 shows across 18 species —————————
@@ -31920,7 +31929,7 @@ document.addEventListener('DOMContentLoaded', () => {
     cumulus: [
       { id: 'backup', dur: 16000, // your colleagues are in the cloud now
         start(w, s) { s.data.q = pikOthers(w).slice(0, 2); s.data.i = 0; },
-        tick(w, s) {
+        tick(w, s, now, t) {
           const q = s.data.q;
           if (s.data.i >= q.length) return;
           const v = q[s.data.i];
@@ -32048,7 +32057,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } },
       { id: 'lights-out', dur: 10000, // it dims a colleague. for their health
         start(w, s) { s.data.v = pikNearest(w); },
-        tick(w, s) {
+        tick(w, s, now, t) {
           const v = s.data.v;
           if (!v || DESK_PIK.walkers.indexOf(v) < 0) return false;
           if (!s.data.done && showGoto(w, v.x, v.y)) {
@@ -32066,7 +32075,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const all = pikOthers(w).filter((v) => v !== w.lastStamp);
           s.data.v = all[Math.floor(Math.random() * all.length)] || pikNearest(w);
         },
-        tick(w, s) {
+        tick(w, s, now, t) {
           const v = s.data.v;
           if (!v || DESK_PIK.walkers.indexOf(v) < 0) return false;
           if (!s.data.done && showGoto(w, v.x, v.y)) {
@@ -32139,7 +32148,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } },
       { id: 'backup-run', dur: 14000, // it is 3am somewhere
         start(w, s) { s.data.v = pikNearest(w); },
-        tick(w, s) {
+        tick(w, s, now, t) {
           const v = s.data.v;
           if (!v || DESK_PIK.walkers.indexOf(v) < 0) return false;
           if (!s.data.done && showGoto(w, v.x, v.y)) {
@@ -32226,7 +32235,7 @@ document.addEventListener('DOMContentLoaded', () => {
         end(w) { deskPikSay(w, trT('warranty: void ♡', 'garantie : annulée ♡')); } },
       { id: 'space-heater', dur: 12000, // free warmth, no consent form
         start(w, s) { s.data.v = pikNearest(w); },
-        tick(w, s) {
+        tick(w, s, now, t) {
           const v = s.data.v;
           if (!v || DESK_PIK.walkers.indexOf(v) < 0) return false;
           if (!s.data.done && showGoto(w, v.x, v.y)) {
@@ -32272,7 +32281,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } },
       { id: 'print-report', dur: 14000, // SCREEE. your file, madam
         start(w, s) { s.data.v = pikNearest(w); },
-        tick(w, s) {
+        tick(w, s, now, t) {
           const v = s.data.v;
           if (!v || DESK_PIK.walkers.indexOf(v) < 0) return false;
           if (!s.data.done && showGoto(w, v.x, v.y)) {
@@ -32281,6 +32290,7 @@ document.addEventListener('DOMContentLoaded', () => {
             [0, 0.2, 0.4].forEach((d) => playTone(1500, 'square', 0.02, d, 0.09));
             const p = document.createElement('span');
             p.className = 'pik-paper-bit is-report';
+            s.els.push(p); // audit: curtain must be able to strike a late paper
             p.textContent = 'REPORT: pik ✓';
             p.style.left = (v.x - 4) + 'px'; p.style.top = (v.y + 34) + 'px';
             DESK_PIK.layer.appendChild(p);
@@ -32382,7 +32392,7 @@ document.addEventListener('DOMContentLoaded', () => {
             showHold(w, now, 8500); showHold(v, now, 8500); // v224: hold the pose
             deskPikSay(w, trT('select all squares with pikmin', 'coche les cases avec des pikmin'));
             setTimeout(() => { try { deskPikSay(v, '???'); } catch (e) { /* failed */ } }, 2250);
-            s.data.verdictAt = t + 5000;
+            s.data.verdictAt = Math.min(t + 5000, 13000); // audit: late arrivals still get their verdict
           }
           if (s.data.verdictAt && t >= s.data.verdictAt && !s.data.said) {
             s.data.said = 1;
@@ -32524,7 +32534,7 @@ document.addEventListener('DOMContentLoaded', () => {
           if (t < 7000) { // reproduce the bug enthusiastically
             const C = [[0, 0], [56, 0], [56, 44], [0, 44]];
             const c = C[s.data.corner % 4];
-            if (showGoto(w, (s.data.ox = s.data.ox || w.x) + c[0] - 28, (s.data.oy = s.data.oy || w.y) + c[1] - 22)) s.data.corner++;
+            if (showGoto(w, (s.data.ox = s.data.ox || w.x) + c[0] - 28, (s.data.oy = s.data.oy || w.y) + c[1] - 22, 8)) s.data.corner++; // audit: r=8 so the square is WALKED
             return;
           }
           if (cue(s, 'deny', t, 7000)) {
@@ -32613,13 +32623,16 @@ document.addEventListener('DOMContentLoaded', () => {
           }
           if (s.data.met && cue(s, 'sudo', t, s.data.metAt + 3400)) {
             deskPikSay(w, trT('sudo make me a sandwich', 'sudo fais-moi un sandwich'));
+            const my = s; // audit: a late timeout must not play into the NEXT show
             setTimeout(() => {
               try {
+                if (w.show !== my) return;
                 if (DESK_PIK.walkers.indexOf(v) >= 0) { showBadge(w, v, '🥪', 'gold', 3000); deskPikSay(v, trT('okay.', 'd’accord.')); }
               } catch (e) { /* no sudoers file */ }
             }, 2250);
             setTimeout(() => { // the HANDOVER — only now is the ritual complete
               try {
+                if (w.show !== my) return;
                 showBadge(w, w, '🥪 GET', 'gold', 3200);
                 w.el.classList.remove('poked'); void w.el.offsetWidth; w.el.classList.add('poked');
                 deskPikSay(w, trT('sudo ♡', 'sudo ♡'));
@@ -32757,7 +32770,7 @@ document.addEventListener('DOMContentLoaded', () => {
     ],
     n9: [ // CACHE — blazing fast, occasionally wrong
       { id: 'hit-and-miss', dur: 14000,
-        start(w, s) { s.data.q = pikOthers(w).slice(0, 2); s.data.i = 0; },
+        start(w, s) { s.data.q = pikOthers(w).filter((v) => !pikBusy(v)).slice(0, 2); s.data.i = 0; }, // audit
         tick(w, s, now, t) {
           const q = s.data.q;
           if (s.data.i >= q.length) return;
@@ -33306,6 +33319,7 @@ document.addEventListener('DOMContentLoaded', () => {
           showBadge(w, w, 'git push --force', 'red', 5500);
           playTone(220, 'sawtooth', 0.05, 0, 0.1);
           for (const v of pikOthers(w, 170)) {
+            if (pikBusy(v)) continue; // audit
             const d = Math.hypot(v.x - w.x, v.y - w.y) || 1;
             showShove(w, v, ((v.x - w.x) / d) * 46, ((v.y - w.y) / d) * 34);
           }
@@ -33314,7 +33328,7 @@ document.addEventListener('DOMContentLoaded', () => {
     ],
     n33: [ // DIFF — sees only what changed
       { id: 'diff-two', dur: 13000,
-        start(w, s) { const o = pikOthers(w); s.data.a = o[0]; s.data.c = o[1]; },
+        start(w, s) { const o = pikOthers(w).filter((v) => !pikBusy(v)); s.data.a = o[0]; s.data.c = o[1]; }, // audit
         tick(w, s, now, t) {
           const a = s.data.a, c = s.data.c;
           if (!a || DESK_PIK.walkers.indexOf(a) < 0) return false;
@@ -33352,8 +33366,11 @@ document.addEventListener('DOMContentLoaded', () => {
             s.data.done = 1;
             showHold(w, now, 4200);
             showBadge(w, v, '⚠ rebasing…', 'red', 2400);
+            v.showGuestUntil = Date.now() + 2800; // audit: booked for the move
+            const my = s;
             setTimeout(() => {
               try {
+                if (!w.show || w.show !== my || DESK_PIK.walkers.indexOf(v) < 0) return; // audit: stale
                 showShove(w, v, (Math.random() < 0.5 ? -1 : 1) * 60, Math.random() * 40 - 20);
                 showBadge(w, v, 'rebased onto main ✓', 'green', 3600);
                 deskPikSay(w, trT('your history is cleaner now', 'ton historique est plus propre'));
@@ -33506,7 +33523,7 @@ document.addEventListener('DOMContentLoaded', () => {
     ],
     n43: [ // PROXY — sees everything, tells no one
       { id: 'middleman', dur: 13000,
-        start(w, s) { const o = pikOthers(w); s.data.a = o[0]; s.data.c = o[1]; },
+        start(w, s) { const o = pikOthers(w).filter((v) => !pikBusy(v)); s.data.a = o[0]; s.data.c = o[1]; }, // audit
         tick(w, s, now, t) {
           const a = s.data.a, c = s.data.c;
           if (!a || DESK_PIK.walkers.indexOf(a) < 0 || !c || DESK_PIK.walkers.indexOf(c) < 0) return false;
@@ -33531,14 +33548,14 @@ document.addEventListener('DOMContentLoaded', () => {
         },
         tick(w, s, now, t) {
           const v = s.data.v;
-          if (v && DESK_PIK.walkers.indexOf(v) >= 0 && !v.chainOf && !v.show && t > 2500 && t < 7500) {
+          if (v && DESK_PIK.walkers.indexOf(v) >= 0 && !pikBusy(v) && t > 2500 && t < 7500) { // audit: full busy screen
             showHold(v, now, 900);
             if (cue(s, 'wait', t, 3000)) showBadge(w, v, 'waiting…', 'red', 4200);
           }
           if (cue(s, 'unlock', t, 7800)) {
             showBadge(w, w, '🔓 released', 'green', 3600);
             deskPikSay(w, trT('your turn. no deadlocks today', 'à toi. pas d’interblocage aujourd’hui'));
-            if (v && DESK_PIK.walkers.indexOf(v) >= 0) setTimeout(() => { try { deskPikSay(v, trT('FINALLY', 'ENFIN')); } catch (e) { /* starved */ } }, 1200);
+            if (v && DESK_PIK.walkers.indexOf(v) >= 0 && !pikBusy(v)) setTimeout(() => { try { if (!pikBusy(v)) deskPikSay(v, trT('FINALLY', 'ENFIN')); } catch (e) { /* starved */ } }, 1200);
           }
         } },
     ],
@@ -33563,7 +33580,7 @@ document.addEventListener('DOMContentLoaded', () => {
           if (t < 8000) {
             const C = [[0, 0], [50, 0], [50, 40], [0, 40]];
             const c = C[s.data.corner % 4];
-            if (showGoto(w, (s.data.ox = s.data.ox || w.x) + c[0] - 25, (s.data.oy = s.data.oy || w.y) + c[1] - 20)) s.data.corner++;
+            if (showGoto(w, (s.data.ox = s.data.ox || w.x) + c[0] - 25, (s.data.oy = s.data.oy || w.y) + c[1] - 20, 8)) s.data.corner++; // audit: r=8 so the loop is WALKED
             return;
           }
           if (cue(s, 'brk', t, 8000)) {
@@ -33995,7 +34012,6 @@ document.addEventListener('DOMContentLoaded', () => {
           const def = pool.find((s) => s.id === c.show);
           if (!def || v.show) return;
           v.show = { def, t0: Date.now(), els: [], undos: [], data: {}, beat: 0 };
-          pikShowSeen(def.id);
           if (def.start) def.start(v, v.show, Date.now());
         }
       } catch (e) { /* the domino wobbled and stood */ }
@@ -34017,10 +34033,10 @@ document.addEventListener('DOMContentLoaded', () => {
   function kernelLectureTick(w, now, docHidden) {
     if (!w.lecTarget) {
       if (!w.lecAt) { w.lecAt = now + 9000 + Math.random() * 14000; return; }
-      if (docHidden || w.show || now < w.lecAt) return; // v222: not during a show
+      if (docHidden || w.show || (w.showGuestUntil || 0) > now || now < w.lecAt) return; // v222/audit
       if (pikStageBusyNear(w)) { w.lecAt = now + 5000; return; } // v229: queue
       // EVERY colleague gets the talk — just not the same one twice in a row
-      const all = DESK_PIK.walkers.filter((v) => v !== w);
+      const all = DESK_PIK.walkers.filter((v) => v !== w && !pikBusy(v)); // audit: never lecture a performer
       const pool = all.filter((v) => v !== w.lastLec);
       const pick = (pool.length ? pool : all);
       if (!pick.length) { w.lecAt = now + 12000; return; }
@@ -34050,7 +34066,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     // hold a polite 30px podium distance; the victim keeps inching away
     if (d > 4) { const ux = (w.x - t.x) / d, uy = (w.y - t.y) / d; w.tx = t.x + ux * 30; w.ty = t.y + uy * 30; }
-    if (!t.chainOf && !t.thiefPhase) {
+    if (!pikBusy(t)) { // audit: full busy screen
       const lr = DESK_PIK.layer.getBoundingClientRect();
       const fx = t.x + (t.x - w.x) * 0.9, fy = t.y + (t.y - w.y) * 0.9;
       t.tx = Math.max(6, Math.min(lr.width - 46, fx));
@@ -35581,7 +35597,7 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.style.left = (60 + Math.random() * Math.max(100, r.width - 200)) + 'px';
     btn.style.top = (r.height * 0.4 + Math.random() * (r.height * 0.45)) + 'px';
     if (chameleon) { // even the sprout can't hold a colour
-      btn._hueTimer = setInterval(() => { img.src = pikSprite(hueColor(hue + Date.now() / 14 % 360), 0); }, 420);
+      btn._hueTimer = setInterval(() => { img.src = pikSprite(hueColor(Math.round(hue + Date.now() / 14 % 360)), 0); }, 420); // audit: integer hue = bounded sprite cache
     }
     btn.addEventListener('click', () => {
       if (btn._hueTimer) clearInterval(btn._hueTimer);
@@ -35631,6 +35647,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // shy mode), time FREEZES for them: no walking, no sprouting, no trails —
     // the curtain lifts on the exact scene it fell on
     if (DESK_PIK.layer && DESK_PIK.layer.classList.contains('pik-float-hidden')) return;
+    // audit: the BSOD crash dream hides the desk — shows must not leak onto it
+    if (document.documentElement.classList.contains('dream-bsod')) return;
+    // audit: phones never render the layer — a GHOST pointer must not drag real icons
+    if (DESK_PIK.layer && !DESK_PIK.layer.getClientRects().length) {
+      DESK_PIK.walkers.forEach((w) => { if (w.thiefIcon) pointerDropIcon(w, 1); });
+      return;
+    }
     const now = Date.now();
     if (now > DESK_PIK.sproutAt) {
       DESK_PIK.sproutAt = now + 16000 + Math.random() * 16000; // brisk regrowth (16-32s)
@@ -35701,6 +35724,7 @@ document.addEventListener('DOMContentLoaded', () => {
         cf.style.top = (w.y - 6 + Math.random() * 32) + 'px';
         DESK_PIK.layer.appendChild(cf);
         cf.addEventListener('animationend', () => cf.remove());
+          setTimeout(() => { try { cf.remove(); } catch (e) { /* swept */ } }, 2600); // audit: reduced-motion never fires animationend
       }
       // the pointer family: the pink baby follows, stalls, and gets fetched
       if (w.babyEl) {
@@ -35739,6 +35763,7 @@ document.addEventListener('DOMContentLoaded', () => {
             hb.style.top = (w.babyY - 4) + 'px';
             DESK_PIK.layer.appendChild(hb);
             hb.addEventListener('animationend', () => hb.remove());
+          setTimeout(() => { try { hb.remove(); } catch (e) { /* swept */ } }, 2600); // audit: reduced-motion never fires animationend
           }
         }
         w.babyEl.style.left = w.babyX + 'px';
@@ -35762,7 +35787,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // confetti — back to robot, wondering aloud if anything seemed off.
       // ★★★: it cycles the whole zoo and only sometimes blows its cover.
       // every creature keeps the antenna flower (continuity is important)
-      if (w.disguiser && now > w.disguiseAt && now > (w.revealUntil || 0)) {
+      if (w.disguiser && !w.show && now > w.disguiseAt && now > (w.revealUntil || 0)) { // audit: not mid-show
         // the ✅ hat swaps for a scrolling site-style banner announcing
         // (with full CAPTCHA confidence) what the creature definitely is
         const disgBanner = () => {
@@ -35811,6 +35836,7 @@ document.addEventListener('DOMContentLoaded', () => {
           fl.style.top = (by0 + 8) + 'px';
           DESK_PIK.layer.appendChild(fl);
           fl.addEventListener('animationend', () => fl.remove());
+          setTimeout(() => { try { fl.remove(); } catch (e) { /* swept */ } }, 2600); // audit: reduced-motion never fires animationend
           const burstWave = (n, dMin, dMax, cols, delay) => setTimeout(() => {
             for (let k = 0; k < n; k++) {
               const b = document.createElement('span');
@@ -35828,6 +35854,7 @@ document.addEventListener('DOMContentLoaded', () => {
               b.style.top = (by0 + 16) + 'px';
               DESK_PIK.layer.appendChild(b);
               b.addEventListener('animationend', () => b.remove());
+          setTimeout(() => { try { b.remove(); } catch (e) { /* swept */ } }, 2600); // audit: reduced-motion never fires animationend
             }
           }, delay);
           burstWave(24, 30, 64, PIK_PARTY_COLORS, 0);
@@ -35979,6 +36006,10 @@ document.addEventListener('DOMContentLoaded', () => {
               t.x = Math.max(8, Math.min(Math.max(60, rB.width - 50), t.x + Math.cos(ang) * 130));
               t.y = Math.max(8, Math.min(Math.max(60, rB.height - 50), t.y + Math.sin(ang) * 130));
               t.tx = t.x; t.ty = t.y;
+              // audit: the fling never RENDERED — logical coords moved, the el did not
+              showStyle(w, t.el, 'transition', 'left 0.7s ease, top 0.7s ease', 900);
+              t.el.style.left = t.x + 'px';
+              t.el.style.top = t.y + 'px';
               deskPikSay(w, trT('MERGE CONFLICT!!', 'CONFLIT DE MERGE !!'));
               playTone(180, 'sawtooth', 0.12, 0, 0.05);
               playTone(140, 'sawtooth', 0.12, 0.12, 0.05);
@@ -36028,6 +36059,7 @@ document.addEventListener('DOMContentLoaded', () => {
             rd.style.top = (w.y + 30) + 'px';
             DESK_PIK.layer.appendChild(rd);
             rd.addEventListener('animationend', () => rd.remove());
+          setTimeout(() => { try { rd.remove(); } catch (e) { /* swept */ } }, 2600); // audit: reduced-motion never fires animationend
             w.rainAt = now + (wx === 'storm' ? 170 + Math.random() * 160 : 380 + Math.random() * 420);
           } else if (wx === 'snow') {
             const sf = document.createElement('span');
@@ -36036,6 +36068,7 @@ document.addEventListener('DOMContentLoaded', () => {
             sf.style.top = (w.y + 28) + 'px';
             DESK_PIK.layer.appendChild(sf);
             sf.addEventListener('animationend', () => sf.remove());
+          setTimeout(() => { try { sf.remove(); } catch (e) { /* swept */ } }, 2600); // audit: reduced-motion never fires animationend
             w.rainAt = now + 460 + Math.random() * 420;
           } else { // sunny: golden warmth rises off the cloud
             const su = document.createElement('span');
@@ -36045,6 +36078,7 @@ document.addEventListener('DOMContentLoaded', () => {
             su.style.top = (w.y + Math.random() * 20) + 'px';
             DESK_PIK.layer.appendChild(su);
             su.addEventListener('animationend', () => su.remove());
+          setTimeout(() => { try { su.remove(); } catch (e) { /* swept */ } }, 2600); // audit: reduced-motion never fires animationend
             w.rainAt = now + 420 + Math.random() * 380;
           }
         }
@@ -36057,6 +36091,7 @@ document.addEventListener('DOMContentLoaded', () => {
           bl.style.top = (w.y + 26) + 'px';
           DESK_PIK.layer.appendChild(bl);
           bl.addEventListener('animationend', () => bl.remove());
+          setTimeout(() => { try { bl.remove(); } catch (e) { /* swept */ } }, 2600); // audit: reduced-motion never fires animationend
           w.el.classList.add('pik-flash');
           setTimeout(() => { try { w.el.classList.remove('pik-flash'); } catch (e) { /* thundered off */ } }, 320);
         }
