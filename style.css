@@ -7192,6 +7192,32 @@ html[data-theme="dark"].dream-gameboy .pik-swap-arrow { color: #0f380f; }
 }
 @keyframes pik-evo-land { 30% { transform: scale(1.28) translateY(-16px); } }
 .pik-evo-hat { position: absolute; top: -26px; left: 50%; transform: translateX(-50%); font-size: 2rem; }
+/* v234: the reveal is a TEXTBOOK DIAGRAM — old form ➜ new form, captioned */
+.pik-evo-port.pik-evo-compare {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(10px, 4vw, 30px);
+}
+.pik-evo-side { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.pik-evo-port-mini { position: relative; display: inline-block; }
+.pik-evo-side.is-old .pik-evo-sprite { filter: saturate(0.65) brightness(0.8); }
+.pik-evo-side.is-new .pik-evo-sprite { filter: drop-shadow(0 0 10px rgba(255, 212, 0, 0.75)); }
+.pik-evo-stars {
+  font-family: var(--font-pixel);
+  font-size: clamp(0.7rem, 2.4vw, 1rem);
+  color: #ffd400;
+  text-shadow: 2px 2px 0 rgba(40, 20, 2, 0.8);
+}
+.pik-evo-side.is-old .pik-evo-stars { color: #cfc4de; }
+.pik-evo-arrow {
+  font-size: clamp(30px, 7vw, 56px);
+  color: #ffd400;
+  text-shadow: 0 0 10px rgba(255, 212, 0, 0.8), 3px 3px 0 rgba(40, 20, 2, 0.6);
+  animation: pik-evo-arrow-pulse 0.9s ease-in-out infinite;
+}
+@keyframes pik-evo-arrow-pulse { 50% { transform: translateX(8px) scale(1.12); } }
+@media (prefers-reduced-motion: reduce) { .pik-evo-arrow { animation: none; } }
 .pik-evo-crown { position: absolute; top: -44px; left: 50%; transform: translate(-50%, -110px); font-size: 2.6rem; opacity: 0; }
 .pik-evo.revealed .pik-evo-crown { animation: pik-evo-crowndrop 0.9s ease 0.25s forwards; }
 @keyframes pik-evo-crowndrop {

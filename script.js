@@ -28512,7 +28512,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     const title = document.createElement('div');
     title.className = 'pik-evo-title';
-    title.textContent = apex ? trT('👑 APEX EVOLUTION 👑', '👑 ÉVOLUTION APEX 👑') : trT('✨ EVOLUTION!! ✨', '✨ ÉVOLUTION !! ✨');
+    // v234: suspense first — the PLAIN-WORDS headline lands at the reveal
+    title.textContent = trT('✨ EVOLVING… ✨', '✨ ÉVOLUTION… ✨');
     const sub = document.createElement('div');
     sub.className = 'pik-evo-sub';
     sub.textContent = name + ' · ' + pikEvoLore(kk, newForm) + (apex ? ' · ★★ → ★★★' : ' · ★ → ★★');
@@ -28555,12 +28556,40 @@ document.addEventListener('DOMContentLoaded', () => {
       playTone(1567.98, 'square', 0.18, 0, 0.05);
       playTone(130, 'sawtooth', 0.3, 0.02, 0.05);
     }, 2300));
-    timers.push(setTimeout(() => { // THE REVEAL
+    timers.push(setTimeout(() => { // THE REVEAL — v234 owner decree: a
+      // TEXTBOOK DIAGRAM. plain words on top, then old form → arrow → new
+      // form, each captioned with its stars. no one may be confused again
       ov.classList.remove('flashing');
       ov.classList.add('revealed');
-      img.style.width = 'min(272px, 62vw)';
-      img.src = pikSprite(pikEntryColor(p), p.s || 0, p.sp || null, false, newForm, kk);
       clearInterval(dust);
+      title.textContent = apex
+        ? trT('👑 YOUR PIKMIN REACHED APEX!! 👑', '👑 TON PIKMIN ATTEINT L’APEX !! 👑')
+        : trT('✨ YOUR PIKMIN EVOLVED!! ✨', '✨ TON PIKMIN A ÉVOLUÉ !! ✨');
+      port.innerHTML = '';
+      port.classList.add('pik-evo-compare');
+      const side = (form, big) => {
+        const wrap = document.createElement('div');
+        wrap.className = 'pik-evo-side' + (big ? ' is-new' : ' is-old');
+        const im = document.createElement('img');
+        im.className = 'pik-evo-sprite';
+        im.alt = '';
+        im.style.width = big ? 'min(238px, 46vw)' : 'min(126px, 26vw)';
+        im.src = pikSprite(pikEntryColor(p), p.s || 0, p.sp || null, false, form, kk);
+        const cap = document.createElement('div');
+        cap.className = 'pik-evo-stars';
+        cap.textContent = '★'.repeat(Math.max(1, form)) + (big ? '' : '');
+        const holder = document.createElement('div');
+        holder.className = 'pik-evo-port-mini';
+        holder.appendChild(im);
+        if (big && sp) { const h = document.createElement('span'); h.className = 'pik-evo-hat'; h.textContent = sp.hat; holder.appendChild(h); }
+        if (big && apex && !sp) { const c = document.createElement('span'); c.className = 'pik-evo-crown'; c.textContent = '👑'; holder.appendChild(c); }
+        wrap.append(holder, cap);
+        return wrap;
+      };
+      const arrow = document.createElement('div');
+      arrow.className = 'pik-evo-arrow';
+      arrow.textContent = '➜';
+      port.append(side(newForm - 1, false), arrow, side(newForm, true));
       playFanfare();
       playSparkleSound();
     }, 2800));
