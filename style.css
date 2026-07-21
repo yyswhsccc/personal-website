@@ -6863,8 +6863,39 @@ html[data-theme="dark"] .pik-disg-banner {
 }
 .pik-minigrid span { width: 10px; height: 10px; background: #d6f5c8; }
 .pik-minigrid span.is-hit { background: #ff8fc7; }
+/* v222: new stagecraft — wait-cursor spin, shake-to-find, drag-select, lag theatre */
+.pik-spinwait img { animation: pik-spinwait 1.6s steps(8) infinite; }
+@keyframes pik-spinwait { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+.pik-shakefind { animation: pik-shakefind 0.45s linear 4; }
+@keyframes pik-shakefind {
+  0%, 100% { margin-left: 0; }
+  25% { margin-left: -6px; }
+  75% { margin-left: 6px; }
+}
+.pik-select-box {
+  position: absolute;
+  border: 2px dashed #4f9edb;
+  background: rgba(79, 158, 219, 0.12);
+  pointer-events: none;
+  z-index: 1;
+}
+.pik-selected img { filter: sepia(1) saturate(3.4) hue-rotate(180deg) brightness(1.1); }
+.pik-anchor-pin {
+  position: absolute;
+  white-space: nowrap;
+  font-family: var(--font-pixel);
+  font-size: 0.55rem;
+  padding: 1px 3px;
+  background: #e3edff;
+  color: #2f5fd0;
+  border: 2px solid #5a83e0;
+  pointer-events: none;
+  z-index: 6;
+}
+.pik-afterimage { position: absolute; opacity: 0.3; pointer-events: none; z-index: 2; filter: saturate(0.5); }
+.pik-lost-tag { position: absolute; left: auto; top: auto; transform: none; z-index: 9; }
 @media (prefers-reduced-motion: reduce) {
-  .pik-goldflash img, .pik-rgbspin img, .pik-paper-bit.is-falling { animation: none; }
+  .pik-goldflash img, .pik-rgbspin img, .pik-paper-bit.is-falling, .pik-spinwait img, .pik-shakefind { animation: none; }
   .desk-pik.pik-dodge { transition: none; }
 }
 

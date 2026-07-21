@@ -31102,12 +31102,25 @@ document.addEventListener('DOMContentLoaded', () => {
         playTone(170, 'sine', 0.05, 0, 0.05);
         return;
       }
-      if (w.showLagPoke) { // v221 Latency: your poke is in transit. 3000ms
+      if (w.showLagPoke) { // v221 Latency: your poke is in transit. 3000ms.
+        // v222: a visible receipt IMMEDIATELY — the click landed, the site
+        // is fine, the pikmin is just emotionally overseas
+        const rcpt = document.createElement('span');
+        rcpt.className = 'pik-show-badge is-dark';
+        rcpt.textContent = trT('📨 poke in transit…', '📨 poke en transit…');
+        el.appendChild(rcpt);
+        playTone(700, 'triangle', 0.03, 0, 0.02);
         setTimeout(() => {
           try {
+            rcpt.remove();
             el.classList.remove('poked'); void el.offsetWidth; el.classList.add('poked');
             pikChirp();
             deskPikSay(w, trT('…pik?!', '…pik ?!'));
+            const ok = document.createElement('span');
+            ok.className = 'pik-show-badge is-green';
+            ok.textContent = trT('✓ delivered · +3000ms', '✓ livré · +3000 ms');
+            el.appendChild(ok);
+            setTimeout(() => { try { ok.remove(); } catch (e2) { /* archived */ } }, 2400);
           } catch (e) { /* packet dropped entirely */ }
         }, 3000);
         return;
@@ -31256,7 +31269,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     // idle: pick a new mark now and then
-    if (docHidden || now < (w.thiefAt || 0)) return;
+    if (docHidden || w.show || now < (w.thiefAt || 0)) return; // v222: shows have the stage
     w.thiefAt = now + 22000 + Math.random() * 18000;
     const icons = [...document.querySelectorAll('.desktop-icon-btn')].filter((b) => {
       if (b.style.transform || b.classList.contains('pik-icon-grabbed')) return false;
@@ -31278,7 +31291,7 @@ document.addEventListener('DOMContentLoaded', () => {
         w.img.style.opacity = (0.55 + Math.random() * 0.45).toFixed(2);
       }
       if (!w.wifiAt) { w.wifiAt = now + 16000 + Math.random() * 26000; return; }
-      if (docHidden || now < w.wifiAt) return;
+      if (docHidden || w.show || now < w.wifiAt) return; // v222: not during a show
       // the wifi dies. it ALWAYS dies at the worst moment
       w.wifiPhase = 1;
       w.wifiDownAt = now;
@@ -31328,7 +31341,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function featureArgueTick(w, now, docHidden) {
     if (w.featPhase === 0) {
       if (!w.featArgAt) { w.featArgAt = now + 14000 + Math.random() * 22000; return; }
-      if (docHidden || now < w.featArgAt) return;
+      if (docHidden || w.show || now < w.featArgAt) return; // v222: not during a show
       w.featPhase = 1; w.featBeat = 0; w.featBeatAt = now;
       w.restUntil = now + 60000; w.tx = w.x; w.ty = w.y; // meeting in session
       w.el.classList.remove('walking');
@@ -31445,13 +31458,24 @@ document.addEventListener('DOMContentLoaded', () => {
     if (t >= at && !s.data[key]) { s.data[key] = 1; return true; }
     return false;
   }
+  function showAfterimage(w, ms) { // v222: a ghost frame left behind — reads as
+    // deliberate theatre, not jank (owner: no one may think the site lags)
+    const g = document.createElement('img');
+    g.src = w.img.src;
+    g.className = 'pik-afterimage';
+    g.style.width = w.img.style.width || (w.el.classList.contains('pik-form3') ? '56px' : '33px');
+    g.style.left = w.x + 'px';
+    g.style.top = w.y + 'px';
+    DESK_PIK.layer.appendChild(g);
+    setTimeout(() => { try { g.remove(); } catch (e) { /* faded */ } }, ms || 800);
+  }
   function pikShowEnd(w, now) {
     const s = w.show;
     if (!s) return;
     try { if (s.def.end) s.def.end(w, s, now); } catch (e) { /* the show must end anyway */ }
     for (const u of s.undos) { try { u(); } catch (e) { /* already struck */ } }
     for (const el of s.els) { try { el.remove(); } catch (e) { /* already struck */ } }
-    w.showSpd = 1; w.showDodge = false; w.showLagPoke = false; w.showPokeLine = null;
+    w.showSpd = 1; w.showDodge = false; w.showLagPoke = false; w.showPokeLine = null; w.showUnflip = false;
     w.show = null;
     w.showAt = now + 16000 + Math.random() * 26000;
   }
@@ -31461,6 +31485,8 @@ document.addEventListener('DOMContentLoaded', () => {
       if (docHidden || now < w.showAt) return;
       if (w.chainOf) { w.showAt = now + 8000; return; } // no theatre on the train
       if (w.sp && w.sp.id === 'captcha' && w.disguised >= 0) { w.showAt = now + 6000; return; } // mid-costume
+      // v222: never upstage a signature act already on stage
+      if (w.thiefPhase || w.wifiPhase || w.featPhase || w.lecTarget) { w.showAt = now + 7000; return; }
       const def = pikShowDraw(w.sp.id);
       if (!def) { w.showAt = now + 60000; return; }
       w.show = { def, t0: now, els: [], undos: [], data: {}, beat: 0 };
@@ -31654,26 +31680,51 @@ document.addEventListener('DOMContentLoaded', () => {
         start(w, s, now) { w.wxMode = 'storm'; w.wxModeAt = now + 11000; w.boltAt = 0; showBadge(w, w, '⛈ SURGE', 'blue', 9000); } },
     ],
     latency: [
-      { id: 'rubber-band', dur: 9000, // the server disagrees with your walk
-        start(w, s) { s.data.ax = w.x; s.data.ay = w.y; showBadge(w, w, '300ms', 'dark', 8000); },
+      { id: 'rubber-band', dur: 10000, // v222: LOUDLY labelled — a checkpoint
+        // flag, a climbing ping meter, a REWIND stamp. theatre, not jank
+        start(w, s) {
+          s.data.ax = w.x; s.data.ay = w.y;
+          const pin = document.createElement('span');
+          pin.className = 'pik-anchor-pin';
+          pin.textContent = '⚑ 300ms';
+          pin.style.left = (w.x + 2) + 'px'; pin.style.top = (w.y - 12) + 'px';
+          DESK_PIK.layer.appendChild(pin);
+          s.els.push(pin);
+          s.data.b = showBadge(w, w, 'ping 300ms', 'dark');
+        },
         tick(w, s, now, t) {
-          if (cue(s, 'snap', t, 4200)) {
+          if (cue(s, 'p6', t, 1600)) s.data.b.textContent = 'ping 600ms';
+          if (cue(s, 'p12', t, 3000)) { s.data.b.textContent = 'ping 1200ms!!'; s.data.b.classList.add('is-red'); }
+          if (cue(s, 'snap', t, 4500)) {
+            showAfterimage(w, 900);
             w.x = s.data.ax; w.y = s.data.ay; w.tx = w.x; w.ty = w.y;
             w.el.style.left = w.x + 'px'; w.el.style.top = w.y + 'px';
+            s.data.b.remove();
+            showBadge(w, w, '⏪ REWIND', 'blue', 3600);
             playTone(140, 'sawtooth', 0.05, 0, 0.06);
+            playTone(420, 'sine', 0.04, 0.1, 0.05);
             deskPikSay(w, trT('the server disagrees', 'le serveur n’est pas d’accord'));
           }
         } },
-      { id: 'lag-poke', dur: 9000, // pokes arrive after the round-trip
-        start(w, s) { w.showLagPoke = true; showBadge(w, w, '⏳ ping 3000', 'dark', 8500); } },
-      { id: 'packet-loss', dur: 10000, // frames simply do not arrive
+      { id: 'lag-poke', dur: 10000, // pokes arrive after the round-trip —
+        // with a visible packet-in-transit receipt so the click clearly landed
+        start(w, s) { w.showLagPoke = true; showBadge(w, w, '⏳ ping: 3000ms', 'dark', 9500); } },
+      { id: 'packet-loss', dur: 10000, // v222: every skip is STAMPED as lost
+        start(w, s) { showBadge(w, w, '⚠ LAG SPIKE', 'red', 3000); deskPikSay(w, trT('packets: optional', 'paquets : optionnels')); },
         tick(w, s, now, t) {
           if (now < (s.data.at || 0)) return;
-          s.data.at = now + 1600;
+          s.data.at = now + 1800;
+          const lost = document.createElement('span');
+          lost.className = 'pik-show-badge is-red pik-lost-tag';
+          lost.textContent = '✕ LOST';
+          lost.style.left = (w.x + 12) + 'px'; lost.style.top = (w.y - 8) + 'px';
+          DESK_PIK.layer.appendChild(lost);
+          setTimeout(() => { try { lost.remove(); } catch (e) { /* resent */ } }, 1100);
+          showAfterimage(w, 700);
           const dx = w.tx - w.x, dy = w.ty - w.y, d = Math.hypot(dx, dy) || 1;
-          w.x += (dx / d) * Math.min(38, d); w.y += (dy / d) * Math.min(38, d);
+          w.x += (dx / d) * Math.min(40, d); w.y += (dy / d) * Math.min(40, d);
           w.el.style.left = w.x + 'px'; w.el.style.top = w.y + 'px';
-          showStyle(w, w.el, 'opacity', '0.25', 140);
+          playTone(900, 'square', 0.02, 0, 0.02);
         } },
     ],
     aliased: [
@@ -32096,6 +32147,193 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         } },
     ],
+    // v222: the four founding acts get pools too — their signature shows
+    // (heist / dropout / standup / lecture) keep their own clocks and now
+    // ROTATE with these
+    pointer: [
+      { id: 'busy-wait', dur: 9000, // the eternal hourglass. the app is Fine
+        start(w, s, now) {
+          showRoot(w, now, 8000);
+          showCls(w, w.el, 'pik-spinwait', 7500);
+          showBadge(w, w, '⌛ busy…', 'dark', 5500);
+          deskPikSay(w, trT('one moment', 'un instant'));
+        },
+        tick(w, s, now, t) {
+          if (cue(s, 'nr', t, 5600)) showBadge(w, w, 'not responding', 'red', 2400);
+        },
+        end(w) { deskPikSay(w, trT('app not responding? never heard of her', 'app bloquée ? connais pas')); } },
+      { id: 'lost-cursor', dur: 10000, // the macOS shake-to-find, performed
+        start(w, s) { showStyle(w, w.el, 'opacity', '0.12'); deskPikSay(w, trT('where did i go', 'où suis-je passé')); },
+        tick(w, s, now, t) {
+          if (cue(s, 'found', t, 3200)) {
+            w.el.style.opacity = '1';
+            showCls(w, w.el, 'pik-shakefind', 2200);
+            showStyle(w, w.img, 'width', '92px', 2200);
+            showBadge(w, w, 'THERE i am!!', 'green', 3600);
+            deskPikSay(w, trT('wiggle wiggle ♡', 'gigote gigote ♡'));
+            playTone(660, 'triangle', 0.04, 0, 0.04);
+          }
+        } },
+      { id: 'drag-select', dur: 12000, // a desktop rubber-band selection, live
+        start(w, s) {
+          s.data.ax = w.x + 14; s.data.ay = w.y + 16;
+          const box = document.createElement('div');
+          box.className = 'pik-select-box';
+          DESK_PIK.layer.appendChild(box);
+          s.els.push(box);
+          s.data.box = box;
+          const lr = DESK_PIK.layer.getBoundingClientRect();
+          s.data.gx = Math.max(8, Math.min(lr.width - 60, w.x + (Math.random() < 0.5 ? -1 : 1) * (150 + Math.random() * 90)));
+          s.data.gy = Math.max(60, Math.min(lr.height - 80, w.y + (Math.random() < 0.5 ? -1 : 1) * (90 + Math.random() * 70)));
+        },
+        tick(w, s, now, t) {
+          const b = s.data.box;
+          const x1 = Math.min(s.data.ax, w.x + 14), x2 = Math.max(s.data.ax, w.x + 14);
+          const y1 = Math.min(s.data.ay, w.y + 16), y2 = Math.max(s.data.ay, w.y + 16);
+          b.style.left = x1 + 'px'; b.style.top = y1 + 'px';
+          b.style.width = (x2 - x1) + 'px'; b.style.height = (y2 - y1) + 'px';
+          if (!s.data.done && (showGoto(w, s.data.gx, s.data.gy) || t > 8000)) {
+            s.data.done = 1;
+            let n = 0;
+            for (const v of pikOthers(w)) {
+              if (v.x + 14 > x1 && v.x + 14 < x2 && v.y + 16 > y1 && v.y + 16 < y2) {
+                n++;
+                showCls(w, v.el, 'pik-selected', 2600);
+                showBadge(w, v, '✓', 'blue', 2600);
+              }
+            }
+            deskPikSay(w, n ? trT('select all ♡ (' + n + ')', 'tout sélectionner ♡ (' + n + ')') : trT('selected: nothing. still fun', 'sélection : rien. amusant quand même'));
+            playTone(520, 'triangle', 0.04, 0, 0.03);
+          }
+        } },
+    ],
+    wifi: [
+      { id: 'speed-test', dur: 11000, // the sacred ritual of the meter
+        start(w, s, now) { showRoot(w, now, 10000); s.data.b = showBadge(w, w, '▼ 2.4 Mbps', 'dark'); s.data.i = 0; },
+        tick(w, s, now, t) {
+          const vals = ['2.4', '11.0', '24.6', '45.1', '61.8', '74.2', '87.3'];
+          const i = Math.min(vals.length - 1, Math.floor(t / 1100));
+          if (i !== s.data.i) { s.data.i = i; s.data.b.textContent = '▼ ' + vals[i] + ' Mbps'; playTone(400 + i * 60, 'triangle', 0.02, 0, 0.02); }
+          if (cue(s, 'done', t, 8200)) { s.data.b.classList.add('is-green'); s.data.b.textContent = '▼ 87.3 Mbps ✓'; }
+        },
+        end(w) { deskPikSay(w, trT("faster than the neighbor's ♡", 'plus rapide que chez le voisin ♡')); } },
+      { id: 'router-reboot', dur: 10000, // the fix that always works
+        start(w, s, now) { showRoot(w, now, 9000); showBadge(w, w, 'have you tried…', 'dark', 2200); },
+        tick(w, s, now, t) {
+          if (cue(s, 'off', t, 2300)) { showStyle(w, w.img, 'transform', 'rotate(180deg)'); showBadge(w, w, '🔌 off', 'red', 2600); playTone(220, 'square', 0.03, 0, 0.06); }
+          if (cue(s, 'on', t, 5200)) {
+            w.img.style.transform = '';
+            showBadge(w, w, '📶 FIXED', 'green', 3600);
+            deskPikSay(w, trT('off and on again. works every time', 'éteindre et rallumer. infaillible'));
+            playTone(520, 'triangle', 0.04, 0, 0.03); playTone(780, 'triangle', 0.04, 0.12, 0.03);
+          }
+        } },
+      { id: 'hotspot', dur: 10000, // sharing is caring. the password is not secure
+        start(w, s) {
+          deskPikSay(w, trT('password: 12345678', 'mot de passe : 12345678'));
+          const crowd = pikOthers(w, 150);
+          for (const v of crowd) showBadge(w, v, '📶 shared', 'green', 5000);
+          if (crowd.length) setTimeout(() => { try { deskPikSay(crowd[0], trT('connected ♡', 'connecté ♡')); } catch (e) { /* roamed */ } }, 1400);
+        } },
+    ],
+    feature: [
+      { id: 'cannot-reproduce', dur: 13000, // the oldest dance in software
+        start(w, s) { s.data.corner = 0; showBadge(w, w, '🐛 reported!', 'red', 4000); deskPikSay(w, trT('bug: walks in circles', 'bug : tourne en rond')); },
+        tick(w, s, now, t) {
+          if (t < 7000) { // reproduce the bug enthusiastically
+            const C = [[0, 0], [56, 0], [56, 44], [0, 44]];
+            const c = C[s.data.corner % 4];
+            if (showGoto(w, (s.data.ox = s.data.ox || w.x) + c[0] - 28, (s.data.oy = s.data.oy || w.y) + c[1] - 22)) s.data.corner++;
+            return;
+          }
+          if (cue(s, 'deny', t, 7000)) {
+            showBadge(w, w, 'cannot reproduce', 'dark', 4200);
+            deskPikSay(w, trT('works on my machine', 'ça marche sur ma machine'));
+            const lr = DESK_PIK.layer.getBoundingClientRect();
+            w.restUntil = 0; w.tx = Math.max(8, Math.min(lr.width - 46, w.x + 170)); w.ty = w.y;
+          }
+        } },
+      { id: 'feature-creep', dur: 12000, // the scope grows. the ship date doesn't
+        start(w, s) { s.data.n = 0; },
+        tick(w, s, now, t) {
+          const n = Math.min(3, 1 + Math.floor(t / 2500));
+          if (n !== s.data.n) {
+            s.data.n = n;
+            showStyle(w, w.img, 'width', (56 + n * 12) + 'px');
+            showBadge(w, w, 'scope +' + n, 'gold', 2200);
+            playTone(360 + n * 90, 'triangle', 0.03, 0, 0.03);
+          }
+          if (cue(s, 'ship', t, 9200)) {
+            w.img.style.width = '56px';
+            showBadge(w, w, 'v2.0: postponed', 'dark', 2600);
+            deskPikSay(w, trT('shipping is a feature too', 'livrer, c’est aussi une fonctionnalité'));
+          }
+        } },
+      { id: 'regression', dur: 11000, // for THIS one, walking correctly is the bug
+        start(w, s) {
+          w.showUnflip = true; // it suddenly walks FORWARD. horrifying
+          showBadge(w, w, '⚠ REGRESSION', 'red', 4500);
+          deskPikSay(w, trT('this feels… wrong', 'ça semble… anormal'));
+        },
+        tick(w, s, now, t) {
+          if (cue(s, 'fix', t, 6000)) {
+            w.showUnflip = false;
+            showBadge(w, w, '✓ restored', 'green', 3600);
+            deskPikSay(w, trT('phew. backwards again ♡', 'ouf. de nouveau à reculons ♡'));
+            playTone(520, 'triangle', 0.04, 0, 0.03);
+          }
+        } },
+    ],
+    kernelpg: [
+      { id: 'dependency-hell', dur: 12000, // installing one thing. just one
+        start(w, s) { s.data.v = pikNearest(w); },
+        tick(w, s, now, t) {
+          const v = s.data.v;
+          if (!v || DESK_PIK.walkers.indexOf(v) < 0) return false;
+          if (!s.data.done && showGoto(w, v.x, v.y)) {
+            s.data.done = 1;
+            showBadge(w, v, 'dependency', 'dark', 5000);
+            const v2 = pikOthers(w).find((o) => o !== v);
+            if (v2) showBadge(w, v2, 'dep of dep', 'dark', 5000);
+            deskPikSay(w, trT('installing you needs 47 packages', 't’installer demande 47 paquets'));
+          }
+          if (cue(s, 'sigh', t, 8000)) deskPikSay(w, trT('resolving… forever', 'résolution… éternelle'));
+        } },
+      { id: 'kernel-panic', dur: 9000, // it has a scapegoat ready
+        start(w, s, now) {
+          showRoot(w, now, 8000);
+          showStyle(w, w.img, 'transform', 'rotate(90deg)');
+          showBadge(w, w, 'KERNEL PANIC', 'red', 4200);
+          playTone(160, 'sawtooth', 0.05, 0, 0.15);
+        },
+        tick(w, s, now, t) {
+          if (cue(s, 'up', t, 4400)) {
+            w.img.style.transform = '';
+            showBadge(w, w, 'blame: GPU driver', 'dark', 3600);
+            deskPikSay(w, trT('nvidia. always nvidia.', 'nvidia. toujours nvidia.'));
+          }
+        } },
+      { id: 'sudo-sandwich', dur: 13000, // xkcd 149, performed with dignity
+        start(w, s) { s.data.v = pikNearest(w); },
+        tick(w, s, now, t) {
+          const v = s.data.v;
+          if (!v || DESK_PIK.walkers.indexOf(v) < 0) return false;
+          if (!s.data.met && showGoto(w, v.x, v.y)) {
+            s.data.met = 1; s.data.metAt = t;
+            deskPikSay(w, trT('make me a sandwich', 'fais-moi un sandwich'));
+            setTimeout(() => { try { deskPikSay(v, trT('make it yourself', 'fais-le toi-même')); } catch (e) { /* left */ } }, 1500);
+          }
+          if (s.data.met && cue(s, 'sudo', t, s.data.metAt + 3400)) {
+            deskPikSay(w, trT('sudo make me a sandwich', 'sudo fais-moi un sandwich'));
+            setTimeout(() => {
+              try {
+                if (DESK_PIK.walkers.indexOf(v) >= 0) { showBadge(w, v, '🥪', 'gold', 3000); deskPikSay(v, trT('okay.', 'd’accord.')); }
+              } catch (e) { /* no sudoers file */ }
+            }, 1500);
+          }
+        },
+        end(w) { deskPikSay(w, trT('sudo ♡', 'sudo ♡')); } },
+    ],
   };
   // v220 APEX Penguin Core: the lore made flesh — 'monolithic, open-source,
   // will explain itself unprompted'. it corners a colleague and delivers
@@ -32113,7 +32351,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function kernelLectureTick(w, now, docHidden) {
     if (!w.lecTarget) {
       if (!w.lecAt) { w.lecAt = now + 9000 + Math.random() * 14000; return; }
-      if (docHidden || now < w.lecAt) return;
+      if (docHidden || w.show || now < w.lecAt) return; // v222: not during a show
       // EVERY colleague gets the talk — just not the same one twice in a row
       const all = DESK_PIK.walkers.filter((v) => v !== w);
       const pool = all.filter((v) => v !== w.lastLec);
@@ -34168,7 +34406,8 @@ document.addEventListener('DOMContentLoaded', () => {
         w.el.classList.add('walking');
         const facingLeft = dx < 0;
         // 'Feature' walks backwards on purpose — sprite faces away from travel
-        w.img.style.transform = ((w.sp && w.sp.flip) ? !facingLeft : facingLeft) ? 'scaleX(-1)' : '';
+        // v222: showUnflip lets the 'regression' show force FORWARD walking
+        w.img.style.transform = ((w.sp && w.sp.flip && !w.showUnflip) ? !facingLeft : facingLeft) ? 'scaleX(-1)' : '';
         w.el.style.left = w.x + 'px';
         w.el.style.top = w.y + 'px';
         // footprint blooms: RAINBOW confetti-flowers, 1-10 per step —
