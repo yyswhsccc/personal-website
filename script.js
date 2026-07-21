@@ -3342,6 +3342,79 @@ document.addEventListener('DOMContentLoaded', () => {
       if (btn) btn.click();
       termLine(trT('♥ like registered on the shared wall. thank you!!', '♥ like enregistré sur le mur partagé. merci !!'), 't-ok');
     },
+    // v230: PIK OVERFLOW — the cap is a lie. every call pours 3 more random
+    // pikmin (duplicates welcome) onto the desk, up to the answer: 42
+    'pik++': () => {
+      const dex = pikdexGet().filter((e) => !e.loan);
+      if (!dex.length) { termLine(trT('no pikmin collected yet — pluck a sprout first', 'aucun pikmin capturé — cueille d’abord une pousse'), 't-err'); return; }
+      if (!DESK_PIK.overflow) {
+        DESK_PIK.overflow = true;
+        DESK_PIK.overflowList = [];
+        termLine(trT('PIK OVERFLOW MODE ENGAGED — the 6-cap is a lie now', 'MODE DÉBORDEMENT PIK — le plafond de 6 est un mensonge'), 't-ok');
+        termLine(trT('keep typing pik++ · trim back with pik--', 'continue avec pik++ · réduis avec pik--'), 't-dim');
+      }
+      let added = 0;
+      for (let k = 0; k < 3; k++) {
+        if (DESK_PIK.walkers.length >= 42) {
+          termLine(trT('42 pikmin. the answer AND the limit — the desk creaks', '42 pikmin. la réponse ET la limite — le bureau craque'), 't-err');
+          break;
+        }
+        const e = dex[Math.floor(Math.random() * dex.length)];
+        const rec = { h: e.h != null ? e.h : null, s: Math.min(e.s || 0, 2), ch: e.ch ? 1 : 0, sp: e.sp || null };
+        DESK_PIK.overflowList.push(rec);
+        deskPikSpawn(rec.h != null ? rec.h : 0, rec.s, !!rec.ch, rec.sp);
+        added++;
+      }
+      if (added) {
+        playSparkleSound();
+        termLine(trT(`+${added} pikmin — ${DESK_PIK.walkers.length} on the desk`, `+${added} pikmin — ${DESK_PIK.walkers.length} sur le bureau`), 't-accent');
+      }
+    },
+    // v230: the trim — six random survivors stay, the rest poof home
+    'pik--': () => {
+      if (DESK_PIK.walkers.length <= PIK_MAX && !DESK_PIK.overflow) {
+        termLine(trT('the desk is already at 6 or fewer — nothing to trim', 'déjà 6 ou moins sur le bureau — rien à réduire'), 't-dim');
+        return;
+      }
+      const pool = [...DESK_PIK.walkers];
+      for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t2 = pool[i]; pool[i] = pool[j]; pool[j] = t2; }
+      const survivors = pool.slice(0, PIK_MAX);
+      const keep = new Set(survivors);
+      DESK_PIK.walkers.slice().forEach((w) => {
+        if (keep.has(w)) return;
+        try {
+          showAfterimage(w, 1100); // the ghost of the departed
+          if (w.show) pikShowEnd(w, Date.now());
+          if (w.thiefIcon) pointerDropIcon(w, 1);
+          if (w.wifiSpin) w.wifiSpin.remove();
+          if (w.bubbleEl) w.bubbleEl.remove();
+          if (w.babyEl) w.babyEl.remove();
+          if (w.bsodPane) w.bsodPane.remove();
+          if (w.chainLink) w.chainLink.remove();
+          if (w.mergeBadge) w.mergeBadge.remove();
+          w.el.remove();
+        } catch (e) { /* already home */ }
+      });
+      DESK_PIK.walkers = survivors;
+      // orphaned train state: a towed car whose head left, or a head whose cars left
+      for (const w of survivors) {
+        if (w.chainOf && !keep.has(w.chainOf)) w.chainOf = null;
+        if (w.chain) { w.chain = w.chain.filter((c) => keep.has(c)); if (typeof mergeBadgeUpdate === 'function') mergeBadgeUpdate(w); }
+      }
+      DESK_PIK.overflow = false;
+      DESK_PIK.overflowList = null;
+      // the survivors' kinds become the active squad
+      const dex = pikdexGet();
+      const kinds = new Set(survivors.map((w) => pikKindOfLive(w)));
+      let active = 0;
+      dex.forEach((e) => { e.a = 0; });
+      dex.forEach((e) => { if (kinds.has(pikKindKey(e)) && active < PIK_MAX) { e.a = 1; active++; } });
+      pikdexSave(dex);
+      if (typeof renderPikdexSoon === 'function') renderPikdexSoon();
+      playTone(520, 'triangle', 0.05, 0, 0.04);
+      playTone(392, 'triangle', 0.05, 0.12, 0.05);
+      termLine(trT('fate chose 6 survivors. the rest went home for snacks', 'le destin a choisi 6 survivants. les autres sont rentrés goûter'), 't-ok');
+    },
     whoami() {
       termLine(trT('yongshan yu — systems/LMS & full-stack lead, AI/data practitioner', 'yongshan yu — lead systèmes/LMS & full-stack, praticienne IA/data'), 't-accent');
       termLine(trT('deep dive: `cat about_me.ini` · `cat druid.log` · `ask <anything>`', 'pour creuser : `cat about_me.ini` · `cat druid.log` · `ask <question>`'), 't-dim');
@@ -31060,7 +31133,8 @@ document.addEventListener('DOMContentLoaded', () => {
   var DESK_PIK = { layer: null, walkers: [], sproutAt: 0, timer: null };
   function deskRoster() { return store.get('yos-pik-roster', []); }
   function deskPikSpawn(hueOrIdx, stage, chameleon, spId) {
-    if (DESK_PIK.walkers.length >= PIK_MAX) return DESK_PIK.walkers[0]; // hard cap: 6 on the desktop, same as the garden
+    // v230: pik++ overflow mode lifts the cap to 42 — the answer AND the limit
+    if (DESK_PIK.walkers.length >= (DESK_PIK.overflow ? 42 : PIK_MAX)) return DESK_PIK.walkers[0];
     // hue number (new, full colour wheel) or legacy palette index
     const hue = (typeof hueOrIdx === 'number' && hueOrIdx > 4) ? hueOrIdx : null;
     const species = spId ? pikSpecies(spId) : null;
@@ -31634,6 +31708,13 @@ document.addEventListener('DOMContentLoaded', () => {
           DESK_PIK.layer.appendChild(toast);
           setTimeout(() => { try { toast.remove(); } catch (e) { /* struck */ } }, 6500);
         }
+      }
+      // v230: with a CROWD on the desk, someone eventually calls a photo
+      if (DESK_PIK.walkers.length >= 10 && Date.now() > (DESK_PIK.photoCoolUntil || 0) && Math.random() < 0.08) {
+        w.show = { def: PIK_GROUP_PHOTO, t0: now, els: [], undos: [], data: {}, beat: 0 };
+        pikShowSeen('group-photo');
+        try { PIK_GROUP_PHOTO.start(w, w.show, now); } catch (e) { pikShowEnd(w, now); }
+        return;
       }
       // v228: DESTINED DUETS — if the fated partner shares the desk, the
       // solo bill can wait
@@ -33577,7 +33658,50 @@ document.addEventListener('DOMContentLoaded', () => {
       { who: 1, at: 7000, badge: ['…ping', 'dark'], tone: 400 },
       { who: 0, at: 9200, say: ['…close enough ♡', '…ça compte ♡'] },
     ] },
+    { keys: ['n20', 'n38'], id: 'duet-editor-war', dur: 16000, beats: [ // Bash & Vim
+      { who: 0, at: 400, say: ['just use sed like an adult', 'utilise sed comme un adulte'] },
+      { who: 1, at: 3000, badge: [':q', 'dark'], say: ['i meant to say NEVER', 'je voulais dire JAMAIS'] },
+      { who: 0, at: 6000, badge: ['kill -9 vim', 'red'], tone: 300 },
+      { who: 1, at: 8600, badge: ['autosaved ✓', 'green'], say: ['you cannot kill what never exits ♡', 'on ne tue pas ce qui ne quitte jamais ♡'] },
+    ] },
+    { keys: ['n21', 'n22'], id: 'duet-pattern-family', dur: 15000, beats: [ // Grep & Regex
+      { who: 0, at: 400, say: ['i found: everything', 'j’ai trouvé : tout'] },
+      { who: 1, at: 3000, say: ['i matched: everything-ER', 'j’ai capturé : tout-PLUS'] },
+      { who: 0, at: 5800, badge: ['.*', 'dark'] },
+      { who: 1, at: 7400, badge: ['(.*)+', 'red'] },
+      { who: 0, at: 9400, say: ['careful. that one backtracks', 'attention. celle-là backtrack'] },
+    ] },
+    // ————— v230 TWIN SCENES: pik++ makes duplicates, duplicates make DRAMA —————
+    { keys: ['n44', 'n44'], id: 'twin-deadlock', dur: 17000, beats: [ // Mutex meets Mutex
+      { who: 0, at: 400, badge: ['🔒 i lock YOU', 'gold'] },
+      { who: 1, at: 2800, badge: ['🔒 i lock YOU first', 'gold'] },
+      { who: 0, at: 5600, badge: ['DEADLOCK', 'red'], say: ['neither of us can ever move', 'aucun de nous ne bougera jamais'], tone: 220 },
+      { who: 1, at: 8400, say: ['…', '…'] },
+      { who: 0, at: 10400, say: ['(the OS killed us both ♡)', '(l’OS nous a tués tous les deux ♡)'], tone: 160 },
+    ] },
+    { keys: ['n38', 'n38'], id: 'twin-vim', dur: 16000, beats: [ // Vim meets Vim
+      { who: 0, at: 400, badge: [':q', 'dark'], say: ['you too?', 'toi aussi ?'] },
+      { who: 1, at: 3000, badge: [':q!', 'dark'], say: ['six years now', 'six ans déjà'] },
+      { who: 0, at: 5800, badge: [':wq??', 'red'] },
+      { who: 1, at: 7600, badge: ['HELP', 'red'] },
+      { who: 0, at: 9600, say: ['at least we are stuck TOGETHER ♡', 'au moins on est coincés ENSEMBLE ♡'], tone: 520 },
+    ] },
+    { keys: ['n34', 'n34'], id: 'twin-forkbomb', dur: 15000, beats: [ // Fork meets Fork
+      { who: 0, at: 400, say: [':(){ :|:& };:', ':(){ :|:& };:'] },
+      { who: 1, at: 2800, say: [':(){ :|:& };:', ':(){ :|:& };:'] },
+      { who: 0, at: 5200, badge: ['2 forks', 'dark'], fx: 'ghost' },
+      { who: 1, at: 7000, badge: ['4 forks?!', 'red'], fx: 'ghost' },
+      { who: 0, at: 9000, say: ['THIS IS HOW IT STARTS', 'C’EST COMME ÇA QUE ÇA COMMENCE'], fx: 'ghost', tone: 240 },
+    ] },
   ];
+  // v230: ANY other duplicated kind gets the generic mirror scene
+  const PIK_TWIN_MIRROR = { keys: [], id: 'twin-mirror', dur: 14000, beats: [
+    { who: 0, at: 400, say: ['wait. WAIT.', 'attends. ATTENDS.'] },
+    { who: 1, at: 2800, say: ['do i really look like that?', 'je ressemble vraiment à ça ?'] },
+    { who: 0, at: 5400, badge: ['me?', 'dark'] },
+    { who: 1, at: 6600, badge: ['no, ME', 'dark'] },
+    { who: 0, at: 9000, say: ['…identical twins ♡', '…jumeaux identiques ♡'], tone: 620 },
+  ] };
   function pikDuetDef(d) { // one generic runner performs every duet
     if (d.__def) return d.__def;
     d.__def = {
@@ -33596,6 +33720,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (b.say) deskPikSay(actor, trT(b.say[0], b.say[1]));
             if (b.badge) showBadge(w, actor, b.badge[0], b.badge[1] || 'dark', 3000);
             if (b.tone) playTone(b.tone, 'triangle', 0.04, 0, 0.04);
+            if (b.fx === 'ghost') showAfterimage(actor, 1300); // v230: fork bombs need ghosts
           }
         }
       },
@@ -33609,14 +33734,68 @@ document.addEventListener('DOMContentLoaded', () => {
       const p = DESK_PIK.walkers.find((v) => v !== w && v.showKey === d.keys[1 - i] && !pikBusy(v));
       if (p) return { def: pikDuetDef(d), partner: p };
     }
+    // v230: no registered pair — but a DUPLICATE of yourself beats any script
+    const twin = DESK_PIK.walkers.find((v) => v !== w && v.showKey && v.showKey === w.showKey && !pikBusy(v));
+    if (twin) return { def: pikDuetDef(PIK_TWIN_MIRROR), partner: twin };
     return null;
   }
+  // v230: THE GROUP PHOTO — with 10+ pikmin on the desk, someone eventually
+  // decides the moment must be immortalized. everyone lines up. FLASH.
+  const PIK_GROUP_PHOTO = {
+    id: 'group-photo', dur: 15000,
+    start(w, s, now) {
+      DESK_PIK.photoCoolUntil = Date.now() + 150000;
+      deskPikSay(w, trT('EVERYONE. photo. NOW ♡', 'TOUT LE MONDE. photo. MAINTENANT ♡'));
+      showBadge(w, w, '📸 group photo', 'gold', 6000);
+      const lr = DESK_PIK.layer.getBoundingClientRect();
+      const crowd = DESK_PIK.walkers.filter((v) => v !== w && !pikBusy(v));
+      s.data.crowd = crowd;
+      const cols = Math.max(3, Math.ceil(Math.sqrt(crowd.length + 1)));
+      const cx0 = Math.max(30, Math.min(lr.width - cols * 40 - 30, w.x - cols * 20));
+      const cy0 = Math.max(70, Math.min(lr.height - 150, w.y - 40));
+      crowd.forEach((v, i) => {
+        v.restUntil = 0;
+        v.tx = cx0 + (i % cols) * 40;
+        v.ty = cy0 + Math.floor(i / cols) * 34;
+      });
+    },
+    tick(w, s, now, t) {
+      if (cue(s, 'pose', t, 6000)) {
+        showHold(w, now, 3400);
+        for (const v of (s.data.crowd || [])) if (DESK_PIK.walkers.indexOf(v) >= 0) showHold(v, now, 3400);
+      }
+      if (cue(s, 'snap', t, 8000)) {
+        const flash = document.createElement('div');
+        flash.className = 'pik-photo-flash';
+        DESK_PIK.layer.appendChild(flash);
+        setTimeout(() => { try { flash.remove(); } catch (e) { /* developed */ } }, 750);
+        playTone(1250, 'triangle', 0.05, 0, 0.09);
+        showBadge(w, w, '📸 ✓', 'green', 3200);
+        deskPikSay(w, trT('beautiful. framed forever ♡', 'magnifique. encadrée pour toujours ♡'));
+        for (const v of (s.data.crowd || [])) {
+          if (DESK_PIK.walkers.indexOf(v) >= 0 && Math.random() < 0.3) {
+            setTimeout(() => { try { deskPikSay(v, '✌️'); } catch (e) { /* blinked */ } }, Math.random() * 1300);
+          }
+        }
+      }
+      if (cue(s, 'scatter', t, 10800)) {
+        const lr = DESK_PIK.layer.getBoundingClientRect();
+        for (const v of (s.data.crowd || [])) {
+          if (DESK_PIK.walkers.indexOf(v) < 0) continue;
+          v.restUntil = 0;
+          v.tx = 8 + Math.random() * Math.max(60, lr.width - 68);
+          v.ty = 60 + Math.random() * Math.max(60, lr.height - 130);
+        }
+      }
+    },
+  };
   // v228: CHAIN REACTIONS — some finales knock over the next domino
   const PIK_CHAINS = {
     'rm-rf-scare': { key: 'bsodjr', show: 'crowdstrike', chance: 0.5 },  // the scare crashed the fragile one
     'dial-up': { key: 'wifi', sig: 'wifidrop', chance: 0.55 },           // the scream killed the wifi
     'overflow-255': { key: 'bitflip', sig: 'jolt', chance: 0.5 },        // overflow flips a nearby bit
     'this-is-fine': { key: 'cumulus', sig: 'storm', chance: 0.5 },       // the fire summons the rain
+    'overflow-tower': { key: 'n47', show: 'sigsegv', chance: 0.5 },      // the tower lands on the guard page
   };
   function pikShowChain(defId, now) {
     const c = PIK_CHAINS[defId];
@@ -34210,7 +34389,10 @@ document.addEventListener('DOMContentLoaded', () => {
       try { if (w.show) pikShowEnd(w, Date.now()); if (w.thiefIcon) pointerDropIcon(w, 1); if (w.wifiSpin) w.wifiSpin.remove(); if (w.bubbleEl) w.bubbleEl.remove(); if (w.babyEl) w.babyEl.remove(); if (w.bsodPane) w.bsodPane.remove(); if (w.chainLink) w.chainLink.remove(); if (w.mergeBadge) w.mergeBadge.remove(); w.el.remove(); } catch (e) { /* already gone */ }
     });
     DESK_PIK.walkers = [];
-    deskRoster().slice(0, PIK_MAX).forEach((rr, i) => {
+    const lineup = deskRoster().slice(0, PIK_MAX);
+    // v230: overflow guests survive a resync — the party is not a fluke
+    if (DESK_PIK.overflow && DESK_PIK.overflowList) lineup.push(...DESK_PIK.overflowList);
+    lineup.forEach((rr, i) => {
       const w = deskPikSpawn(rr.h != null ? rr.h : rr.c, rr.s, !!rr.ch, rr.sp || null);
       const seat = seats[i];
       if (w && seat) {
@@ -35544,6 +35726,18 @@ document.addEventListener('DOMContentLoaded', () => {
       if (w.wifiApex) wifiApexTick(w, now, docHidden);
       if (w.featureApex) featureArgueTick(w, now, docHidden);
       if (w.lecturer) kernelLectureTick(w, now, docHidden);
+      // v230: sidewalk hellos — two free pikmin brushing past may greet
+      if (!docHidden && !pikBusy(w) && now > (w.helloAt || 0)) {
+        w.helloAt = now + 11000 + Math.random() * 11000;
+        const hv = pikNearest(w, 38);
+        if (hv && !pikBusy(hv) && Math.random() < 0.5) {
+          const GREET = ['♡', 'yo', 'pik!', 'o7'];
+          deskPikSay(w, GREET[Math.floor(Math.random() * GREET.length)]);
+          setTimeout(() => {
+            try { if (DESK_PIK.walkers.indexOf(hv) >= 0 && !pikBusy(hv)) deskPikSay(hv, GREET[Math.floor(Math.random() * GREET.length)]); } catch (e) { /* walked on */ }
+          }, 750);
+        }
+      }
       if (w.showPool) pikShowTick(w, now, docHidden);
       if (w.mergeApex) {
         // v211 THE BRANCH TRAIN (owner decree: swallowing is DEAD).
@@ -35727,7 +35921,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // footprint blooms: RAINBOW confetti-flowers, 1-10 per step —
         // 3+ cluster into a round posy. Always UNDER the walker's feet,
         // never on its body; the whole patch melts away in 7 seconds.
-        if (!docHidden && now > (w.trailAt || 0)) {
+        if (!docHidden && now > (w.trailAt || 0) && (DESK_PIK.walkers.length <= 12 || Math.random() < 12 / DESK_PIK.walkers.length)) { // v230: crowd mode thins trails
           w.trailAt = now + 750 + Math.random() * 450; // airier cadence
           const n = 1 + Math.floor(Math.random() * 10);
           const cx = w.x + 14, cy = w.y + 34; // strictly below the sprite

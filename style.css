@@ -6901,6 +6901,18 @@ html[data-theme="dark"] .pik-disg-banner {
    (mirrors the merge-head opt-out; the 👑 emoji stays as the id card) */
 .desk-pik.pik-wheel-apex.pik-form3 img { animation: none; filter: none; }
 .desk-pik.pik-wheel-apex.pik-form3.walking img { animation: pik-bob 0.42s steps(2) infinite; filter: none; }
+/* v230: the group photo FLASH */
+.pik-photo-flash {
+  position: absolute;
+  inset: 0;
+  background: #ffffff;
+  opacity: 0.75;
+  pointer-events: none;
+  z-index: 48;
+  animation: pik-photo-flash 0.7s ease-out forwards;
+}
+@keyframes pik-photo-flash { to { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .pik-photo-flash { animation: none; opacity: 0; } }
 /* v229: the mass outage — every pikmin wears a real mini bluescreen */
 .pik-mini-bsod {
   position: absolute;
