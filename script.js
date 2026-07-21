@@ -31353,7 +31353,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (w.featPhase !== 1) return;
     // tug of war: each head yanks the sprite its own way
     if (!REDUCED_MOTION && now > w.featWigAt) {
-      w.featWigAt = now + 300;
+      w.featWigAt = now + 450;
       w.img.style.transform = w.img.style.transform ? '' : 'scaleX(-1)';
     }
     const gone = now - w.featBeatAt;
@@ -31361,15 +31361,15 @@ document.addEventListener('DOMContentLoaded', () => {
       w.featBeat = 1;
       deskPikSay(w, trT('HEAD: go left', 'HEAD : à gauche'));
       playTone(520, 'triangle', 0.04, 0, 0.02);
-    } else if (w.featBeat === 1 && gone >= 1700) {
+    } else if (w.featBeat === 1 && gone >= 2550) { // v224: 1.5x
       w.featBeat = 2;
       deskPikSay(w, trT('tail: right. WONTFIX.', 'tail : à droite. WONTFIX.'));
       playTone(380, 'triangle', 0.04, 0, 0.02);
-    } else if (w.featBeat === 2 && gone >= 3400) {
+    } else if (w.featBeat === 2 && gone >= 5100) {
       w.featBeat = 3;
       deskPikSay(w, trT('deadlock — 1 vote vs 1', 'impasse — 1 voix contre 1'));
       playTone(240, 'square', 0.04, 0, 0.02);
-    } else if (w.featBeat === 3 && gone >= 5100) {
+    } else if (w.featBeat === 3 && gone >= 7650) {
       // rand() is the only maintainer both ends respect
       const goLeft = Math.random() < 0.5;
       deskPikSay(w, goLeft
@@ -31393,6 +31393,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // random, plays for a few seconds, cleans up after itself. the drawing
   // odds reshuffle EVERY DAWN (seeded by the date — same bill worldwide,
   // different bill tomorrow). owner decree: '我要最好玩的效果'.
+  const SHOW_TEMPO = 1.5; // v224 owner decree: every show plays 1.5x SLOWER —
+  // scaled once here (show time `t`, helper timeouts), not per-show
   function pikShowRng(seedStr) { // fnv-1a into mulberry32 — tiny, seedable
     let h = 2166136261;
     for (let i = 0; i < seedStr.length; i++) { h ^= seedStr.charCodeAt(i); h = Math.imul(h, 16777619); }
@@ -31421,25 +31423,31 @@ document.addEventListener('DOMContentLoaded', () => {
     b.textContent = text;
     target.el.appendChild(b);
     if (w.show) w.show.els.push(b);
-    if (ms) setTimeout(() => { try { b.remove(); } catch (e) { /* struck */ } }, ms);
+    if (ms) setTimeout(() => { try { b.remove(); } catch (e) { /* struck */ } }, ms * SHOW_TEMPO);
     return b;
   }
   function showCls(w, el, cls, ms) { // class with guaranteed restore
     el.classList.add(cls);
     const undo = () => { try { el.classList.remove(cls); } catch (e) { /* gone */ } };
     if (w.show) w.show.undos.push(undo);
-    if (ms) setTimeout(undo, ms);
+    if (ms) setTimeout(undo, ms * SHOW_TEMPO);
   }
   function showStyle(w, el, prop, val, ms) { // inline style with restore
     const prev = el.style[prop];
     el.style[prop] = val;
     const undo = () => { try { el.style[prop] = prev; } catch (e) { /* gone */ } };
     if (w.show) w.show.undos.push(undo);
-    if (ms) setTimeout(undo, ms);
+    if (ms) setTimeout(undo, ms * SHOW_TEMPO);
   }
   function showRoot(w, now, ms) { // stand still, this is theatre
-    w.restUntil = now + ms; w.tx = w.x; w.ty = w.y;
+    w.restUntil = now + ms * SHOW_TEMPO; w.tx = w.x; w.ty = w.y;
     w.el.classList.remove('walking');
+  }
+  function showHold(x, now, ms) { // v224: freeze ANY actor mid-scene — a
+    // sandwich handover with a wandering party is not a scene
+    x.restUntil = now + (ms || 900);
+    x.tx = x.x; x.ty = x.y;
+    x.el.classList.remove('walking');
   }
   function showGoto(w, x, y) { // per-tick walk-to; returns true on arrival
     w.restUntil = 0; w.tx = x; w.ty = y;
@@ -31470,7 +31478,7 @@ document.addEventListener('DOMContentLoaded', () => {
     g.style.left = w.x + 'px';
     g.style.top = w.y + 'px';
     DESK_PIK.layer.appendChild(g);
-    setTimeout(() => { try { g.remove(); } catch (e) { /* faded */ } }, ms || 800);
+    setTimeout(() => { try { g.remove(); } catch (e) { /* faded */ } }, (ms || 800) * SHOW_TEMPO);
   }
   function pikShowEnd(w, now) {
     const s = w.show;
@@ -31479,6 +31487,7 @@ document.addEventListener('DOMContentLoaded', () => {
     for (const u of s.undos) { try { u(); } catch (e) { /* already struck */ } }
     for (const el of s.els) { try { el.remove(); } catch (e) { /* already struck */ } }
     w.showSpd = 1; w.showDodge = false; w.showLagPoke = false; w.showPokeLine = null; w.showUnflip = false;
+    w.restUntil = 0; // curtain releases the actor
     w.show = null;
     w.showAt = now + 16000 + Math.random() * 26000;
   }
@@ -31497,7 +31506,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     const s = w.show;
-    const t = now - s.t0;
+    const t = (now - s.t0) / SHOW_TEMPO; // v224: the whole bill runs 1.5x slower
     try {
       if (s.def.tick && s.def.tick(w, s, now, t) === false) { pikShowEnd(w, now); return; }
     } catch (e) { pikShowEnd(w, now); return; }
@@ -31527,9 +31536,10 @@ document.addEventListener('DOMContentLoaded', () => {
           if (!s.data.hit) {
             if (showGoto(w, v.x, v.y)) {
               s.data.hit = 1;
+              showHold(w, now, 3200); showHold(v, now, 3200); // v224: hold the pose
               showCls(w, v.el, 'pik-garbled', 2600);
               deskPikSay(w, trT('sorry. lossy hug', 'désolé. câlin avec pertes'));
-              setTimeout(() => { try { deskPikSay(v, trT('?? my pixels ??', '?? mes pixels ??')); } catch (e) { /* fled */ } }, 700);
+              setTimeout(() => { try { deskPikSay(v, trT('?? my pixels ??', '?? mes pixels ??')); } catch (e) { /* fled */ } }, 1050);
               playTone(160, 'square', 0.04, 0, 0.03);
             }
           }
@@ -31537,7 +31547,7 @@ document.addEventListener('DOMContentLoaded', () => {
       { id: 'mosaic-trail', dur: 10000, // walks in corrupted macroblocks
         tick(w, s, now, t) {
           if (now < (s.data.at || 0)) return;
-          s.data.at = now + 480;
+          s.data.at = now + 720;
           const p = document.createElement('span');
           p.className = 'pik-mosaic-bit';
           const cols = ['#d38ef5', '#41e0ff', '#ff2fae', '#8a4bd0'];
@@ -31545,7 +31555,7 @@ document.addEventListener('DOMContentLoaded', () => {
           p.style.left = (w.x + 4 + Math.random() * 22) + 'px';
           p.style.top = (w.y + 26 + Math.random() * 10) + 'px';
           DESK_PIK.layer.appendChild(p);
-          setTimeout(() => { try { p.remove(); } catch (e) { /* melted */ } }, 3800);
+          setTimeout(() => { try { p.remove(); } catch (e) { /* melted */ } }, 5700);
         } },
     ],
     matrix: [
@@ -31561,7 +31571,7 @@ document.addEventListener('DOMContentLoaded', () => {
         },
         tick(w, s, now, t) {
           if (t > 6200 || now < (s.data.at || 0)) return;
-          s.data.at = now + 480;
+          s.data.at = now + 720;
           const GLYPHS = 'ﾊﾐﾋｰｳｼﾅ01ｱｶﾈ';
           const g = document.createElement('span');
           g.className = 'pik-code-drop';
@@ -31569,7 +31579,7 @@ document.addEventListener('DOMContentLoaded', () => {
           g.style.left = (w.x + 14 + (Math.random() * 160 - 80)) + 'px';
           g.style.top = (w.y - 40 - Math.random() * 30) + 'px';
           DESK_PIK.layer.appendChild(g);
-          setTimeout(() => { try { g.remove(); } catch (e) { /* dissolved */ } }, 2500);
+          setTimeout(() => { try { g.remove(); } catch (e) { /* dissolved */ } }, 3750);
         } },
       { id: 'white-rabbit', dur: 12000, // follow it. always follow it
         start(w, s) {
@@ -31598,7 +31608,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const v = pikNearest(w, 140);
           if (v) {
             showStyle(w, v.img, 'opacity', '0.7', 6000);
-            setTimeout(() => { try { deskPikSay(v, trT('take my bar ♡', 'prends ma barre ♡')); } catch (e) { /* left */ } }, 900);
+            setTimeout(() => { try { deskPikSay(v, trT('take my bar ♡', 'prends ma barre ♡')); } catch (e) { /* left */ } }, 1350);
           }
         },
         end(w) { deskPikSay(w, trT('thanks. still 15% though', 'merci. toujours 15 % cela dit')); } },
@@ -31629,7 +31639,7 @@ document.addEventListener('DOMContentLoaded', () => {
           DESK_PIK.layer.appendChild(toast);
           s.els.push(toast);
           playTone(180, 'square', 0.05, 0, 0.04);
-          setTimeout(() => { try { deskPikSay(w, trT('anyway.', 'bref.')); } catch (e) { /* shrug */ } }, 2600);
+          setTimeout(() => { try { deskPikSay(w, trT('anyway.', 'bref.')); } catch (e) { /* shrug */ } }, 3900);
         } },
     ],
     post: [
@@ -31642,6 +31652,7 @@ document.addEventListener('DOMContentLoaded', () => {
           if (!v || DESK_PIK.walkers.indexOf(v) < 0) { s.data.i++; return; }
           if (showGoto(w, v.x, v.y)) {
             playTone(980, 'square', 0.05, 0, 0.06);
+            showHold(v, now, 1600); // v224: hold the pose
             showBadge(w, v, '✓', 'green', 1800);
             s.data.i++;
           }
@@ -31654,11 +31665,12 @@ document.addEventListener('DOMContentLoaded', () => {
           if (s.data.done) return;
           if (showGoto(w, v.x, v.y)) {
             s.data.done = 1;
+            showHold(w, now, 4000); showHold(v, now, 4000); // v224: hold the pose
             const id = v.sp && v.sp.id;
             if (id === 'wifi') { for (let k = 0; k < 3; k++) playTone(980, 'square', 0.05, k * 0.18, 0.07); showBadge(w, v, '3×beep: NET', 'red', 4200); }
             else if (id === 'bsodjr') { playTone(980, 'square', 0.05, 0, 0.34); playTone(980, 'square', 0.05, 0.5, 0.08); playTone(980, 'square', 0.05, 0.7, 0.08); showBadge(w, v, '1L-2S: GPU', 'red', 4200); }
             else { playTone(980, 'square', 0.05, 0, 0.07); showBadge(w, v, '✓ PASS', 'green', 4200); }
-            setTimeout(() => { try { deskPikSay(w, trT('diagnosis complete', 'diagnostic terminé')); } catch (e) { /* off */ } }, 1300);
+            setTimeout(() => { try { deskPikSay(w, trT('diagnosis complete', 'diagnostic terminé')); } catch (e) { /* off */ } }, 1950);
           }
         } },
       { id: 'boot-seq', dur: 7000, // the whole POST, live
@@ -31680,6 +31692,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const v = q[s.data.i];
           if (!v || DESK_PIK.walkers.indexOf(v) < 0) { s.data.i++; return; }
           if (showGoto(w, v.x, v.y - 20)) {
+            showHold(v, now, 2200); // v224: hold the pose
             showBadge(w, v, '✓ synced', 'green', 6000);
             deskPikSay(w, trT('backed up ♡', 'sauvegardé ♡'));
             playTone(620, 'triangle', 0.04, 0, 0.03);
@@ -31732,13 +31745,13 @@ document.addEventListener('DOMContentLoaded', () => {
         start(w, s) { showBadge(w, w, '⚠ LAG SPIKE', 'red', 3000); deskPikSay(w, trT('packets: optional', 'paquets : optionnels')); },
         tick(w, s, now, t) {
           if (now < (s.data.at || 0)) return;
-          s.data.at = now + 1800;
+          s.data.at = now + 2700;
           const lost = document.createElement('span');
           lost.className = 'pik-show-badge is-red pik-lost-tag';
           lost.textContent = '✕ LOST';
           lost.style.left = (w.x + 12) + 'px'; lost.style.top = (w.y - 8) + 'px';
           DESK_PIK.layer.appendChild(lost);
-          setTimeout(() => { try { lost.remove(); } catch (e) { /* resent */ } }, 1100);
+          setTimeout(() => { try { lost.remove(); } catch (e) { /* resent */ } }, 1650);
           showAfterimage(w, 700);
           const dx = w.tx - w.x, dy = w.ty - w.y, d = Math.hypot(dx, dy) || 1;
           w.x += (dx / d) * Math.min(40, d); w.y += (dy / d) * Math.min(40, d);
@@ -31806,8 +31819,9 @@ document.addEventListener('DOMContentLoaded', () => {
           if (!v || DESK_PIK.walkers.indexOf(v) < 0) return false;
           if (!s.data.done && showGoto(w, v.x, v.y)) {
             s.data.done = 1;
+            showHold(w, now, 3200); showHold(v, now, 3200); // v224: hold the pose
             showStyle(w, v.img, 'filter', 'brightness(0.22)', 2600);
-            setTimeout(() => { try { deskPikSay(v, trT('my retinas ♡', 'mes rétines ♡')); } catch (e) { /* blinded */ } }, 800);
+            setTimeout(() => { try { deskPikSay(v, trT('my retinas ♡', 'mes rétines ♡')); } catch (e) { /* blinded */ } }, 1200);
             deskPikSay(w, trT("you're welcome", 'de rien'));
           }
         } },
@@ -31823,6 +31837,7 @@ document.addEventListener('DOMContentLoaded', () => {
           if (!v || DESK_PIK.walkers.indexOf(v) < 0) return false;
           if (!s.data.done && showGoto(w, v.x, v.y)) {
             s.data.done = 1;
+            showHold(w, now, 3200); showHold(v, now, 3200); // v224: hold the pose
             w.lastStamp = v;
             showCls(w, v.el, 'pik-goldflash', 1200);
             showBadge(w, v, 'SHIPPED ✓', 'gold', 5000);
@@ -31895,6 +31910,7 @@ document.addEventListener('DOMContentLoaded', () => {
           if (!v || DESK_PIK.walkers.indexOf(v) < 0) return false;
           if (!s.data.done && showGoto(w, v.x, v.y)) {
             s.data.done = 1;
+            showHold(w, now, 3200); showHold(v, now, 3200); // v224: hold the pose
             showBadge(w, v, '📦 tar.gz', 'dark', 4200);
             deskPikSay(w, trT('backed up. it is 3am somewhere', 'sauvegardé. il est 3 h quelque part'));
           }
@@ -31921,7 +31937,7 @@ document.addEventListener('DOMContentLoaded', () => {
               s.data.b.textContent = '…';
               setTimeout(() => {
                 try { deskPikSay(w, trT('huh. nothing!! AGAIN!!', 'bah. rien !! ENCORE !!')); cheatFall(['🎊', '✨'], 8); } catch (e) { /* partied out */ }
-              }, 1200);
+              }, 1800);
             }
           }
         } },
@@ -31937,8 +31953,8 @@ document.addEventListener('DOMContentLoaded', () => {
           const v = pikNearest(w, 160);
           if (v) {
             setTimeout(() => {
-              try { v.el.classList.add('pik-glitch'); setTimeout(() => { try { v.el.classList.remove('pik-glitch'); } catch (e) { /* ok */ } }, 440); deskPikSay(v, '?!'); } catch (e) { /* dodged the ray */ }
-            }, 500);
+              try { v.el.classList.add('pik-glitch'); setTimeout(() => { try { v.el.classList.remove('pik-glitch'); } catch (e) { /* ok */ } }, 660); deskPikSay(v, '?!'); } catch (e) { /* dodged the ray */ }
+            }, 750);
           }
         } },
       { id: 'votes-4096', dur: 7000, // belgium, 2003. the cosmos voted
@@ -31946,7 +31962,7 @@ document.addEventListener('DOMContentLoaded', () => {
       { id: 'coin-bit', dur: 7000, // 0 or 1. the eternal question
         start(w, s) { s.data.b = showBadge(w, w, '0', 'dark'); },
         tick(w, s, now, t) {
-          if (t < 5000) { if (now > (s.data.at || 0)) { s.data.at = now + 300; s.data.b.textContent = s.data.b.textContent === '0' ? '1' : '0'; } return; }
+          if (t < 5000) { if (now > (s.data.at || 0)) { s.data.at = now + 450; s.data.b.textContent = s.data.b.textContent === '0' ? '1' : '0'; } return; }
           if (!s.data.done) {
             s.data.done = 1;
             const one = Math.random() < 0.5;
@@ -31981,15 +31997,16 @@ document.addEventListener('DOMContentLoaded', () => {
           if (!v || DESK_PIK.walkers.indexOf(v) < 0) return false;
           if (!s.data.done && showGoto(w, v.x, v.y)) {
             s.data.done = 1;
+            showHold(w, now, 3800); showHold(v, now, 3800); // v224: hold the pose
             showStyle(w, v.img, 'filter', 'sepia(0.35) saturate(1.6) hue-rotate(-18deg)', 3200);
             deskPikSay(w, trT('free heating', 'chauffage gratuit'));
-            setTimeout(() => { try { deskPikSay(v, '♡'); } catch (e) { /* toasty */ } }, 900);
+            setTimeout(() => { try { deskPikSay(v, '♡'); } catch (e) { /* toasty */ } }, 1350);
           }
         } },
       { id: 'benchmark', dur: 12000, // numbers only go up
         start(w, s) { w.showSpd = 1.6; s.data.score = 15832; s.data.b = showBadge(w, w, '15832 pts', 'gold'); },
         tick(w, s, now, t) {
-          if (now > (s.data.at || 0)) { s.data.at = now + 800; s.data.score += 400 + Math.floor(Math.random() * 900); s.data.b.textContent = s.data.score + ' pts'; }
+          if (now > (s.data.at || 0)) { s.data.at = now + 1200; s.data.score += 400 + Math.floor(Math.random() * 900); s.data.b.textContent = s.data.score + ' pts'; }
           const dx = w.tx - w.x, dy = w.ty - w.y;
           if (Math.hypot(dx, dy) < 30) {
             const lr = DESK_PIK.layer.getBoundingClientRect();
@@ -32004,7 +32021,7 @@ document.addEventListener('DOMContentLoaded', () => {
       { id: 'paper-tail', dur: 13000, // continuous feed, tractor holes and all
         tick(w, s, now, t) {
           if (now < (s.data.at || 0)) return;
-          s.data.at = now + 520;
+          s.data.at = now + 780;
           const p = document.createElement('span');
           p.className = 'pik-paper-bit';
           p.style.left = (w.x + 8) + 'px'; p.style.top = (w.y + 30) + 'px';
@@ -32016,7 +32033,7 @@ document.addEventListener('DOMContentLoaded', () => {
         end(w, s) {
           playTone(500, 'sawtooth', 0.05, 0, 0.14); // rrrip
           deskPikSay(w, trT('archival quality.', 'qualité archive.'));
-          for (const p of s.els) { try { p.classList.add('is-falling'); setTimeout(() => { try { p.remove(); } catch (e) { /* shredded */ } }, 1300); } catch (e) { /* gone */ } }
+          for (const p of s.els) { try { p.classList.add('is-falling'); setTimeout(() => { try { p.remove(); } catch (e) { /* shredded */ } }, 1950); } catch (e) { /* gone */ } }
           s.els.length = 0; // struck our own way — don't let the engine yank them mid-fall
         } },
       { id: 'print-report', dur: 14000, // SCREEE. your file, madam
@@ -32026,13 +32043,14 @@ document.addEventListener('DOMContentLoaded', () => {
           if (!v || DESK_PIK.walkers.indexOf(v) < 0) return false;
           if (!s.data.done && showGoto(w, v.x, v.y)) {
             s.data.done = 1;
+            showHold(w, now, 4200); showHold(v, now, 4200); // v224: hold the pose
             [0, 0.2, 0.4].forEach((d) => playTone(1500, 'square', 0.02, d, 0.09));
             const p = document.createElement('span');
             p.className = 'pik-paper-bit is-report';
             p.textContent = 'REPORT: pik ✓';
             p.style.left = (v.x - 4) + 'px'; p.style.top = (v.y + 34) + 'px';
             DESK_PIK.layer.appendChild(p);
-            setTimeout(() => { try { p.remove(); } catch (e) { /* filed */ } }, 6000);
+            setTimeout(() => { try { p.remove(); } catch (e) { /* filed */ } }, 9000);
             deskPikSay(w, trT('your records, madam', 'vos dossiers, madame'));
           }
         } },
@@ -32057,7 +32075,7 @@ document.addEventListener('DOMContentLoaded', () => {
           if (v && !v.chainOf) {
             v.restUntil = now + 1400; v.tx = v.x; v.ty = v.y;
             showBadge(w, v, ':(', 'blue', 2200);
-            setTimeout(() => { try { deskPikSay(v, trT('wait, why me', 'attends, pourquoi moi')); } catch (e) { /* rebooted */ } }, 700);
+            setTimeout(() => { try { deskPikSay(v, trT('wait, why me', 'attends, pourquoi moi')); } catch (e) { /* rebooted */ } }, 1050);
           }
         } },
       { id: 'crash-progress', dur: 10000, // collecting error info, honestly
@@ -32095,12 +32113,12 @@ document.addEventListener('DOMContentLoaded', () => {
           const odd = crowd.length > 1 ? crowd[Math.floor(Math.random() * crowd.length)] : null;
           for (const v of crowd) { if (v !== odd) showCls(w, v.el, 'pik-rgbspin', 3200); }
           deskPikSay(w, trT('sync ON ♡', 'sync ON ♡'));
-          if (odd) setTimeout(() => { try { deskPikSay(w, trT('iCUE vs Aura. classic.', 'iCUE vs Aura. un classique.')); } catch (e) { /* desynced */ } }, 3600);
+          if (odd) setTimeout(() => { try { deskPikSay(w, trT('iCUE vs Aura. classic.', 'iCUE vs Aura. un classique.')); } catch (e) { /* desynced */ } }, 5400);
         } },
       { id: 'fps-count', dur: 10000, // the lights ARE performance
         start(w, s) { s.data.fps = 144; s.data.b = showBadge(w, w, '144 fps', 'green'); showCls(w, w.el, 'pik-rgbspin', 9500); },
         tick(w, s, now, t) {
-          if (now > (s.data.at || 0)) { s.data.at = now + 900; s.data.fps += 15; s.data.b.textContent = s.data.fps + ' fps'; }
+          if (now > (s.data.at || 0)) { s.data.at = now + 1350; s.data.fps += 15; s.data.b.textContent = s.data.fps + ' fps'; }
         },
         end(w) { deskPikSay(w, trT('+15 fps. told you ♡', '+15 fps. je l’avais dit ♡')); } },
     ],
@@ -32118,8 +32136,9 @@ document.addEventListener('DOMContentLoaded', () => {
             g.style.left = (v.x - 2) + 'px'; g.style.top = (v.y - 46) + 'px';
             DESK_PIK.layer.appendChild(g);
             s.els.push(g);
+            showHold(w, now, 8500); showHold(v, now, 8500); // v224: hold the pose
             deskPikSay(w, trT('select all squares with pikmin', 'coche les cases avec des pikmin'));
-            setTimeout(() => { try { deskPikSay(v, '???'); } catch (e) { /* failed */ } }, 1500);
+            setTimeout(() => { try { deskPikSay(v, '???'); } catch (e) { /* failed */ } }, 2250);
             s.data.verdictAt = t + 5000;
           }
           if (s.data.verdictAt && t >= s.data.verdictAt && !s.data.said) {
@@ -32252,7 +32271,7 @@ document.addEventListener('DOMContentLoaded', () => {
           deskPikSay(w, trT('password: 12345678', 'mot de passe : 12345678'));
           const crowd = pikOthers(w, 150);
           for (const v of crowd) showBadge(w, v, '📶 shared', 'green', 5000);
-          if (crowd.length) setTimeout(() => { try { deskPikSay(crowd[0], trT('connected ♡', 'connecté ♡')); } catch (e) { /* roamed */ } }, 1400);
+          if (crowd.length) setTimeout(() => { try { deskPikSay(crowd[0], trT('connected ♡', 'connecté ♡')); } catch (e) { /* roamed */ } }, 2100);
         } },
     ],
     feature: [
@@ -32311,6 +32330,7 @@ document.addEventListener('DOMContentLoaded', () => {
           if (!v || DESK_PIK.walkers.indexOf(v) < 0) return false;
           if (!s.data.done && showGoto(w, v.x, v.y)) {
             s.data.done = 1;
+            showHold(w, now, 4500); showHold(v, now, 4500); // v224: hold the pose
             showBadge(w, v, 'dependency', 'dark', 5000);
             const v2 = pikOthers(w).find((o) => o !== v);
             if (v2) showBadge(w, v2, 'dep of dep', 'dark', 5000);
@@ -32332,7 +32352,9 @@ document.addEventListener('DOMContentLoaded', () => {
             deskPikSay(w, trT('nvidia. always nvidia.', 'nvidia. toujours nvidia.'));
           }
         } },
-      { id: 'sudo-sandwich', dur: 13000, // xkcd 149, performed with dignity
+      { id: 'sudo-sandwich', dur: 15000, // xkcd 149, performed with dignity.
+        // v224: BOTH actors stand rooted from hello to handover — and the
+        // penguin does not leave without its 🥪
         start(w, s) { s.data.v = pikNearest(w); },
         tick(w, s, now, t) {
           const v = s.data.v;
@@ -32340,7 +32362,11 @@ document.addEventListener('DOMContentLoaded', () => {
           if (!s.data.met && showGoto(w, v.x, v.y)) {
             s.data.met = 1; s.data.metAt = t;
             deskPikSay(w, trT('make me a sandwich', 'fais-moi un sandwich'));
-            setTimeout(() => { try { deskPikSay(v, trT('make it yourself', 'fais-le toi-même')); } catch (e) { /* left */ } }, 1500);
+            setTimeout(() => { try { deskPikSay(v, trT('make it yourself', 'fais-le toi-même')); } catch (e) { /* left */ } }, 2250);
+          }
+          if (s.data.met) { // the negotiation table: nobody wanders off
+            showHold(w, now, 900);
+            showHold(v, now, 900);
           }
           if (s.data.met && cue(s, 'sudo', t, s.data.metAt + 3400)) {
             deskPikSay(w, trT('sudo make me a sandwich', 'sudo fais-moi un sandwich'));
@@ -32348,10 +32374,18 @@ document.addEventListener('DOMContentLoaded', () => {
               try {
                 if (DESK_PIK.walkers.indexOf(v) >= 0) { showBadge(w, v, '🥪', 'gold', 3000); deskPikSay(v, trT('okay.', 'd’accord.')); }
               } catch (e) { /* no sudoers file */ }
-            }, 1500);
+            }, 2250);
+            setTimeout(() => { // the HANDOVER — only now is the ritual complete
+              try {
+                showBadge(w, w, '🥪 GET', 'gold', 3200);
+                w.el.classList.remove('poked'); void w.el.offsetWidth; w.el.classList.add('poked');
+                deskPikSay(w, trT('sudo ♡', 'sudo ♡'));
+                playTone(660, 'triangle', 0.05, 0, 0.03);
+                playTone(880, 'triangle', 0.05, 0.12, 0.03);
+              } catch (e) { /* dropped the sandwich */ }
+            }, 4400);
           }
-        },
-        end(w) { deskPikSay(w, trT('sudo ♡', 'sudo ♡')); } },
+        } },
     ],
   };
   // v220 APEX Penguin Core: the lore made flesh — 'monolithic, open-source,
@@ -32420,7 +32454,7 @@ document.addEventListener('DOMContentLoaded', () => {
     playTone(340 + (w.lecBeat % 3) * 70, 'triangle', 0.03, 0, 0.015);
     if (w.lecBeat === 3) deskPikSay(t, 'pik…'); // a polite hostage
     w.lecBeat++;
-    w.lecBeatAt = now + 1900;
+    w.lecBeatAt = now + 2850; // v224: 1.5x slower
   }
   // v213: the head of the train wears its merge count in plain git —
   // '+1 MERGED', '+2 MERGED'… one glance says exactly what happened
@@ -32465,7 +32499,15 @@ document.addEventListener('DOMContentLoaded', () => {
     s.textContent = text;
     w.el.appendChild(s);
     w.bubbleEl = s;
-    setTimeout(() => { if (w.bubbleEl === s) w.bubbleEl = null; s.remove(); }, 1600);
+    // v224: the SPEAKER rises above the crowd while talking — a bubble must
+    // never hide behind the listener's body (owner decree)
+    if (!w.sayZSaved) { w.sayZSaved = true; w.sayZPrev = w.el.style.zIndex; }
+    w.el.style.zIndex = 26;
+    setTimeout(() => {
+      if (w.bubbleEl === s) w.bubbleEl = null;
+      s.remove();
+      if (!w.bubbleEl && w.sayZSaved) { try { w.el.style.zIndex = w.sayZPrev; } catch (e) { /* gone */ } w.sayZSaved = false; }
+    }, 2400); // v224: 1600 → 2400, dialogue deserves reading time
   }
   function deskAnchorPoints() {
     const pts = [];
