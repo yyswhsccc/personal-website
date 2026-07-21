@@ -6893,6 +6893,19 @@ html[data-theme="dark"] .pik-disg-banner {
   z-index: 6;
 }
 .pik-afterimage { position: absolute; opacity: 0.3; pointer-events: none; z-index: 2; filter: saturate(0.5); }
+/* v225: wheel APEX sheds the gold halo — the SHOWS are the crown now
+   (mirrors the merge-head opt-out; the 👑 emoji stays as the id card) */
+.desk-pik.pik-wheel-apex.pik-form3 img { animation: none; filter: none; }
+.desk-pik.pik-wheel-apex.pik-form3.walking img { animation: pik-bob 0.42s steps(2) infinite; filter: none; }
+.pik-bug-bit {
+  position: absolute;
+  font-size: 11px;
+  line-height: 1;
+  pointer-events: none;
+  z-index: 5;
+  transition: left 0.5s ease, top 0.5s ease;
+  filter: drop-shadow(1px 2px 0 rgba(20, 2, 14, 0.3));
+}
 .pik-code-drop {
   position: absolute;
   color: #2ea043;

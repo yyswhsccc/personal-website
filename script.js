@@ -23998,7 +23998,7 @@ document.addEventListener('DOMContentLoaded', () => {
       lecture: () => { const w = DESK_PIK.walkers.find((v) => v.lecturer); if (!w) return 'no APEX Penguin Core on the desktop'; w.lecAt = 1; w.lecTarget = null; return 'a colleague is about to learn about GNU/Linux'; },
       // v221 debug: force a specific show — __yosPik.showplay('turbo', 'benchmark'); omit showId for a weighted draw
       showplay: (spId, showId) => {
-        const w = DESK_PIK.walkers.find((v) => v.showPool && v.sp && v.sp.id === spId);
+        const w = DESK_PIK.walkers.find((v) => v.showPool && v.showKey === spId); // v225: also accepts a0..a12
         if (!w) return 'no APEX ' + spId + ' on the desktop';
         if (w.show) pikShowEnd(w, Date.now());
         const pool = PIK_SHOWCASE[spId] || [];
@@ -28304,7 +28304,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     const seg = parseInt((kind || 'w:0').slice(2), 10) || 0;
     ARCH[seg % ARCH.length]();
-    if (epic) rim('#ffd400'); // APEX still glows — on top of its OWN gear
+    // v225 owner decree: the gold rim is GONE — a wheel APEX is known by
+    // its SHOWS now, not by gilding (the halo goes too, in CSS)
   }
   // the battery clock: every 45s, if the quantized frame moved, every
   // on-stage Low Batt re-dresses (desk, garden, and an open pikdex)
@@ -31051,6 +31052,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // ornament (and no gold halo either; the badge is the statement)
     const isMergeHead = !spId && !chameleon && hue !== null && Math.floor((((hue % 360) + 360) % 360) / 7.5) === 35 && form === 3;
     if (isMergeHead) el.classList.add('pik-merge-head');
+    // v225: wheel APEX (except Merge — the train IS its show) joins the
+    // showcase by ARCHETYPE, and sheds the gold halo via this class
+    const archKey = (!spId && !chameleon && hue !== null && form >= 3 && !isMergeHead)
+      ? 'a' + (pikSegOfHue(hue) % 13) : null;
+    if (archKey) el.classList.add('pik-wheel-apex');
     if (form === 3 && !species && !isMergeHead) {
       const crown = document.createElement('span');
       crown.className = 'pik-crown';
@@ -31083,7 +31089,7 @@ document.addEventListener('DOMContentLoaded', () => {
       wifiApex: spId === 'wifi' && form >= 3, wifiAt: 0, wifiDownAt: 0, wifiPhase: 0, wifiSpin: null, wifiSpinAt: 0, wifiFlickAt: 0, // v219 APEX Signal: the bars are REAL now
       featureApex: spId === 'feature' && form >= 3, featArgAt: 0, featPhase: 0, featBeatAt: 0, featBeat: 0, featWigAt: 0, // v219 APEX Feature: two heads, one route, zero consensus
       lecturer: spId === 'kernelpg' && form >= 3, lecAt: 0, lecTarget: null, lecBeat: 0, lecBeatAt: 0, lastLec: null, // v220 APEX Penguin Core: will explain itself. unprompted. AT you
-      showPool: !!(spId && form >= 3 && PIK_SHOWCASE[spId]), showAt: 0, show: null, showSpd: 1, showDodge: false, showLagPoke: false, showPokeLine: null, lastStamp: null, // v221 the daily showcase
+      showKey: (spId && form >= 3) ? spId : archKey, showPool: !!(((spId && form >= 3) ? spId : archKey) && PIK_SHOWCASE[(spId && form >= 3) ? spId : archKey]), showAt: 0, show: null, showSpd: 1, showDodge: false, showLagPoke: false, showPokeLine: null, lastStamp: null, // v221 the daily showcase · v225 wheel archetypes join
       sp: species || null, spd: species && species.spd ? species.spd : 1, stepAt: 0,
       x: 40 + Math.random() * Math.max(120, r.width - 160),
       y: r.height * 0.35 + Math.random() * (r.height * 0.5),
@@ -31449,6 +31455,27 @@ document.addEventListener('DOMContentLoaded', () => {
     x.tx = x.x; x.ty = x.y;
     x.el.classList.remove('walking');
   }
+  function showShove(w, v, dx, dy) { // v225: pick a colleague up and PUT them
+    // somewhere else — rebase does this to your commits daily
+    const lr = DESK_PIK.layer.getBoundingClientRect();
+    showHold(v, Date.now(), 1800);
+    showStyle(w, v.el, 'transition', 'left 0.9s ease, top 0.9s ease', 1200);
+    v.x = Math.max(6, Math.min(lr.width - 46, v.x + dx));
+    v.y = Math.max(60, Math.min(lr.height - 70, v.y + dy));
+    v.tx = v.x; v.ty = v.y;
+    v.el.style.left = v.x + 'px';
+    v.el.style.top = v.y + 'px';
+  }
+  function showDrop(w, s, x, y, text, color) { // a small falling glyph
+    const g = document.createElement('span');
+    g.className = 'pik-code-drop';
+    g.textContent = text;
+    if (color) g.style.color = color;
+    g.style.left = x + 'px';
+    g.style.top = y + 'px';
+    DESK_PIK.layer.appendChild(g);
+    setTimeout(() => { try { g.remove(); } catch (e) { /* fell */ } }, 3750);
+  }
   function showGoto(w, x, y) { // per-tick walk-to; returns true on arrival
     w.restUntil = 0; w.tx = x; w.ty = y;
     return Math.hypot(x - w.x, y - w.y) < 42;
@@ -31499,7 +31526,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (w.sp && w.sp.id === 'captcha' && w.disguised >= 0) { w.showAt = now + 6000; return; } // mid-costume
       // v222: never upstage a signature act already on stage
       if (w.thiefPhase || w.wifiPhase || w.featPhase || w.lecTarget) { w.showAt = now + 7000; return; }
-      const def = pikShowDraw(w.sp.id);
+      const def = pikShowDraw(w.showKey); // v225: species id OR archetype key
       if (!def) { w.showAt = now + 60000; return; }
       w.show = { def, t0: now, els: [], undos: [], data: {}, beat: 0 };
       try { if (def.start) def.start(w, w.show, now); } catch (e) { pikShowEnd(w, now); }
@@ -32384,6 +32411,456 @@ document.addEventListener('DOMContentLoaded', () => {
                 playTone(880, 'triangle', 0.05, 0.12, 0.03);
               } catch (e) { /* dropped the sandwich */ }
             }, 4400);
+          }
+        } },
+    ],
+    // ————— v225: the THIRTEEN ARCHETYPES take the stage — every wheel
+    // pikmin acts its computing identity. keys a0..a12 = seg % 13 —————
+    a0: [ // MERGE HORNS — the git warrior
+      { id: 'rebase', dur: 13000,
+        start(w, s) { s.data.v = pikNearest(w); },
+        tick(w, s, now, t) {
+          const v = s.data.v;
+          if (!v || DESK_PIK.walkers.indexOf(v) < 0) return false;
+          if (!s.data.done && showGoto(w, v.x, v.y)) {
+            s.data.done = 1;
+            showHold(w, now, 4200);
+            showBadge(w, v, '⚠ rebasing…', 'red', 2400);
+            setTimeout(() => {
+              try {
+                showShove(w, v, (Math.random() < 0.5 ? -1 : 1) * 60, Math.random() * 40 - 20);
+                showBadge(w, v, 'rebased onto main ✓', 'green', 3600);
+                deskPikSay(w, trT('your history is cleaner now', 'ton historique est plus propre'));
+                setTimeout(() => { try { deskPikSay(v, '?!'); } catch (e) { /* relocated */ } }, 1300);
+              } catch (e) { /* conflict */ }
+            }, 2400);
+          }
+        } },
+      { id: 'force-push', dur: 10000,
+        start(w, s, now) {
+          showRoot(w, now, 6000);
+          showBadge(w, w, 'git push --force', 'red', 5500);
+          playTone(220, 'sawtooth', 0.05, 0, 0.1);
+          for (const v of pikOthers(w, 170)) {
+            const d = Math.hypot(v.x - w.x, v.y - w.y) || 1;
+            showShove(w, v, ((v.x - w.x) / d) * 46, ((v.y - w.y) / d) * 34);
+          }
+          setTimeout(() => { try { deskPikSay(w, trT('with consent ♡', 'avec consentement ♡')); } catch (e) { /* pushed */ } }, 1800);
+        } },
+    ],
+    a1: [ // CANARY WINGS — deploys are a trust exercise
+      { id: 'canary-deploy', dur: 15000,
+        start(w, s) { s.data.v = pikNearest(w); },
+        tick(w, s, now, t) {
+          const v = s.data.v;
+          if (!v || DESK_PIK.walkers.indexOf(v) < 0) return false;
+          if (!s.data.done && showGoto(w, v.x, v.y)) {
+            s.data.done = 1; s.data.at = t;
+            showHold(w, now, 8000); showHold(v, now, 8000);
+            showBadge(w, v, '🐤 v2-canary @1%', 'gold', 4500);
+            deskPikSay(w, trT('deploying to you first ♡', 'déployé sur toi d’abord ♡'));
+          }
+          if (s.data.done && cue(s, 'verdict', t, s.data.at + 4500)) {
+            if (Math.random() < 0.55) {
+              showCls(w, v.el, 'pik-goldflash', 1200);
+              showBadge(w, v, 'healthy ✓', 'green', 3000);
+              for (const o of pikOthers(w).filter((o) => o !== v)) showBadge(w, o, 'v2 ✓', 'green', 3000);
+              deskPikSay(w, trT('canary healthy — SHIP IT!!', 'canari en forme — ON LIVRE !!'));
+            } else {
+              showCls(w, v.el, 'pik-glitch', 440);
+              showBadge(w, v, '💥 rollback', 'red', 3600);
+              deskPikSay(w, trT('and THAT is why we canary', 'et VOILÀ pourquoi on canarise'));
+            }
+          }
+        } },
+      { id: 'friday-deploy', dur: 8000,
+        start(w, s, now) {
+          showRoot(w, now, 6000);
+          showBadge(w, w, 'deploy: FRI 17:59', 'gold', 6000);
+          deskPikSay(w, trT('YOLO ♡', 'YOLO ♡'));
+          cheatFall(['🐤', '✨'], 6);
+        },
+        end(w) { deskPikSay(w, trT('unafraid.', 'sans peur.')); } },
+    ],
+    a2: [ // UPTIME HALO — availability is a religion
+      { id: 'five-nines', dur: 11000,
+        start(w, s, now) { showRoot(w, now, 9000); s.data.b = showBadge(w, w, '99.9%', 'gold'); },
+        tick(w, s, now, t) {
+          if (cue(s, 'n4', t, 2600)) { s.data.b.textContent = '99.99%'; playTone(520, 'triangle', 0.04, 0, 0.04); }
+          if (cue(s, 'n5', t, 5200)) { s.data.b.textContent = '99.999%'; playTone(660, 'triangle', 0.04, 0, 0.04); deskPikSay(w, trT('five nines. HOLY.', 'cinq neufs. SACRÉ.')); }
+        } },
+      { id: 'blip', dur: 9000,
+        start(w, s, now) {
+          showRoot(w, now, 7000);
+          showBadge(w, w, 'DOWN?!', 'red', 1800);
+          showStyle(w, w.el, 'opacity', '0.35', 900);
+        },
+        tick(w, s, now, t) {
+          if (cue(s, 'cover', t, 2400)) {
+            showBadge(w, w, '99.9% (rounded)', 'dark', 4200);
+            deskPikSay(w, trT('nobody saw that.', 'personne n’a rien vu.'));
+          }
+        } },
+      { id: 'maintenance', dur: 10000,
+        start(w, s, now) {
+          showRoot(w, now, 8500);
+          showBadge(w, w, 'maint: 02:00–02:07', 'blue', 3600);
+          showStyle(w, w.img, 'transform', 'rotate(90deg)', 4200);
+        },
+        tick(w, s, now, t) {
+          if (cue(s, 'up', t, 5000)) deskPikSay(w, trT('uptime unaffected (technically)', 'uptime intact (techniquement)'));
+        } },
+    ],
+    a3: [ // FULL-BARS ANTENNAE — the walking base station
+      { id: 'coverage', dur: 11000,
+        start(w, s) { showBadge(w, w, 'extending coverage…', 'green', 9000); },
+        tick(w, s, now, t) {
+          if (now < (s.data.at || 0)) return;
+          s.data.at = now + 1050;
+          showDrop(w, s, w.x + 4 + Math.random() * 26, w.y + 22, '📶', null);
+        },
+        end(w) { deskPikSay(w, trT('dead zone: eliminated ✓', 'zone blanche : éliminée ✓')); } },
+      { id: 'roaming', dur: 12000,
+        start(w, s) { s.data.v = pikNearest(w); },
+        tick(w, s, now, t) {
+          const v = s.data.v;
+          if (!v || DESK_PIK.walkers.indexOf(v) < 0) return false;
+          if (!s.data.done && showGoto(w, v.x, v.y)) {
+            s.data.done = 1;
+            showHold(w, now, 4200); showHold(v, now, 4200);
+            showBadge(w, v, 'roaming 💸', 'red', 4200);
+            deskPikSay(w, trT('that will be $12/MB ♡', 'ça fera 12 $/Mo ♡'));
+            setTimeout(() => { try { deskPikSay(v, '…'); } catch (e) { /* broke */ } }, 1500);
+          }
+        } },
+    ],
+    a4: [ // THIRD EYE — sees bugs across time
+      { id: 'prophecy', dur: 13000,
+        start(w, s) { s.data.v = pikNearest(w); },
+        tick(w, s, now, t) {
+          const v = s.data.v;
+          if (!v || DESK_PIK.walkers.indexOf(v) < 0) return false;
+          if (!s.data.done && showGoto(w, v.x, v.y)) {
+            s.data.done = 1; s.data.at = t;
+            showHold(w, now, 7000); showHold(v, now, 7000);
+            showBadge(w, w, '👁 foreseeing…', 'dark', 3600);
+          }
+          if (s.data.done && cue(s, 'omen', t, s.data.at + 3600)) {
+            const OMENS = [['⚠ bug in 3 days', '⚠ bug dans 3 jours'], ['⚠ null pointer soon', '⚠ pointeur nul imminent'], ['✓ bug-free (suspicious)', '✓ sans bug (suspect)']];
+            const o = OMENS[Math.floor(Math.random() * OMENS.length)];
+            showBadge(w, s.data.v, trT(o[0], o[1]), o[0][0] === '✓' ? 'green' : 'red', 5000);
+            deskPikSay(w, trT('i have seen it.', 'je l’ai vu.'));
+            setTimeout(() => { try { deskPikSay(s.data.v, '?!'); } catch (e) { /* doomed */ } }, 1300);
+          }
+        } },
+      { id: 'stare-review', dur: 13000,
+        start(w, s) { s.data.v = pikNearest(w); },
+        tick(w, s, now, t) {
+          const v = s.data.v;
+          if (!v || DESK_PIK.walkers.indexOf(v) < 0) return false;
+          if (!s.data.done && showGoto(w, v.x, v.y)) {
+            s.data.done = 1; s.data.at = t;
+            showHold(w, now, 7500); showHold(v, now, 7500);
+            showBadge(w, w, 'reviewing by staring…', 'dark', 4200);
+          }
+          if (s.data.done && cue(s, 'verdict', t, s.data.at + 4200)) {
+            if (Math.random() < 0.5) { showBadge(w, s.data.v, 'LGTM 👁', 'green', 3600); deskPikSay(w, trT('approved.', 'approuvé.')); }
+            else { showBadge(w, s.data.v, 'requested changes', 'red', 3600); deskPikSay(w, trT('all of it. rewrite ALL of it', 'tout. réécris TOUT')); }
+          }
+        } },
+      { id: 'the-tear', dur: 8000,
+        start(w, s, now) {
+          showRoot(w, now, 6500);
+          showBadge(w, w, '👁 it saw something', 'dark', 5000);
+          showDrop(w, s, w.x + 16, w.y + 12, '•', '#c9a7f5');
+          deskPikSay(w, trT('the bug… is already written', 'le bug… est déjà écrit'));
+          playTone(200, 'sine', 0.04, 0, 0.15);
+        } },
+    ],
+    a5: [ // ROOT MOHAWK — anarchy with sudo
+      { id: 'chmod-777', dur: 12000,
+        start(w, s) { s.data.v = pikNearest(w); },
+        tick(w, s, now, t) {
+          const v = s.data.v;
+          if (!v || DESK_PIK.walkers.indexOf(v) < 0) return false;
+          if (!s.data.done && showGoto(w, v.x, v.y)) {
+            s.data.done = 1;
+            showHold(w, now, 4200); showHold(v, now, 4200);
+            showBadge(w, v, 'chmod 777', 'gold', 4200);
+            deskPikSay(w, trT('you are FREE now', 'tu es LIBRE maintenant'));
+            setTimeout(() => { try { deskPikSay(s.data.v, trT('what are permissions', 'c’est quoi des permissions')); } catch (e) { /* liberated */ } }, 1500);
+          }
+        } },
+      { id: 'rm-rf-scare', dur: 10000,
+        start(w, s, now) {
+          showRoot(w, now, 8000);
+          showBadge(w, w, 'sudo rm -rf /', 'red', 4200);
+          playTone(180, 'sawtooth', 0.05, 0, 0.2);
+          const lr = DESK_PIK.layer.getBoundingClientRect();
+          for (const v of pikOthers(w)) { // RUN. EVERYONE RUNS
+            if (v.chainOf) continue;
+            const d = Math.hypot(v.x - w.x, v.y - w.y) || 1;
+            v.restUntil = 0;
+            v.tx = Math.max(8, Math.min(lr.width - 46, v.x + ((v.x - w.x) / d) * 140));
+            v.ty = Math.max(60, Math.min(lr.height - 70, v.y + ((v.y - w.y) / d) * 90));
+          }
+        },
+        tick(w, s, now, t) {
+          if (cue(s, 'jk', t, 4200)) {
+            showBadge(w, w, '(kidding)', 'green', 3600);
+            deskPikSay(w, trT('relax. no --no-preserve-root', 'du calme. pas de --no-preserve-root'));
+          }
+        } },
+      { id: 'ring0', dur: 10000,
+        start(w, s) {
+          w.showSpd = 1.5;
+          showBadge(w, w, 'ring 0', 'dark', 8000);
+          showStyle(w, w.el, 'opacity', '0.55');
+          deskPikSay(w, trT('userspace is a prison', 'l’espace utilisateur est une prison'));
+        },
+        end(w) { w.el.style.opacity = '1'; deskPikSay(w, trT('back to userland.', 'retour en userland.')); } },
+    ],
+    a6: [ // DAEMON TAIL — background process, unkillable
+      { id: 'daemonize', dur: 11000,
+        start(w, s) {
+          showBadge(w, w, 'nohup &', 'dark', 3600);
+          showStyle(w, w.el, 'opacity', '0.25');
+          deskPikSay(w, trT('detaching from terminal…', 'détachement du terminal…'));
+        },
+        end(w) { w.el.style.opacity = '1'; deskPikSay(w, trT('still running ♡', 'toujours en cours ♡')); } },
+      { id: 'unkillable', dur: 12000,
+        start(w, s) { s.data.v = pikNearest(w); },
+        tick(w, s, now, t) {
+          const v = s.data.v;
+          if (!v || DESK_PIK.walkers.indexOf(v) < 0) return false;
+          if (!s.data.done && showGoto(w, v.x, v.y)) {
+            s.data.done = 1; s.data.at = t;
+            showHold(w, now, 6000); showHold(v, now, 6000);
+            showBadge(w, v, 'kill -9', 'red', 3000);
+            setTimeout(() => { try { deskPikSay(s.data.v, trT('please just stop', 's’il te plaît arrête')); } catch (e) { /* gave up */ } }, 900);
+          }
+          if (s.data.done && cue(s, 'nope', t, s.data.at + 3000)) {
+            showBadge(w, w, 'signal ignored', 'dark', 3600);
+            deskPikSay(w, trT('cannot be killed. only loved', 'intuable. seulement aimable'));
+          }
+        } },
+    ],
+    a7: [ // DEBUG FANGS — the bug hunter
+      { id: 'bug-hunt', dur: 15000,
+        start(w, s) {
+          const lr = DESK_PIK.layer.getBoundingClientRect();
+          const b = document.createElement('span');
+          b.className = 'pik-bug-bit';
+          b.textContent = '🐛';
+          s.data.bx = Math.max(10, Math.min(lr.width - 30, w.x + (Math.random() * 200 - 100)));
+          s.data.by = Math.max(64, Math.min(lr.height - 74, w.y + (Math.random() * 120 - 60)));
+          b.style.left = s.data.bx + 'px'; b.style.top = s.data.by + 'px';
+          DESK_PIK.layer.appendChild(b);
+          s.els.push(b);
+          s.data.bug = b;
+          showBadge(w, w, '🐛 spotted!!', 'red', 3000);
+        },
+        tick(w, s, now, t) {
+          if (s.data.caught) return;
+          const lr = DESK_PIK.layer.getBoundingClientRect();
+          if (now > (s.data.hopAt || 0)) { // the bug scurries
+            s.data.hopAt = now + 1350;
+            s.data.bx = Math.max(10, Math.min(lr.width - 30, s.data.bx + (Math.random() * 90 - 45)));
+            s.data.by = Math.max(64, Math.min(lr.height - 74, s.data.by + (Math.random() * 60 - 30)));
+            s.data.bug.style.left = s.data.bx + 'px'; s.data.bug.style.top = s.data.by + 'px';
+          }
+          w.restUntil = 0; w.tx = s.data.bx - 10; w.ty = s.data.by - 14;
+          if (Math.hypot(s.data.bx - 10 - w.x, s.data.by - 14 - w.y) < 30) { // CHOMP
+            s.data.caught = 1;
+            s.data.bug.remove();
+            w.el.classList.remove('poked'); void w.el.offsetWidth; w.el.classList.add('poked');
+            playTone(300, 'square', 0.05, 0, 0.05);
+            showBadge(w, w, 'bug: FIXED ✓', 'green', 3600);
+            deskPikSay(w, trT('one at a time.', 'un à la fois.'));
+          }
+        },
+        end(w, s) { if (!s.data.caught) deskPikSay(w, trT('…it regressed.', '…il a régressé.')); } },
+      { id: 'restraining-order', dur: 9000,
+        start(w, s, now) {
+          showRoot(w, now, 7000);
+          const p = document.createElement('span');
+          p.className = 'pik-paper-bit is-report';
+          p.textContent = 'RE: bugs v. you';
+          p.style.left = (w.x - 6) + 'px'; p.style.top = (w.y + 34) + 'px';
+          DESK_PIK.layer.appendChild(p);
+          s.els.push(p);
+          showBadge(w, w, 'served 📄', 'dark', 4200);
+          deskPikSay(w, trT('restraining order. worth it.', 'ordonnance restrictive. ça valait le coup.'));
+        } },
+    ],
+    a8: [ // HOTFIX CAPE — the 3am hero
+      { id: '3am-page', dur: 15000,
+        start(w, s) {
+          showBadge(w, w, '📟 PROD DOWN', 'red', 4200);
+          playTone(880, 'square', 0.05, 0, 0.09); playTone(880, 'square', 0.05, 0.25, 0.09);
+          w.showSpd = 2;
+          const icons = [...document.querySelectorAll('.desktop-icon-btn')];
+          const ic = icons[Math.floor(Math.random() * icons.length)];
+          if (!ic) { s.data.dead = 1; return; }
+          const r = ic.getBoundingClientRect(), lr = DESK_PIK.layer.getBoundingClientRect();
+          s.data.ic = ic;
+          s.data.gx = r.left - lr.left + r.width / 2 - 22;
+          s.data.gy = r.top - lr.top + r.height + 2;
+          deskPikSay(w, trT('at 3am?! on my way', 'à 3 h ?! j’arrive'));
+        },
+        tick(w, s, now, t) {
+          if (s.data.dead) return false;
+          if (!s.data.fixed && showGoto(w, s.data.gx, s.data.gy)) {
+            s.data.fixed = 1; s.data.at = t;
+            w.showSpd = 1;
+            showHold(w, now, 5000);
+            showStyle(w, s.data.ic, 'filter', 'hue-rotate(80deg) saturate(2)', 2400);
+            showBadge(w, w, 'hotfixing…', 'gold', 2400);
+          }
+          if (s.data.fixed && cue(s, 'done', t, s.data.at + 2400)) {
+            showBadge(w, w, 'hotfixed ✓', 'green', 3600);
+            deskPikSay(w, trT('back to bed.', 'retour au lit.'));
+            playTone(660, 'triangle', 0.05, 0, 0.04);
+          }
+        } },
+      { id: 'always-dns', dur: 9000,
+        start(w, s, now) {
+          showRoot(w, now, 7000);
+          const p = document.createElement('span');
+          p.className = 'pik-paper-bit is-report';
+          p.textContent = 'POSTMORTEM';
+          p.style.left = (w.x - 4) + 'px'; p.style.top = (w.y + 34) + 'px';
+          DESK_PIK.layer.appendChild(p);
+          s.els.push(p);
+          showBadge(w, w, 'root cause: DNS', 'dark', 5000);
+          deskPikSay(w, trT('it is ALWAYS dns.', 'c’est TOUJOURS le dns.'));
+        } },
+    ],
+    a9: [ // MONOREPO CROWN — all dependencies bow
+      { id: 'audience', dur: 13000,
+        start(w, s, now) {
+          showRoot(w, now, 10000);
+          showBadge(w, w, '👑 royal audience', 'gold', 5000);
+          deskPikSay(w, trT('my dependencies ♡ approach', 'mes dépendances ♡ approchez'));
+          const crowd = pikOthers(w, 190);
+          s.data.crowd = crowd;
+          crowd.forEach((v, i) => {
+            if (v.chainOf) return;
+            const ang = (i / Math.max(1, crowd.length)) * Math.PI - Math.PI / 2;
+            v.restUntil = 0;
+            v.tx = w.x + Math.cos(ang) * 62;
+            v.ty = Math.max(60, w.y + Math.abs(Math.sin(ang)) * 46 + 18);
+          });
+        },
+        tick(w, s, now, t) {
+          if (cue(s, 'bow', t, 5000)) {
+            for (const v of (s.data.crowd || [])) {
+              if (DESK_PIK.walkers.indexOf(v) < 0 || v.chainOf) continue;
+              showHold(v, now, 3000);
+              showBadge(w, v, '🙇', 'dark', 3000);
+            }
+          }
+          if (cue(s, 'free', t, 8600)) deskPikSay(w, trT('you may go. build well', 'vous pouvez disposer. compilez bien'));
+        } },
+      { id: 'decree', dur: 10000,
+        start(w, s, now) {
+          showRoot(w, now, 7000);
+          showBadge(w, w, 'DECREE: bump to v2', 'gold', 5000);
+          const crowd = pikOthers(w);
+          const odd = crowd.length > 1 ? crowd[Math.floor(Math.random() * crowd.length)] : null;
+          for (const v of crowd) showBadge(w, v, v === odd ? 'peer conflict' : 'v2 ✓', v === odd ? 'red' : 'green', 4200);
+          if (odd) setTimeout(() => { try { deskPikSay(w, trT('patch him. gently.', 'patchez-le. gentiment.')); } catch (e) { /* decreed */ } }, 2400);
+        } },
+      { id: 'node-modules', dur: 12000,
+        start(w, s, now) { showRoot(w, now, 10000); s.data.b = showBadge(w, w, 'installing… 3 pkgs', 'dark'); },
+        tick(w, s, now, t) {
+          if (cue(s, 'n2', t, 2400)) s.data.b.textContent = 'installing… 148 pkgs';
+          if (cue(s, 'n3', t, 4800)) s.data.b.textContent = 'installing… 1204 pkgs';
+          if (cue(s, 'n4', t, 7200)) {
+            s.data.b.textContent = 'node_modules: 1.2 GB';
+            showStyle(w, w.img, 'transform', 'rotate(8deg)', 2400);
+            deskPikSay(w, trT('heavy is the crown.', 'lourde est la couronne.'));
+          }
+        } },
+    ],
+    a10: [ // PROD-FIRE HAIR — this is fine
+      { id: 'this-is-fine', dur: 12000,
+        start(w, s, now) {
+          showRoot(w, now, 10000);
+          showBadge(w, w, '🔥 prod is down', 'red', 3600);
+          showCls(w, w.el, 'pik-overheat', 8000);
+        },
+        tick(w, s, now, t) {
+          if (cue(s, 'fine', t, 3600)) { showBadge(w, w, 'this is fine ♡', 'gold', 4200); deskPikSay(w, trT('this is fine.', 'tout va bien.')); }
+        },
+        end(w) { deskPikSay(w, trT('fixed it live. probably.', 'réparé en direct. sans doute.')); } },
+      { id: 'live-edit', dur: 11000,
+        start(w, s, now) {
+          showRoot(w, now, 9000);
+          showBadge(w, w, 'editing in prod…', 'red', 4200);
+          [0, 0.18, 0.36, 0.54, 0.72].forEach((d) => playTone(1400 + Math.random() * 300, 'square', 0.015, d, 0.03));
+        },
+        tick(w, s, now, t) {
+          if (cue(s, 'result', t, 4800)) {
+            if (Math.random() < 0.5) { showBadge(w, w, 'deployed!! 🎉', 'green', 3600); cheatFall(['🔥', '✨'], 6); deskPikSay(w, trT('genius. no review needed', 'génie. zéro review nécessaire')); }
+            else { showBadge(w, w, 'worse. MUCH worse', 'red', 3600); showCls(w, w.el, 'pik-glitch', 440); deskPikSay(w, trT('…revert. REVERT', '…revert. REVERT')); }
+          }
+        } },
+    ],
+    a11: [ // STARDUST — zero warnings, immaculate
+      { id: 'lint-colleague', dur: 13000,
+        start(w, s) { s.data.v = pikNearest(w); },
+        tick(w, s, now, t) {
+          const v = s.data.v;
+          if (!v || DESK_PIK.walkers.indexOf(v) < 0) return false;
+          if (!s.data.done && showGoto(w, v.x, v.y)) {
+            s.data.done = 1; s.data.at = t;
+            showHold(w, now, 6500); showHold(v, now, 6500);
+            showBadge(w, w, 'linting…', 'dark', 3000);
+          }
+          if (s.data.done && cue(s, 'verdict', t, s.data.at + 3000)) {
+            if (Math.random() < 0.5) { showCls(w, s.data.v.el, 'pik-goldflash', 1200); showBadge(w, s.data.v, '0 warnings ✨', 'green', 3600); deskPikSay(w, trT('immaculate.', 'immaculé.')); }
+            else { showBadge(w, s.data.v, '347 warnings', 'red', 3600); deskPikSay(w, trT('i can fix them. ALL of them', 'je peux les corriger. TOUS')); }
+          }
+        } },
+      { id: 'star-shower', dur: 9000,
+        start(w, s, now) {
+          showRoot(w, now, 7000);
+          showBadge(w, w, 'build: 0W 0E', 'green', 5000);
+          deskPikSay(w, trT('the linter applauds', 'le linter applaudit'));
+        },
+        tick(w, s, now, t) {
+          if (t > 5000 || now < (s.data.at || 0)) return;
+          s.data.at = now + 900;
+          showDrop(w, s, w.x + 4 + Math.random() * 30, w.y - 10 - Math.random() * 20, '✦', '#ffd400');
+        } },
+    ],
+    a12: [ // CONFERENCE BOWTIE — the keynote speaker
+      { id: 'demo-curse', dur: 11000,
+        start(w, s, now) {
+          showRoot(w, now, 9000);
+          showBadge(w, w, '🎤 live demo…', 'gold', 3600);
+          deskPikSay(w, trT('works locally, watch this', 'ça marche en local, regardez'));
+        },
+        tick(w, s, now, t) {
+          if (cue(s, 'curse', t, 4200)) {
+            showBadge(w, w, '📶 wifi died', 'red', 3600);
+            playTone(200, 'sawtooth', 0.04, 0, 0.12);
+            deskPikSay(w, trT('as rehearsed.', 'comme en répétition.'));
+          }
+        } },
+      { id: 'lightning-talk', dur: 12000,
+        start(w, s, now) {
+          showRoot(w, now, 10000);
+          showBadge(w, w, '🎤 lightning talk', 'gold', 5000);
+          deskPikSay(w, trT('my slides, quickly —', 'mes slides, vite —'));
+          s.data.crowd = pikOthers(w, 170);
+        },
+        tick(w, s, now, t) {
+          if (cue(s, 'aud', t, 2400)) { for (const v of (s.data.crowd || [])) { if (DESK_PIK.walkers.indexOf(v) >= 0 && !v.chainOf) showHold(v, now, 4500); } }
+          if (cue(s, 'clap', t, 7000)) {
+            for (const v of (s.data.crowd || [])) { if (DESK_PIK.walkers.indexOf(v) >= 0) showBadge(w, v, '👏', 'gold', 2600); }
+            deskPikSay(w, trT('no questions? perfect.', 'pas de questions ? parfait.'));
           }
         } },
     ],
