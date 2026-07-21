@@ -24011,6 +24011,17 @@ document.addEventListener('DOMContentLoaded', () => {
         try { if (def.start) def.start(w, w.show, Date.now()); } catch (e) { pikShowEnd(w, Date.now()); return 'show crashed on start: ' + e.message; }
         return 'now playing: ' + spId + '/' + def.id;
       },
+      // v229 debug: X-ray of every walker's stage scheduling state
+      stage: () => DESK_PIK.walkers.map((w) => ({
+        key: w.showKey || (w.sp && w.sp.id) || 'w:' + w.hue,
+        pool: !!w.showPool,
+        show: w.show ? w.show.def.id : null,
+        ticks: w.dbgTick || 0, br: w.dbgBr || null,
+        showInMs: w.showAt ? Math.round(w.showAt - Date.now()) : null,
+        gate: w.showPool ? pikStageBusyNear(w) : null,
+        guest: (w.showGuestUntil || 0) > Date.now(),
+        busy: pikBusy(w),
+      })),
       // v228 debug: the playbill collection + forcing a destined duet
       seen: () => { const s = store.get('yos-pik-shows-seen', {}); return Object.keys(s).length + ' shows collected: ' + Object.keys(s).join(', '); },
       duet: () => {
@@ -31305,6 +31316,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     // idle: pick a new mark now and then
     if (docHidden || w.show || now < (w.thiefAt || 0)) return; // v222: shows have the stage
+    if (pikStageBusyNear(w)) { w.thiefAt = now + 5000; return; } // v229: queue behind the running scene
     w.thiefAt = now + 22000 + Math.random() * 18000;
     const icons = [...document.querySelectorAll('.desktop-icon-btn')].filter((b) => {
       if (b.style.transform || b.classList.contains('pik-icon-grabbed')) return false;
@@ -31327,6 +31339,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       if (!w.wifiAt) { w.wifiAt = now + 16000 + Math.random() * 26000; return; }
       if (docHidden || w.show || now < w.wifiAt) return; // v222: not during a show
+      if (pikStageBusyNear(w)) { w.wifiAt = now + 5000; return; } // v229: queue
       // the wifi dies. it ALWAYS dies at the worst moment
       w.wifiPhase = 1;
       w.wifiDownAt = now;
@@ -31377,6 +31390,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (w.featPhase === 0) {
       if (!w.featArgAt) { w.featArgAt = now + 14000 + Math.random() * 22000; return; }
       if (docHidden || w.show || now < w.featArgAt) return; // v222: not during a show
+      if (pikStageBusyNear(w)) { w.featArgAt = now + 5000; return; } // v229: queue
       w.featPhase = 1; w.featBeat = 0; w.featBeatAt = now;
       w.restUntil = now + 60000; w.tx = w.x; w.ty = w.y; // meeting in session
       w.el.classList.remove('walking');
@@ -31510,6 +31524,16 @@ document.addEventListener('DOMContentLoaded', () => {
     // yanking a frozen Signal out of its dropout ruins BOTH shows
     return !!(v.show || v.chainOf || v.thiefPhase || v.wifiPhase || v.featPhase || v.lecTarget || v.disguised >= 0 || (v.showGuestUntil || 0) > Date.now());
   }
+  function pikStageBusyNear(w, r) { // v229 owner decree: ONE SPOTLIGHT PER
+    // NEIGHBORHOOD — colliding shows must play one AFTER the other. a scene
+    // already running within range means: wait for its curtain
+    for (const x of DESK_PIK.walkers) {
+      if (x === w) continue;
+      if (!(x.show || x.thiefPhase === 2 || (x.wifiPhase || 0) > 0 || (x.featPhase || 0) > 0 || x.lecTarget)) continue;
+      if (Math.hypot(x.x - w.x, x.y - w.y) < (r || 200)) return true;
+    }
+    return false;
+  }
   function pikNearest(w, maxD) { // prefers a FREE colleague; falls back to anyone
     let best = null, bd = maxD || 1e9, bestFree = null, bfd = maxD || 1e9;
     for (const v of DESK_PIK.walkers) {
@@ -31585,14 +31609,19 @@ document.addEventListener('DOMContentLoaded', () => {
     pikShowChain(s.def.id, now); // v228: some finales tip the next domino
   }
   function pikShowTick(w, now, docHidden) {
+    w.dbgTick = (w.dbgTick || 0) + 1; // v229 temp debug
     if (!w.show) {
-      if (!w.showAt) { w.showAt = now + 9000 + Math.random() * 18000; return; }
-      if (docHidden || now < w.showAt) return;
+      if (!w.showAt) { w.showAt = now + 9000 + Math.random() * 18000; w.dbgBr = 'arm'; return; }
+      if (docHidden || now < w.showAt) { w.dbgBr = docHidden ? 'hidden' : 'wait'; return; }
+      w.dbgBr = 'past-gate';
       if (w.chainOf) { w.showAt = now + 8000; return; } // no theatre on the train
       if (w.sp && w.sp.id === 'captcha' && w.disguised >= 0) { w.showAt = now + 6000; return; } // mid-costume
       // v222: never upstage a signature act already on stage
       if (w.thiefPhase || w.wifiPhase || w.featPhase || w.lecTarget) { w.showAt = now + 7000; return; }
       if ((w.showGuestUntil || 0) > now) { w.showAt = now + 6000; return; } // v228: starring in someone's duet
+      // v229: colliding shows queue — first on stage finishes first, the
+      // patient one retries in a few seconds and inherits the spotlight
+      if (pikStageBusyNear(w)) { w.showAt = now + 4000 + Math.random() * 3000; return; }
       // v228: the daily bill toast — once per day, the marquee goes up
       if (!DESK_PIK.billToasted && store.get('yos-pik-bill-day', '') !== new Date().toDateString()) {
         DESK_PIK.billToasted = 1;
@@ -32208,16 +32237,25 @@ document.addEventListener('DOMContentLoaded', () => {
             deskPikSay(w, trT('rebooted ♡', 'redémarré ♡'));
           }
         } },
-      { id: 'mass-outage', dur: 8000, // the rare one. the big one
+      { id: 'mass-outage', dur: 9000, // the rare one. the big one.
+        // v229 owner decree: EVERYONE bluescreens — every pikmin on the desk
+        // wears a real mini-BSOD and freezes for a full 3 seconds
         start(w, s, now) {
           deskPikSay(w, trT('sorry. the update went out', 'désolé. la mise à jour est partie'));
           for (const v of pikOthers(w)) {
-            if (pikBusy(v)) continue; // v228
-            v.restUntil = now + 1400; v.tx = v.x; v.ty = v.y; v.el.classList.remove('walking');
-            showBadge(w, v, ':(', 'blue', 2400);
+            if (v.chainOf) continue; // the train tows through anything
+            v.restUntil = now + 3000; v.tx = v.x; v.ty = v.y; v.el.classList.remove('walking');
+            const pane = document.createElement('span');
+            pane.className = 'pik-mini-bsod';
+            pane.textContent = ':(';
+            v.el.appendChild(pane);
+            s.els.push(pane);
+            setTimeout(() => { try { pane.remove(); } catch (e) { /* rebooted */ } }, 3000);
           }
           playTone(160, 'sawtooth', 0.05, 0, 0.3);
-        } },
+          playTone(120, 'sawtooth', 0.05, 0.4, 0.3);
+        },
+        end(w) { deskPikSay(w, trT('…everyone rebooted ok?', '…tout le monde a redémarré ?')); } },
     ],
     rgbrig: [
       { id: 'mode-cycle', dur: 13000, // BREATHE / WAVE / RAINBOW / AUDIO
@@ -33619,6 +33657,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!w.lecTarget) {
       if (!w.lecAt) { w.lecAt = now + 9000 + Math.random() * 14000; return; }
       if (docHidden || w.show || now < w.lecAt) return; // v222: not during a show
+      if (pikStageBusyNear(w)) { w.lecAt = now + 5000; return; } // v229: queue
       // EVERY colleague gets the talk — just not the same one twice in a row
       const all = DESK_PIK.walkers.filter((v) => v !== w);
       const pool = all.filter((v) => v !== w.lastLec);

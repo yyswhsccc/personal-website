@@ -6901,6 +6901,24 @@ html[data-theme="dark"] .pik-disg-banner {
    (mirrors the merge-head opt-out; the 👑 emoji stays as the id card) */
 .desk-pik.pik-wheel-apex.pik-form3 img { animation: none; filter: none; }
 .desk-pik.pik-wheel-apex.pik-form3.walking img { animation: pik-bob 0.42s steps(2) infinite; filter: none; }
+/* v229: the mass outage — every pikmin wears a real mini bluescreen */
+.pik-mini-bsod {
+  position: absolute;
+  left: 50%;
+  top: -8px;
+  transform: translateX(-50%);
+  width: 30px;
+  height: 22px;
+  background: #0a23a8;
+  color: #ffffff;
+  font-family: var(--font-pixel);
+  font-size: 0.6rem;
+  line-height: 22px;
+  text-align: center;
+  z-index: 9;
+  pointer-events: none;
+  box-shadow: 2px 2px 0 rgba(4, 10, 40, 0.4);
+}
 .pik-bug-bit {
   position: absolute;
   font-size: 11px;
