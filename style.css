@@ -6735,6 +6735,27 @@ html[data-theme="dark"] .pik-disg-banner {
   50% { rotate: 4deg; }
 }
 @media (prefers-reduced-motion: reduce) { .desktop-icon-btn.pik-icon-grabbed { animation: none; } }
+/* wifi v219: the APEX Signal loses wifi — spinner, timeout, reunion */
+.pik-wifi-wait {
+  position: absolute;
+  left: 50%;
+  top: -16px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-family: var(--font-pixel);
+  font-size: 0.65rem;
+  line-height: 1;
+  padding: 2px 4px;
+  background: #eef7ff;
+  color: #2f6fa8;
+  border: 2px solid #4f9edb;
+  box-shadow: 2px 2px 0 rgba(12, 30, 48, 0.3);
+  pointer-events: none;
+  z-index: 8;
+}
+.pik-wifi-wait.is-timeout { background: #ffe3e3; color: #a82c2c; border-color: #d64545; }
+.pik-wifi-wait.is-back { background: #e2ffe9; border-color: #4fae6e; }
+
 /* Merge v213: the head car wears its merge count in plain git */
 .pik-merge-badge {
   position: absolute;

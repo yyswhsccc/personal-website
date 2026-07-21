@@ -23992,6 +23992,9 @@ document.addEventListener('DOMContentLoaded', () => {
       game() { return GAME; } // raw state, for scripted playtests only
     };
     window.__yosPik = { roll: pikRollSprout, counts: pikCounts, add: pikdexAdd, total: pikCountTotal, form: pikFormOfKind, th: pikThresholds, pull: watchPullSync, enc: pikCountsEncode, dec: pikCountsMergeRemote, evo: pikEvolveCelebrate, cinema: pikEvolveCinema, rite: pikEvolveRite,
+      // v219 debug: drop the APEX Signal's wifi / convene the APEX Feature standup right now
+      wifidrop: () => { const w = DESK_PIK.walkers.find((v) => v.wifiApex); if (!w) return 'no APEX Signal on the desktop'; w.wifiAt = 1; return 'signal lost — next tick'; },
+      argue: () => { const w = DESK_PIK.walkers.find((v) => v.featureApex); if (!w) return 'no APEX Feature on the desktop'; w.featArgAt = 1; return 'standup convened — next tick'; },
       // v216 debug: make the APEX Pointer commit the heist right now
       steal: () => {
         const w = DESK_PIK.walkers.find((v) => v.iconThief);
@@ -31056,6 +31059,8 @@ document.addEventListener('DOMContentLoaded', () => {
       framedSp: spId === 'y2kbug' && form >= 2, // sprites on the 0.9s frame clock
       cronRing: spId === 'cronjob' && form >= 2, lastMin: -1, // it rings ON the minute
       weather: spId === 'cumulus' && form >= 2, apexWeather: spId === 'cumulus' && form >= 3, rainAt: 0, boltAt: 0,
+      wifiApex: spId === 'wifi' && form >= 3, wifiAt: 0, wifiDownAt: 0, wifiPhase: 0, wifiSpin: null, wifiSpinAt: 0, wifiFlickAt: 0, // v219 APEX Signal: the bars are REAL now
+      featureApex: spId === 'feature' && form >= 3, featArgAt: 0, featPhase: 0, featBeatAt: 0, featBeat: 0, featWigAt: 0, // v219 APEX Feature: two heads, one route, zero consensus
       sp: species || null, spd: species && species.spd ? species.spd : 1, stepAt: 0,
       x: 40 + Math.random() * Math.max(120, r.width - 160),
       y: r.height * 0.35 + Math.random() * (r.height * 0.5),
@@ -31212,6 +31217,111 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!icons.length) return;
     w.thiefIcon = icons[Math.floor(Math.random() * icons.length)];
     w.thiefPhase = 1;
+  }
+  // v219 APEX Signal: the bars are REAL — the body glows with the signal,
+  // and every so often the wifi just… goes. 7 seconds of nothing: a
+  // spinner, a timeout, then the sweet relief of bars coming back.
+  const WIFI_SPIN_FRAMES = ['◜', '◝', '◞', '◟'];
+  function wifiApexTick(w, now, docHidden) {
+    if (w.wifiPhase === 0) { // online: flicker with the signal strength
+      if (!REDUCED_MOTION && now > w.wifiFlickAt) {
+        w.wifiFlickAt = now + 260 + Math.random() * 520;
+        w.img.style.opacity = (0.55 + Math.random() * 0.45).toFixed(2);
+      }
+      if (!w.wifiAt) { w.wifiAt = now + 16000 + Math.random() * 26000; return; }
+      if (docHidden || now < w.wifiAt) return;
+      // the wifi dies. it ALWAYS dies at the worst moment
+      w.wifiPhase = 1;
+      w.wifiDownAt = now;
+      w.restUntil = now + 7000; w.tx = w.x; w.ty = w.y; // rooted mid-step
+      w.el.classList.remove('walking');
+      w.img.style.opacity = '0.35';
+      const s = document.createElement('span');
+      s.className = 'pik-wifi-wait';
+      s.textContent = WIFI_SPIN_FRAMES[0];
+      w.el.appendChild(s);
+      w.wifiSpin = s;
+      w.wifiSpinAt = 0;
+      return;
+    }
+    const gone = now - w.wifiDownAt;
+    if (w.wifiPhase === 1) { // searching: the little arc goes round and round
+      if (w.wifiSpin && now > w.wifiSpinAt) {
+        w.wifiSpinAt = now + 150;
+        w.wifiSpin.textContent = WIFI_SPIN_FRAMES[Math.floor(gone / 150) % 4];
+      }
+      if (gone >= 4200) { // it is not coming back on its own
+        w.wifiPhase = 2;
+        if (w.wifiSpin) { w.wifiSpin.textContent = '✕'; w.wifiSpin.classList.add('is-timeout'); }
+        deskPikSay(w, trT('request timed out', 'délai d’attente dépassé'));
+        playTone(300, 'square', 0.04, 0, 0.02);
+        playTone(220, 'square', 0.04, 0.14, 0.02);
+      }
+      return;
+    }
+    if (w.wifiPhase === 2 && gone >= 7000) { // …and we're back
+      if (w.wifiSpin) { w.wifiSpin.textContent = '📶'; w.wifiSpin.classList.remove('is-timeout'); w.wifiSpin.classList.add('is-back'); }
+      const s = w.wifiSpin;
+      w.wifiSpin = null;
+      setTimeout(() => { try { s.remove(); } catch (e) { /* gone with a resync */ } }, 1100);
+      deskPikSay(w, trT('back online ✓', 'de retour en ligne ✓'));
+      playTone(520, 'triangle', 0.05, 0, 0.02);
+      playTone(780, 'triangle', 0.05, 0.12, 0.02);
+      w.img.style.opacity = '1';
+      w.restUntil = 0;
+      w.wifiPhase = 0;
+      w.wifiAt = now + 16000 + Math.random() * 26000;
+    }
+  }
+  // v219 APEX Feature: two heads, one body, ZERO consensus. every so often
+  // the ends hold a standup about the route — git flavored, naturally —
+  // deadlock at 1 vote vs 1, then rand() ships the tiebreak.
+  function featureArgueTick(w, now, docHidden) {
+    if (w.featPhase === 0) {
+      if (!w.featArgAt) { w.featArgAt = now + 14000 + Math.random() * 22000; return; }
+      if (docHidden || now < w.featArgAt) return;
+      w.featPhase = 1; w.featBeat = 0; w.featBeatAt = now;
+      w.restUntil = now + 60000; w.tx = w.x; w.ty = w.y; // meeting in session
+      w.el.classList.remove('walking');
+      return;
+    }
+    if (w.featPhase !== 1) return;
+    // tug of war: each head yanks the sprite its own way
+    if (!REDUCED_MOTION && now > w.featWigAt) {
+      w.featWigAt = now + 300;
+      w.img.style.transform = w.img.style.transform ? '' : 'scaleX(-1)';
+    }
+    const gone = now - w.featBeatAt;
+    if (w.featBeat === 0 && gone >= 0) {
+      w.featBeat = 1;
+      deskPikSay(w, trT('HEAD: go left', 'HEAD : à gauche'));
+      playTone(520, 'triangle', 0.04, 0, 0.02);
+    } else if (w.featBeat === 1 && gone >= 1700) {
+      w.featBeat = 2;
+      deskPikSay(w, trT('tail: right. WONTFIX.', 'tail : à droite. WONTFIX.'));
+      playTone(380, 'triangle', 0.04, 0, 0.02);
+    } else if (w.featBeat === 2 && gone >= 3400) {
+      w.featBeat = 3;
+      deskPikSay(w, trT('deadlock — 1 vote vs 1', 'impasse — 1 voix contre 1'));
+      playTone(240, 'square', 0.04, 0, 0.02);
+    } else if (w.featBeat === 3 && gone >= 5100) {
+      // rand() is the only maintainer both ends respect
+      const goLeft = Math.random() < 0.5;
+      deskPikSay(w, goLeft
+        ? trT('rand() says left — shipped', 'rand() dit gauche — livré')
+        : trT('rand() says right — shipped', 'rand() dit droite — livré'));
+      playTone(660, 'triangle', 0.05, 0, 0.02);
+      playTone(880, 'triangle', 0.05, 0.12, 0.02);
+      const lr = DESK_PIK.layer.getBoundingClientRect();
+      w.tx = goLeft
+        ? 8 + Math.random() * Math.max(40, lr.width * 0.22)
+        : Math.max(8, lr.width * 0.74 + Math.random() * (lr.width * 0.22) - 46);
+      w.ty = Math.max(60, Math.min(lr.height - 70, w.y + (Math.random() * 140 - 70)));
+      w.img.style.transform = '';
+      w.restUntil = 0;
+      w.featPhase = 0;
+      w.featArgAt = now + 20000 + Math.random() * 25000;
+    }
   }
   // v213: the head of the train wears its merge count in plain git —
   // '+1 MERGED', '+2 MERGED'… one glance says exactly what happened
@@ -31703,7 +31813,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // its own footprints reads as a glitch, not a homecoming.
     const seats = DESK_PIK.walkers.map((w) => ({ x: w.x, y: w.y, tx: w.tx, ty: w.ty }));
     DESK_PIK.walkers.forEach((w) => {
-      try { if (w.thiefIcon) pointerDropIcon(w, 1); if (w.bubbleEl) w.bubbleEl.remove(); if (w.babyEl) w.babyEl.remove(); if (w.bsodPane) w.bsodPane.remove(); if (w.chainLink) w.chainLink.remove(); if (w.mergeBadge) w.mergeBadge.remove(); w.el.remove(); } catch (e) { /* already gone */ }
+      try { if (w.thiefIcon) pointerDropIcon(w, 1); if (w.wifiSpin) w.wifiSpin.remove(); if (w.bubbleEl) w.bubbleEl.remove(); if (w.babyEl) w.babyEl.remove(); if (w.bsodPane) w.bsodPane.remove(); if (w.chainLink) w.chainLink.remove(); if (w.mergeBadge) w.mergeBadge.remove(); w.el.remove(); } catch (e) { /* already gone */ }
     });
     DESK_PIK.walkers = [];
     deskRoster().slice(0, PIK_MAX).forEach((rr, i) => {
@@ -33037,6 +33147,8 @@ document.addEventListener('DOMContentLoaded', () => {
       // intact), grows with every merge, sometimes hits a MERGE CONFLICT
       // and bounces off, and occasionally git-reverts one back out
       if (w.iconThief) pointerThiefTick(w, now, docHidden);
+      if (w.wifiApex) wifiApexTick(w, now, docHidden);
+      if (w.featureApex) featureArgueTick(w, now, docHidden);
       if (w.mergeApex) {
         // v211 THE BRANCH TRAIN (owner decree: swallowing is DEAD).
         // merged piks queue behind the Merge, joined by pink dashed
