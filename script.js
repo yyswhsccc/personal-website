@@ -4896,17 +4896,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const ownedSegs = pikdexWheelSegs(own);
     const ownedSp = new Set(own.filter((p) => p.sp != null).map((p) => p.sp));
     const hasCh = own.some((p) => p.ch);
+    const arrivals = []; // sweep: promote THESE, not the earliest benched pik
     remote.slice(own.length).forEach((r) => {
-      if (r && r.ch) { if (hasCh) return; dex.push(r); return; }
-      if (r && r.sp != null) { if (ownedSp.has(r.sp)) return; ownedSp.add(r.sp); dex.push(r); return; }
+      if (r && r.ch) { if (hasCh) return; dex.push(r); arrivals.push(r); return; }
+      if (r && r.sp != null) { if (ownedSp.has(r.sp)) return; ownedSp.add(r.sp); dex.push(r); arrivals.push(r); return; }
       const seg = Math.floor(pikHueOf(r) / WHEEL_STEP) % WHEEL_SEGS;
       if (ownedSegs.has(seg)) return;
       ownedSegs.add(seg);
       dex.push(r);
+      arrivals.push(r);
     });
-    // keep the squad staffed: if there's room on duty, promote arrivals
+    // keep the squad staffed: if there's room on duty, promote ARRIVALS —
+    // a deliberately-benched squad member stays benched (sweep)
     let active = dex.filter((p) => p.a).length;
-    dex.forEach((p) => { if (!p.a && active < PIK_MAX) { p.a = 1; active++; } });
+    arrivals.forEach((p) => { if (!p.a && active < PIK_MAX) { p.a = 1; active++; } });
     pikdexSave(dex);
     pikdexRosterProject();
     pikdexWheelCheck(before);
@@ -4925,7 +4928,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 9 newest badges were falling off the wire. append-only, like b4 before it.
     const pcs = (typeof pikCountsEncode === 'function') ? pikCountsEncode() : [];
     // wst: one compact counter the WATCH client reads — fans + plucks + wheel%
-    const wst = 1 + Math.min(pet.followers || 0, 99999)
+    const wst = 1 + Math.min(pet.followers || 0, 99998) // sweep: 99999+1 sentinel overflowed the field into the plucks digit
       + 100000 * Math.min((typeof pikCountTotal === 'function') ? pikCountTotal() : 0, 9999)
       + 1000000000 * Math.min(100, (typeof pikdexWheelPct === 'function') ? pikdexWheelPct(pikdexGet()) : 0);
     const payload = [achvBitsRange(18, 68), achvBitsRange(68, 118), achvBitsRange(118, 168), spells.length, piks.n, 2].concat(spells).concat(piks.chunks).concat(pcs).concat([wst, achvBitsRange(168, 218)]);
@@ -12132,7 +12135,7 @@ document.addEventListener('DOMContentLoaded', () => {
       ['pointerup', 'pointerleave', 'pointercancel'].forEach((ev) => b.addEventListener(ev, () => press(k, false)));
     });
     cv.addEventListener('pointerdown', () => press('a', true));
-    cv.addEventListener('pointerup', () => press('a', false));
+    ['pointerup', 'pointerleave', 'pointercancel'].forEach((ev) => cv.addEventListener(ev, () => press('a', false))); // sweep: mouse released off-canvas latched A forever
     const keymap = (code) => code === 'Space' || code === 'Enter' || code === 'KeyA' ? 'a' : code === 'ArrowLeft' ? 'left' : code === 'ArrowRight' ? 'right' : null;
     const onKey = (e) => {
       const w = document.getElementById('win-dreamlog');
@@ -24136,6 +24139,7 @@ document.addEventListener('DOMContentLoaded', () => {
       steal: () => {
         const w = DESK_PIK.walkers.find((v) => v.iconThief);
         if (!w) return 'no APEX Pointer on the desktop';
+        if (w.thiefIcon) pointerDropIcon(w, 1); // sweep: no stranding the current loot
         const icons = [...document.querySelectorAll('.desktop-icon-btn')].filter((b) => !b.style.transform);
         if (!icons.length) return 'no icons to steal';
         const t = icons[Math.floor(Math.random() * icons.length)];
@@ -28530,6 +28534,7 @@ document.addEventListener('DOMContentLoaded', () => {
       s.style.color = ['#ffd400', '#ff8fc7', '#ffffff'][Math.floor(Math.random() * 3)];
       document.body.appendChild(s);
       s.addEventListener('animationend', () => s.remove());
+      setTimeout(() => { try { s.remove(); } catch (e) { /* swept */ } }, 1400); // sweep: forced-colors/reduced-motion never fire animationend
     }, 130);
     // the charge sings upward
     [0, 1, 2, 3, 4, 5, 6].forEach((i) => playTone(392 + i * 74, 'triangle', 0.12, 0.15 + i * 0.27, 0.035));
@@ -28713,6 +28718,11 @@ document.addEventListener('DOMContentLoaded', () => {
     img.alt = '';
     img.style.width = gbForm === 3 ? '56px' : gbForm === 2 ? '52px' : '33px'; // apron-compensated, tempered (v161.2)
     if (gbForm >= 2) el.classList.add('pik-form' + gbForm);
+    // sweep: v225 'gold retired' applies in the meadow too — wheel APEX
+    // buddies shed the shine (Merge keeps its badge-only decree)
+    if (gbForm >= 3 && !spId && !ch && hue != null) {
+      el.classList.add(Math.floor((((hue % 360) + 360) % 360) / 7.5) === 35 ? 'pik-merge-head' : 'pik-wheel-apex');
+    }
     el.appendChild(img);
     if (species) { // the hat performs live, too
       const hat = document.createElement('span');
@@ -31253,14 +31263,14 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
       if (w.showPokeLine) { // v221: a show wants its own poke line
-        w.restUntil = Date.now() + 1200;
+        w.restUntil = Math.max(w.restUntil || 0, Date.now() + 1200); // sweep: same
         el.classList.remove('poked'); void el.offsetWidth; el.classList.add('poked');
         pikChirp();
         deskPikSay(w, trT(w.showPokeLine[0], w.showPokeLine[1]));
         achvBump('pets');
         return;
       }
-      w.restUntil = Date.now() + 1800; // pauses to enjoy the attention
+      w.restUntil = Math.max(w.restUntil || 0, Date.now() + 1800); // pauses to enjoy the attention (sweep: never SHORTEN an active root)
       el.classList.remove('poked');
       void el.offsetWidth;
       el.classList.add('poked');
@@ -31343,14 +31353,17 @@ document.addEventListener('DOMContentLoaded', () => {
       // v227: keep the grid lifted until the springy return lands — dropping
       // the z mid-flight would sink the icon behind the sidebar again
       const cont = ic.closest('.desktop-icons-container');
-      if (instant) { if (cont) cont.classList.remove('pik-heist-lift'); ic.style.transition = ''; }
-      else setTimeout(() => { try { ic.style.transition = ''; if (cont) cont.classList.remove('pik-heist-lift'); } catch (e) { /* gone */ } }, 600);
+      if (instant) { if (cont) { cont.classList.remove('pik-heist-lift'); cont.style.zIndex = ''; } ic.style.transition = ''; }
+      else setTimeout(() => { try { ic.style.transition = ''; if (cont) { cont.classList.remove('pik-heist-lift'); cont.style.zIndex = ''; } } catch (e) { /* gone */ } }, 600);
     } catch (e) { /* the icon left the desktop */ }
   }
   function pointerThiefTick(w, now, docHidden) {
     const ic = w.thiefIcon;
     // an icon that vanished (dream swap, language rerender) is forgotten
-    if (ic && !document.body.contains(ic)) { w.thiefIcon = null; w.thiefHome = null; w.thiefPhase = 0; }
+    if (ic && !document.body.contains(ic)) {
+      w.thiefIcon = null; w.thiefHome = null; w.thiefPhase = 0;
+      try { const c = document.querySelector('.desktop-icons-container.pik-heist-lift'); if (c) { c.classList.remove('pik-heist-lift'); c.style.zIndex = ''; } } catch (e) { /* flat */ } // sweep: no stranded lift
+    }
     if (w.thiefPhase === 1) { // walking toward the mark
       const t = w.thiefIcon;
       if (!t) { w.thiefPhase = 0; return; }
@@ -31367,8 +31380,16 @@ document.addEventListener('DOMContentLoaded', () => {
         w.thiefAt = now + 8000 + Math.random() * 6000;
         t.classList.add('pik-icon-grabbed');
         // v227: lift the whole icon grid above the sidebar (z 5 → 45) for
-        // the ride — a stolen file must never vanish BEHIND the furniture
-        try { const c = t.closest('.desktop-icons-container'); if (c) c.classList.add('pik-heist-lift'); } catch (e) { /* flat desk */ }
+        // the ride — a stolen file must never vanish BEHIND the furniture.
+        // sweep: in float-top mode the pointer rides at z 1990 over the
+        // WINDOWS — the loot must follow it up there
+        try {
+          const c = t.closest('.desktop-icons-container');
+          if (c) {
+            c.classList.add('pik-heist-lift');
+            c.style.zIndex = DESK_PIK.layer.classList.contains('pik-float-top') ? '1989' : '';
+          }
+        } catch (e) { /* flat desk */ }
         deskPikSay(w, trT('mine now', 'à moi maintenant'));
         playTone(880, 'triangle', 0.05, 0, 0.02);
       }
@@ -31587,6 +31608,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   function showShove(w, v, dx, dy) { // v225: pick a colleague up and PUT them
     // somewhere else — rebase does this to your commits daily
+    if (v.chainOf) return; // sweep: the tow rewrites left/top every tick — a shove just rubber-bands
     const lr = DESK_PIK.layer.getBoundingClientRect();
     showHold(v, Date.now(), 1800);
     showStyle(w, v.el, 'transition', 'left 0.9s ease, top 0.9s ease', 1200);
@@ -31713,7 +31735,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // patient one retries in a few seconds and inherits the spotlight
       if (pikStageBusyNear(w)) { w.showAt = now + 4000 + Math.random() * 3000; return; }
       // v228: the daily bill toast — once per day, the marquee goes up
-      if (!DESK_PIK.billToasted && store.get('yos-pik-bill-day', '') !== new Date().toDateString()) {
+      if (!DESK_PIK.billToasted && DESK_PIK.layer.offsetParent !== null && store.get('yos-pik-bill-day', '') !== new Date().toDateString()) { // sweep: never burn the day's toast into a hidden layer
         DESK_PIK.billToasted = 1;
         store.set('yos-pik-bill-day', new Date().toDateString());
         const pool = PIK_SHOWCASE[w.showKey] || [];
@@ -34114,7 +34136,7 @@ document.addEventListener('DOMContentLoaded', () => {
     mergeBadgeUpdate(w);
     const r = DESK_PIK.layer.getBoundingClientRect();
     v.tx = Math.max(8, Math.min(Math.max(60, r.width - 50), v.x + (Math.random() * 200 - 100)));
-    v.ty = Math.max(8, Math.min(Math.max(60, r.height - 50), v.y + (Math.random() * 120 - 60)));
+    v.ty = Math.max(60, Math.min(Math.max(60, r.height - 50), v.y + (Math.random() * 120 - 60))); // sweep: y floor 60 like every other mover
     deskPikSay(w, trT(lineEn, lineFr));
     setTimeout(() => { try { deskPikSay(v, trT('reverted!! FREE!!', 'annulé !! LIBRE !!')); } catch (e) { /* already off */ } }, 500);
     playTone(400, 'square', 0.07, 0, 0.03);
@@ -34339,6 +34361,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let dirty = false;
     d.forEach((p) => {
       if (!p || typeof p !== 'object') { dirty = true; return; }
+      if (p.sp == null && !p.ch && !Number.isFinite(p.h)) { dirty = true; return; } // sweep: a NaN hue mints a phantom 'w:NaN' kind that blocks the last wheel slot
       const k = pikKindKey(p);
       const keep = seen[k];
       if (!keep) { seen[k] = p; merged.push(p); return; }
@@ -34443,7 +34466,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const c = pikCounts();
     const key = pikKindKey(entry);
     const before = c[key] || 0;
-    c[key] = Math.min(before + 1, 950);
+    c[key] = Math.min(before + 1, 511); // sweep: the cloud wire packs base-512 — a 950 local cap silently diverged across devices
     pikCountsSave(c);
     if (before >= 1) {
       const extra = store.get('yos-pik-extra', 0) + 1;
@@ -34582,7 +34605,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // remember where everyone stood — a resync must NOT teleport the squad.
     // their bloom trails stay on the desk, and a pikmin standing away from
     // its own footprints reads as a glitch, not a homecoming.
-    const seats = DESK_PIK.walkers.map((w) => ({ x: w.x, y: w.y, tx: w.tx, ty: w.ty }));
+    const seatsByKind = {}; // sweep: seats keyed by IDENTITY — benching pik #2 must not teleport #3-#6 into each other's footprints
+    DESK_PIK.walkers.forEach((w) => {
+      const k = pikKindOfLive(w);
+      (seatsByKind[k] = seatsByKind[k] || []).push({ x: w.x, y: w.y, tx: w.tx, ty: w.ty });
+    });
     DESK_PIK.walkers.forEach((w) => {
       try { if (w.show) pikShowEnd(w, Date.now()); if (w.thiefIcon) pointerDropIcon(w, 1); if (w.wifiSpin) w.wifiSpin.remove(); if (w.bubbleEl) w.bubbleEl.remove(); if (w.babyEl) w.babyEl.remove(); if (w.bsodPane) w.bsodPane.remove(); if (w.chainLink) w.chainLink.remove(); if (w.mergeBadge) w.mergeBadge.remove(); w.el.remove(); } catch (e) { /* already gone */ }
     });
@@ -34592,7 +34619,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (DESK_PIK.overflow && DESK_PIK.overflowList) lineup.push(...DESK_PIK.overflowList);
     lineup.forEach((rr, i) => {
       const w = deskPikSpawn(rr.h != null ? rr.h : rr.c, rr.s, !!rr.ch, rr.sp || null);
-      const seat = seats[i];
+      const seat = w ? (seatsByKind[pikKindOfLive(w)] || []).shift() : null;
       if (w && seat) {
         w.x = seat.x; w.y = seat.y; w.tx = seat.tx; w.ty = seat.ty;
         w.el.style.left = w.x + 'px';
@@ -35701,7 +35728,7 @@ document.addEventListener('DOMContentLoaded', () => {
           playTone(1320, 'square', 0.06, 0, 0.02);
           playTone(1320, 'square', 0.06, 0.15, 0.02);
           playTone(1760, 'square', 0.07, 0.3, 0.02);
-          deskPikSay(w, '⏰ ' + ['RING!!', 'pik o\'clock!!', 'ON SCHEDULE ✓'][Math.floor(Math.random() * 3)]);
+          deskPikSay(w, '⏰ ' + [trT('RING!!', 'DRING !!'), trT("pik o'clock!!", 'pik heures pile !!'), trT('ON SCHEDULE ✓', "À L'HEURE ✓")][Math.floor(Math.random() * 3)]); // sweep: the last EN-only sentence say
         }
       }
       // framed sprites (y2kbug confetti / cronjob clock hand): re-roll
@@ -36004,7 +36031,7 @@ document.addEventListener('DOMContentLoaded', () => {
               const ang = Math.atan2(t.y - w.y, t.x - w.x) || Math.random() * 6.283;
               const rB = DESK_PIK.layer.getBoundingClientRect();
               t.x = Math.max(8, Math.min(Math.max(60, rB.width - 50), t.x + Math.cos(ang) * 130));
-              t.y = Math.max(8, Math.min(Math.max(60, rB.height - 50), t.y + Math.sin(ang) * 130));
+              t.y = Math.max(60, Math.min(Math.max(60, rB.height - 50), t.y + Math.sin(ang) * 130)); // sweep: y floor 60
               t.tx = t.x; t.ty = t.y;
               // audit: the fling never RENDERED — logical coords moved, the el did not
               showStyle(w, t.el, 'transition', 'left 0.7s ease, top 0.7s ease', 900);
@@ -36177,7 +36204,7 @@ document.addEventListener('DOMContentLoaded', () => {
               d.style.left = (cx + Math.random() * 36 - 18) + 'px';
               d.style.top = (cy - 2 + Math.random() * 12) + 'px';
               DESK_PIK.layer.appendChild(d);
-              setTimeout(() => d.classList.add('fading'), 9000);
+              setTimeout(() => d.classList.add('fading'), 6500); // sweep: fade BEFORE removal (timers were swapped)
               setTimeout(() => d.remove(), 8000);
             }
             const trailsS = DESK_PIK.layer.querySelectorAll('.pik-trail');
@@ -37606,10 +37633,11 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!cs) return 'nocloud';
       const v = watchUidToNum(cs.uid);
       const finish = () => { store.set('yos-watch-paired', Date.now()); achvUnlock('wristslime'); watchPullArm(); };
-      return cloudGet(`wpair-${pin}`).then((pre) => {
+      return cloudGet(`wpair-${pin}`, true).then((pre) => {
         // exactly v+1 on the counter = a watch already adopted THIS save's
         // code (our value + its ack). re-typing the code must not stomp the
         // ack back to v and then wait forever for a wave that already came.
+        if (pre == null) return 'nocloud'; // sweep: a blipped read must not stomp the ack — retry later
         if (pre === v + 1) { finish(); return 'ok'; }
         // v86: go through cloudKeyFor — it CACHES the counter's admin key,
         // so re-pairing with a pin this browser already burned still works
