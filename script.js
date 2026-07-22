@@ -31481,6 +31481,67 @@ document.addEventListener('DOMContentLoaded', () => {
         ov.appendChild(s2);
       }
     } },
+    // ————— v245: seven MORE troublemakers join the wrecking crew —————
+    n46: { cls: 'tear-freeze', fill(ov) { // Loopy: the whole screen HANGS
+      for (let k = 0; k < 8; k++) {
+        const s2 = document.createElement('span');
+        s2.className = 'tear-hour';
+        s2.textContent = '⌛';
+        s2.style.left = Math.random() * 92 + '%';
+        s2.style.top = Math.random() * 92 + '%';
+        ov.appendChild(s2);
+      }
+      for (let k = 0; k < 5; k++) {
+        const s2 = document.createElement('span');
+        s2.className = 'tear-nr';
+        s2.textContent = 'while(true) — Not Responding';
+        s2.style.left = (5 + Math.random() * 60) + '%';
+        s2.style.top = (8 + Math.random() * 80) + '%';
+        ov.appendChild(s2);
+      }
+    } },
+    y2kbug: { cls: 'tear-y2k', fill(ov) { // its ORIGIN STORY, full screen
+      ov.innerHTML = '<div class="tear-mono">AWARD MODULAR BIOS v4.51PG — 640K OK</div>'
+        + '<div class="tear-mono tear-red">SYSTEM DATE INVALID: 01/01/1900</div>'
+        + '<div class="tear-mono">CMOS CHECKSUM ERROR — TIME TRAVEL DETECTED</div>'
+        + '<div class="tear-mono tear-dim">PRESS F1 TO CONTINUE. PRESS F2 TO PARTY LIKE IT IS 19100</div>'
+        + '<div class="tear-mono">▌</div>';
+    } },
+    n38: { cls: 'tear-vim', fill(ov) { // the screen becomes vim. forever
+      let rows = '';
+      for (let k = 0; k < 14; k++) rows += '<div class="tear-tilde">~</div>';
+      ov.innerHTML = rows
+        + '<div class="tear-vim-tries tear-mono">:q  :q!  :wq  :x  ZZ  :help  :HELP  :please</div>'
+        + '<div class="tear-vim-status">-- INSERT --                                  All</div>';
+    } },
+    n15: { cls: 'tear-offline', fill(ov) { // Router: the internet is gone
+      ov.innerHTML = '<div class="tear-off-glyph">📡</div>'
+        + '<div class="tear-off-big">No internet</div>'
+        + '<div class="tear-off-small">Try: checking the cables · restarting the router · blaming DNS (it is DNS)</div>'
+        + '<div class="tear-off-code">ERR_INTERNET_DISCONNECTED</div>';
+    } },
+    n34: { cls: 'tear-fork', fill(ov) { // fork bomb: processes ALL the way down
+      let rows = '';
+      for (let k = 0; k < 15; k++) {
+        rows += k % 3 === 2
+          ? '<div class="tear-mono tear-dim">[pid ' + (1024 + k * 371) + '] :(){ :|:& };:</div>'
+          : '<div class="tear-mono tear-red">-bash: fork: retry: Resource temporarily unavailable</div>';
+      }
+      ov.innerHTML = rows;
+    } },
+    n40: { cls: 'tear-floppy', fill(ov) { // the most ancient scream
+      ov.innerHTML = '<div class="tear-mono">Non-System disk or disk error</div>'
+        + '<div class="tear-mono">Replace and strike any key when ready</div>'
+        + '<div class="tear-mono tear-dim">(the disk is 1.44MB of pure memories)</div>'
+        + '<div class="tear-mono">▌</div>';
+    } },
+    dotmatrix: { cls: 'tear-lp0', fill(ov) { // the legendary kernel message
+      ov.innerHTML = '<div class="tear-mono tear-dim">[ 1337.420 ] lp0: checking printer status</div>'
+        + '<div class="tear-mono tear-red">[ 1337.421 ] lp0 on fire</div>'
+        + '<div class="tear-mono tear-red">[ 1337.422 ] printer: the printer is ON FIRE</div>'
+        + '<div class="tear-mono tear-dim">[ 1337.423 ] please do not panic (panic anyway)</div>'
+        + '<div class="tear-mono tear-dim">[ 1337.424 ] SCREEE intensifies</div>';
+    } },
   };
   function pikTearDef(key) {
     const st = PIK_TEAR_STYLES[key];

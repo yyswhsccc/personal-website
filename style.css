@@ -13679,3 +13679,39 @@ html.boring-first body { background: #807e78; }
 .pik-tear.tear-invert { backdrop-filter: invert(1) hue-rotate(180deg); background: rgba(0, 0, 0, 0.05); }
 .tear-bit { position: absolute; font-family: var(--font-pixel); font-size: 16px; color: #1a1a1a; text-shadow: 1px 1px 0 #f2f2f2; }
 @media (prefers-reduced-motion: reduce) { .pik-tear { transition: none; } }
+
+/* v245: seven more tear skins */
+.pik-tear.tear-freeze { background: rgba(190, 190, 195, 0.3); backdrop-filter: grayscale(1) brightness(0.92); }
+.tear-hour { position: absolute; font-size: 22px; }
+.tear-nr {
+  position: absolute;
+  font-family: Tahoma, sans-serif;
+  font-size: 12px;
+  color: #444;
+  background: #e8e5de;
+  border: 1px solid #8f8b81;
+  padding: 3px 8px;
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.2);
+  white-space: nowrap;
+}
+.pik-tear.tear-y2k, .pik-tear.tear-fork, .pik-tear.tear-floppy, .pik-tear.tear-lp0 { background: #000000; color: #d8d8d0; padding: 12vh 9vw; }
+.pik-tear.tear-vim { background: #0c0c0c; color: #e8e6df; padding: 5vh 3vw 0; }
+.tear-tilde { font-family: var(--font-pixel); font-size: clamp(11px, 1.6vw, 16px); color: #41a0ff; line-height: 1.9; }
+.tear-vim-tries { margin-top: 3vh; color: #ffd400; }
+.tear-vim-status {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #e8e6df;
+  color: #0c0c0c;
+  font-family: var(--font-pixel);
+  font-size: clamp(10px, 1.4vw, 14px);
+  padding: 4px 10px;
+  white-space: pre;
+}
+.pik-tear.tear-offline { background: #f2f2f2; color: #444; padding: 18vh 12vw; }
+.tear-off-glyph { font-size: clamp(40px, 8vw, 76px); filter: grayscale(1); margin-bottom: 3vh; }
+.tear-off-big { font-family: Tahoma, 'Segoe UI', sans-serif; font-size: clamp(20px, 3.4vw, 34px); font-weight: 700; margin-bottom: 1.6vh; }
+.tear-off-small { font-family: Tahoma, sans-serif; font-size: clamp(11px, 1.5vw, 15px); color: #666; margin-bottom: 3vh; }
+.tear-off-code { font-family: var(--font-pixel); font-size: clamp(9px, 1.3vw, 13px); color: #999; }
