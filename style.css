@@ -13568,3 +13568,30 @@ body:has(.game-rotated) .desktop-taskbar, body:has(.game-rotated) #slime-pet, bo
 @media (max-width: 700px) {
   .boring-body { padding: 30px 22px 22px; }
 }
+
+/* v237: identity footprints — every APEX walks its own trail */
+.pik-idtrail {
+  position: absolute;
+  font-family: var(--font-pixel);
+  font-size: 11px;
+  line-height: 1;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.85;
+  transition: opacity 1.5s ease;
+  text-shadow: 1px 1px 0 rgba(20, 2, 14, 0.18);
+}
+.pik-idtrail.fading { opacity: 0; }
+.pik-idtrail.is-blink { animation: pik-caretblink 1.05s steps(1) infinite; }
+@keyframes pik-caretblink { 50% { opacity: 0.1; } }
+.pik-idtrail-ghost {
+  position: absolute;
+  image-rendering: pixelated;
+  opacity: 0.3;
+  filter: saturate(0.5);
+  pointer-events: none;
+  z-index: 1;
+  transition: opacity 1.4s ease;
+}
+.pik-idtrail-ghost.fading { opacity: 0; }
+@media (prefers-reduced-motion: reduce) { .pik-idtrail.is-blink { animation: none; } }

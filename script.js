@@ -2582,7 +2582,7 @@ document.addEventListener('DOMContentLoaded', () => {
     void emailToast.offsetWidth;
     emailToast.classList.add('toast-show');
     // marquee stays up long enough to read the WHOLE line (scaled to length)
-    const dur = opts.scroll ? Math.max(4200, Math.min(11000, 700 + Array.from(text).length * 130)) : (opts.ms || 3000);
+    const dur = opts.scroll ? Math.max(5200, Math.min(21000, 900 + Array.from(text).length * 175)) : (opts.ms || 3000); // v237 owner decree: the batch blessing deserves to be READ
     if (opts.scroll) { const tr = emailToast.querySelector('.toast-marquee-track'); if (tr) tr.style.animationDuration = (dur - 400) + 'ms'; }
 
     if (toastTimer) clearTimeout(toastTimer);
@@ -31182,6 +31182,130 @@ document.addEventListener('DOMContentLoaded', () => {
     try { fn(); } catch (e) { console.warn('[yos boot] step "' + label + '" skipped:', e); }
   }
 
+  /* ————— v237: IDENTITY FOOTPRINTS — every APEX walks its OWN trail.
+     the rainbow pixel flowers are for civilians; an APEX leaves the mark
+     of what it IS. keyed by showKey (species id or name bucket). fx:
+     alt = strict alternation · tick = even spacing · echo = prints appear
+     1.2s late at OLD positions (latency!) · ghost = mini self-copies ·
+     pair = double dots · blink = caret blink · hue = vivid random ·
+     flip = upside-down · c:'self' = the pik's own hue ————— */
+  const PIK_TRAILS = {
+    glitch: { g: ['▚', '▞'], c: ['#ff2fae', '#41e0ff'], fx: 'alt' },
+    matrix: { g: ['ﾊ', 'ﾐ', '0', '1'], c: ['#2ea043', '#7ee787'] },
+    wifi: { g: ['▂', '▄', '▆'], c: ['#4f9edb', '#7cfc00'] },
+    lowbatt: { g: ['▮'], c: ['#ff5d5d', '#ffc23f', '#7ce87c'] },
+    post: { g: ['♪', '·'], c: ['#c98a2e', '#ffd27a'] },
+    cumulus: { g: ['·', '☁'], c: ['#a5c9e8', '#eef7ff'], s: 9 },
+    feature: { g: ['❯'], c: ['#7fae35'], fx: 'flip' },
+    latency: { g: ['·', '•'], c: ['#b09a62'], fx: 'echo' },
+    aliased: { g: ['■'], c: ['#8e6cc9', '#cbb1f2'], s: 13 },
+    darkmode: { g: ['✦', '☾', '·'], c: ['#c9a7f5', '#4a3a5e'] },
+    gilded: { g: ['✦'], c: ['#ffd400', '#fff6c9'] },
+    cacheghost: { fx: 'ghost' },
+    cronjob: { g: ['|'], c: ['#4fae8e'], fx: 'tick' },
+    bitflip: { g: ['0', '1'], c: ['#1a1a1a', '#f2f2f2'], fx: 'alt' },
+    turbo: { g: ['▴', '·'], c: ['#ff4d1f', '#ff8a5c', '#ffd400'] },
+    dotmatrix: { g: ['◦'], c: ['#7c8db0'], fx: 'tick' },
+    bsodjr: { g: [':('], c: ['#2f5fd0'], s: 9 },
+    rgbrig: { g: ['■'], fx: 'hue' },
+    captcha: { g: ['☑'], c: ['#7cba58'] },
+    kernelpg: { g: ['·'], c: ['#3d7a94'], fx: 'pair' },
+    n0: { g: ['■'], c: 'self', s: 8 },
+    n1: { g: ['|'], c: 'self', fx: 'blink' },
+    n2: { g: ['▟', '▙'], c: 'self', fx: 'alt' },
+    n3: { g: ['◧'], c: 'self', s: 12 },
+    n4: { g: ['ᛝ', 'ꟼ', '§', 'ƶ'], c: ['#4a3a5e'] },
+    n5: { g: ['⧈'], c: ['#c9992e'] },
+    n6: { g: ['0', '1'], c: 'self', fx: 'alt' },
+    n7: { g: ['◐', '◑'], c: 'self', fx: 'alt' },
+    n8: { g: ['⣿'], c: 'self' },
+    n9: { g: ['⚡'], c: ['#ffd400'], s: 9 },
+    n10: { g: ['🍪'], s: 9 },
+    n11: { g: ['◍'], c: ['#c9992e', '#ffd400'] },
+    n12: { g: ['▣'], c: ['#41e0ff'] },
+    n13: { g: ['·'], c: ['#4f9edb'], fx: 'tick' },
+    n14: { g: [')'], c: ['#ff8a5c'] },
+    n15: { g: ['⌗'], c: ['#4f9edb'] },
+    n16: { g: ['▢'], c: ['#ff8fc7'] },
+    n17: { g: ['#'], c: ['#241335'] },
+    n18: { g: ['ψ'], c: ['#8a4bd0'] },
+    n19: { g: ['|'], c: ['#4fae8e'], fx: 'tick' },
+    n20: { g: ['$'], c: ['#7cba58'] },
+    n21: { g: ['/'], c: ['#d6539b'] },
+    n22: { g: ['*', '+', '?'], c: ['#8e6cc9'] },
+    n23: { g: ['λ'], c: ['#ffd400', '#c98a2e'] },
+    n24: { g: ['≡'], c: ['#7cb1ff'] },
+    n25: { g: ['∴', '∵'], c: ['#c9a7f5'] },
+    n26: { g: ['…'], c: 'self', fx: 'tick' },
+    n27: { g: ['#'], c: ['#ffd400'] },
+    n28: { g: ['·'], c: ['#ffffff'] },
+    n29: { g: ['∅'], c: ['#9aa0b4'] },
+    n30: { g: ['●'], c: 'self', s: 12 },
+    n31: { g: ['⬡'], c: ['#7ee787'] },
+    n32: { g: ['+'], c: ['#4fae6e'] },
+    n33: { g: ['−', '+'], c: ['#d64545', '#4fae6e'], fx: 'alt' },
+    n34: { g: ['⑂'], c: ['#ff8a5c'] },
+    n36: { g: ['○', '◦'], c: ['#b09a62'], fx: 'echo' },
+    n37: { g: ['~'], c: ['#4f9edb'] },
+    n38: { g: [':'], c: ['#2ea043'] },
+    n39: { g: ['◱'], c: ['#b09a62'] },
+    n40: { g: ['💾'], s: 9 },
+    n41: { g: ['≋'], c: ['#ff8fc7'] },
+    n42: { g: ['⌇'], c: ['#41e0ff'] },
+    n43: { g: ['⇄'], c: ['#9aa0b4'] },
+    n44: { g: ['∥'], c: ['#c9992e'] },
+    n45: { g: ['⋯'], c: ['#8e6cc9'], fx: 'echo' },
+    n46: { g: ['∞'], c: ['#ff8fc7'] },
+    n47: { g: ['✗'], c: ['#d64545'] },
+  };
+  function pikIdTrailStep(w, spec, cx, cy, now) {
+    if (spec.fx === 'tick') { // metronome spacing — a ruled line, not a sprinkle
+      if (w.idTrailX != null && Math.hypot(cx - w.idTrailX, cy - w.idTrailY) < 30) return;
+      w.idTrailX = cx; w.idTrailY = cy;
+    }
+    let px = cx, py = cy;
+    if (spec.fx === 'echo') { // the print lands where it WAS — 1.2s of lag, visible
+      const buf = (w.idEcho = w.idEcho || []);
+      buf.push([cx, cy, now]);
+      if (buf.length > 40) buf.shift();
+      const oldIx = buf.findIndex((e) => now - e[2] >= 1200);
+      if (oldIx < 0) return;
+      px = buf[oldIx][0]; py = buf[oldIx][1];
+      buf.splice(oldIx, 1);
+    }
+    if (spec.fx === 'ghost') { // it keeps getting served from cache
+      const g = document.createElement('img');
+      g.className = 'pik-trail pik-idtrail-ghost';
+      g.src = w.img.src;
+      g.alt = '';
+      g.style.width = '20px';
+      g.style.left = (px + 4) + 'px';
+      g.style.top = (py - 16) + 'px';
+      DESK_PIK.layer.appendChild(g);
+      setTimeout(() => { try { g.classList.add('fading'); } catch (e) { /* purged */ } }, 3200);
+      setTimeout(() => { try { g.remove(); } catch (e) { /* purged */ } }, 4800);
+      return;
+    }
+    const many = spec.fx === 'pair' ? 2 : 1;
+    for (let k = 0; k < many; k++) {
+      const s = document.createElement('span');
+      s.className = 'pik-trail pik-idtrail' + (spec.fx === 'blink' ? ' is-blink' : '');
+      let gi = Math.floor(Math.random() * (spec.g ? spec.g.length : 1));
+      if (spec.fx === 'alt') { w.idAlt = ((w.idAlt || 0) + 1) % spec.g.length; gi = w.idAlt; }
+      s.textContent = spec.g ? spec.g[gi] : '·';
+      if (spec.fx === 'hue') s.style.color = 'hsl(' + Math.floor(Math.random() * 360) + ', 90%, 62%)';
+      else if (spec.c === 'self') s.style.color = 'hsl(' + Math.round(((w.hue || 0) % 360 + 360) % 360) + ', 85%, 58%)';
+      else if (spec.c) s.style.color = spec.c[(spec.fx === 'alt' && spec.c.length === spec.g.length) ? gi : Math.floor(Math.random() * spec.c.length)];
+      if (spec.s) s.style.fontSize = spec.s + 'px';
+      if (spec.fx === 'flip') s.style.transform = 'rotate(180deg)';
+      s.style.left = (px + Math.random() * 18 - 9 + k * 7) + 'px';
+      s.style.top = (py + Math.random() * 8 - 3) + 'px';
+      DESK_PIK.layer.appendChild(s);
+      setTimeout(() => { try { s.classList.add('fading'); } catch (e) { /* melted */ } }, 4500);
+      setTimeout(() => { try { s.remove(); } catch (e) { /* melted */ } }, 6200);
+    }
+  }
+
   /* ---------- v236: THE BORING DISGUISE ----------
      owner decree: a deliberately dull résumé "马甲" for recruiters —
      Times New Roman, white paper, real facts, scannable in 10 seconds.
@@ -34267,6 +34391,13 @@ document.addEventListener('DOMContentLoaded', () => {
     s.textContent = text;
     w.el.appendChild(s);
     w.bubbleEl = s;
+    // v237: a bubble spoken at the desk's edge must SLIDE INWARD, not clip
+    try {
+      const br = s.getBoundingClientRect();
+      const vw = window.innerWidth || document.documentElement.clientWidth;
+      if (br.left < 4) s.style.left = (16 + (4 - br.left)) + 'px';
+      else if (br.right > vw - 4) s.style.left = (16 - (br.right - (vw - 4))) + 'px';
+    } catch (e) { /* unmeasured */ }
     // v224: the SPEAKER rises above the crowd while talking — a bubble must
     // never hide behind the listener's body (owner decree)
     if (!w.sayZSaved) { w.sayZSaved = true; w.sayZPrev = w.el.style.zIndex; }
@@ -36386,6 +36517,14 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             const trailsP = DESK_PIK.layer.querySelectorAll('.pik-trail');
             for (let k = 0; k < trailsP.length - 70; k++) trailsP[k].remove();
+            return;
+          }
+          // v237: an APEX leaves the mark of what it IS — flowers are for civilians
+          const idSpec = w.showPool && PIK_TRAILS[w.showKey];
+          if (idSpec) {
+            pikIdTrailStep(w, idSpec, cx, cy, now);
+            const trailsI = DESK_PIK.layer.querySelectorAll('.pik-trail');
+            for (let k = 0; k < trailsI.length - 70; k++) trailsI[k].remove();
             return;
           }
           const posyR = n > 2 ? 15 + n * 3 : 0; // roomy, breathable posies
