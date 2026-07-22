@@ -31227,24 +31227,24 @@ document.addEventListener('DOMContentLoaded', () => {
     // v242 owner decree: footprints are SENTENCES now — every identity
     // drops a mixed stream of glyphs (g), words & error fragments (w),
     // plus an 8% universal spice pool. never the same walk twice.
-    glitch: { g: ['▚', '▞'], w: ['rgb split', 'moshed', '§§§'], c: ['#ff2fae', '#41e0ff'], fx: 'alt' },
-    matrix: { g: ['ﾊ', 'ﾐ', '0', '1'], w: ['wake up', 'follow', '01101'], c: ['#2ea043', '#7ee787'] },
+    glitch: { g: ['▚', '▞'], w: ['rgb split', 'moshed', '§§§'], c: ['#ff2fae', '#41e0ff'], fx: 'alt', a: 'jitter' },
+    matrix: { g: ['ﾊ', 'ﾐ', '0', '1'], w: ['wake up', 'follow', '01101'], c: ['#2ea043', '#7ee787'], a: 'fall' },
     wifi: { g: ['▂', '▄', '▆'], w: ['ssid?', '5GHz', 'full bars'], c: ['#4f9edb', '#7cfc00'] },
     lowbatt: { g: ['▮'], w: ['15%', 'low batt…', 'plug me'], c: ['#ff5d5d', '#ffc23f', '#7ce87c'] },
     post: { g: ['♪', '·'], w: ['beep', 'beep beep', 'POST OK'], c: ['#c98a2e', '#ffd27a'] },
-    cumulus: { g: ['·', '☁'], w: ['drizzle', '10% rain'], c: ['#a5c9e8', '#7c8db0'], s: 9 },
+    cumulus: { g: ['·', '☁'], w: ['drizzle', '10% rain'], c: ['#a5c9e8', '#7c8db0'], s: 9, a: 'drift' },
     feature: { g: ['❯'], w: ['WONTFIX', 'by design', 'not a bug'], c: ['#7fae35'], fx: 'flip' },
     latency: { g: ['·', '•'], w: ['300ms', 'lag…', 'jitter'], c: ['#b09a62'], fx: 'echo' },
     aliased: { g: ['■'], w: ['8×8', 'jaggies'], c: ['#8e6cc9', '#cbb1f2'], s: 13 },
-    darkmode: { g: ['✦', '☾', '·'], w: ['0 lux', 'goth', 'no light'], c: ['#c9a7f5', '#4a3a5e'] },
-    gilded: { g: ['✦'], w: ['v1.0', 'GOLD', 'shipped ✓'], c: ['#ffd400', '#c9992e'] },
+    darkmode: { g: ['✦', '☾', '·'], w: ['0 lux', 'goth', 'no light'], c: ['#c9a7f5', '#4a3a5e'], a: 'pulse' },
+    gilded: { g: ['✦'], w: ['v1.0', 'GOLD', 'shipped ✓'], c: ['#ffd400', '#c9992e'], a: 'pulse' },
     cacheghost: { w: ['304', 'stale', 'cached'], c: ['#a9a4c9'], fx: 'ghost' },
     cronjob: { g: ['|'], w: ['* * * * *', '03:00', 'on time'], c: ['#4fae8e'], fx: 'tick' },
-    bitflip: { g: ['0', '1'], w: ['2^12', 'bit rot', 'ECC?'], c: ['#1a1a1a', '#f2f2f2'], fx: 'alt' },
-    turbo: { g: ['▴', '·'], w: ['98°C', 'MHz+', 'no warranty'], c: ['#ff4d1f', '#ff8a5c', '#ffd400'] },
+    bitflip: { g: ['0', '1'], w: ['2^12', 'bit rot', 'ECC?'], c: ['#1a1a1a', '#f2f2f2'], fx: 'alt', a: 'jitter' },
+    turbo: { g: ['▴', '·'], w: ['98°C', 'MHz+', 'no warranty'], c: ['#ff4d1f', '#ff8a5c', '#ffd400'], a: 'flicker' },
     dotmatrix: { g: ['◦'], w: ['SCREE', 'lp0 on fire', '···'], c: ['#7c8db0'], fx: 'tick' },
     bsodjr: { g: [':('], w: ['0xDEAD', 'IRQL…', 'dump 40%', ':-('], c: ['#2f5fd0'], s: 9 },
-    rgbrig: { g: ['■'], w: ['RGB', '+15fps', '16.7M'], fx: 'hue' },
+    rgbrig: { g: ['■'], w: ['RGB', '+15fps', '16.7M'], fx: 'hue', a: 'hue' },
     captcha: { g: ['☑'], w: ['not a bot', 'im human', '☐?'], c: ['#7cba58'] },
     kernelpg: { g: ['·'], w: ['ring 0', 'sudo', 'GNU'], c: ['#3d7a94'], fx: 'pair' },
     n0: { g: ['■'], w: ['1px', 'RGBa', 'dead px'], c: 'self', s: 8 },
@@ -31256,7 +31256,7 @@ document.addEventListener('DOMContentLoaded', () => {
     n6: { g: ['0', '1'], w: ['LSB', 'respect'], c: 'self', fx: 'alt' },
     n7: { g: ['◐', '◑'], w: ['4 bits', '½ byte'], c: 'self', fx: 'alt' },
     n8: { g: ['⣿'], w: ['0xFF', '255', '8 bits'], c: 'self' },
-    n9: { g: ['⚡'], w: ['HIT ✓', 'MISS…', 'TTL ∞'], c: ['#ffd400'], s: 9 },
+    n9: { g: ['⚡'], w: ['HIT ✓', 'MISS…', 'TTL ∞'], c: ['#ffd400'], s: 9, a: 'flicker' },
     n10: { g: ['🍪'], w: ['crumbs', '30 days', 'consent?'], s: 9, c: ['#c9992e'] },
     n11: { g: ['◍'], w: ['expired', 'JWT', 'refresh ✓'], c: ['#c9992e', '#ffd400'] },
     n12: { g: ['▣'], w: ['TTL 64', 'hop!', 'frag 2/3'], c: ['#41e0ff'] },
@@ -31270,7 +31270,7 @@ document.addEventListener('DOMContentLoaded', () => {
     n20: { g: ['$'], w: ['sudo', 'ls -la', '| grep', 'cd ~'], c: ['#7cba58'] },
     n21: { g: ['/'], w: ['-r', 'match!', '/bug/g'], c: ['#d6539b'] },
     n22: { g: ['*', '+', '?'], w: ['\\d+', '(.*)', '[a-z]'], c: ['#8e6cc9'] },
-    n23: { g: ['λ'], w: ['λx.x', 'no name', 'cold…'], c: ['#ffd400', '#c98a2e'] },
+    n23: { g: ['λ'], w: ['λx.x', 'no name', 'cold…'], c: ['#ffd400', '#c98a2e'], a: 'pulse' },
     n24: { g: ['≡'], w: ['push', 'pop', 'depth++'], c: ['#7cb1ff'] },
     n25: { g: ['∴', '∵'], w: ['malloc', 'free()', 'GC ✓'], c: ['#c9a7f5'] },
     n26: { g: ['…'], w: ['FIFO', '#1 next', 'no cutting'], c: 'self', fx: 'tick' },
@@ -31288,11 +31288,11 @@ document.addEventListener('DOMContentLoaded', () => {
     n39: { g: ['◱'], w: ['-xzvf?', '.tar.gz', 'flags…'], c: ['#b09a62'] },
     n40: { g: ['💾'], w: ['1.44MB', 'save ✓', 'A:\\'], s: 9, c: ['#7c8db0'] },
     n41: { g: ['≋'], w: ['-60%', 'deflate', '.zip ♡'], c: ['#ff8fc7'] },
-    n42: { g: ['⌇'], w: ['SYN', 'ACK', ':8080'], c: ['#41e0ff'] },
+    n42: { g: ['⌇'], w: ['SYN', 'ACK', ':8080'], c: ['#41e0ff'], a: 'wiggle' },
     n43: { g: ['⇄'], w: ['relay', 'no logs ♡', 'mitm?'], c: ['#9aa0b4'] },
     n44: { g: ['∥'], w: ['lock()', 'wait…', 'unlock ✓'], c: ['#c9992e'] },
     n45: { g: ['⋯'], w: ['await', 'pending', '.then()'], c: ['#8e6cc9'], fx: 'echo' },
-    n46: { g: ['∞'], w: ['while(1)', 'i++', 'break?'], c: ['#ff8fc7'] },
+    n46: { g: ['∞'], w: ['while(1)', 'i++', 'break?'], c: ['#ff8fc7'], a: 'spin' },
     n47: { g: ['✗'], w: ['SIGSEGV', '0x0', 'core ✗', 'null'], c: ['#d64545'] },
   };
   // the universal spice rack — any APEX may drop one of these, rarely
@@ -31339,6 +31339,16 @@ document.addEventListener('DOMContentLoaded', () => {
       if (spec.fx === 'alt' && !word) { w.idAlt = ((w.idAlt || 0) + 1) % spec.g.length; gi = w.idAlt; }
       s.textContent = word || (spec.g ? spec.g[gi] : '·');
       if (word && word.length > 2) s.style.fontSize = '8px'; // fragments run small
+      // v246 owner decree: footprints ANIMATE. words type themselves out;
+      // glyphs either pop in (finite entry) or live a looping flair —
+      // identity flavor first, generic seasoning otherwise
+      if (spec.fx !== 'blink') {
+        if (word) s.classList.add('ta-tw');
+        else if (spec.fx === 'flip') s.classList.add(Math.random() < 0.5 ? 'ta-flicker' : 'ta-hue'); // upside-down glyphs keep their inline rotate — animate opacity/filter only
+        else if (spec.a && Math.random() < 0.6) s.classList.add('ta-' + spec.a);
+        else if (Math.random() < 0.35) s.classList.add(['ta-pulse', 'ta-drift', 'ta-wiggle'][Math.floor(Math.random() * 3)]);
+        else s.classList.add(['ta-pop', 'ta-bounce', 'ta-spinin', 'ta-grow'][Math.floor(Math.random() * 4)]);
+      }
       if (spec.fx === 'hue') s.style.color = 'hsl(' + Math.floor(Math.random() * 360) + ', 90%, 62%)';
       else if (spec.c === 'self') s.style.color = 'hsl(' + Math.round(((w.hue || 0) % 360 + 360) % 360) + ', 85%, 58%)';
       else if (spec.c) s.style.color = spec.c[(spec.fx === 'alt' && spec.c.length === spec.g.length) ? gi : Math.floor(Math.random() * spec.c.length)];
@@ -31681,7 +31691,7 @@ document.addEventListener('DOMContentLoaded', () => {
     return { src: pikSprite(pikEntryColor({ h }), 2, null, false, form, 'w:' + Math.floor(h / 7.2)), hat: null };
   }
   const BORING_QUESTIONS = [ // v243: the ghost makes SMALL TALK now
-    ['been to Edmonton? it is a GOOD place.', 'déjà venu·e à Edmonton ? c’est un ENDROIT bien.'],
+    ['been to Edmonton? it is a <s>COLD</s> GOOD place.', 'déjà venu·e à Edmonton ? c’est un endroit <s>FROID</s> BIEN.', 1], // the strikethrough IS the joke
     ['do you like watching squirrels? yongshan loves it 😋', 'tu aimes observer les écureuils ? yongshan adore 😋'],
     ['had your bubble tea today?', 'tu as bu ton bubble tea aujourd’hui ?'],
     ['coffee or tea?', 'café ou thé ?'],
@@ -31799,13 +31809,13 @@ document.addEventListener('DOMContentLoaded', () => {
         // v243: three conversation flavors — cold jokes, small talk, and
         // Yongshan's restaurant chart, reasons copied VERBATIM (owner decree)
         const roll = Math.random();
-        let line;
+        let line, html = false;
         if (roll < 0.4) { const j = BORING_JOKES[Math.floor(Math.random() * BORING_JOKES.length)]; line = trT(j[0], j[1]); }
-        else if (roll < 0.75) { const q = BORING_QUESTIONS[Math.floor(Math.random() * BORING_QUESTIONS.length)]; line = trT(q[0], q[1]); }
+        else if (roll < 0.75) { const q = BORING_QUESTIONS[Math.floor(Math.random() * BORING_QUESTIONS.length)]; line = trT(q[0], q[1]); html = !!q[2]; }
         else { const r = RESTO_LIST[Math.floor(Math.random() * RESTO_LIST.length)]; line = trT('hungry? try 📍 ', 'un creux ? essaie 📍 ') + r.n + ' — ' + trT(r.note[0], r.note[1]); }
         const bub = document.createElement('div');
         bub.className = 'boring-pik-bubble';
-        bub.textContent = line;
+        if (html) bub.innerHTML = line; else bub.textContent = line;
         gw.appendChild(bub);
         T(() => { try { const r = bub.getBoundingClientRect(); if (r.left < 4) bub.style.marginLeft = (4 - r.left) + 'px'; else if (r.right > vw() - 4) bub.style.marginLeft = (-(r.right - vw() + 4)) + 'px'; } catch (e) { /* unmeasured */ } }, 30);
         T(() => { try { bub.remove(); } catch (e) { /* laughed off */ } }, 5600);
@@ -33198,6 +33208,7 @@ document.addEventListener('DOMContentLoaded', () => {
             g.style.left = (v.x - 2) + 'px'; g.style.top = (v.y - 46) + 'px';
             DESK_PIK.layer.appendChild(g);
             s.els.push(g);
+            s.data.grid = g; // v246: the sheet must leave before the verdict shows
             showHold(w, now, 8500); showHold(v, now, 8500); // v224: hold the pose
             deskPikSay(w, trT('select all squares with pikmin', 'coche les cases avec des pikmin'));
             setTimeout(() => { try { deskPikSay(v, '???'); } catch (e) { /* failed */ } }, 2250);
@@ -33205,6 +33216,7 @@ document.addEventListener('DOMContentLoaded', () => {
           }
           if (s.data.verdictAt && t >= s.data.verdictAt && !s.data.said) {
             s.data.said = 1;
+            try { if (s.data.grid) s.data.grid.remove(); } catch (e) { /* graded */ } // v246: sheet away — the verdict was hiding behind it
             const pass = Math.random() < 0.6;
             deskPikSay(w, pass ? trT('verified ✓', 'vérifié ✓') : trT('try again.', 'réessaie.'));
             if (s.data.v && DESK_PIK.walkers.indexOf(s.data.v) >= 0) showBadge(w, s.data.v, pass ? '✓' : '✗', pass ? 'green' : 'red', 2600);

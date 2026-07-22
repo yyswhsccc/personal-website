@@ -13715,3 +13715,35 @@ html.boring-first body { background: #807e78; }
 .tear-off-big { font-family: Tahoma, 'Segoe UI', sans-serif; font-size: clamp(20px, 3.4vw, 34px); font-weight: 700; margin-bottom: 1.6vh; }
 .tear-off-small { font-family: Tahoma, sans-serif; font-size: clamp(11px, 1.5vw, 15px); color: #666; margin-bottom: 3vh; }
 .tear-off-code { font-family: var(--font-pixel); font-size: clamp(9px, 1.3vw, 13px); color: #999; }
+
+/* ————— v246: ANIMATED footprints — entries and looping flairs ————— */
+.pik-idtrail { white-space: nowrap; }
+.ta-pop { animation: ta-pop 0.4s ease-out; }
+@keyframes ta-pop { 0% { transform: scale(0); } 65% { transform: scale(1.25); } 100% { transform: scale(1); } }
+.ta-bounce { animation: ta-bounce 0.5s ease-out; }
+@keyframes ta-bounce { 0% { transform: translateY(-9px); opacity: 0; } 60% { transform: translateY(1px); opacity: 1; } 100% { transform: translateY(0); } }
+.ta-spinin { animation: ta-spinin 0.45s ease-out; }
+@keyframes ta-spinin { 0% { transform: rotate(-130deg) scale(0.3); opacity: 0; } 100% { transform: rotate(0) scale(1); opacity: 1; } }
+.ta-grow { animation: ta-grow 0.5s ease-out; }
+@keyframes ta-grow { 0% { transform: scale(0); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+.ta-tw { overflow: hidden; display: inline-block; max-width: 20ch; animation: ta-tw 0.9s steps(14, end); }
+@keyframes ta-tw { 0% { max-width: 0; } 100% { max-width: 20ch; } }
+.ta-pulse { animation: ta-pulse 1.6s ease-in-out infinite; }
+@keyframes ta-pulse { 50% { transform: scale(1.18); opacity: 1; } }
+.ta-drift { animation: ta-drift 3s ease-in-out infinite; }
+@keyframes ta-drift { 50% { transform: translateX(5px); } }
+.ta-wiggle { animation: ta-wiggle 1.2s ease-in-out infinite; }
+@keyframes ta-wiggle { 25% { transform: rotate(9deg); } 75% { transform: rotate(-9deg); } }
+.ta-hue { animation: ta-hue 2s linear infinite; }
+@keyframes ta-hue { to { filter: hue-rotate(360deg); } }
+.ta-flicker { animation: ta-flicker 0.9s steps(3) infinite; }
+@keyframes ta-flicker { 0% { opacity: 0.95; } 50% { opacity: 0.45; } 100% { opacity: 0.85; } }
+.ta-fall { animation: ta-fall 1.3s ease-in forwards; }
+@keyframes ta-fall { 0% { transform: translateY(-7px); opacity: 0.4; } 100% { transform: translateY(4px); opacity: 0.9; } }
+.ta-spin { animation: ta-spin 2.4s linear infinite; }
+@keyframes ta-spin { to { transform: rotate(360deg); } }
+.ta-jitter { animation: ta-jitter 0.5s steps(2) infinite; }
+@keyframes ta-jitter { 0% { transform: translate(-1px, 1px); } 50% { transform: translate(1px, -1px); } 100% { transform: translate(-1px, 0); } }
+@media (prefers-reduced-motion: reduce) {
+  .ta-pop, .ta-bounce, .ta-spinin, .ta-grow, .ta-tw, .ta-pulse, .ta-drift, .ta-wiggle, .ta-hue, .ta-flicker, .ta-fall, .ta-spin, .ta-jitter { animation: none; }
+}
