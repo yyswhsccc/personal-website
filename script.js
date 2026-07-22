@@ -24131,6 +24131,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return 'no destined pair on the desk right now';
       },
+      bonds: () => store.get('yos-pik-bonds', {}), // v238 debug: the friendship ledger
+      gossip: (id) => { const w0 = DESK_PIK.walkers[0]; if (!w0) return 'empty desk'; pikGossip(id || 'group-photo', w0); return 'the news is out: ' + (id || 'group-photo'); },
       bill: (spId) => { // today's odds for a species (or all)
         const one = (id) => {
           const d = new Date();
@@ -31306,6 +31308,85 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+
+  /* ————— v238: DEEP SOCIETY — bonds, moods, and gossip —————
+     scenes leave RELATIONSHIPS behind now. duets and kindness build
+     persistent bonds (yos-pik-bonds); rebases and roaming charges build
+     grudges. besties high-five and gravitate; rivals exchange cold
+     stares. big events become NEWS that spreads pik-to-pik at hello
+     range — watch a rumor cross the desk. */
+  function pikBondKey(a, b) {
+    const ka = pikKindOfLive(a), kb = pikKindOfLive(b);
+    return ka < kb ? ka + '|' + kb : kb + '|' + ka;
+  }
+  function pikBondGet(a, b) { return (store.get('yos-pik-bonds', {})[pikBondKey(a, b)] || 0); }
+  function pikBondAdd(a, b, d) {
+    const m = store.get('yos-pik-bonds', {});
+    const k = pikBondKey(a, b);
+    m[k] = Math.max(-9, Math.min(9, Math.round(((m[k] || 0) + d) * 10) / 10));
+    store.set('yos-pik-bonds', m);
+  }
+  function pikMoodSet(v, mood) { v.mood = mood; v.moodUntil = Date.now() + 90000; }
+  const PIK_WARM = { 'apply-patch': 1, 'ship-stamp': 1, 'save-icon': 1, 'seasoning': 1, 'half-a-byte': 1, 'ping-pong': 1, 'handshake': 1, 'canary-token': 1, 'consent-banner': 0.5 };
+  const PIK_COLD = { 'rebase': 2, 'roaming': 1, 'the-lock': 1, 'stare-review': 1 };
+  const PIK_GOSSIP_LINES = {
+    'rm-rf-scare': ['bash threatened to DELETE EVERYTHING', 'bash a menacé de TOUT SUPPRIMER'],
+    'mass-outage': ['an update took the WHOLE desk down', 'une mise à jour a couché TOUT le bureau'],
+    'group-photo': ['we took a group photo ♡', 'on a fait une photo de groupe ♡'],
+    'twin-deadlock': ['the two locks froze EACH OTHER', 'les deux verrous se sont figés MUTUELLEMENT'],
+    'heist': ['the cursor STOLE a file. again', 'le curseur a VOLÉ un fichier. encore'],
+    'this-is-fine': ['someone is on fire and calls it fine', 'quelqu’un brûle et dit que ça va'],
+  };
+  function pikGossip(id, origin) {
+    if (!PIK_GOSSIP_LINES[id]) return;
+    DESK_PIK.gossip = { id, at: Date.now(), seen: new Set([origin]) };
+    for (const v of pikOthers(origin, 240)) DESK_PIK.gossip.seen.add(v); // witnesses carry the news
+  }
+  const PIK_BESTIE_DUET = { keys: [], id: 'duet-besties', dur: 14000, beats: [
+    { who: 0, at: 400, say: ['you. i LIKE you', 'toi. je t’aime bien'] },
+    { who: 1, at: 2800, say: ['obviously ♡', 'évidemment ♡'] },
+    { who: 0, at: 5200, badge: ['✋', 'gold'] },
+    { who: 1, at: 6200, badge: ['✋', 'gold'], tone: 760 },
+    { who: 0, at: 7400, say: ['HIGH FIVE ♡', 'TOPE LÀ ♡'], tone: 880, anim: 'hearts' },
+  ] };
+  function pikSocialTick(w, now) {
+    if (w.mood && now > (w.moodUntil || 0)) w.mood = null;
+    if (w.show || pikBusy(w)) return;
+    if (now < (w.helloAt || 0)) return;
+    w.helloAt = now + 8000 + Math.random() * 9000;
+    const v = pikNearest(w, 46);
+    if (!v || pikBusy(v) || Math.hypot(v.x - w.x, v.y - w.y) > 46) {
+      if (w.mood && Math.random() < 0.15) deskPikSay(w, w.mood === 'happy' ? '♪' : '…');
+      return;
+    }
+    const g = DESK_PIK.gossip;
+    if (g && Date.now() - g.at < 240000 && g.seen.has(w) && !g.seen.has(v)) { // 🗣 THE NEWS SPREADS
+      g.seen.add(v);
+      deskPikSay(w, '🗣 ' + trT(PIK_GOSSIP_LINES[g.id][0], PIK_GOSSIP_LINES[g.id][1]));
+      setTimeout(() => { try { if (DESK_PIK.walkers.indexOf(v) >= 0) deskPikSay(v, '😮'); } catch (e) { /* old news */ } }, 1400);
+      return;
+    }
+    const bond = pikBondGet(w, v);
+    if (bond <= -4) { // rivals: the cold stare. no words
+      showHold(w, now, 1100); showHold(v, now, 1100);
+      deskPikSay(w, '😒');
+      setTimeout(() => { try { if (DESK_PIK.walkers.indexOf(v) >= 0) deskPikSay(v, '😒'); } catch (e) { /* stormed off */ } }, 700);
+      return;
+    }
+    if (bond >= 6) { // besties!!
+      deskPikSay(w, Math.random() < 0.5 ? '♡♡' : trT('bestie!!', 'bestie !!'));
+      setTimeout(() => { try { if (DESK_PIK.walkers.indexOf(v) >= 0) deskPikSay(v, '♡'); } catch (e) { /* shy */ } }, 700);
+      pikBondAdd(w, v, 0.2);
+      return;
+    }
+    if (Math.random() < 0.45) { // a passing hello, colored by mood
+      const G = w.mood === 'grumpy' ? ['hmph.', '…'] : w.mood === 'happy' ? ['♪', '♡', 'yo!!'] : ['♡', 'yo', 'pik!', 'o7'];
+      deskPikSay(w, G[Math.floor(Math.random() * G.length)]);
+      setTimeout(() => { try { if (DESK_PIK.walkers.indexOf(v) >= 0 && !pikBusy(v)) deskPikSay(v, ['♡', 'yo', 'pik!'][Math.floor(Math.random() * 3)]); } catch (e) { /* walked on */ } }, 700);
+      pikBondAdd(w, v, 0.2);
+    }
+  }
+
   /* ---------- v236: THE BORING DISGUISE ----------
      owner decree: a deliberately dull résumé "马甲" for recruiters —
      Times New Roman, white paper, real facts, scannable in 10 seconds.
@@ -31619,6 +31700,7 @@ document.addEventListener('DOMContentLoaded', () => {
         w.thiefWp = null;
         w.thiefAt = now + 8000 + Math.random() * 6000;
         t.classList.add('pik-icon-grabbed');
+        pikGossip('heist', w); // v238: everyone will hear about this
         // v227: lift the whole icon grid above the sidebar (z 5 → 45) for
         // the ride — a stolen file must never vanish BEHIND the furniture.
         // sweep: in float-top mode the pointer rides at z 1990 over the
@@ -31902,7 +31984,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function pikShowAudience(w, now) { // v228: a show DRAWS A CROWD — nearby
     // idlers drift over to watch; one might 👀. no holds, pure charm
     if (Math.random() < 0.4) return;
-    const fans = pikOthers(w, 240).filter((v) => !pikBusy(v)).slice(0, 2);
+    const fans = pikOthers(w, 240).filter((v) => !pikBusy(v) && v.mood !== 'grumpy' && pikBondGet(w, v) > -4).slice(0, 2); // v238
     for (const v of fans) {
       if (Math.random() < 0.45) continue;
       const ang = Math.random() * Math.PI * 2;
@@ -31958,6 +32040,15 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!(w.thiefPhase || w.wifiPhase || w.featPhase || w.lecTarget)) w.restUntil = 0; // audit: a curtain must not un-root a signature act
     w.show = null;
     w.showAt = now + 16000 + Math.random() * 26000;
+    // v238: the scene is over — the RELATIONSHIP remains
+    try {
+      const partner = s.data && (s.data.p || s.data.v);
+      if (partner && DESK_PIK.walkers.indexOf(partner) >= 0) {
+        if (s.data.p) { pikBondAdd(w, partner, 2); pikMoodSet(w, 'happy'); pikMoodSet(partner, 'happy'); }
+        else if (PIK_WARM[s.def.id]) { pikBondAdd(w, partner, PIK_WARM[s.def.id]); pikMoodSet(partner, 'happy'); }
+        else if (PIK_COLD[s.def.id]) { pikBondAdd(w, partner, -PIK_COLD[s.def.id]); pikMoodSet(partner, 'grumpy'); }
+      }
+    } catch (e) { /* feelings are hard */ }
     pikShowChain(s.def.id, now, w); // v228: some finales tip the next domino (v231: with a visible projectile)
   }
   function pikShowTick(w, now, docHidden) {
@@ -31997,6 +32088,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // solo bill can wait
       const duet = pikDuetFor(w);
       if (duet && Math.random() < 0.35) {
+        if (PIK_GOSSIP_LINES[duet.def.id]) pikGossip(duet.def.id, w); // v238
         w.show = { def: duet.def, t0: now, els: [], undos: [], data: { p: duet.partner, lead0: duet.lead0 }, beat: 0 };
         duet.partner.showGuestUntil = Date.now() + 5000;
         pikShowAudience(w, now);
@@ -32004,6 +32096,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       const def = pikShowDraw(w.showKey); // v225: species id OR archetype key
       if (!def) { w.showAt = now + 60000; return; }
+      if (PIK_GOSSIP_LINES[def.id]) pikGossip(def.id, w); // v238: this will be NEWS
       w.show = { def, t0: now, els: [], undos: [], data: {}, beat: 0 };
       pikShowAudience(w, now); // v228: and the neighbors drift over
       try { if (def.start) def.start(w, w.show, now); } catch (e) { pikShowEnd(w, now); }
@@ -33921,6 +34014,10 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   // named pixel set-pieces — A0/A1 are the actors in REGISTRY key order
   const PIK_DUET_ANIMS = {
+    hearts(A0, A1, s) { // v238: friendship, visibly
+      const mx = (A0.x + A1.x) / 2 + 14, my = (A0.y + A1.y) / 2;
+      for (let k = 0; k < 4; k++) setTimeout(() => { try { showRise(s, mx - 14 + Math.random() * 28, my + 6, '♡', '#ff8fc7'); } catch (e) { /* love lost */ } }, k * 320);
+    },
     diffrise(A0, A1, s) { // red − sinks, green + rises between the pair
       const mx = (A0.x + A1.x) / 2 + 14, my = (A0.y + A1.y) / 2;
       for (let k = 0; k < 3; k++) {
@@ -34187,7 +34284,9 @@ document.addEventListener('DOMContentLoaded', () => {
       if (p) return { def: pikDuetDef(d), partner: p, lead0: i === 0 };
     }
     // v230: no registered pair — but a DUPLICATE of yourself beats any script
-    const twin = DESK_PIK.walkers.find((v) => v !== w && v.showKey && v.showKey === w.showKey && !pikBusy(v));
+    const bestie = DESK_PIK.walkers.find((v) => v !== w && !pikBusy(v) && pikBondGet(w, v) >= 6); // v238: friendship outranks fate
+    if (bestie && Math.random() < 0.5) return { def: pikDuetDef(PIK_BESTIE_DUET), partner: bestie, lead0: true };
+    const twin = DESK_PIK.walkers.find((v) => v !== w && v.showKey && v.showKey === w.showKey && !pikBusy(v) && pikBondGet(w, v) > -4);
     if (twin) return { def: pikDuetDef(PIK_TWIN_MIRROR), partner: twin, lead0: true };
     return null;
   }
@@ -36209,18 +36308,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (w.wifiApex) wifiApexTick(w, now, docHidden);
       if (w.featureApex) featureArgueTick(w, now, docHidden);
       if (w.lecturer) kernelLectureTick(w, now, docHidden);
-      // v230: sidewalk hellos — two free pikmin brushing past may greet
-      if (!docHidden && !pikBusy(w) && now > (w.helloAt || 0)) {
-        w.helloAt = now + 11000 + Math.random() * 11000;
-        const hv = pikNearest(w, 38);
-        if (hv && !pikBusy(hv) && Math.random() < 0.5) {
-          const GREET = ['♡', 'yo', 'pik!', 'o7'];
-          deskPikSay(w, GREET[Math.floor(Math.random() * GREET.length)]);
-          setTimeout(() => {
-            try { if (DESK_PIK.walkers.indexOf(hv) >= 0 && !pikBusy(hv)) deskPikSay(hv, GREET[Math.floor(Math.random() * GREET.length)]); } catch (e) { /* walked on */ }
-          }, 750);
-        }
-      }
+      if (!docHidden) pikSocialTick(w, now); // v238: hellos, bonds, grudges, and the news
       if (w.showPool) pikShowTick(w, now, docHidden);
       if (w.mergeApex) {
         // v211 THE BRANCH TRAIN (owner decree: swallowing is DEAD).
