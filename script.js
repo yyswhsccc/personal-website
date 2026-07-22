@@ -4347,7 +4347,8 @@ document.addEventListener('DOMContentLoaded', () => {
     { id: 'goblinfix', icon: '🔨', n: ['Delivered As Specified', 'Livré Comme Spécifié'], d: ['hired slime & sons for three repairs. every word of the contract was honored. every. single. word.', 'a embauché slime & sons pour trois réparations. chaque mot du contrat a été respecté. chaque. mot.'], t: ['on renovation night, break three things — then choose your words carefully.', 'la nuit des rénovations, casse trois choses — puis choisis bien tes mots.'] },
     { id: 'showgoer', icon: '🎟️', n: ['Opening Night', 'Soir de Première'], d: ['witnessed 10 different pikmin shows. the desktop is a theatre now.', 'a vu 10 spectacles de pikmin différents. le bureau est un théâtre.'], t: ['APEX pikmin perform. stay a while.', 'les pikmin APEX jouent. reste un peu.'] },
     { id: 'frontrow', icon: '🍿', n: ['Front Row Forever', 'Premier Rang à Vie'], d: ['witnessed 40 different shows. the pikmin recognize you at the door.', 'a vu 40 spectacles différents. les pikmin te reconnaissent à l’entrée.'], t: ['every name has its own act.', 'chaque nom a son propre numéro.'] },
-    { id: 'seasonticket', icon: '🎭', n: ['Season Ticket Holder', 'Abonné·e à la Saison'], d: ['witnessed 100 different shows — duets, disasters, dial-up and all.', 'a vu 100 spectacles — duos, désastres, 56k et tout le reste.'], t: ['the bill reshuffles every dawn. collect it all.', 'l’affiche change à l’aube. collectionne tout.'] }
+    { id: 'seasonticket', icon: '🎭', n: ['Season Ticket Holder', 'Abonné·e à la Saison'], d: ['witnessed 100 different shows — duets, disasters, dial-up and all.', 'a vu 100 spectacles — duos, désastres, 56k et tout le reste.'], t: ['the bill reshuffles every dawn. collect it all.', 'l’affiche change à l’aube. collectionne tout.'] },
+    { id: 'undercover', icon: '🕴️', n: ['Past the Boring Firewall', 'Passé le Pare-feu de l’Ennui'], d: ['clicked the forbidden link in the fake résumé. HR never knew.', 'a cliqué le lien interdit du faux CV. Les RH n’ont rien vu.'], t: ['the résumé has a door. it says not to.', 'le CV a une porte. elle dit de ne pas.'] },
   ];
 
   // ---- metric engine: count things, achievements pop themselves ----
@@ -4412,7 +4413,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (got[id]) return;
     got[id] = Date.now();
     store.set('yos-achv', got);
-    if (!quiet) achvToastShow(a);
+    if (!quiet) {
+      // v240: while the boring disguise is up, toasts would blow the cover —
+      // they queue and land after the big reveal instead
+      if (document.getElementById('boring-shell')) (window.__achvQueue = window.__achvQueue || []).push(a);
+      else achvToastShow(a);
+    }
     // some trophies come with merch: announce the freshly unlocked fit
     const fit = {
       goose: ['new fit unlocked: 🪿 propeller cap ♡', 'nouvelle tenue : 🪿 casquette à hélice ♡'],
@@ -12957,6 +12963,18 @@ document.addEventListener('DOMContentLoaded', () => {
     b.className = 'scp-actor-bub';
     b.textContent = line;
     box.appendChild(b);
+    // v239: a bubble born above the stage ceiling FLIPS BELOW the actor,
+    // and never hangs past the stage's side walls (owner: SCP-173's lines
+    // were decapitated by the live-room top edge)
+    try {
+      const stage = box.closest('#live-stage') || box.parentElement;
+      const sr = stage.getBoundingClientRect();
+      const br = b.getBoundingClientRect();
+      if (br.top < sr.top + 2) b.classList.add('is-below');
+      const br2 = b.getBoundingClientRect();
+      if (br2.left < sr.left + 2) b.style.marginLeft = Math.round(sr.left + 4 - br2.left) + 'px';
+      else if (br2.right > sr.right - 2) b.style.marginLeft = '-' + Math.round(br2.right - (sr.right - 4)) + 'px';
+    } catch (e) { /* unmeasured stage */ }
     box.classList.remove('scp-actor-jolt'); void box.offsetWidth; box.classList.add('scp-actor-jolt');
     setTimeout(() => { try { b.remove(); } catch (e) { /* eaten */ } }, Math.min(6500, Math.max(1800, duration || 2400)));
     return true;
@@ -24131,6 +24149,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return 'no destined pair on the desk right now';
       },
+      dephell: () => { // v240 debug: trap the second walker in package purgatory NOW
+        const v = DESK_PIK.walkers[1] || DESK_PIK.walkers[0];
+        if (!v) return 'empty desk';
+        pikDepHellStart(v);
+        return 'trapped: ' + pikKindOfLive(v) + ' — send a friend within 52px';
+      },
       bonds: () => store.get('yos-pik-bonds', {}), // v238 debug: the friendship ledger
       gossip: (id) => { const w0 = DESK_PIK.walkers[0]; if (!w0) return 'empty desk'; pikGossip(id || 'group-photo', w0); return 'the news is out: ' + (id || 'group-photo'); },
       bill: (spId) => { // today's odds for a species (or all)
@@ -31309,6 +31333,88 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
 
+
+  /* ————— v240: DEPENDENCY PURGATORY + THE Ctrl+C RESCUE —————
+     the Penguin's 47 packages now TRAP the victim under a live, scrolling
+     install panel that only grows. it stands there crying soft piks until
+     a colleague wanders close — then the two perform the holiest key
+     combo in computing: one pikmin is Ctrl, the other is C. */
+  const PIK_DEP_NAMES = ['left-pad', 'is-odd', 'is-even', 'is-number', 'pad-left-of-left-pad', 'tiny-each', 'has-own', 'why', 'one-liner-utils', 'true', 'micro-dash', 'node-sadness'];
+  function pikDepHellStart(v) {
+    if (v.depHell) return;
+    const el = document.createElement('div');
+    el.className = 'pik-dep-panel';
+    el.innerHTML = '<div class="pik-dep-lines"></div><div class="pik-dep-count"></div>';
+    DESK_PIK.layer.appendChild(el);
+    v.depHell = { el, lines: el.querySelector('.pik-dep-lines'), count: el.querySelector('.pik-dep-count'), n: 47, at: 0, cryAt: 0, t0: Date.now() };
+  }
+  function pikDepHellTick(v, now) {
+    const d = v.depHell;
+    if (!d) return;
+    if (!document.body.contains(d.el)) { v.depHell = null; return; }
+    v.restUntil = now + 900; v.tx = v.x; v.ty = v.y; v.el.classList.remove('walking'); // rooted in package purgatory
+    d.el.style.left = (v.x - 26) + 'px';
+    d.el.style.top = (v.y - 66) + 'px';
+    if (now > d.at) { // another dependency arrives. with dependencies
+      d.at = now + 650;
+      const row = document.createElement('div');
+      row.textContent = PIK_DEP_NAMES[Math.floor(Math.random() * PIK_DEP_NAMES.length)] + '@' + (1 + Math.floor(Math.random() * 9)) + '.' + Math.floor(Math.random() * 20) + '.' + Math.floor(Math.random() * 9) + ' ✓';
+      d.lines.appendChild(row);
+      while (d.lines.children.length > 3) d.lines.removeChild(d.lines.firstChild);
+      d.n += 1 + Math.floor(Math.random() * 7);
+      d.count.textContent = d.n + ' pkgs (+deps…)';
+    }
+    if (now > d.cryAt) { d.cryAt = now + 5200 + Math.random() * 4200; deskPikSay(v, Math.random() < 0.5 ? 'pik…' : '…pik…'); }
+    if (Date.now() - d.t0 > 120000) { pikDepHellEnd(v, false); return; } // mercy timeout
+    const r = DESK_PIK.walkers.find((x) => x !== v && !pikBusy(x) && Math.hypot(x.x - v.x, x.y - v.y) < 52);
+    if (r) pikDepRescue(v, r, now);
+  }
+  function pikDepBadge(target, text, mod, ms) {
+    const b = document.createElement('span');
+    b.className = 'pik-show-badge' + (mod ? ' is-' + mod : '');
+    b.textContent = text;
+    const nb = target.el.querySelectorAll('.pik-show-badge').length;
+    if (nb) b.style.top = (-16 - 14 * nb) + 'px';
+    target.el.appendChild(b);
+    setTimeout(() => { try { b.remove(); } catch (e) { /* struck */ } }, ms || 3000);
+  }
+  function pikDepRescue(v, r, now) {
+    const d = v.depHell;
+    if (!d || d.rescuing) return;
+    d.rescuing = 1;
+    showHold(r, now, 5200); showHold(v, now, 5200);
+    pikDepBadge(r, 'Ctrl', 'dark', 4200); // one pikmin is Ctrl…
+    setTimeout(() => { try { pikDepBadge(v, '+ C', 'dark', 3400); } catch (e) { /* slipped */ } }, 700); // …the other is C
+    setTimeout(() => {
+      try {
+        playTone(300, 'square', 0.05, 0, 0.06); playTone(300, 'square', 0.05, 0.12, 0.06);
+        const row = document.createElement('div');
+        row.className = 'pik-dep-sigint';
+        row.textContent = '^C';
+        d.lines.appendChild(row);
+        pikDepBadge(v, 'SIGINT ✓', 'green', 3000);
+      } catch (e) { /* resent */ }
+    }, 1600);
+    setTimeout(() => { try { pikDepHellEnd(v, true, r); } catch (e) { /* already free */ } }, 2600);
+  }
+  function pikDepHellEnd(v, rescued, r) {
+    const d = v.depHell;
+    if (!d) return;
+    v.depHell = null;
+    try { d.el.classList.add('is-falling'); setTimeout(() => { try { d.el.remove(); } catch (e) { /* filed */ } }, 1000); } catch (e) { /* gone */ }
+    v.restUntil = 0;
+    if (rescued) {
+      v.el.classList.remove('poked'); void v.el.offsetWidth; v.el.classList.add('poked');
+      deskPikSay(v, trT('FREE. i owe you my life', 'LIBRE. je te dois la vie'));
+      setTimeout(() => { try { if (r && DESK_PIK.walkers.indexOf(r) >= 0) deskPikSay(r, trT('ctrl+c saves lives ♡', 'ctrl+c sauve des vies ♡')); } catch (e) { /* modest hero */ } }, 1400);
+      if (r) { pikBondAdd(v, r, 2); pikMoodSet(v, 'happy'); pikMoodSet(r, 'happy'); }
+      playTone(660, 'triangle', 0.05, 0, 0.04); playTone(880, 'triangle', 0.05, 0.12, 0.05);
+    } else {
+      deskPikSay(v, trT('…it will finish in the background. surely', '…ça finira en arrière-plan. sûrement'));
+      pikMoodSet(v, 'grumpy');
+    }
+  }
+
   /* ————— v238: DEEP SOCIETY — bonds, moods, and gossip —————
      scenes leave RELATIONSHIPS behind now. duets and kindness build
      persistent bonds (yos-pik-bonds); rebases and roaming charges build
@@ -31395,21 +31501,51 @@ document.addEventListener('DOMContentLoaded', () => {
      to be clicked. any of them CRASHES the doc into the real OS.
      reached via ?boring (put THIS link on the résumé) or `boring`
      in the terminal. */
+  function boringRandomPik() { // 72 kinds, three forms at equal odds,
+    // hidden species deliberately over-represented (owner decree)
+    const form = 1 + Math.floor(Math.random() * 3);
+    if (Math.random() < 0.45) {
+      const sp = HIDDEN_SPECIES[Math.floor(Math.random() * HIDDEN_SPECIES.length)];
+      return { src: pikSprite(pikEntryColor({ sp: sp.id }), 2, sp.id, false, form, 's:' + sp.id), hat: sp.hat };
+    }
+    const h = Math.floor(Math.random() * 360);
+    return { src: pikSprite(pikEntryColor({ h }), 2, null, false, form, 'w:' + Math.floor(h / 7.2)), hat: null };
+  }
+  const BORING_JOKES = [
+    ['why do programmers prefer dark mode? light attracts bugs.', 'pourquoi les devs préfèrent le mode sombre ? la lumière attire les bugs.'],
+    ['i would tell you a UDP joke, but you might not get it.', 'je te raconterais une blague UDP, mais tu ne la recevrais peut-être pas.'],
+    ['there are only 10 kinds of people.', 'il n’y a que 10 sortes de gens.'],
+    ['!false — funny because it’s true.', '!false — drôle car c’est vrai.'],
+    ['a SQL query walks into a bar and asks two tables: may i JOIN you?', 'une requête SQL entre dans un bar et demande à deux tables : je peux vous JOIN ?'],
+    ['why did the developer go broke? he used up all his cache.', 'pourquoi le dev est-il fauché ? il a épuisé tout son cache.'],
+    ['how do you comfort a JavaScript bug? you console it.', 'comment consoler un bug JavaScript ? avec la console.'],
+    ['i changed my password to "incorrect". now the computer reminds me.', 'mon mot de passe est « incorrect ». l’ordinateur me le rappelle.'],
+  ];
   function boringShellShow() {
     if (document.getElementById('boring-shell')) return;
     const sh = document.createElement('div');
     sh.id = 'boring-shell';
+    sh.__timers = [];
+    const T = (fn, ms) => { const t = setTimeout(fn, ms); sh.__timers.push(t); return t; };
+    const I = (fn, ms) => { const t = setInterval(fn, ms); sh.__timers.push(t); return t; };
+    const destroy = () => { sh.__timers.forEach((t) => { clearTimeout(t); clearInterval(t); }); try { sh.remove(); } catch (e) { /* fell */ } };
     const doc = document.createElement('div');
     doc.className = 'boring-doc';
     const chrome = document.createElement('div');
     chrome.className = 'boring-chrome';
     const chromeTitle = document.createElement('span');
     chromeTitle.textContent = '📄 resume.doc — Microsoft Word 97';
+    const chromeBtns = document.createElement('span');
+    const langBtn = document.createElement('button');
+    langBtn.className = 'boring-x boring-lang';
+    langBtn.textContent = yosLang === 'fr' ? 'EN' : 'FR';
+    langBtn.title = trT('version française', 'English version');
     const chromeX = document.createElement('button');
     chromeX.className = 'boring-x';
     chromeX.textContent = '✕';
     chromeX.title = trT('close the boredom', 'fermer l’ennui');
-    chrome.append(chromeTitle, chromeX);
+    chromeBtns.append(langBtn, chromeX);
+    chrome.append(chromeTitle, chromeBtns);
     const esc = (t) => { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; };
     const L = (en, fr) => esc(trT(en, fr));
     doc.appendChild(chrome);
@@ -31440,35 +31576,161 @@ document.addEventListener('DOMContentLoaded', () => {
     ].join('');
     doc.appendChild(body);
     sh.appendChild(doc);
-    // the haunting: one pikmin marches across the paperwork, forever
-    const ghost = document.createElement('img');
-    ghost.className = 'boring-pik';
-    ghost.alt = '';
-    ghost.title = '…?';
-    try { ghost.src = pikSprite(hueColor(Math.floor(Math.random() * 360)), 2, null, false, 1, null); } catch (e) { ghost.remove(); }
-    sh.appendChild(ghost);
     document.body.appendChild(sh);
+    // ————— the HAUNTING v2: ten seconds of PURE boredom first, then a
+    // random pikmin (any of 72 kinds, any form, hidden kinds favored)
+    // strolls the paperwork at site walking pace, telling terrible jokes
+    let ghost = null;
+    function spawnGhost() {
+      if (sh.dataset.crashing || ghost || !sh.isConnected) return;
+      const pick = boringRandomPik();
+      const gw = document.createElement('div');
+      gw.className = 'boring-pik-walker';
+      const img = document.createElement('img');
+      img.src = pick.src;
+      img.alt = '';
+      gw.appendChild(img);
+      if (pick.hat) { const h = document.createElement('span'); h.className = 'boring-pik-hat'; h.textContent = pick.hat; gw.appendChild(h); }
+      const vw = () => window.innerWidth || 1200;
+      const st = { x: Math.random() < 0.5 ? -40 : vw() + 10, y: (window.innerHeight || 800) * 0.78 + Math.random() * 50 - 25, tx: 0, pause: 0, exiting: false };
+      st.tx = 60 + Math.random() * (vw() - 140);
+      gw.style.left = st.x + 'px';
+      gw.style.top = st.y + 'px';
+      sh.appendChild(gw);
+      ghost = gw;
+      gw.addEventListener('click', crash);
+      const walk = I(() => {
+        if (sh.dataset.crashing || !gw.isConnected) return;
+        const d = st.tx - st.x;
+        if (Math.abs(d) < 3) { // arrived: rest like a real desk pikmin
+          gw.classList.remove('is-walking');
+          if (!st.pause) { st.pause = Date.now() + 1400 + Math.random() * 2800; return; }
+          if (Date.now() < st.pause) return;
+          st.pause = 0;
+          if (st.exiting) { gw.remove(); ghost = null; clearInterval(walk); T(spawnGhost, 6000 + Math.random() * 9000); return; }
+          if (Math.random() < 0.22) { st.exiting = true; st.tx = Math.random() < 0.5 ? -60 : vw() + 40; }
+          else st.tx = 60 + Math.random() * (vw() - 140);
+          return;
+        }
+        gw.classList.add('is-walking');
+        st.x += Math.sign(d) * 1.9; // site walking pace. no trail. (owner decree)
+        img.style.transform = d < 0 ? 'scaleX(-1)' : '';
+        gw.style.left = st.x + 'px';
+      }, 105);
+      const joke = () => {
+        if (sh.dataset.crashing || !gw.isConnected) return;
+        const j = BORING_JOKES[Math.floor(Math.random() * BORING_JOKES.length)];
+        const bub = document.createElement('div');
+        bub.className = 'boring-pik-bubble';
+        bub.textContent = trT(j[0], j[1]);
+        gw.appendChild(bub);
+        T(() => { try { const r = bub.getBoundingClientRect(); if (r.left < 4) bub.style.marginLeft = (4 - r.left) + 'px'; else if (r.right > vw() - 4) bub.style.marginLeft = (-(r.right - vw() + 4)) + 'px'; } catch (e) { /* unmeasured */ } }, 30);
+        T(() => { try { bub.remove(); } catch (e) { /* laughed off */ } }, 5600);
+        T(joke, 9000 + Math.random() * 7000);
+      };
+      T(joke, 2600 + Math.random() * 3200);
+    }
+    T(spawnGhost, 10000); // owner decree: ten FULL seconds of boredom first
+    // ————— THE GRAND CRASH: hang → shatter → macaron garden bursts
+    // through → the machine ACTUALLY boots → desktop. a whole journey
     const crash = () => {
       if (sh.dataset.crashing) return;
       sh.dataset.crashing = 1;
+      achvUnlock('undercover'); // queued while the shell stands; lands after
       chromeTitle.textContent = '📄 resume.doc ' + trT('(Not Responding)', '(Ne répond pas)');
       doc.classList.add('is-hung');
+      if (ghost) { try { ghost.remove(); } catch (e) { /* fled */ } ghost = null; }
       playTone(220, 'square', 0.06, 0, 0.18);
-      setTimeout(() => {
-        doc.classList.add('is-crashing');
-        ghost.remove();
-        playTone(140, 'sawtooth', 0.07, 0, 0.25);
-        playTone(90, 'sawtooth', 0.06, 0.25, 0.3);
-      }, 900);
-      setTimeout(() => {
+      T(() => { // the résumé SHATTERS into flying paper shards
+        const r = doc.getBoundingClientRect();
+        doc.style.visibility = 'hidden';
+        playTone(120, 'sawtooth', 0.08, 0, 0.3);
+        playTone(90, 'sawtooth', 0.06, 0.3, 0.35);
+        for (let k = 0; k < 16; k++) {
+          const shard = document.createElement('div');
+          shard.className = 'boring-shard';
+          const wpx = 50 + Math.random() * 150, hpx = 40 + Math.random() * 110;
+          shard.style.width = wpx + 'px';
+          shard.style.height = hpx + 'px';
+          shard.style.left = (r.left + Math.random() * Math.max(40, r.width - wpx)) + 'px';
+          shard.style.top = (r.top + Math.random() * Math.max(40, r.height - hpx)) + 'px';
+          shard.style.clipPath = 'polygon(0 ' + (5 + Math.random() * 20 | 0) + '%, ' + (55 + Math.random() * 45 | 0) + '% 0, 100% ' + (50 + Math.random() * 50 | 0) + '%, ' + (Math.random() * 35 | 0) + '% 100%)';
+          sh.appendChild(shard);
+          const ang = Math.random() * Math.PI * 2;
+          const dist = 320 + Math.random() * 520;
+          T(() => { try { shard.style.transform = 'translate(' + Math.round(Math.cos(ang) * dist) + 'px,' + Math.round(Math.sin(ang) * dist + 260) + 'px) rotate(' + Math.round(Math.random() * 720 - 360) + 'deg)'; shard.style.opacity = '0'; } catch (e) { /* confetti now */ } }, 60 + Math.random() * 240);
+        }
+      }, 1200);
+      T(() => { // …and the GARDEN bursts through the hole it left
+        const cx2 = (window.innerWidth || 1200) / 2, cy2 = (window.innerHeight || 800) / 2;
+        [523, 659, 784, 1046, 1318].forEach((f, i) => playTone(f, 'triangle', 0.06, i * 0.16, 0.09));
+        for (let k = 0; k < 46; k++) {
+          T(() => {
+            const f2 = document.createElement('img');
+            f2.className = 'boring-burst-bloom';
+            f2.src = trailBloomSprite(Math.floor(Math.random() * 6));
+            f2.alt = '';
+            f2.style.width = (16 + Math.random() * 22) + 'px';
+            f2.style.left = cx2 + 'px';
+            f2.style.top = cy2 + 'px';
+            sh.appendChild(f2);
+            const ang = Math.random() * Math.PI * 2, dist = 180 + Math.random() * 560;
+            T(() => { try { f2.style.transform = 'translate(' + Math.round(Math.cos(ang) * dist) + 'px,' + Math.round(Math.sin(ang) * dist * 0.8 - 60) + 'px) rotate(' + Math.round(Math.random() * 360) + 'deg)'; f2.style.opacity = '0'; } catch (e) { /* bloomed */ } }, 30);
+          }, k * 42);
+        }
+        for (let k = 0; k < 12; k++) { // pikmin ride the flower wave out
+          T(() => {
+            const pk = boringRandomPik();
+            const im = document.createElement('img');
+            im.className = 'boring-burst-pik';
+            im.src = pk.src;
+            im.alt = '';
+            im.style.width = (32 + Math.random() * 14) + 'px';
+            im.style.left = cx2 + 'px';
+            im.style.top = cy2 + 'px';
+            sh.appendChild(im);
+            const ang = Math.random() * Math.PI * 2, dist = 240 + Math.random() * 460;
+            T(() => { try { im.style.transform = 'translate(' + Math.round(Math.cos(ang) * dist) + 'px,' + Math.round(Math.sin(ang) * dist - 80) + 'px) rotate(' + Math.round(Math.random() * 300 - 150) + 'deg)'; im.style.opacity = '0'; } catch (e) { /* flew */ } }, 30);
+          }, 260 + k * 120);
+        }
+        playSparkleSound();
+      }, 1900);
+      T(() => { // then the machine ACTUALLY boots — cute loader, full ritual
+        document.documentElement.classList.remove('boring-first');
+        const loader = document.getElementById('loader');
+        if (loader) {
+          loader.classList.remove('fade-out');
+          loader.style.display = ''; // the original boot nails it shut with inline display:none — pull the nail
+          const fill = loader.querySelector('.progress-bar-fill');
+          if (fill) { fill.style.animation = 'none'; void fill.offsetWidth; fill.style.animation = ''; }
+          setTimeout(() => { // raw timers: they must OUTLIVE the shell's cleanup
+            try {
+              loader.classList.add('fade-out');
+              setTimeout(() => { try { loader.style.display = 'none'; } catch (e2) { /* sealed */ } }, 900);
+            } catch (e) { /* booted */ }
+          }, 3900);
+        }
+      }, 4300);
+      T(() => { // curtain — and the muted achievements finally land
         sh.classList.add('is-gone');
-        setTimeout(() => { try { sh.remove(); } catch (e) { /* fell */ } }, 500);
-      }, 2000);
+        T(destroy, 600);
+        setTimeout(() => { // raw: must survive the shell's timer sweep
+          const q = window.__achvQueue || [];
+          window.__achvQueue = [];
+          q.forEach((a2, i) => setTimeout(() => { try { achvToastShow(a2); } catch (e) { /* modest */ } }, i * 2600));
+        }, 5400);
+      }, 4800);
     };
+    langBtn.addEventListener('click', () => {
+      const next = yosLang === 'fr' ? 'en' : 'fr';
+      destroy();
+      applyLang(next, true);
+      boringShellShow();
+    });
     chromeX.addEventListener('click', crash);
-    ghost.addEventListener('click', crash);
     body.querySelector('#boring-door').addEventListener('click', (e) => { e.preventDefault(); crash(); });
   }
+
 
   /* ---------- THE DESKTOP IS A PIKMIN MEADOW ----------
      Your petal buddies live HERE now: they patrol between the icons,
@@ -31538,7 +31800,7 @@ document.addEventListener('DOMContentLoaded', () => {
       wifiApex: spId === 'wifi' && form >= 3, wifiAt: 0, wifiDownAt: 0, wifiPhase: 0, wifiSpin: null, wifiSpinAt: 0, wifiFlickAt: 0, // v219 APEX Signal: the bars are REAL now
       featureApex: spId === 'feature' && form >= 3, featArgAt: 0, featPhase: 0, featBeatAt: 0, featBeat: 0, featWigAt: 0, // v219 APEX Feature: two heads, one route, zero consensus
       lecturer: spId === 'kernelpg' && form >= 3, lecAt: 0, lecTarget: null, lecBeat: 0, lecBeatAt: 0, lastLec: null, // v220 APEX Penguin Core: will explain itself. unprompted. AT you
-      showKey: (spId && form >= 3) ? spId : archKey, showPool: !!(((spId && form >= 3) ? spId : archKey) && PIK_SHOWCASE[(spId && form >= 3) ? spId : archKey]), showAt: 0, show: null, showSpd: 1, showDodge: false, showLagPoke: false, showPokeLine: null, lastStamp: null, // v221 the daily showcase · v225 wheel archetypes join
+      showKey: (spId && form >= 3) ? spId : archKey, showPool: !!(((spId && form >= 3) ? spId : archKey) && PIK_SHOWCASE[(spId && form >= 3) ? spId : archKey]), showAt: 0, show: null, showSpd: 1, showDodge: false, showLagPoke: false, showPokeLine: null, lastStamp: null, depHell: null, // v221 the daily showcase · v225 wheel archetypes join · v240 purgatory
       sp: species || null, spd: species && species.spd ? species.spd : 1, stepAt: 0,
       x: 40 + Math.random() * Math.max(120, r.width - 160),
       y: r.height * 0.35 + Math.random() * (r.height * 0.5),
@@ -31956,7 +32218,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   function pikBusy(v) { // v228: an actor mid-scene must never be conscripted —
     // yanking a frozen Signal out of its dropout ruins BOTH shows
-    return !!(v.show || v.chainOf || v.thiefPhase || v.wifiPhase || v.featPhase || v.lecTarget || v.disguised >= 0 || (v.showGuestUntil || 0) > Date.now());
+    return !!(v.show || v.chainOf || v.thiefPhase || v.wifiPhase || v.featPhase || v.lecTarget || v.depHell || v.disguised >= 0 || (v.showGuestUntil || 0) > Date.now());
   }
   function pikStageBusyNear(w, r) { // v229 owner decree: ONE SPOTLIGHT PER
     // NEIGHBORHOOD — colliding shows must play one AFTER the other. a scene
@@ -32931,20 +33193,20 @@ document.addEventListener('DOMContentLoaded', () => {
         } },
     ],
     kernelpg: [
-      { id: 'dependency-hell', dur: 12000, // installing one thing. just one
+      { id: 'dependency-hell', dur: 12000, // installing one thing. just one.
+        // v240 owner decree: the victim is TRAPPED under an endless package
+        // download — only a colleague performing the sacred Ctrl+C frees them
         start(w, s) { s.data.v = pikNearest(w); },
         tick(w, s, now, t) {
           const v = s.data.v;
           if (!v || DESK_PIK.walkers.indexOf(v) < 0) return false;
           if (!s.data.done && showGoto(w, v.x, v.y)) {
             s.data.done = 1;
-            showHold(w, now, 4500); showHold(v, now, 4500); // v224: hold the pose
-            showBadge(w, v, 'dependency', 'dark', 5000);
-            const v2 = pikOthers(w).find((o) => o !== v);
-            if (v2) showBadge(w, v2, 'dep of dep', 'dark', 5000);
+            showHold(w, now, 4500);
             deskPikSay(w, trT('installing you needs 47 packages', 't’installer demande 47 paquets'));
+            pikDepHellStart(v);
           }
-          if (cue(s, 'sigh', t, 8000)) deskPikSay(w, trT('resolving… forever', 'résolution… éternelle'));
+          if (cue(s, 'sorry', t, 6000)) deskPikSay(w, trT('…they bundled MORE dependencies. good luck', '…ils ont ajouté PLUS de dépendances. bon courage'));
         } },
       { id: 'kernel-panic', dur: 9000, // it has a scapegoat ready
         start(w, s, now) {
@@ -34957,7 +35219,7 @@ document.addEventListener('DOMContentLoaded', () => {
       (seatsByKind[k] = seatsByKind[k] || []).push({ x: w.x, y: w.y, tx: w.tx, ty: w.ty });
     });
     DESK_PIK.walkers.forEach((w) => {
-      try { if (w.show) pikShowEnd(w, Date.now()); if (w.thiefIcon) pointerDropIcon(w, 1); if (w.wifiSpin) w.wifiSpin.remove(); if (w.bubbleEl) w.bubbleEl.remove(); if (w.babyEl) w.babyEl.remove(); if (w.bsodPane) w.bsodPane.remove(); if (w.chainLink) w.chainLink.remove(); if (w.mergeBadge) w.mergeBadge.remove(); w.el.remove(); } catch (e) { /* already gone */ }
+      try { if (w.depHell) { try { w.depHell.el.remove(); } catch (e2) { /* gone */ } w.depHell = null; } if (w.show) pikShowEnd(w, Date.now()); if (w.thiefIcon) pointerDropIcon(w, 1); if (w.wifiSpin) w.wifiSpin.remove(); if (w.bubbleEl) w.bubbleEl.remove(); if (w.babyEl) w.babyEl.remove(); if (w.bsodPane) w.bsodPane.remove(); if (w.chainLink) w.chainLink.remove(); if (w.mergeBadge) w.mergeBadge.remove(); w.el.remove(); } catch (e) { /* already gone */ }
     });
     DESK_PIK.walkers = [];
     const lineup = deskRoster().slice(0, PIK_MAX);
@@ -36308,6 +36570,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (w.wifiApex) wifiApexTick(w, now, docHidden);
       if (w.featureApex) featureArgueTick(w, now, docHidden);
       if (w.lecturer) kernelLectureTick(w, now, docHidden);
+      if (w.depHell) pikDepHellTick(w, now); // v240: package purgatory
       if (!docHidden) pikSocialTick(w, now); // v238: hellos, bonds, grudges, and the news
       if (w.showPool) pikShowTick(w, now, docHidden);
       if (w.mergeApex) {

@@ -12674,6 +12674,8 @@ html.dreaming .live-stage .wx-sprite { display: none; }
    148px habitat height, top:-30px landed above the wrapper's
    overflow:hidden and every line was invisible */
 .scp-habitat-actor .scp-actor-bub { top: 2px; }
+/* v239: ceiling-clipped bubbles flip under the actor instead */
+.scp-actor-bub.is-below { top: auto; bottom: -34px; }
 
 /* the bullet chat's mute chip — proper pixel hardware now (the old
    translucent gray ✕ looked like debris and, once the lines expired,
@@ -13541,25 +13543,7 @@ body:has(.game-rotated) .desktop-taskbar, body:has(.game-rotated) #slime-pet, bo
 .boring-door { margin-top: 26px; font-size: 12.5px; }
 .boring-door a { color: #0000cc; }
 .boring-foot { color: #999; font-size: 11px; text-align: right; margin-top: 30px; }
-.boring-pik {
-  position: fixed;
-  bottom: 12vh;
-  left: -48px;
-  width: 30px;
-  image-rendering: pixelated;
-  cursor: pointer;
-  z-index: 5001;
-  animation: boring-haunt 16s linear infinite;
-  animation-delay: 5s;
-}
-@keyframes boring-haunt {
-  0% { left: -48px; transform: scaleX(1) translateY(0); }
-  12% { transform: scaleX(1) translateY(-3px); }
-  24% { transform: scaleX(1) translateY(0); }
-  49% { left: 104vw; transform: scaleX(1); }
-  50% { left: 104vw; transform: scaleX(-1); }
-  99% { left: -48px; transform: scaleX(-1); }
-  100% { left: -48px; transform: scaleX(1); }
+
 }
 @media (prefers-reduced-motion: reduce) {
   .boring-pik { animation: none; left: auto; right: 18px; }
@@ -13595,3 +13579,74 @@ body:has(.game-rotated) .desktop-taskbar, body:has(.game-rotated) #slime-pet, bo
 }
 .pik-idtrail-ghost.fading { opacity: 0; }
 @media (prefers-reduced-motion: reduce) { .pik-idtrail.is-blink { animation: none; } }
+
+/* ————— v240: boring page v2 — first-frame gate, JS walker, jokes, epic crash ————— */
+html.boring-first #loader { display: none !important; }
+html.boring-first body { background: #807e78; }
+.boring-lang { margin-right: 6px; }
+.boring-pik-walker { position: fixed; z-index: 5001; cursor: pointer; }
+.boring-pik-walker img { width: 30px; image-rendering: pixelated; display: block; }
+.boring-pik-walker.is-walking { animation: boring-bob 0.42s steps(2) infinite; }
+@keyframes boring-bob { 50% { margin-top: -3px; } }
+.boring-pik-hat { position: absolute; top: -13px; left: 50%; transform: translateX(-50%); font-size: 12px; }
+.boring-pik-bubble {
+  position: absolute;
+  bottom: 40px;
+  left: -30px;
+  background: #ffffff;
+  border: 1px solid #555;
+  padding: 4px 9px;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 12.5px;
+  color: #222;
+  white-space: nowrap;
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.15);
+}
+.boring-shard {
+  position: fixed;
+  background: #ffffff;
+  border: 1px solid #999;
+  z-index: 5002;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.25);
+  transition: transform 1.8s cubic-bezier(0.3, 0.1, 0.7, 0.4), opacity 1.9s ease;
+}
+.boring-burst-bloom, .boring-burst-pik {
+  position: fixed;
+  image-rendering: pixelated;
+  z-index: 5003;
+  transition: transform 2.2s cubic-bezier(0.2, 0.7, 0.4, 1), opacity 2.4s ease;
+}
+/* v240: dependency purgatory — the endless install panel */
+.pik-dep-panel {
+  position: absolute;
+  width: 132px;
+  background: #14101f;
+  border: 2px solid #4fae8e;
+  padding: 3px 5px;
+  z-index: 7;
+  pointer-events: none;
+  box-shadow: 2px 2px 0 rgba(8, 4, 16, 0.4);
+}
+.pik-dep-lines div {
+  font-family: var(--font-pixel);
+  font-size: 0.5rem;
+  color: #7ee787;
+  white-space: nowrap;
+  overflow: hidden;
+  line-height: 1.6;
+}
+.pik-dep-lines .pik-dep-sigint { color: #ff4d6d; font-size: 0.62rem; }
+.pik-dep-count {
+  font-family: var(--font-pixel);
+  font-size: 0.5rem;
+  color: #ffd400;
+  border-top: 1px solid #2a2438;
+  margin-top: 2px;
+  padding-top: 2px;
+}
+.pik-dep-panel.is-falling { animation: pik-paper-fall 0.95s ease-in forwards; }
+@media (prefers-reduced-motion: reduce) {
+  .boring-pik-walker.is-walking { animation: none; }
+  .boring-shard, .boring-burst-bloom, .boring-burst-pik { transition: opacity 1.2s ease; }
+  .pik-dep-panel.is-falling { animation: none; opacity: 0; }
+}
