@@ -3417,6 +3417,10 @@ document.addEventListener('DOMContentLoaded', () => {
       playTone(392, 'triangle', 0.05, 0.12, 0.05);
       termLine(trT('fate chose 6 survivors. the rest went home for snacks', 'le destin a choisi 6 survivants. les autres sont rentrés goûter'), 't-ok');
     },
+    boring() { // v236: yes, you can ENTER the disguise voluntarily
+      termLine(trT('deploying professional disguise…', 'déploiement du déguisement professionnel…'), 't-dim');
+      setTimeout(() => { try { boringShellShow(); } catch (e) { /* the tie slipped */ } }, 600);
+    },
     whoami() {
       termLine(trT('yongshan yu — systems/LMS & full-stack lead, AI/data practitioner', 'yongshan yu — lead systèmes/LMS & full-stack, praticienne IA/data'), 't-accent');
       termLine(trT('deep dive: `cat about_me.ini` · `cat druid.log` · `ask <anything>`', 'pour creuser : `cat about_me.ini` · `cat druid.log` · `ask <question>`'), 't-dim');
@@ -31178,6 +31182,89 @@ document.addEventListener('DOMContentLoaded', () => {
     try { fn(); } catch (e) { console.warn('[yos boot] step "' + label + '" skipped:', e); }
   }
 
+  /* ---------- v236: THE BORING DISGUISE ----------
+     owner decree: a deliberately dull résumé "马甲" for recruiters —
+     Times New Roman, white paper, real facts, scannable in 10 seconds.
+     but the document is haunted: a pikmin marches across it, the ✕
+     button "closes the boredom", and one blue link politely begs not
+     to be clicked. any of them CRASHES the doc into the real OS.
+     reached via ?boring (put THIS link on the résumé) or `boring`
+     in the terminal. */
+  function boringShellShow() {
+    if (document.getElementById('boring-shell')) return;
+    const sh = document.createElement('div');
+    sh.id = 'boring-shell';
+    const doc = document.createElement('div');
+    doc.className = 'boring-doc';
+    const chrome = document.createElement('div');
+    chrome.className = 'boring-chrome';
+    const chromeTitle = document.createElement('span');
+    chromeTitle.textContent = '📄 resume.doc — Microsoft Word 97';
+    const chromeX = document.createElement('button');
+    chromeX.className = 'boring-x';
+    chromeX.textContent = '✕';
+    chromeX.title = trT('close the boredom', 'fermer l’ennui');
+    chrome.append(chromeTitle, chromeX);
+    const esc = (t) => { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; };
+    const L = (en, fr) => esc(trT(en, fr));
+    doc.appendChild(chrome);
+    const body = document.createElement('div');
+    body.className = 'boring-body';
+    body.innerHTML = [
+      '<h1>YONGSHAN YU</h1>',
+      '<p class="boring-contact"><a href="mailto:yuyongshan573@gmail.com">yuyongshan573@gmail.com</a> · +1 825-963-2725 · <a href="http://www.linkedin.com/in/yongshan-yu-b9a713227" target="_blank" rel="noopener">LinkedIn</a> · <a href="https://github.com/yyswhsccc" target="_blank" rel="noopener">GitHub</a></p>',
+      '<hr>',
+      '<h2>' + L('SUMMARY', 'PROFIL') + '</h2>',
+      '<p>' + L('AI/LMS systems and full-stack lead. Builds and operates production learning platforms, AI agent systems, and accessible web software.', 'Lead systèmes IA/LMS et full-stack. Conçoit et exploite des plateformes d’apprentissage en production, des systèmes d’agents IA et des logiciels web accessibles.') + '</p>',
+      '<h2>' + L('SELECTED WORK', 'TRAVAUX CHOISIS') + '</h2>',
+      '<ul>',
+      '<li><b>ARC Moodle LMS</b> — ' + L('solo-built WCAG 2.1 AA Moodle platform on AWS; self-healing (auto-heal, S3 disaster-recovery backups, nightly snapshots); operated for months by a non-technical team. Live in production.', 'plateforme Moodle WCAG 2.1 AA construite seule sur AWS ; auto-réparation (auto-heal, sauvegardes S3, snapshots nocturnes) ; exploitée des mois par une équipe non technique. En production.') + '</li>',
+      '<li><b>Druid</b> — ' + L('AI-agent framework: agents scan repositories, write test-backed patches and answer reviewers; 47 merged PRs (45 maintainer-reviewed) on payment-path and security code.', 'framework d’agents IA : les agents scannent les dépôts, écrivent des correctifs testés et répondent aux reviewers ; 47 PR fusionnées (45 relues par les mainteneurs) sur du code financier et de sécurité.') + '</li>',
+      '<li><b>yongshanOS</b> — ' + L('the interactive version of this document: a hand-written, framework-free desktop OS in vanilla JS/CSS (window manager, audio synth, EN/FR i18n, 120+ scripted behaviors).', 'la version interactive de ce document : un OS de bureau écrit à la main, sans framework, en JS/CSS (gestionnaire de fenêtres, synthé audio, i18n EN/FR, 120+ comportements scriptés).') + '</li>',
+      '</ul>',
+      '<h2>' + L('EDUCATION', 'FORMATION') + '</h2>',
+      '<ul>',
+      '<li><b>MSc in Artificial Intelligence</b> — Nanyang Technological University, Singapore (2023–2024), GPA 4.21/5.0</li>',
+      '<li><b>BSc in Computer Science</b> (' + L('Minor: Psychology', 'mineure : psychologie') + ') — University of Alberta, Canada (2019–2023) · ' + L('Graduate with Distinction, top 5% of class', 'diplômée avec distinction, top 5 % de la promotion') + '</li>',
+      '</ul>',
+      '<h2>' + L('SKILLS', 'COMPÉTENCES') + '</h2>',
+      '<p>' + L('Full-stack web engineering · AWS operations · accessibility (WCAG 2.1 AA) · AI agents & applied ML · bilingual EN/FR product copy', 'Ingénierie web full-stack · exploitation AWS · accessibilité (WCAG 2.1 AA) · agents IA & ML appliqué · rédaction produit bilingue EN/FR') + '</p>',
+      '<p class="boring-refs">' + L('References available upon request.', 'Références disponibles sur demande.') + '</p>',
+      '<p class="boring-door"><a href="#" id="boring-door">⚠ ' + L('An interactive version of this résumé exists. Please do not click here during work hours.', 'Une version interactive de ce CV existe. Merci de ne pas cliquer ici pendant les heures de travail.') + '</a></p>',
+      '<p class="boring-foot">' + L('Last saved 4:03 PM · Page 1 of 1', 'Enregistré à 16 h 03 · Page 1 sur 1') + '</p>',
+    ].join('');
+    doc.appendChild(body);
+    sh.appendChild(doc);
+    // the haunting: one pikmin marches across the paperwork, forever
+    const ghost = document.createElement('img');
+    ghost.className = 'boring-pik';
+    ghost.alt = '';
+    ghost.title = '…?';
+    try { ghost.src = pikSprite(hueColor(Math.floor(Math.random() * 360)), 2, null, false, 1, null); } catch (e) { ghost.remove(); }
+    sh.appendChild(ghost);
+    document.body.appendChild(sh);
+    const crash = () => {
+      if (sh.dataset.crashing) return;
+      sh.dataset.crashing = 1;
+      chromeTitle.textContent = '📄 resume.doc ' + trT('(Not Responding)', '(Ne répond pas)');
+      doc.classList.add('is-hung');
+      playTone(220, 'square', 0.06, 0, 0.18);
+      setTimeout(() => {
+        doc.classList.add('is-crashing');
+        ghost.remove();
+        playTone(140, 'sawtooth', 0.07, 0, 0.25);
+        playTone(90, 'sawtooth', 0.06, 0.25, 0.3);
+      }, 900);
+      setTimeout(() => {
+        sh.classList.add('is-gone');
+        setTimeout(() => { try { sh.remove(); } catch (e) { /* fell */ } }, 500);
+      }, 2000);
+    };
+    chromeX.addEventListener('click', crash);
+    ghost.addEventListener('click', crash);
+    body.querySelector('#boring-door').addEventListener('click', (e) => { e.preventDefault(); crash(); });
+  }
+
   /* ---------- THE DESKTOP IS A PIKMIN MEADOW ----------
      Your petal buddies live HERE now: they patrol between the icons,
      inspect files, squeak in inverted bubbles, and fresh sprouts pop
@@ -36699,6 +36786,7 @@ document.addEventListener('DOMContentLoaded', () => {
   bootSafe('livetab', () => updateLiveTab());
   bootSafe('ama', () => amaBootGreeting());
   bootSafe('term', () => termBootBanner());
+  bootSafe('boring', () => { if (new URLSearchParams(location.search).has('boring')) boringShellShow(); }); // v236: the recruiter disguise
   bootSafe('chat', () => chatBootLine());
   bootSafe('search', () => renderSearch(''));
   bootSafe('addr', () => updateAddressBar());
