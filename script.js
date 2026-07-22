@@ -31216,74 +31216,80 @@ document.addEventListener('DOMContentLoaded', () => {
      pair = double dots · blink = caret blink · hue = vivid random ·
      flip = upside-down · c:'self' = the pik's own hue ————— */
   const PIK_TRAILS = {
-    glitch: { g: ['▚', '▞'], c: ['#ff2fae', '#41e0ff'], fx: 'alt' },
-    matrix: { g: ['ﾊ', 'ﾐ', '0', '1'], c: ['#2ea043', '#7ee787'] },
-    wifi: { g: ['▂', '▄', '▆'], c: ['#4f9edb', '#7cfc00'] },
-    lowbatt: { g: ['▮'], c: ['#ff5d5d', '#ffc23f', '#7ce87c'] },
-    post: { g: ['♪', '·'], c: ['#c98a2e', '#ffd27a'] },
-    cumulus: { g: ['·', '☁'], c: ['#a5c9e8', '#eef7ff'], s: 9 },
-    feature: { g: ['❯'], c: ['#7fae35'], fx: 'flip' },
-    latency: { g: ['·', '•'], c: ['#b09a62'], fx: 'echo' },
-    aliased: { g: ['■'], c: ['#8e6cc9', '#cbb1f2'], s: 13 },
-    darkmode: { g: ['✦', '☾', '·'], c: ['#c9a7f5', '#4a3a5e'] },
-    gilded: { g: ['✦'], c: ['#ffd400', '#fff6c9'] },
-    cacheghost: { fx: 'ghost' },
-    cronjob: { g: ['|'], c: ['#4fae8e'], fx: 'tick' },
-    bitflip: { g: ['0', '1'], c: ['#1a1a1a', '#f2f2f2'], fx: 'alt' },
-    turbo: { g: ['▴', '·'], c: ['#ff4d1f', '#ff8a5c', '#ffd400'] },
-    dotmatrix: { g: ['◦'], c: ['#7c8db0'], fx: 'tick' },
-    bsodjr: { g: [':('], c: ['#2f5fd0'], s: 9 },
-    rgbrig: { g: ['■'], fx: 'hue' },
-    captcha: { g: ['☑'], c: ['#7cba58'] },
-    kernelpg: { g: ['·'], c: ['#3d7a94'], fx: 'pair' },
-    n0: { g: ['■'], c: 'self', s: 8 },
-    n1: { g: ['|'], c: 'self', fx: 'blink' },
-    n2: { g: ['▟', '▙'], c: 'self', fx: 'alt' },
-    n3: { g: ['◧'], c: 'self', s: 12 },
-    n4: { g: ['ᛝ', 'ꟼ', '§', 'ƶ'], c: ['#4a3a5e'] },
-    n5: { g: ['⧈'], c: ['#c9992e'] },
-    n6: { g: ['0', '1'], c: 'self', fx: 'alt' },
-    n7: { g: ['◐', '◑'], c: 'self', fx: 'alt' },
-    n8: { g: ['⣿'], c: 'self' },
-    n9: { g: ['⚡'], c: ['#ffd400'], s: 9 },
-    n10: { g: ['🍪'], s: 9 },
-    n11: { g: ['◍'], c: ['#c9992e', '#ffd400'] },
-    n12: { g: ['▣'], c: ['#41e0ff'] },
-    n13: { g: ['·'], c: ['#4f9edb'], fx: 'tick' },
-    n14: { g: [')'], c: ['#ff8a5c'] },
-    n15: { g: ['⌗'], c: ['#4f9edb'] },
-    n16: { g: ['▢'], c: ['#ff8fc7'] },
-    n17: { g: ['#'], c: ['#241335'] },
-    n18: { g: ['ψ'], c: ['#8a4bd0'] },
-    n19: { g: ['|'], c: ['#4fae8e'], fx: 'tick' },
-    n20: { g: ['$'], c: ['#7cba58'] },
-    n21: { g: ['/'], c: ['#d6539b'] },
-    n22: { g: ['*', '+', '?'], c: ['#8e6cc9'] },
-    n23: { g: ['λ'], c: ['#ffd400', '#c98a2e'] },
-    n24: { g: ['≡'], c: ['#7cb1ff'] },
-    n25: { g: ['∴', '∵'], c: ['#c9a7f5'] },
-    n26: { g: ['…'], c: 'self', fx: 'tick' },
-    n27: { g: ['#'], c: ['#ffd400'] },
-    n28: { g: ['·'], c: ['#ffffff'] },
-    n29: { g: ['∅'], c: ['#9aa0b4'] },
-    n30: { g: ['●'], c: 'self', s: 12 },
-    n31: { g: ['⬡'], c: ['#7ee787'] },
-    n32: { g: ['+'], c: ['#4fae6e'] },
-    n33: { g: ['−', '+'], c: ['#d64545', '#4fae6e'], fx: 'alt' },
-    n34: { g: ['⑂'], c: ['#ff8a5c'] },
-    n36: { g: ['○', '◦'], c: ['#b09a62'], fx: 'echo' },
-    n37: { g: ['~'], c: ['#4f9edb'] },
-    n38: { g: [':'], c: ['#2ea043'] },
-    n39: { g: ['◱'], c: ['#b09a62'] },
-    n40: { g: ['💾'], s: 9 },
-    n41: { g: ['≋'], c: ['#ff8fc7'] },
-    n42: { g: ['⌇'], c: ['#41e0ff'] },
-    n43: { g: ['⇄'], c: ['#9aa0b4'] },
-    n44: { g: ['∥'], c: ['#c9992e'] },
-    n45: { g: ['⋯'], c: ['#8e6cc9'], fx: 'echo' },
-    n46: { g: ['∞'], c: ['#ff8fc7'] },
-    n47: { g: ['✗'], c: ['#d64545'] },
+    // v242 owner decree: footprints are SENTENCES now — every identity
+    // drops a mixed stream of glyphs (g), words & error fragments (w),
+    // plus an 8% universal spice pool. never the same walk twice.
+    glitch: { g: ['▚', '▞'], w: ['rgb split', 'moshed', '§§§'], c: ['#ff2fae', '#41e0ff'], fx: 'alt' },
+    matrix: { g: ['ﾊ', 'ﾐ', '0', '1'], w: ['wake up', 'follow', '01101'], c: ['#2ea043', '#7ee787'] },
+    wifi: { g: ['▂', '▄', '▆'], w: ['ssid?', '5GHz', 'full bars'], c: ['#4f9edb', '#7cfc00'] },
+    lowbatt: { g: ['▮'], w: ['15%', 'low batt…', 'plug me'], c: ['#ff5d5d', '#ffc23f', '#7ce87c'] },
+    post: { g: ['♪', '·'], w: ['beep', 'beep beep', 'POST OK'], c: ['#c98a2e', '#ffd27a'] },
+    cumulus: { g: ['·', '☁'], w: ['drizzle', '10% rain'], c: ['#a5c9e8', '#7c8db0'], s: 9 },
+    feature: { g: ['❯'], w: ['WONTFIX', 'by design', 'not a bug'], c: ['#7fae35'], fx: 'flip' },
+    latency: { g: ['·', '•'], w: ['300ms', 'lag…', 'jitter'], c: ['#b09a62'], fx: 'echo' },
+    aliased: { g: ['■'], w: ['8×8', 'jaggies'], c: ['#8e6cc9', '#cbb1f2'], s: 13 },
+    darkmode: { g: ['✦', '☾', '·'], w: ['0 lux', 'goth', 'no light'], c: ['#c9a7f5', '#4a3a5e'] },
+    gilded: { g: ['✦'], w: ['v1.0', 'GOLD', 'shipped ✓'], c: ['#ffd400', '#c9992e'] },
+    cacheghost: { w: ['304', 'stale', 'cached'], c: ['#a9a4c9'], fx: 'ghost' },
+    cronjob: { g: ['|'], w: ['* * * * *', '03:00', 'on time'], c: ['#4fae8e'], fx: 'tick' },
+    bitflip: { g: ['0', '1'], w: ['2^12', 'bit rot', 'ECC?'], c: ['#1a1a1a', '#f2f2f2'], fx: 'alt' },
+    turbo: { g: ['▴', '·'], w: ['98°C', 'MHz+', 'no warranty'], c: ['#ff4d1f', '#ff8a5c', '#ffd400'] },
+    dotmatrix: { g: ['◦'], w: ['SCREE', 'lp0 on fire', '···'], c: ['#7c8db0'], fx: 'tick' },
+    bsodjr: { g: [':('], w: ['0xDEAD', 'IRQL…', 'dump 40%', ':-('], c: ['#2f5fd0'], s: 9 },
+    rgbrig: { g: ['■'], w: ['RGB', '+15fps', '16.7M'], fx: 'hue' },
+    captcha: { g: ['☑'], w: ['not a bot', 'im human', '☐?'], c: ['#7cba58'] },
+    kernelpg: { g: ['·'], w: ['ring 0', 'sudo', 'GNU'], c: ['#3d7a94'], fx: 'pair' },
+    n0: { g: ['■'], w: ['1px', 'RGBa', 'dead px'], c: 'self', s: 8 },
+    n1: { g: ['|'], w: ['blink', 'EOL'], c: 'self', fx: 'blink' },
+    n2: { g: ['▟', '▙'], w: ['8-bit', 'frame 2/4'], c: 'self', fx: 'alt' },
+    n3: { g: ['◧'], w: ['z-axis', 'NOW IN 3D'], c: 'self', s: 12 },
+    n4: { g: ['ᛝ', 'ꟼ', '§', 'ƶ'], w: ['U+FFFD', 'tofu □'], c: ['#4a3a5e'] },
+    n5: { g: ['⧈'], w: ['3nm', 'silicon', '×2'], c: ['#c9992e'] },
+    n6: { g: ['0', '1'], w: ['LSB', 'respect'], c: 'self', fx: 'alt' },
+    n7: { g: ['◐', '◑'], w: ['4 bits', '½ byte'], c: 'self', fx: 'alt' },
+    n8: { g: ['⣿'], w: ['0xFF', '255', '8 bits'], c: 'self' },
+    n9: { g: ['⚡'], w: ['HIT ✓', 'MISS…', 'TTL ∞'], c: ['#ffd400'], s: 9 },
+    n10: { g: ['🍪'], w: ['crumbs', '30 days', 'consent?'], s: 9, c: ['#c9992e'] },
+    n11: { g: ['◍'], w: ['expired', 'JWT', 'refresh ✓'], c: ['#c9992e', '#ffd400'] },
+    n12: { g: ['▣'], w: ['TTL 64', 'hop!', 'frag 2/3'], c: ['#41e0ff'] },
+    n13: { g: ['·'], w: ['pong', '0.3ms', 'rtt ♡'], c: ['#4f9edb'], fx: 'tick' },
+    n14: { g: [')'], w: ['56k', 'EEE-AW', 'dial…'], c: ['#ff8a5c'] },
+    n15: { g: ['⌗'], w: ['DHCP ✓', '192.168…', 'blame DNS'], c: ['#4f9edb'] },
+    n16: { g: ['▢'], w: ['click me', 'A/B', 'CTR+'], c: ['#ff8fc7'] },
+    n17: { g: ['#'], w: ['ring 0', 'syscall', 'panic?'], c: ['#241335'] },
+    n18: { g: ['ψ'], w: ['nohup &', 'bg', 'kill -9?'], c: ['#8a4bd0'] },
+    n19: { g: ['|'], w: ['* * *', '03:00', 'missed 1'], c: ['#4fae8e'], fx: 'tick' },
+    n20: { g: ['$'], w: ['sudo', 'ls -la', '| grep', 'cd ~'], c: ['#7cba58'] },
+    n21: { g: ['/'], w: ['-r', 'match!', '/bug/g'], c: ['#d6539b'] },
+    n22: { g: ['*', '+', '?'], w: ['\\d+', '(.*)', '[a-z]'], c: ['#8e6cc9'] },
+    n23: { g: ['λ'], w: ['λx.x', 'no name', 'cold…'], c: ['#ffd400', '#c98a2e'] },
+    n24: { g: ['≡'], w: ['push', 'pop', 'depth++'], c: ['#7cb1ff'] },
+    n25: { g: ['∴', '∵'], w: ['malloc', 'free()', 'GC ✓'], c: ['#c9a7f5'] },
+    n26: { g: ['…'], w: ['FIFO', '#1 next', 'no cutting'], c: 'self', fx: 'tick' },
+    n27: { g: ['#'], w: ['#7f3a', 'sha256', 'salted ✓'], c: ['#ffd400'] },
+    n28: { g: ['·'], w: ['NaCl', 'seasoned', '·····'], c: ['#ffffff'] },
+    n29: { g: ['∅'], w: ['once.', 'used ✗', '8f21'], c: ['#9aa0b4'] },
+    n30: { g: ['●'], w: ['base64', '4.2MB', 'aGkg…'], c: 'self', s: 12 },
+    n31: { g: ['⬡'], w: ['npm i', '1204 pkgs', '1.2GB'], c: ['#7ee787'] },
+    n32: { g: ['+'], w: ['v1.0.1', '+1 line', 'healed'], c: ['#4fae6e'] },
+    n33: { g: ['−', '+'], w: ['@@ -1 +1 @@', 'hunk', '2 files'], c: ['#d64545', '#4fae6e'], fx: 'alt' },
+    n34: { g: ['⑂'], w: ['fork()', 'diverged', 'pid 2'], c: ['#ff8a5c'] },
+    n36: { g: ['○', '◦'], w: ['echo…', '(echo)', '…o'], c: ['#b09a62'], fx: 'echo' },
+    n37: { g: ['~'], w: ['GET /', '200 OK', '-fsSL'], c: ['#4f9edb'] },
+    n38: { g: [':'], w: [':q', ':wq', 'ESC', 'hjkl'], c: ['#2ea043'] },
+    n39: { g: ['◱'], w: ['-xzvf?', '.tar.gz', 'flags…'], c: ['#b09a62'] },
+    n40: { g: ['💾'], w: ['1.44MB', 'save ✓', 'A:\\'], s: 9, c: ['#7c8db0'] },
+    n41: { g: ['≋'], w: ['-60%', 'deflate', '.zip ♡'], c: ['#ff8fc7'] },
+    n42: { g: ['⌇'], w: ['SYN', 'ACK', ':8080'], c: ['#41e0ff'] },
+    n43: { g: ['⇄'], w: ['relay', 'no logs ♡', 'mitm?'], c: ['#9aa0b4'] },
+    n44: { g: ['∥'], w: ['lock()', 'wait…', 'unlock ✓'], c: ['#c9992e'] },
+    n45: { g: ['⋯'], w: ['await', 'pending', '.then()'], c: ['#8e6cc9'], fx: 'echo' },
+    n46: { g: ['∞'], w: ['while(1)', 'i++', 'break?'], c: ['#ff8fc7'] },
+    n47: { g: ['✗'], w: ['SIGSEGV', '0x0', 'core ✗', 'null'], c: ['#d64545'] },
   };
+  // the universal spice rack — any APEX may drop one of these, rarely
+  const PIK_TRAIL_SPICE = ['404', 'NaN', 'undefined', 'TODO', '// fixme', ';', 'oops', '<div>'];
+
   function pikIdTrailStep(w, spec, cx, cy, now) {
     if (spec.fx === 'tick') { // metronome spacing — a ruled line, not a sprinkle
       if (w.idTrailX != null && Math.hypot(cx - w.idTrailX, cy - w.idTrailY) < 30) return;
@@ -31299,7 +31305,7 @@ document.addEventListener('DOMContentLoaded', () => {
       px = buf[oldIx][0]; py = buf[oldIx][1];
       buf.splice(oldIx, 1);
     }
-    if (spec.fx === 'ghost') { // it keeps getting served from cache
+    if (spec.fx === 'ghost' && !(spec.w && Math.random() < 0.3)) { // it keeps getting served from cache (words interleave)
       const g = document.createElement('img');
       g.className = 'pik-trail pik-idtrail-ghost';
       g.src = w.img.src;
@@ -31312,13 +31318,19 @@ document.addEventListener('DOMContentLoaded', () => {
       setTimeout(() => { try { g.remove(); } catch (e) { /* purged */ } }, 4800);
       return;
     }
-    const many = spec.fx === 'pair' ? 2 : 1;
+    // v242: what falls this step? 8% universal spice, ~24% an identity
+    // word/error fragment, else the core glyph logic — a varied SENTENCE
+    let word = null;
+    if (Math.random() < 0.08) word = PIK_TRAIL_SPICE[Math.floor(Math.random() * PIK_TRAIL_SPICE.length)];
+    else if (spec.w && Math.random() < 0.24) word = spec.w[Math.floor(Math.random() * spec.w.length)];
+    const many = (spec.fx === 'pair' && !word) ? 2 : 1;
     for (let k = 0; k < many; k++) {
       const s = document.createElement('span');
-      s.className = 'pik-trail pik-idtrail' + (spec.fx === 'blink' ? ' is-blink' : '');
+      s.className = 'pik-trail pik-idtrail' + (spec.fx === 'blink' && !word ? ' is-blink' : '');
       let gi = Math.floor(Math.random() * (spec.g ? spec.g.length : 1));
-      if (spec.fx === 'alt') { w.idAlt = ((w.idAlt || 0) + 1) % spec.g.length; gi = w.idAlt; }
-      s.textContent = spec.g ? spec.g[gi] : '·';
+      if (spec.fx === 'alt' && !word) { w.idAlt = ((w.idAlt || 0) + 1) % spec.g.length; gi = w.idAlt; }
+      s.textContent = word || (spec.g ? spec.g[gi] : '·');
+      if (word && word.length > 2) s.style.fontSize = '8px'; // fragments run small
       if (spec.fx === 'hue') s.style.color = 'hsl(' + Math.floor(Math.random() * 360) + ', 90%, 62%)';
       else if (spec.c === 'self') s.style.color = 'hsl(' + Math.round(((w.hue || 0) % 360 + 360) % 360) + ', 85%, 58%)';
       else if (spec.c) s.style.color = spec.c[(spec.fx === 'alt' && spec.c.length === spec.g.length) ? gi : Math.floor(Math.random() * spec.c.length)];
