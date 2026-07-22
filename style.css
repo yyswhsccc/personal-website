@@ -13653,3 +13653,29 @@ html.boring-first body { background: #807e78; }
   .boring-shard, .boring-burst-bloom, .boring-burst-pik { transition: opacity 1.2s ease; }
   .pik-dep-panel.is-falling { animation: none; opacity: 0; }
 }
+
+/* ————— v244: THE SCREEN TEAR — five full-screen error skins ————— */
+.pik-tear {
+  position: fixed;
+  inset: 0;
+  z-index: 4000;
+  pointer-events: none;
+  transition: clip-path 0.35s linear;
+  overflow: hidden;
+}
+.pik-tear.tear-bsod { background: #0a23a8; color: #ffffff; padding: 12vh 10vw; }
+.tear-face { font-family: var(--font-pixel); font-size: clamp(40px, 9vw, 90px); margin-bottom: 4vh; }
+.tear-line { font-family: var(--font-pixel); font-size: clamp(10px, 1.6vw, 16px); line-height: 2; max-width: 720px; }
+.tear-dim { opacity: 0.65; }
+.pik-tear.tear-seg, .pik-tear.tear-panic { background: #0c0c0c; color: #e8e6df; padding: 14vh 10vw; }
+.tear-mono { font-family: var(--font-pixel); font-size: clamp(10px, 1.5vw, 15px); line-height: 2.1; }
+.tear-red { color: #ff4d6d; }
+.pik-tear.tear-glitch {
+  background:
+    repeating-linear-gradient(0deg, rgba(255, 47, 174, 0.5) 0 6px, rgba(65, 224, 255, 0.45) 6px 12px, rgba(20, 2, 14, 0.6) 12px 15px);
+  backdrop-filter: saturate(2.4) hue-rotate(40deg);
+}
+.tear-shred { position: absolute; font-family: var(--font-pixel); font-size: 22px; color: #ffffff; text-shadow: 2px 0 #ff2fae, -2px 0 #41e0ff; }
+.pik-tear.tear-invert { backdrop-filter: invert(1) hue-rotate(180deg); background: rgba(0, 0, 0, 0.05); }
+.tear-bit { position: absolute; font-family: var(--font-pixel); font-size: 16px; color: #1a1a1a; text-shadow: 1px 1px 0 #f2f2f2; }
+@media (prefers-reduced-motion: reduce) { .pik-tear { transition: none; } }

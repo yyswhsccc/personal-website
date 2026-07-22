@@ -24149,6 +24149,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return 'no destined pair on the desk right now';
       },
+      tear: (key) => { // v244 debug: rip the screen from a chosen persona
+        const w = DESK_PIK.walkers.find((v) => v.showPool && v.showKey === (key || 'bsodjr') && !pikBusy(v));
+        if (!w) return 'no free ' + (key || 'bsodjr') + ' on the desktop';
+        const tdef = pikTearDef(w.showKey);
+        w.show = { def: tdef, t0: Date.now(), els: [], undos: [], data: {}, beat: 0 };
+        try { tdef.start(w, w.show, Date.now()); } catch (e) { pikShowEnd(w, Date.now()); return 'tear failed: ' + e.message; }
+        return 'the screen is tearing: ' + w.showKey;
+      },
       dephell: () => { // v240 debug: trap the second walker in package purgatory NOW
         const v = DESK_PIK.walkers[1] || DESK_PIK.walkers[0];
         if (!v) return 'empty desk';
@@ -31427,6 +31435,93 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+
+  /* ————— v244: THE SCREEN TEAR — error pikmin sometimes rip a REAL
+     full-screen error open. it blooms as a slow circle from under their
+     feet until the whole screen IS the error, while the culprit stands
+     rooted, blinking, radiating innocence. then it heals. 15% odds at
+     showtime for the five error personas. ————— */
+  const PIK_TEAR_STYLES = {
+    bsodjr: { cls: 'tear-bsod', fill(ov) {
+      ov.innerHTML = '<div class="tear-face">:(</div>'
+        + '<div class="tear-line">A problem has been detected and the desktop has been shut down to prevent damage to your vibes.</div>'
+        + '<div class="tear-line">IRQL_NOT_CUTE_OR_EQUAL</div>'
+        + '<div class="tear-line tear-dim">collecting error info… 40% complete (it is always 40%)</div>';
+    } },
+    n47: { cls: 'tear-seg', fill(ov) {
+      ov.innerHTML = '<div class="tear-mono">$ ./life</div>'
+        + '<div class="tear-mono tear-red">Segmentation fault (core dumped)</div>'
+        + '<div class="tear-mono tear-dim">#0  0x0000dead in main ()</div>'
+        + '<div class="tear-mono tear-dim">#1  0x0000cafe in pik_walk ()</div>'
+        + '<div class="tear-mono">$ ▌</div>';
+    } },
+    n17: { cls: 'tear-panic', fill(ov) {
+      ov.innerHTML = '<div class="tear-mono">Kernel panic — not syncing: attempted to kill init!</div>'
+        + '<div class="tear-mono tear-dim">CPU: 0  PID: 1  Comm: pik  Tainted: C(ute)</div>'
+        + '<div class="tear-mono tear-dim">Call Trace: &lt;wandering&gt; → &lt;oops&gt; → &lt;this&gt;</div>'
+        + '<div class="tear-mono">[ end Kernel panic — have you tried being nicer to it ]</div>';
+    } },
+    glitch: { cls: 'tear-glitch', fill(ov) {
+      for (let k = 0; k < 14; k++) {
+        const s2 = document.createElement('span');
+        s2.className = 'tear-shred';
+        s2.textContent = Math.random() < 0.5 ? '▚' : '▞';
+        s2.style.left = Math.random() * 100 + '%';
+        s2.style.top = Math.random() * 100 + '%';
+        ov.appendChild(s2);
+      }
+    } },
+    bitflip: { cls: 'tear-invert', fill(ov) {
+      for (let k = 0; k < 18; k++) {
+        const s2 = document.createElement('span');
+        s2.className = 'tear-bit';
+        s2.textContent = Math.random() < 0.5 ? '0' : '1';
+        s2.style.left = Math.random() * 100 + '%';
+        s2.style.top = Math.random() * 100 + '%';
+        ov.appendChild(s2);
+      }
+    } },
+  };
+  function pikTearDef(key) {
+    const st = PIK_TEAR_STYLES[key];
+    if (st.__def) return st.__def;
+    st.__def = {
+      id: 'screen-tear-' + key, dur: 14000,
+      start(w, s, now) {
+        showRoot(w, now, 13500);
+        const ov = document.createElement('div');
+        ov.className = 'pik-tear ' + st.cls;
+        st.fill(ov);
+        document.body.appendChild(ov);
+        s.els.push(ov);
+        s.data.ov = ov;
+        // the culprit (and colleagues) float ABOVE the catastrophe
+        showStyle(w, DESK_PIK.layer, 'zIndex', '4001');
+        const lr = DESK_PIK.layer.getBoundingClientRect();
+        s.data.cx = Math.round(lr.left + w.x + 14);
+        s.data.cy = Math.round(lr.top + w.y + 30);
+        const vw = window.innerWidth || 1200, vh = window.innerHeight || 800;
+        s.data.rMax = Math.hypot(Math.max(s.data.cx, vw - s.data.cx), Math.max(s.data.cy, vh - s.data.cy)) + 40;
+        ov.style.clipPath = 'circle(0px at ' + s.data.cx + 'px ' + s.data.cy + 'px)';
+        playTone(70, 'sawtooth', 0.06, 0, 0.6);
+      },
+      tick(w, s, now, t) {
+        const ov = s.data.ov;
+        if (!ov || !ov.isConnected) return false;
+        let r;
+        if (t < 8600) r = Math.max(0, (t - 600) / 8000) * s.data.rMax;      // the slow bloom
+        else if (t < 11000) r = s.data.rMax;                                 // the world IS the error
+        else r = Math.max(0, 1 - (t - 11000) / 2600) * s.data.rMax;          // …and it heals
+        ov.style.clipPath = 'circle(' + Math.round(r) + 'px at ' + s.data.cx + 'px ' + s.data.cy + 'px)';
+        if (cue(s, 'oops', t, 1500)) showBadge(w, w, '?!', 'red', 3000);
+        if (cue(s, 'blink', t, 3400)) showBadge(w, w, '…', 'dark', 2600);
+        if (cue(s, 'innocent', t, 5600)) deskPikSay(w, trT('…did i do that?', '…c’est moi qui ai fait ça ?'));
+        if (cue(s, 'shh', t, 12400)) deskPikSay(w, trT('nobody saw that.', 'personne n’a rien vu.'));
+      },
+    };
+    return st.__def;
+  }
+
   /* ————— v238: DEEP SOCIETY — bonds, moods, and gossip —————
      scenes leave RELATIONSHIPS behind now. duets and kindness build
      persistent bonds (yos-pik-bonds); rebases and roaming charges build
@@ -31454,6 +31549,7 @@ document.addEventListener('DOMContentLoaded', () => {
     'twin-deadlock': ['the two locks froze EACH OTHER', 'les deux verrous se sont figés MUTUELLEMENT'],
     'heist': ['the cursor STOLE a file. again', 'le curseur a VOLÉ un fichier. encore'],
     'this-is-fine': ['someone is on fire and calls it fine', 'quelqu’un brûle et dit que ça va'],
+    'screen-tear': ['the SCREEN ripped. someone looked very innocent', 'l’ÉCRAN s’est déchiré. quelqu’un avait l’air très innocent'],
   };
   function pikGossip(id, origin) {
     if (!PIK_GOSSIP_LINES[id]) return;
@@ -32380,6 +32476,15 @@ document.addEventListener('DOMContentLoaded', () => {
         w.show = { def: duet.def, t0: now, els: [], undos: [], data: { p: duet.partner, lead0: duet.lead0 }, beat: 0 };
         duet.partner.showGuestUntil = Date.now() + 5000;
         pikShowAudience(w, now);
+        return;
+      }
+      // v244: the error personas may TEAR THE SCREEN instead (15%)
+      if (!REDUCED_MOTION && PIK_TEAR_STYLES[w.showKey] && Math.random() < 0.15) {
+        const tdef = pikTearDef(w.showKey);
+        w.show = { def: tdef, t0: now, els: [], undos: [], data: {}, beat: 0 };
+        pikGossip('screen-tear', w);
+        pikShowAudience(w, now);
+        try { tdef.start(w, w.show, now); } catch (e) { pikShowEnd(w, now); }
         return;
       }
       const def = pikShowDraw(w.showKey); // v225: species id OR archetype key
