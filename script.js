@@ -31523,6 +31523,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const h = Math.floor(Math.random() * 360);
     return { src: pikSprite(pikEntryColor({ h }), 2, null, false, form, 'w:' + Math.floor(h / 7.2)), hat: null };
   }
+  const BORING_QUESTIONS = [ // v243: the ghost makes SMALL TALK now
+    ['been to Edmonton? it is a GOOD place.', 'déjà venu·e à Edmonton ? c’est un ENDROIT bien.'],
+    ['do you like watching squirrels? yongshan loves it 😋', 'tu aimes observer les écureuils ? yongshan adore 😋'],
+    ['had your bubble tea today?', 'tu as bu ton bubble tea aujourd’hui ?'],
+    ['coffee or tea?', 'café ou thé ?'],
+    ['is it snowing where you are? it probably is here.', 'il neige chez toi ? ici, sûrement.'],
+    ['seen the northern lights? Edmonton gets them sometimes ♡', 'déjà vu des aurores ? Edmonton en a parfois ♡'],
+  ];
   const BORING_JOKES = [
     ['why do programmers prefer dark mode? light attracts bugs.', 'pourquoi les devs préfèrent le mode sombre ? la lumière attire les bugs.'],
     ['i would tell you a UDP joke, but you might not get it.', 'je te raconterais une blague UDP, mais tu ne la recevrais peut-être pas.'],
@@ -31631,10 +31639,16 @@ document.addEventListener('DOMContentLoaded', () => {
       }, 105);
       const joke = () => {
         if (sh.dataset.crashing || !gw.isConnected) return;
-        const j = BORING_JOKES[Math.floor(Math.random() * BORING_JOKES.length)];
+        // v243: three conversation flavors — cold jokes, small talk, and
+        // Yongshan's restaurant chart, reasons copied VERBATIM (owner decree)
+        const roll = Math.random();
+        let line;
+        if (roll < 0.4) { const j = BORING_JOKES[Math.floor(Math.random() * BORING_JOKES.length)]; line = trT(j[0], j[1]); }
+        else if (roll < 0.75) { const q = BORING_QUESTIONS[Math.floor(Math.random() * BORING_QUESTIONS.length)]; line = trT(q[0], q[1]); }
+        else { const r = RESTO_LIST[Math.floor(Math.random() * RESTO_LIST.length)]; line = trT('hungry? try 📍 ', 'un creux ? essaie 📍 ') + r.n + ' — ' + trT(r.note[0], r.note[1]); }
         const bub = document.createElement('div');
         bub.className = 'boring-pik-bubble';
-        bub.textContent = trT(j[0], j[1]);
+        bub.textContent = line;
         gw.appendChild(bub);
         T(() => { try { const r = bub.getBoundingClientRect(); if (r.left < 4) bub.style.marginLeft = (4 - r.left) + 'px'; else if (r.right > vw() - 4) bub.style.marginLeft = (-(r.right - vw() + 4)) + 'px'; } catch (e) { /* unmeasured */ } }, 30);
         T(() => { try { bub.remove(); } catch (e) { /* laughed off */ } }, 5600);
