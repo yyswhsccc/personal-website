@@ -24149,6 +24149,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return 'no destined pair on the desk right now';
       },
+      y2k: (m) => { // v247 debug: 'fw' | 'doom' — skips to the last two beats of the countdown
+        DESK_PIK.y2kForce = m || 'fw';
+        const out = window.__yosPik.showplay('y2kbug', 'countdown');
+        if (!/^now playing/.test(out)) { DESK_PIK.y2kForce = null; return out; } // review: a failed start must not arm a later natural countdown
+        const w = DESK_PIK.walkers.find((v) => v.showKey === 'y2kbug');
+        if (w && w.show && w.show.def.id === 'countdown') w.show.t0 -= 7200 * SHOW_TEMPO;
+        else DESK_PIK.y2kForce = null; // a refused booking must not rig a later organic countdown
+        return out;
+      },
       tear: (key) => { // v244 debug: rip the screen from a chosen persona
         const w = DESK_PIK.walkers.find((v) => v.showPool && v.showKey === (key || 'bsodjr') && !pikBusy(v));
         if (!w) return 'no free ' + (key || 'bsodjr') + ' on the desktop';
@@ -31557,9 +31566,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const st = PIK_TEAR_STYLES[key];
     if (st.__def) return st.__def;
     st.__def = {
-      id: 'screen-tear-' + key, dur: 14000,
+      id: 'screen-tear-' + key, dur: 18800,
+      // v248 owner decree: the culprit takes CENTER STAGE (crying), everyone
+      // else lines up at the top utterly lost, the full error holds 7 real
+      // seconds, and a mysterious computer force fixes it. then: cheering
       start(w, s, now) {
-        showRoot(w, now, 13500);
         const ov = document.createElement('div');
         ov.className = 'pik-tear ' + st.cls;
         st.fill(ov);
@@ -31572,22 +31583,121 @@ document.addEventListener('DOMContentLoaded', () => {
         s.data.cx = Math.round(lr.left + w.x + 14);
         s.data.cy = Math.round(lr.top + w.y + 30);
         const vw = window.innerWidth || 1200, vh = window.innerHeight || 800;
+        s.data.vw = vw; s.data.vh = vh;
         s.data.rMax = Math.hypot(Math.max(s.data.cx, vw - s.data.cx), Math.max(s.data.cy, vh - s.data.cy)) + 40;
         ov.style.clipPath = 'circle(0px at ' + s.data.cx + 'px ' + s.data.cy + 'px)';
+        // guilt walk: the rip starts at its feet, but it must FACE the jury
+        s.data.gx = Math.max(8, Math.min(lr.width - 46, vw / 2 - lr.left - 14));
+        s.data.gy = Math.max(60, Math.min(lr.height - 70, vh / 2 - lr.top - 30));
+        // the bystanders flee to the TOP of the screen and stand there, lost
+        s.data.crowd = [];
+        const others = pikOthers(w).filter((v) => !(v.chainOf || v.thiefPhase || v.wifiPhase || v.featPhase || v.lecTarget || v.depHell || v.disguised >= 0));
+        for (let i = 0; i < others.length; i++) {
+          const v = others[i];
+          if (v.show) pikShowEnd(v, now); // their curtain drops — THIS is the show now
+          v.showGuestUntil = Date.now() + 28500;
+          s.data.crowd.push({ v, x: 10 + (Math.max(120, lr.width) - 60) * ((i + 0.5) / others.length), y: 62 + (i % 2) * 16 });
+        }
+        s.undos.push(() => {
+          for (const c of s.data.crowd) {
+            try {
+              c.v.el.classList.remove('pik-cheer');
+              if (DESK_PIK.walkers.indexOf(c.v) >= 0) { c.v.restUntil = 0; c.v.showGuestUntil = 0; }
+            } catch (e) { /* wandered off */ }
+          }
+          try { w.el.classList.remove('pik-cheer'); } catch (e) { /* bowed */ }
+        });
         playTone(70, 'sawtooth', 0.06, 0, 0.6);
       },
       tick(w, s, now, t) {
         const ov = s.data.ov;
         if (!ov || !ov.isConnected) return false;
-        let r;
-        if (t < 8600) r = Math.max(0, (t - 600) / 8000) * s.data.rMax;      // the slow bloom
-        else if (t < 11000) r = s.data.rMax;                                 // the world IS the error
-        else r = Math.max(0, 1 - (t - 11000) / 2600) * s.data.rMax;          // …and it heals
-        ov.style.clipPath = 'circle(' + Math.round(r) + 'px at ' + s.data.cx + 'px ' + s.data.cy + 'px)';
+        if (t < 13267) { // grow, then hold — 7 real seconds of full error
+          const r = t < 8600 ? Math.max(0, (t - 600) / 8000) * s.data.rMax : s.data.rMax;
+          ov.style.clipPath = 'circle(' + Math.round(r) + 'px at ' + s.data.cx + 'px ' + s.data.cy + 'px)';
+        }
+        if (t < 8600) { // the exodus: culprit to centre stage, the rest to the top row
+          showGoto(w, s.data.gx, s.data.gy, 10);
+          for (const c of s.data.crowd) {
+            if (DESK_PIK.walkers.indexOf(c.v) < 0) continue;
+            if (Math.hypot(c.x - c.v.x, c.y - c.v.y) > 12) { c.v.restUntil = 0; c.v.tx = c.x; c.v.ty = c.y; }
+            else { c.v.restUntil = now + 800; c.v.tx = c.v.x; c.v.ty = c.v.y; c.v.el.classList.remove('walking'); }
+          }
+        }
         if (cue(s, 'oops', t, 1500)) showBadge(w, w, '?!', 'red', 3000);
         if (cue(s, 'blink', t, 3400)) showBadge(w, w, '…', 'dark', 2600);
-        if (cue(s, 'innocent', t, 5600)) deskPikSay(w, trT('…did i do that?', '…c’est moi qui ai fait ça ?'));
-        if (cue(s, 'shh', t, 12400)) deskPikSay(w, trT('nobody saw that.', 'personne n’a rien vu.'));
+        if (cue(s, 'full', t, 8600)) { // everyone freezes where the script put them
+          showHold(w, now, 12000);
+          for (const c of s.data.crowd) {
+            if (DESK_PIK.walkers.indexOf(c.v) < 0) continue;
+            c.v.restUntil = now + 15500; c.v.tx = c.v.x; c.v.ty = c.v.y; c.v.el.classList.remove('walking');
+          }
+        }
+        if (cue(s, 'guilt', t, 8900)) deskPikSay(w, trT('…did i break it? (ToT)', '…j’ai tout cassé ? (ToT)'));
+        if (cue(s, 'guilt2', t, 11400)) deskPikSay(w, trT('i was just WALKING (ToT)', 'je faisais que MARCHER (ToT)'));
+        if (t > 9300 && t < 12900 && now > (s.data.dazeAt || 0)) { // scattered bewilderment from the top row
+          s.data.dazeAt = now + 1350 + Math.random() * 900;
+          const alive = s.data.crowd.filter((c) => DESK_PIK.walkers.indexOf(c.v) >= 0);
+          if (alive.length) {
+            const DAZE = [['where is the floor', 'où est le sol'], ['is this the cloud??', 'c’est ça le cloud ??'], ['i can see the CODE', 'je vois le CODE'], ['mom?', 'maman ?'], ['are we deleted?', 'on est supprimés ?'], ['do NOT reboot us', 'ne nous redémarrez PAS'], ['…new wallpaper?', '…nouveau fond d’écran ?']];
+            const d = DAZE[Math.floor(Math.random() * DAZE.length)];
+            deskPikSay(alive[Math.floor(Math.random() * alive.length)].v, trT(d[0], d[1]));
+          }
+        }
+        if (cue(s, 'force', t, 13267)) { // a MYSTERIOUS computer force arrives
+          const fx = Math.round(s.data.vw / 2 + 40), fy = Math.round(s.data.vh * 0.34);
+          s.data.fx = fx; s.data.fy = fy;
+          const cur = document.createElement('div');
+          cur.className = 'pik-fixcursor';
+          cur.style.left = Math.round(s.data.vw * 0.72) + 'px'; cur.style.top = '-80px';
+          document.body.appendChild(cur); s.els.push(cur);
+          s.data.cur = cur;
+          void cur.offsetWidth;
+          cur.style.left = fx + 'px'; cur.style.top = fy + 'px';
+          playTone(196, 'sine', 0.035, 0, 0.5); playTone(262, 'sine', 0.03, 0.3, 0.5);
+        }
+        if (cue(s, 'menu', t, 14300)) { // it right-clicks the apocalypse
+          const menu = document.createElement('div');
+          menu.className = 'pik-fixmenu';
+          const items = [trT('what happened here', 'que s’est-il passé ici'), trT('blame the intern', 'accuser le stagiaire'), trT('fix everything (recommended)', 'tout réparer (recommandé)')];
+          for (const it of items) { const row = document.createElement('div'); row.className = 'pik-fixmenu-row'; row.textContent = it; menu.appendChild(row); }
+          menu.style.left = (s.data.fx + 14) + 'px'; menu.style.top = (s.data.fy + 22) + 'px';
+          document.body.appendChild(menu); s.els.push(menu);
+          s.data.menu = menu;
+          playTone(700, 'square', 0.03, 0, 0.03);
+        }
+        if (cue(s, 'click', t, 15100) && s.data.menu) {
+          const rows = s.data.menu.querySelectorAll('.pik-fixmenu-row');
+          rows[rows.length - 1].classList.add('is-pick');
+          playTone(980, 'square', 0.035, 0.28, 0.04);
+        }
+        if (cue(s, 'wipe', t, 15600)) { // the fix radiates from the click
+          if (s.data.cur) s.data.cur.classList.add('is-gone');
+          if (s.data.menu) s.data.menu.classList.add('is-gone');
+          ov.style.transition = 'clip-path 1.05s ease-in';
+          ov.style.clipPath = 'circle(0px at ' + s.data.fx + 'px ' + s.data.fy + 'px)';
+          const toast = document.createElement('div');
+          toast.className = 'pik-fixtoast';
+          toast.textContent = trT('✓ fixed. do not ask how.', '✓ réparé. ne demande pas comment.');
+          document.body.appendChild(toast); s.els.push(toast);
+          playTone(523, 'triangle', 0.04, 0, 0.09); playTone(659, 'triangle', 0.04, 0.12, 0.09); playTone(784, 'triangle', 0.045, 0.24, 0.09); playTone(1046, 'triangle', 0.05, 0.38, 0.2);
+        }
+        if (cue(s, 'cheer', t, 16700)) { // EVERYONE cheers
+          try { ov.remove(); } catch (e) { /* already wiped */ }
+          playFanfare();
+          w.el.classList.add('pik-cheer');
+          deskPikSay(w, trT('IT FIXED ITSELF!!', 'ÇA S’EST RÉPARÉ TOUT SEUL !!'));
+          const YAY = [['YAAAY!!', 'YAAAY !!'], ['✨!!', '✨!!'], ['pik!! pik!!', 'pik !! pik !!'], ['WE LIVE!!', 'ON EST VIVANTS !!']];
+          let di = 0;
+          for (const c of s.data.crowd) {
+            if (DESK_PIK.walkers.indexOf(c.v) < 0) continue;
+            c.v.el.classList.add('pik-cheer');
+            pikMoodSet(c.v, 'happy');
+            if (di < 4) { const y = YAY[di % YAY.length]; const vv = c.v; setTimeout(() => { try { deskPikSay(vv, trT(y[0], y[1])); } catch (e) { /* left */ } }, 260 + di * 420); }
+            di++;
+          }
+        }
+        if (cue(s, 'shh', t, 18100)) deskPikSay(w, trT('nobody saw ANYTHING.', 'personne n’a RIEN vu.'));
       },
     };
     return st.__def;
@@ -31621,6 +31731,8 @@ document.addEventListener('DOMContentLoaded', () => {
     'heist': ['the cursor STOLE a file. again', 'le curseur a VOLÉ un fichier. encore'],
     'this-is-fine': ['someone is on fire and calls it fine', 'quelqu’un brûle et dit que ça va'],
     'screen-tear': ['the SCREEN ripped. someone looked very innocent', 'l’ÉCRAN s’est déchiré. quelqu’un avait l’air très innocent'],
+    'y2k-doom': ['the y2k apocalypse ACTUALLY came. for nine seconds', 'l’apocalypse de l’an 2000 est VRAIMENT venue. neuf secondes'],
+    'y2k-fireworks': ['the cone spent its whole body on FIREWORKS', 'le cône a dépensé tout son corps en FEUX D’ARTIFICE'],
   };
   function pikGossip(id, origin) {
     if (!PIK_GOSSIP_LINES[id]) return;
@@ -32550,7 +32662,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
       // v244: the error personas may TEAR THE SCREEN instead (15%)
-      if (!REDUCED_MOTION && PIK_TEAR_STYLES[w.showKey] && Math.random() < 0.15) {
+      if (!REDUCED_MOTION && !DESK_PIK.y2kSpecial && PIK_TEAR_STYLES[w.showKey] && Math.random() < 0.15) { // v247: a y2k special owns the stage
         const tdef = pikTearDef(w.showKey);
         w.show = { def: tdef, t0: now, els: [], undos: [], data: {}, beat: 0 };
         pikGossip('screen-tear', w);
@@ -32573,6 +32685,233 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (e) { pikShowEnd(w, now); return; }
     if (!s.credited) { s.credited = 1; pikShowSeen(s.def.id); } // audit: credit only shows that survive tick 1
     if (t >= s.def.dur) pikShowEnd(w, now);
+  }
+  // ————— v247 Y2K SPECIALS — the countdown finally PAYS OFF (sometimes) ————
+  // both morph the live show instance: s.def is re-read every tick, so a
+  // per-instance clone with a longer dur and new tick/end keeps the whole
+  // engine cleanup (els/undos/resync-abort) intact
+  function pikY2kFireworks(w, s, now) { // 10%: the confetti it has worn since 1999 gets its sky show
+    pikGossip('y2k-fireworks', w);
+    s.def = Object.assign({}, s.def, { dur: 20600, tick: pikY2kFwTick, end: pikY2kFwEnd });
+    showRoot(w, now, 17600);
+    showStyle(w, DESK_PIK.layer, 'zIndex', '4001'); // the sky show plays ABOVE the windows (tear precedent)
+    s.data.b.textContent = '✨';
+    deskPikSay(w, trT('no apocalypse?? fine. PLAN B ♡', 'pas d’apocalypse ?? bon. PLAN B ♡'));
+    const hold = 17600; // real ms — the audience is transfixed until the finale fades
+    s.data.frozen = [];
+    for (const v of pikOthers(w)) {
+      // the train tows through anything; signature acts (dropout, standup,
+      // lecture, heist, dep-hell) own their actor's clock — leave them be
+      if (v.chainOf || v.thiefPhase || v.wifiPhase || v.featPhase || v.lecTarget || v.depHell || v.disguised >= 0) continue;
+      if (v.show) pikShowEnd(v, now); // nobody performs OVER the sky show — strike their sets cleanly
+      v.restUntil = now + hold; v.tx = v.x; v.ty = v.y; v.el.classList.remove('walking');
+      v.showGuestUntil = Date.now() + hold; // no new bookings mid-spectacle
+      v.el.classList.add('pik-stargaze');
+      s.data.frozen.push(v);
+    }
+    w.el.classList.add('pik-stargaze'); // the artist watches its own work
+    s.undos.push(() => {
+      try { w.el.classList.remove('pik-stargaze'); } catch (e) { /* bowed */ }
+      for (const v of s.data.frozen) {
+        try {
+          v.el.classList.remove('pik-stargaze');
+          // audit-guard mirror: never un-root someone a signature act re-claimed mid-freeze
+          if (DESK_PIK.walkers.indexOf(v) >= 0 && !(v.thiefPhase || v.wifiPhase || v.featPhase || v.lecTarget || v.depHell)) { v.restUntil = 0; v.showGuestUntil = 0; }
+        } catch (e) { /* left early */ }
+      }
+    });
+    s.data.launches = [9900, 11300, 12700, 14100, 15400, 16600, 17700]; // show-clock; last is the mega
+    s.data.li = 0; s.data.oohAt = 0;
+    DESK_PIK.y2kSpecial = 1; s.undos.push(() => { DESK_PIK.y2kSpecial = 0; });
+    pikY2kWatchdog(w, s); // deskPikTick can be curtained mid-show (game / live room / dream) — never strand the freeze
+  }
+  function pikY2kFwTick(w, s, now, t) {
+    const L = s.data.launches;
+    if (s.data.li < L.length && t >= L[s.data.li]) { const i = s.data.li++; pikY2kRocket(w, s, i === L.length - 1); }
+    if (t > 10800 && t < 18800 && now > s.data.oohAt) { // scattered awe, never a chorus
+      s.data.oohAt = now + 1700 + Math.random() * 2000;
+      const crowd = s.data.frozen.filter((v) => DESK_PIK.walkers.indexOf(v) >= 0);
+      if (crowd.length) {
+        const v = crowd[Math.floor(Math.random() * crowd.length)];
+        const OOH = [['oooooh…', 'oooooh…'], ['aaaaah…', 'aaaaah…'], ['✨!!', '✨!!'], ['pik…!!', 'pik…!!'], ['woah', 'woah'], ['♡', '♡'], ['encore!!', 'encore !!']];
+        const o = OOH[Math.floor(Math.random() * OOH.length)];
+        deskPikSay(v, trT(o[0], o[1]));
+      }
+    }
+    if (cue(s, 'brag', t, 13600)) deskPikSay(w, trT('saved these dots since 1999!!', 'ces points, gardés depuis 1999 !!'));
+    if (cue(s, 'finale', t, 17400)) s.data.b.textContent = 'GRAND FINALE';
+    if (cue(s, 'bow', t, 19500)) deskPikSay(w, trT('…the apocalypse can wait ♡', '…l’apocalypse peut attendre ♡'));
+  }
+  function pikY2kFwEnd(w, s, now) {
+    for (const v of s.data.frozen) { try { if (DESK_PIK.walkers.indexOf(v) >= 0) pikMoodSet(v, 'happy'); } catch (e) { /* moved on */ } }
+    pikMoodSet(w, 'happy');
+  }
+  function pikY2kRocket(w, s, mega) {
+    const lr = DESK_PIK.layer.getBoundingClientRect();
+    const sx = 26 + Math.random() * Math.max(80, lr.width - 96);
+    const sy = 34 + Math.random() * Math.max(50, lr.height * 0.34);
+    const r = document.createElement('span');
+    r.className = 'pik-fw-rocket';
+    r.style.background = PIK_PARTY_COLORS[Math.floor(Math.random() * PIK_PARTY_COLORS.length)];
+    r.style.left = (w.x + 14) + 'px'; r.style.top = (w.y + 2) + 'px';
+    DESK_PIK.layer.appendChild(r); s.els.push(r);
+    void r.offsetWidth; // commit launch pad — the flight is a transition
+    r.style.left = sx + 'px'; r.style.top = sy + 'px';
+    playTone(320, 'triangle', 0.028, 0, 0.1); playTone(520, 'triangle', 0.024, 0.14, 0.1); playTone(760, 'triangle', 0.02, 0.28, 0.1);
+    setTimeout(() => {
+      try {
+        r.remove();
+        const bursts = mega ? [[sx, sy], [sx - 64, sy + 26], [sx + 58, sy + 18]] : [[sx, sy]];
+        for (let bi = 0; bi < bursts.length; bi++) pikY2kBurst(s, bursts[bi][0], bursts[bi][1], mega ? 22 : 15, bi * 170);
+        playTone(88, 'sawtooth', mega ? 0.06 : 0.045, 0, 0.14);
+        for (let i = 0; i < 3; i++) playTone(1100 + Math.random() * 700, 'square', 0.016, 0.1 + i * 0.09, 0.03);
+      } catch (e) { /* a dud */ }
+    }, 980);
+  }
+  function pikY2kBurst(s, cx, cy, n, delay) {
+    setTimeout(() => {
+      try {
+        for (let i = 0; i < n; i++) {
+          const d = document.createElement('span');
+          const glyph = Math.random() < 0.18;
+          d.className = 'pik-fw-dot' + (glyph ? ' is-glyph' : '');
+          const col = PIK_PARTY_COLORS[i % PIK_PARTY_COLORS.length]; // ITS body palette, spent gladly
+          if (glyph) { d.textContent = ['✦', '✨', '♡'][i % 3]; d.style.color = col; } else d.style.background = col;
+          const ang = (i / n) * Math.PI * 2 + Math.random() * 0.5;
+          const dist = 30 + Math.random() * 62;
+          d.style.setProperty('--fx', Math.round(Math.cos(ang) * dist) + 'px');
+          d.style.setProperty('--fy', Math.round(Math.sin(ang) * dist * 0.82) + 'px');
+          d.style.left = cx + 'px'; d.style.top = cy + 'px';
+          DESK_PIK.layer.appendChild(d); s.els.push(d);
+          setTimeout(() => { try { d.remove(); } catch (e) { /* faded */ } }, 1900);
+        }
+      } catch (e) { /* damp powder */ }
+    }, delay);
+  }
+  function pikY2kDoom(w, s, now) { // 10%: the world ACTUALLY ends. it is thrilled
+    pikGossip('y2k-doom', w);
+    s.def = Object.assign({}, s.def, { dur: 20800, tick: pikY2kDoomTick, end: pikY2kDoomEnd });
+    showRoot(w, now, 17600);
+    showStyle(w, DESK_PIK.layer, 'zIndex', '4001'); // everyone panics ON TOP of the chaos
+    s.data.b.textContent = '00:00:00';
+    s.data.offs = [];
+    const flash = document.createElement('div');
+    flash.className = 'y2k-flash';
+    document.body.appendChild(flash); s.els.push(flash);
+    setTimeout(() => { try { flash.remove(); } catch (e) { /* blinked */ } }, 900);
+    DESK_PIK.y2kSpecial = 1; s.undos.push(() => { DESK_PIK.y2kSpecial = 0; });
+    pikY2kWatchdog(w, s); // deskPikTick can be curtained mid-show (game / live room / dream) — the quake must never strand
+  }
+  function pikY2kWatchdog(w, s) { // real-time curtain: fires even when the engine clock is frozen
+    setTimeout(() => {
+      try { if (w.show === s) pikShowEnd(w, Date.now()); } catch (e) { /* already down */ }
+    }, (s.def.dur - 9000) * SHOW_TEMPO + 2500);
+  }
+  function pikY2kOff(s, fn) { // idempotent tear-down: fires at the heal beat AND at curtain
+    let done = false;
+    const f = () => { if (done) return; done = true; try { fn(); } catch (e) { /* already */ } };
+    s.data.offs.push(f); s.undos.push(f);
+    return f;
+  }
+  function pikY2kDoomTick(w, s, now, t) {
+    if (cue(s, 'gasp', t, 9400)) deskPikSay(w, trT('…wait.', '…attends.'));
+    if (cue(s, 'happening', t, 10000)) {
+      deskPikSay(w, trT('IT IS HAPPENING!!! IT ACTUALLY CAME!!!', 'ÇA ARRIVE !!! C’EST VRAIMENT LÀ !!!'));
+      document.body.classList.add('y2k-quake');
+      pikY2kOff(s, () => document.body.classList.remove('y2k-quake'));
+      trayClock.classList.add('y2k-doomclock');
+      s.data.doomClock = 1;
+      pikY2kOff(s, () => { s.data.doomClock = 0; trayClock.classList.remove('y2k-doomclock'); updateClock(); });
+      playTone(52, 'sawtooth', 0.05, 0, 0.6); playTone(40, 'sawtooth', 0.045, 0.5, 0.7);
+    }
+    if (s.data.doomClock) trayClock.textContent = '01/01/1900'; // out-stamp the minute interval
+    if (s.data.doomClock && now > (s.data.rumbleAt || 0)) { s.data.rumbleAt = now + 1400; playTone(48 + Math.random() * 22, 'sawtooth', 0.04, 0, 0.5); }
+    if (cue(s, 'rollover', t, 10800)) {
+      const panel = document.createElement('div');
+      panel.className = 'y2k-flip';
+      for (const ch of '1999') { const c = document.createElement('span'); c.className = 'y2k-cell'; c.textContent = ch; panel.appendChild(c); }
+      document.body.appendChild(panel); s.els.push(panel);
+      s.data.panel = panel;
+      playTone(660, 'square', 0.035, 0, 0.06);
+    }
+    if (cue(s, 'carry', t, 11700) && s.data.panel) { // 99 + 1 = 100. in a two-digit field.
+      const cells = s.data.panel.querySelectorAll('.y2k-cell');
+      const target = '19100'; // the century carried and BROKE THE PANEL
+      for (let i = 0; i < cells.length; i++) { cells[i].textContent = target[i]; cells[i].classList.add('is-flip'); }
+      const extra = document.createElement('span');
+      extra.className = 'y2k-cell is-flip is-extra';
+      extra.textContent = target[4];
+      s.data.panel.appendChild(extra);
+      playTone(180, 'square', 0.05, 0, 0.08); playTone(120, 'square', 0.05, 0.12, 0.1); playTone(90, 'sawtooth', 0.05, 0.26, 0.16);
+    }
+    if (cue(s, 'rain', t, 12500)) {
+      cheatFall(['0', '1', '9', 'Y', '2', 'K', '▚'], 22); // the interface is leaking digits
+      const crt = document.createElement('div');
+      crt.className = 'y2k-crt';
+      document.body.appendChild(crt); s.els.push(crt);
+      s.data.crt = crt;
+      for (const win of document.querySelectorAll('.window')) win.classList.add('y2k-wobble');
+      pikY2kOff(s, () => { for (const win of document.querySelectorAll('.window.y2k-wobble')) win.classList.remove('y2k-wobble'); });
+      const icons = document.querySelector('.desktop-icons-container');
+      if (icons) { icons.classList.add('y2k-jitter'); pikY2kOff(s, () => icons.classList.remove('y2k-jitter')); }
+    }
+    if (cue(s, 'panic', t, 13100)) {
+      s.data.b.textContent = 'I TOLD YOU';
+      w.el.classList.add('y2k-vindicated');
+      pikY2kOff(s, () => w.el.classList.remove('y2k-vindicated'));
+      const CRY = [['?!', '?!'], ['PIK?!', 'PIK ?!'], ['not like this!!', 'pas comme ça !!'], ['save your work!!', 'sauvegardez tout !!']];
+      const lr = DESK_PIK.layer.getBoundingClientRect();
+      for (const v of pikOthers(w)) {
+        if (pikBusy(v)) continue; // never yank an actor mid-scene
+        v.restUntil = 0;
+        v.tx = 8 + Math.random() * Math.max(60, lr.width - 68);
+        v.ty = 60 + Math.random() * Math.max(60, lr.height - 130);
+        if (Math.random() < 0.55) { const c = CRY[Math.floor(Math.random() * CRY.length)]; deskPikSay(v, trT(c[0], c[1])); }
+      }
+    }
+    if (cue(s, 'invert', t, 14200)) {
+      const inv = document.createElement('div');
+      inv.className = 'y2k-invert';
+      document.body.appendChild(inv); s.els.push(inv);
+      setTimeout(() => { try { inv.remove(); } catch (e) { /* uninverted */ } }, 1300);
+      const ban = document.createElement('div');
+      ban.className = 'y2k-banner';
+      ban.textContent = 'SYSTEM DATE INVALID';
+      document.body.appendChild(ban); s.els.push(ban);
+      s.data.ban = ban;
+      playTone(140, 'sawtooth', 0.05, 0, 0.2);
+    }
+    if (cue(s, 'told', t, 14900)) deskPikSay(w, trT('I TOLD YOU ALL!! WHO IS "just a cone" NOW??', 'JE VOUS L’AVAIS DIT !! QUI EST « juste un cône » MAINTENANT ??'));
+    if (cue(s, 'patch', t, 16000)) {
+      const dlg = document.createElement('div');
+      dlg.className = 'y2k-patch';
+      dlg.innerHTML = '<div class="y2k-patch-title">hotfix_y2k.exe</div><div class="y2k-patch-body"><div class="y2k-patch-cap"></div><div class="y2k-patch-bar"><i></i></div></div>';
+      dlg.querySelector('.y2k-patch-cap').textContent = trT('rolling the date back…', 'restauration de la date…');
+      document.body.appendChild(dlg); s.els.push(dlg);
+      s.data.dlg = dlg;
+      playTone(880, 'square', 0.02, 0, 0.03); playTone(880, 'square', 0.02, 0.22, 0.03); playTone(880, 'square', 0.02, 0.44, 0.03);
+    }
+    if (cue(s, 'healed', t, 17300)) {
+      for (const f of s.data.offs) f(); // quake off, clock back, wobble off — idempotent
+      if (s.data.crt) s.data.crt.classList.add('is-heal');
+      if (s.data.ban) s.data.ban.classList.add('is-heal');
+      if (s.data.dlg) { s.data.dlg.querySelector('.y2k-patch-cap').textContent = trT('apocalypse cancelled ✓', 'apocalypse annulée ✓'); }
+      if (s.data.panel) {
+        const cells = s.data.panel.querySelectorAll('.y2k-cell');
+        const back = '2000✓';
+        for (let i = 0; i < cells.length; i++) { cells[i].textContent = back[i] || ''; cells[i].classList.remove('is-flip', 'is-extra'); void cells[i].offsetWidth; cells[i].classList.add('is-flip'); if (back[i] === '✓') cells[i].classList.add('is-ok'); }
+      }
+      playTone(523, 'triangle', 0.04, 0, 0.09); playTone(659, 'triangle', 0.04, 0.12, 0.09); playTone(784, 'triangle', 0.045, 0.24, 0.16);
+    }
+    if (cue(s, 'deflate', t, 18300)) { s.data.b.textContent = '…'; deskPikSay(w, trT('…they patched it.', '…ils l’ont corrigée.')); }
+    if (cue(s, 'mourn', t, 19300)) { deskPikSay(w, trT('they patched MY apocalypse.', 'ils ont corrigé MON apocalypse.')); pikMoodSet(w, 'grumpy'); }
+    if (cue(s, 'console', t, 20000)) {
+      const v = pikNearest(w, 280);
+      if (v) { deskPikSay(v, trT('…next year ♡', '…l’année prochaine ♡')); pikBondAdd(v, w, 0.5); }
+    }
+  }
+  function pikY2kDoomEnd(w, s, now) {
+    for (const f of (s.data.offs || [])) f(); // belt and braces — every off is idempotent
   }
   // ————————— v221 THE BILL — 54 shows across 18 species —————————
   const PIK_SHOWCASE = {
@@ -32990,13 +33329,22 @@ document.addEventListener('DOMContentLoaded', () => {
       { id: 'countdown', dur: 14000, // the apocalypse, hourly, on demand
         start(w, s, now) { showRoot(w, now, 12000); s.data.b = showBadge(w, w, '10', 'red'); s.data.n = 10; },
         tick(w, s, now, t) {
-          const n = 10 - Math.floor(t / 900);
-          if (n !== s.data.n && n >= 0) {
+          // clamped so a starved tick (backgrounded tab) can never JUMP the
+          // zero — the payoff frame must always land
+          const n = Math.max(0, 10 - Math.floor(t / 900));
+          if (n !== s.data.n) {
             s.data.n = n;
             s.data.b.textContent = String(n);
             playTone(300 + (10 - n) * 40, 'square', 0.04, 0, 0.05);
             if (n === 0) {
               s.data.b.textContent = '…';
+              // v247 owner decree: 10% the apocalypse ACTUALLY comes, 10% the
+              // body confetti gets its 15-second sky show. 80%: nothing, AGAIN
+              const force = DESK_PIK.y2kForce; DESK_PIK.y2kForce = null;
+              const ok = !REDUCED_MOTION && !document.querySelector('.pik-tear') && DESK_PIK.layer.offsetParent !== null;
+              const r = force === 'doom' ? 0.05 : force === 'fw' ? 0.15 : Math.random();
+              if (ok && r < 0.1) { pikY2kDoom(w, s, now); return; }
+              if (ok && r < 0.2) { pikY2kFireworks(w, s, now); return; }
               setTimeout(() => {
                 try { deskPikSay(w, trT('huh. nothing!! AGAIN!!', 'bah. rien !! ENCORE !!')); cheatFall(['🎊', '✨'], 8); } catch (e) { /* partied out */ }
               }, 1800);
@@ -35475,6 +35823,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // 'shy' = fully invisible, everywhere, always (they still perform inside
     // the live room & the game — those are THEIR windows, not the desktop)
     const hide = mode === 'shy' || isUp('win-live') || isUp('win-game');
+    // review: dropping the curtain mid-tear/mid-doom stranded body-level
+    // chrome (quake, CRT, hijacked clock) frozen over the game — strike
+    // every running show the moment the curtain falls
+    if (hide && !layer.classList.contains('pik-float-hidden')) {
+      for (const v of DESK_PIK.walkers) { if (v.show) { try { pikShowEnd(v, Date.now()); } catch (e) { /* struck */ } } }
+    }
     layer.classList.toggle('pik-float-hidden', hide);
   }
   const PIK_FLOAT_OPTS = [
@@ -36487,7 +36841,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // the curtain lifts on the exact scene it fell on
     if (DESK_PIK.layer && DESK_PIK.layer.classList.contains('pik-float-hidden')) return;
     // audit: the BSOD crash dream hides the desk — shows must not leak onto it
-    if (document.documentElement.classList.contains('dream-bsod')) return;
+    if (document.documentElement.classList.contains('dream-bsod')) {
+      for (const v of DESK_PIK.walkers) { if (v.show) { try { pikShowEnd(v, Date.now()); } catch (e) { /* struck */ } } }
+      return;
+    }
     // audit: phones never render the layer — a GHOST pointer must not drag real icons
     if (DESK_PIK.layer && !DESK_PIK.layer.getClientRects().length) {
       DESK_PIK.walkers.forEach((w) => { if (w.thiefIcon) pointerDropIcon(w, 1); });

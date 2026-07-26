@@ -13747,3 +13747,123 @@ html.boring-first body { background: #807e78; }
 @media (prefers-reduced-motion: reduce) {
   .ta-pop, .ta-bounce, .ta-spinin, .ta-grow, .ta-tw, .ta-pulse, .ta-drift, .ta-wiggle, .ta-hue, .ta-flicker, .ta-fall, .ta-spin, .ta-jitter { animation: none; }
 }
+
+/* ————— v247: Y2K SPECIALS — the countdown finally pays off ————— */
+.pik-stargaze { transform: rotate(-10deg) translateY(-1px); transform-origin: 50% 88%; transition: transform 0.5s ease; }
+.pik-fw-rocket {
+  position: absolute; width: 5px; height: 5px; z-index: 60; pointer-events: none;
+  box-shadow: 0 6px 0 -1px rgba(255, 255, 255, 0.55), 0 11px 0 -2px rgba(255, 255, 255, 0.25);
+  transition: left 0.95s cubic-bezier(0.2, 0.7, 0.35, 1), top 0.95s cubic-bezier(0.2, 0.7, 0.35, 1);
+  image-rendering: pixelated;
+}
+.pik-fw-dot {
+  position: absolute; width: 5px; height: 5px; z-index: 61; pointer-events: none;
+  animation: y2k-burst 1.75s ease-out forwards;
+}
+.pik-fw-dot.is-glyph { width: auto; height: auto; background: transparent; font-size: 11px; line-height: 1; }
+@keyframes y2k-burst {
+  0% { transform: translate(0, 0) scale(0.4); opacity: 1; }
+  58% { transform: translate(var(--fx), var(--fy)) scale(1.1); opacity: 1; }
+  100% { transform: translate(var(--fx), calc(var(--fy) + 24px)) scale(0.7); opacity: 0; }
+}
+body.y2k-quake #top { animation: y2k-quake 0.34s steps(2) infinite; } /* quake the frame, not body — a transformed body becomes the containing block for the fixed doom dialogs and they would jump */
+@keyframes y2k-quake {
+  0% { transform: translate(-3px, 2px) rotate(-0.25deg); }
+  50% { transform: translate(3px, -2px) rotate(0.25deg); }
+  100% { transform: translate(-2px, -1px) rotate(0); }
+}
+.y2k-flash { position: fixed; inset: 0; z-index: 3978; pointer-events: none; background: #fff; animation: y2k-flash 0.85s steps(3) forwards; }
+@keyframes y2k-flash { 0% { opacity: 0.9; } 60% { opacity: 0.25; } 100% { opacity: 0; } }
+.y2k-crt {
+  position: fixed; inset: 0; z-index: 3980; pointer-events: none;
+  background: repeating-linear-gradient(transparent 0 2px, rgba(0, 0, 0, 0.16) 2px 3px);
+  box-shadow: inset 0 0 120px rgba(0, 0, 0, 0.5);
+  animation: y2k-crtflicker 0.26s steps(2) infinite;
+  transition: opacity 0.9s ease;
+}
+@keyframes y2k-crtflicker { 0% { opacity: 1; } 50% { opacity: 0.72; } 100% { opacity: 0.9; } }
+.y2k-crt.is-heal { animation: none; opacity: 0; } /* the infinite flicker would out-cascade the fade */
+.y2k-invert { position: fixed; inset: 0; z-index: 3979; pointer-events: none; backdrop-filter: invert(1); animation: y2k-invertflash 1.2s steps(1) forwards; }
+@keyframes y2k-invertflash { 0% { opacity: 1; } 25% { opacity: 0; } 45% { opacity: 1; } 70% { opacity: 0; } 85% { opacity: 1; } 100% { opacity: 0; } }
+.y2k-flip {
+  position: fixed; left: 50%; top: 30%; transform: translateX(-50%); z-index: 3986;
+  display: flex; gap: 6px; padding: 10px 12px;
+  background: #1a1a24; border: 3px ridge #8a8aa0; box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.45);
+}
+.y2k-cell {
+  width: 34px; height: 48px; display: flex; align-items: center; justify-content: center;
+  background: #0a0a10; color: #7cfc00; border: 2px solid #333344;
+  font-family: 'Courier New', monospace; font-size: 30px; font-weight: bold;
+  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.6);
+}
+.y2k-cell.is-flip { animation: y2k-cellflip 0.5s ease-out; }
+@keyframes y2k-cellflip { 0% { transform: rotateX(90deg); } 100% { transform: rotateX(0); } }
+.y2k-cell.is-extra { color: #ff2fae; border-color: #ff2fae; transform: rotate(8deg) translateY(-7px); margin-left: -3px; box-shadow: 0 0 10px rgba(255, 47, 174, 0.7); }
+.y2k-cell.is-ok { color: #7cfc00; border-color: #7cfc00; }
+.y2k-banner {
+  position: fixed; left: 50%; top: 48%; transform: translate(-50%, -50%) rotate(-9deg); z-index: 3985;
+  padding: 8px 22px; background: #200; color: #ff2f2f; border: 4px double #ff2f2f;
+  font-family: 'Courier New', monospace; font-size: clamp(18px, 4vw, 34px); font-weight: bold; letter-spacing: 3px;
+  animation: y2k-bannerblink 0.5s steps(2) infinite; transition: opacity 0.7s ease; white-space: nowrap;
+}
+@keyframes y2k-bannerblink { 50% { opacity: 0.55; } }
+.y2k-banner.is-heal { opacity: 0; animation: none; }
+.y2k-patch {
+  position: fixed; left: 50%; bottom: 18%; transform: translateX(-50%); z-index: 3987;
+  width: min(300px, 82vw); background: #d4d0c8; border: 2px outset #fff; box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.4);
+  font-family: 'Courier New', monospace;
+}
+.y2k-patch-title { padding: 3px 8px; background: linear-gradient(90deg, #000080, #1084d0); color: #fff; font-size: 12px; font-weight: bold; }
+.y2k-patch-body { padding: 10px 12px; }
+.y2k-patch-cap { font-size: 11px; color: #222; margin-bottom: 7px; }
+.y2k-patch-bar { height: 14px; border: 1px inset #808080; background: #fff; overflow: hidden; }
+.y2k-patch-bar i { display: block; height: 100%; width: 0; background: repeating-linear-gradient(90deg, #000080 0 8px, #1084d0 8px 16px); animation: y2k-patchfill 1.7s steps(12) forwards; }
+@keyframes y2k-patchfill { 0% { width: 0; } 100% { width: 100%; } }
+.y2k-wobble { animation: y2k-wobble 0.5s ease-in-out infinite; }
+@keyframes y2k-wobble { 0%, 100% { transform: rotate(-0.5deg); } 50% { transform: rotate(0.5deg); } }
+.y2k-jitter { animation: y2k-jitterk 0.3s steps(2) infinite; }
+@keyframes y2k-jitterk { 0% { transform: translate(-1px, 1px); } 50% { transform: translate(1px, -1px); } 100% { transform: translate(0, 0); } }
+.y2k-vindicated { animation: y2k-hop 0.45s ease-in-out infinite; }
+@keyframes y2k-hop { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
+#tray-clock.y2k-doomclock { color: #ff2f2f !important; font-weight: bold; animation: y2k-bannerblink 0.6s steps(2) infinite; }
+@media (prefers-reduced-motion: reduce) {
+  body.y2k-quake #top, .y2k-crt, .y2k-invert, .y2k-flash, .y2k-wobble, .y2k-jitter, .y2k-vindicated,
+  .y2k-cell.is-flip, .y2k-banner, .pik-fw-dot, .y2k-patch-bar i { animation: none; }
+  /* without their keyframes these two would sit at full opacity — hide, don't strobe */
+  .y2k-flash, .y2k-invert, .pik-fw-dot { opacity: 0; }
+  .y2k-patch-bar i { width: 100%; }
+  .y2k-patch-bar i { width: 100%; }
+}
+
+/* ————— v248: TEAR THEATRE — guilt centre stage, mystery repair, cheers ————— */
+.pik-cheer { animation: y2k-hop 0.4s ease-in-out infinite; }
+.pik-fixcursor {
+  position: fixed; width: 40px; height: 56px; z-index: 4005; pointer-events: none;
+  background: #fff;
+  clip-path: polygon(0 0, 0 76%, 26% 61%, 43% 100%, 59% 92%, 45% 58%, 74% 55%);
+  filter: drop-shadow(2px 2px 0 #000) drop-shadow(0 0 12px rgba(65, 224, 255, 0.85));
+  opacity: 0.94;
+  transition: left 1.15s ease, top 1.15s ease, opacity 0.5s ease;
+  animation: pik-fixbob 1.1s ease-in-out infinite;
+}
+@keyframes pik-fixbob { 0%, 100% { margin-top: 0; } 50% { margin-top: -5px; } }
+.pik-fixmenu {
+  position: fixed; z-index: 4005; min-width: 190px;
+  background: #d4d0c8; border: 2px outset #fff; box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.5);
+  font-family: 'Courier New', monospace; font-size: 12px; color: #111;
+  transition: opacity 0.5s ease;
+}
+.pik-fixmenu-row { padding: 5px 12px; border-bottom: 1px solid #b8b4ac; }
+.pik-fixmenu-row:last-child { border-bottom: 0; font-weight: bold; }
+.pik-fixmenu-row.is-pick { background: #000080; color: #fff; }
+.pik-fixcursor.is-gone, .pik-fixmenu.is-gone { opacity: 0; }
+.pik-fixtoast {
+  position: fixed; left: 50%; top: 44%; transform: translate(-50%, -50%); z-index: 4004;
+  padding: 10px 20px; background: #0a0a10; color: #7cfc00; border: 3px double #7cfc00;
+  font-family: 'Courier New', monospace; font-size: 15px; font-weight: bold; white-space: nowrap;
+  animation: pik-fixtoast 3.2s ease forwards;
+}
+@keyframes pik-fixtoast { 0% { opacity: 0; } 12% { opacity: 1; } 78% { opacity: 1; } 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .pik-cheer, .pik-fixcursor, .pik-fixtoast { animation: none; }
+}
