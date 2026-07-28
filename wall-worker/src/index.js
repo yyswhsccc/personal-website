@@ -16,6 +16,7 @@
 
 const ALLOW_ORIGINS = [
   'https://yyswhsccc.github.io',
+  'https://yongshan.is-a.dev',
   'http://localhost:8642',
   'http://127.0.0.1:8642',
   'http://localhost:8742',
