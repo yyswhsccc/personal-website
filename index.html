@@ -113,7 +113,7 @@
     })();
   </script>
 
-  <link rel="stylesheet" href="style.css?v=270">
+  <link rel="stylesheet" href="style.css?v=271">
 <script>/* wrist-sized screens get the wrist edition */(function(){try{if(screen.width<=340&&screen.height<=430)location.replace('watch.html');}catch(e){}})();</script>
 </head>
 <body>
@@ -405,6 +405,22 @@
           <button class="desktop-icon-btn" data-window="win-education" aria-haspopup="dialog">
             <svg class="icon-visual" viewBox="0 0 32 32" width="46" height="46"><use href="#y2k-txt-icon" /></svg>
             <div class="icon-label" data-i18n="file.edu">education_awards.txt</div>
+          </button>
+
+          <!-- MP3: yongshan's playlist -->
+          <button class="desktop-icon-btn" data-window="win-mp3" aria-haspopup="dialog">
+            <svg class="icon-visual" viewBox="0 0 32 32" width="46" height="46" shape-rendering="crispEdges" aria-hidden="true">
+              <rect x="7" y="3" width="18" height="26" rx="3" fill="#ff8fc7"/>
+              <rect x="9" y="6" width="14" height="10" fill="#2a0a20"/>
+              <rect x="10" y="7" width="12" height="2" fill="#6ce3f7"/>
+              <rect x="10" y="10" width="9" height="2" fill="#ffb7e2"/>
+              <rect x="10" y="13" width="11" height="2" fill="#c9a7f5"/>
+              <rect x="13" y="19" width="6" height="6" fill="#fff"/>
+              <rect x="15" y="21" width="2" height="2" fill="#f0509f"/>
+              <rect x="9" y="20" width="2" height="4" fill="#a8e0ff"/>
+              <rect x="21" y="20" width="2" height="4" fill="#a8e0ff"/>
+            </svg>
+            <div class="icon-label">mp3_player.exe</div>
           </button>
 
           <!-- Dreamlog: the dream journal — the icon only exists while the site dreams -->
@@ -1274,6 +1290,35 @@
       </section>
 
       <!-- 4. EDUCATION & AWARDS WINDOW -->
+      <section class="window window-closed window-mp3" id="win-mp3" aria-labelledby="title-mp3" role="dialog">
+        <div class="window-header drag-handle">
+          <div class="window-title-container">
+            <span class="window-icon">🎵</span>
+            <span class="window-title" id="title-mp3">mp3_player.exe</span>
+          </div>
+          <div class="window-controls">
+            <button class="win-btn win-btn-minimize" aria-label="Minimize window">_</button>
+            <button class="win-btn win-btn-maximize" aria-label="Maximize window">⛶</button>
+            <button class="win-btn win-btn-close" aria-label="Close window">♥</button>
+          </div>
+        </div>
+        <div class="window-body">
+          <div class="mp3-device">
+            <div class="mp3-screen" id="mp3-screen" tabindex="0"><!-- rendered by JS --></div>
+            <div class="mp3-controls">
+              <button class="mp3-btn" id="mp3-prev" aria-label="previous track">⏮</button>
+              <button class="mp3-btn mp3-btn-main" id="mp3-play" aria-label="play or pause">▶</button>
+              <button class="mp3-btn" id="mp3-next" aria-label="next track">⏭</button>
+              <input class="mp3-vol" id="mp3-vol" type="range" min="0" max="100" value="70" aria-label="volume">
+            </div>
+          </div>
+        </div>
+        <div class="window-footer">
+          <span>yongshan's mixtape · 17 tracks</span>
+          <span>music keeps playing while you wander ♡</span>
+        </div>
+      </section>
+
       <section class="window window-closed" id="win-education" aria-labelledby="title-education" role="dialog">
         <div class="window-header drag-handle">
           <div class="window-title-container">
@@ -1517,6 +1562,6 @@
     })();
   </script>
   <script src="i18n.js?v=88"></script>
-  <script src="script.js?v=270"></script>
+  <script src="script.js?v=271"></script>
 </body>
 </html>

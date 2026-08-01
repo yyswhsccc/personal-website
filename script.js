@@ -39076,3 +39076,150 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => openWindow('win-game', { fromHistory: true }), 2400);
   }
 });
+
+// ————————————————— mp3_player.exe: yongshan's mixtape —————————————————
+(function () {
+  var MP3_TRACKS = [
+    { t: '太聪明', a: '陈绮贞', f: 'tai-cong-ming' },
+    { t: '青山绿野', a: '渡边雅二', f: 'qing-shan-lv-ye' },
+    { t: '罪恶的银盘', a: 'NickTheWorld', f: 'zui-e-de-yin-pan' },
+    { t: '我叫玛丽苏', a: 'Bobeep', f: 'wo-jiao-ma-li-su', mv: 'BV1vg41157eW' },
+    { t: '水滴', a: 'Anti-General', f: 'shui-di' },
+    { t: '你啊你啊', a: '魏如萱', f: 'ni-a-ni-a' },
+    { t: '华佗', a: 'GAI周延', f: 'hua-tuo' },
+    { t: '初雪', a: 'EXO', f: 'chu-xue' },
+    { t: 'Hue', a: 'Dave Thomas Junior', f: 'hue' },
+    { t: '八重海', a: '三十年前，五十年后', f: 'ba-chong-hai' },
+    { t: 'Cocopops', a: 'Ivoris', f: 'cocopops' },
+    { t: '地尽头', a: 'Shirley Kwan', f: 'di-jin-tou' },
+    { t: '烟霞', a: '容祖儿', f: 'yan-xia' },
+    { t: '小雨', a: '黄龄', f: 'xiao-yu' },
+    { t: '反正我愿意', a: '福梦（FUMON）', f: 'fan-zheng-wo-yuan-yi' },
+    { t: '锦鲤抄', a: '银临', f: 'jin-li-chao' },
+    { t: '以剑试情长', a: '青龙捕快/镜予歌', f: 'yi-jian-shi-qing-chang' },
+  ];
+  // 短段占位：yongshan 之后逐首补写（键 = f）
+  var MP3_NOTES = {};
+  var PLACEHOLDER = '（这里以后是 yongshan 写给这首歌的碎碎念 ♡）';
+
+  var win = document.getElementById('win-mp3');
+  var screen = document.getElementById('mp3-screen');
+  if (!win || !screen) return;
+  var audio = new Audio();
+  audio.loop = false;
+  var order = [];
+  var cur = -1;          // index into order
+  var playing = false;
+  var booted = false;
+
+  function shuffle(arr) {
+    for (var i = arr.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var t2 = arr[i]; arr[i] = arr[j]; arr[j] = t2;
+    }
+    return arr;
+  }
+
+  function fmtNo(i) { return (i < 9 ? '0' : '') + (i + 1); }
+
+  function renderList() {
+    var html = '<div class="mp3-head">yongshan’s playlist ♡ ' + MP3_TRACKS.length + ' tracks</div>';
+    for (var i = 0; i < order.length; i++) {
+      var tr = MP3_TRACKS[order[i]];
+      var on = i === cur;
+      html += '<div class="mp3-track' + (on ? ' on' : '') + '" data-i="' + i + '">' +
+        '<span class="no">' + (on ? (playing ? '♪' : '▸') : fmtNo(i)) + '</span>' +
+        tr.t + ' <span class="artist">— ' + tr.a + '</span></div>';
+      if (on) {
+        if (tr.mv) {
+          html += '<div class="mp3-mv"><iframe src="https://player.bilibili.com/player.html?bvid=' + tr.mv +
+            '&autoplay=1&danmaku=0&high_quality=1" allowfullscreen allow="autoplay; fullscreen"></iframe></div>';
+        }
+        var note = MP3_NOTES[tr.f] || PLACEHOLDER;
+        html += '<div class="mp3-note">' + note + '</div>';
+        if (tr._missing) {
+          html += '<div class="mp3-note">这盘磁带还没塞进机器… (◠‿◠)\n把 ' + tr.f + '.mp3 放进 assets/music/ 它就会唱歌了</div>';
+        }
+      }
+    }
+    screen.innerHTML = html;
+  }
+
+  function playCur() {
+    var tr = MP3_TRACKS[order[cur]];
+    if (tr.mv) {                       // the MV special: video plays in-screen
+      audio.pause();
+      playing = false;
+      renderList();
+      return;
+    }
+    tr._missing = false;
+    audio.src = 'assets/music/' + tr.f + '.mp3';
+    var p = audio.play();
+    if (p && p.catch) { p.catch(function () {}); }
+    playing = true;
+    renderList();
+  }
+
+  audio.addEventListener('error', function () {
+    var tr = cur >= 0 && MP3_TRACKS[order[cur]];
+    if (tr) { tr._missing = true; }
+    playing = false;
+    renderList();
+  });
+  audio.addEventListener('ended', function () {
+    cur = (cur + 1) % order.length;
+    playCur();
+  });
+
+  screen.addEventListener('click', function (e) {
+    var row = e.target.closest ? e.target.closest('.mp3-track') : null;
+    if (!row) return;
+    cur = parseInt(row.getAttribute('data-i'), 10);
+    playCur();
+    var el = screen.querySelector('.mp3-track.on');
+    if (el && el.scrollIntoView) el.scrollIntoView({ block: 'nearest' });
+  });
+
+  document.getElementById('mp3-play').addEventListener('click', function () {
+    if (cur < 0) { cur = 0; playCur(); return; }
+    var tr = MP3_TRACKS[order[cur]];
+    if (tr.mv) return;                 // video owns its own controls
+    if (playing) { audio.pause(); playing = false; }
+    else { var p = audio.play(); if (p && p.catch) p.catch(function () {}); playing = true; }
+    renderList();
+  });
+  document.getElementById('mp3-prev').addEventListener('click', function () {
+    if (!order.length) return;
+    cur = (cur - 1 + order.length) % order.length;
+    playCur();
+  });
+  document.getElementById('mp3-next').addEventListener('click', function () {
+    if (!order.length) return;
+    cur = (cur + 1) % order.length;
+    playCur();
+  });
+  document.getElementById('mp3-vol').addEventListener('input', function (e) {
+    audio.volume = e.target.value / 100;
+  });
+  audio.volume = 0.7;
+
+  function boot() {
+    booted = true;
+    screen.innerHTML = '<div class="mp3-splash"><b>欢迎来到yongshan的歌单！</b>' +
+      '<div>来跟yongshan一起听听音乐吧！</div><span class="mp3-cursor"></span></div>';
+    // fresh shuffle every open; keep the playing track pinned if music is on
+    var playingTrack = playing && cur >= 0 ? order[cur] : -1;
+    order = shuffle(MP3_TRACKS.map(function (_, i) { return i; }));
+    if (playingTrack >= 0) { cur = order.indexOf(playingTrack); }
+    else { cur = -1; }
+    setTimeout(function () { renderList(); }, 1500);
+  }
+
+  // boot on every open, however the window is opened
+  new MutationObserver(function () {
+    var open = !win.classList.contains('window-closed');
+    if (open && !booted) { boot(); }
+    if (!open) { booted = false; }     // music keeps playing; next open reshuffles
+  }).observe(win, { attributes: true, attributeFilter: ['class'] });
+})();
