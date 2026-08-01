@@ -7,6 +7,19 @@
 window.YOS_I18N = {
 
   en: {
+    'file.mp3': 'mp3_player.exe',
+    'mp3.boot1': 'YS-2000 BIOS v19.100 \u2661',
+    'mp3.boot2': 'memory check: 1.44MB of feelings \u2026 ok',
+    'mp3.boot3': 'waking the pocket jukebox \u2026',
+    'mp3.boot4': 'loading tapes',
+    'mp3.boot5': 'shuffle engine: extra random \u2661',
+    'mp3.welcome1': "welcome to yongshan's playlist!",
+    'mp3.welcome2': 'come listen to some music with yongshan!',
+    'mp3.head': "yongshan's playlist \u2661 {n} tracks",
+    'mp3.note.soon': "(yongshan's liner notes for this song are on their way \u2661)",
+    'mp3.tape': "this tape isn't in the deck yet\u2026 (\u25e0\u203f\u25e0)\ndrop {f}.mp3 into assets/music/ and it will sing",
+    'mp3.footer.l': "yongshan's mixtape \u00b7 17 tracks",
+    'mp3.footer.r': 'music keeps playing while you wander \u2661',
     'meta.title': 'YongshanOS ♡',
     'meta.desc': 'Personal portfolio of Yongshan Yu, AI/LMS Systems & Full-Stack Lead. A hand-built Y2K pixel desktop OS with a playable slime pet.',
 
@@ -349,6 +362,19 @@ window.YOS_I18N = {
   },
 
   fr: {
+    'file.mp3': 'mp3_player.exe',
+    'mp3.boot1': 'YS-2000 BIOS v19.100 \u2661',
+    'mp3.boot2': 'test m\u00e9moire : 1.44MB de sentiments \u2026 ok',
+    'mp3.boot3': 'r\u00e9veil du juke-box de poche \u2026',
+    'mp3.boot4': 'chargement des cassettes',
+    'mp3.boot5': 'moteur shuffle : extra al\u00e9atoire \u2661',
+    'mp3.welcome1': 'bienvenue dans la playlist de yongshan !',
+    'mp3.welcome2': '\u00e9coute un peu de musique avec yongshan !',
+    'mp3.head': 'la playlist de yongshan \u2661 {n} titres',
+    'mp3.note.soon': '(les petites pens\u00e9es de yongshan sur ce titre arrivent bient\u00f4t \u2661)',
+    'mp3.tape': "cette cassette n'est pas encore dans le lecteur\u2026 (\u25e0\u203f\u25e0)\nd\u00e9pose {f}.mp3 dans assets/music/ et elle chantera",
+    'mp3.footer.l': 'la mixtape de yongshan \u00b7 17 titres',
+    'mp3.footer.r': 'la musique continue pendant ta balade \u2661',
     'meta.title': 'YongshanOS ♡',
     'meta.desc': 'Portfolio personnel de Yongshan Yu, responsable systèmes IA/LMS et développement full-stack. Un bureau pixel Y2K fait main, avec un slime de compagnie jouable.',
 

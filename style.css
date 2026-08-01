@@ -13907,4 +13907,26 @@ body.y2k-quake #top { animation: y2k-quake 0.34s steps(2) infinite; } /* quake t
 }
 .mp3-btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 rgba(90, 61, 110, 0.45); }
 .mp3-btn-main { min-width: 58px; background: var(--pink-hot); color: #fff; }
-.mp3-vol { flex: 1; accent-color: var(--pink-deep); }
+.mp3-volwrap { flex: 1; display: flex; align-items: center; gap: 8px; }
+.mp3-vollabel, .mp3-volpct {
+  font-family: 'Courier New', monospace; font-size: 11px; font-weight: 700;
+  color: #fff; text-shadow: 1px 1px 0 rgba(90, 61, 110, 0.85); letter-spacing: 0.08em;
+}
+.mp3-volpct { min-width: 24px; text-align: right; }
+.mp3-volbar {
+  flex: 1; display: flex; gap: 3px; padding: 5px; cursor: pointer;
+  background: #2a0a20; border: 2px solid var(--pink-deep);
+  box-shadow: inset 0 2px 0 rgba(0, 0, 0, 0.5), 2px 2px 0 rgba(90, 61, 110, 0.45);
+}
+.mp3-volbar .seg { flex: 1; height: 14px; background: rgba(255, 183, 226, 0.16); }
+.mp3-volbar .seg.on { background: var(--pink-hot); box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.55), inset 0 -3px 0 rgba(240, 80, 159, 0.9); }
+.mp3-volbar:focus-visible { outline: 3px solid var(--yellow, #ffd400); outline-offset: 2px; }
+.mp3-screen { box-shadow: inset 0 0 0 2px rgba(255, 183, 226, 0.25), inset 0 4px 0 rgba(0, 0, 0, 0.55), inset 4px 0 0 rgba(0, 0, 0, 0.35); }
+.mp3-plate {
+  margin-top: 10px; text-align: center; font-family: 'Courier New', monospace;
+  font-size: 10.5px; font-weight: 700; letter-spacing: 0.22em; color: #fff;
+  text-shadow: 1px 1px 0 rgba(90, 61, 110, 0.85);
+}
+.mp3-boot { color: #9fe8c0; }
+.mp3-boot div { margin-bottom: 4px; }
+.mp3-boot div:first-child { color: #fff; font-weight: 700; }

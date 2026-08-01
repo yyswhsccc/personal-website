@@ -39098,9 +39098,14 @@ document.addEventListener('DOMContentLoaded', () => {
     { t: '锦鲤抄', a: '银临', f: 'jin-li-chao' },
     { t: '以剑试情长', a: '青龙捕快/镜予歌', f: 'yi-jian-shi-qing-chang' },
   ];
-  // 短段占位：yongshan 之后逐首补写（键 = f）
+  // liner notes: yongshan will supply these per track (key = f)
   var MP3_NOTES = {};
-  var PLACEHOLDER = '（这里以后是 yongshan 写给这首歌的碎碎念 ♡）';
+
+  function mp3Lang() { return String(document.documentElement.lang || 'en').indexOf('fr') === 0 ? 'fr' : 'en'; }
+  function T(key) {
+    var d = window.YOS_I18N;
+    return (d && d[mp3Lang()] && d[mp3Lang()][key]) || (d && d.en && d.en[key]) || key;
+  }
 
   var win = document.getElementById('win-mp3');
   var screen = document.getElementById('mp3-screen');
@@ -39123,7 +39128,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function fmtNo(i) { return (i < 9 ? '0' : '') + (i + 1); }
 
   function renderList() {
-    var html = '<div class="mp3-head">yongshan’s playlist ♡ ' + MP3_TRACKS.length + ' tracks</div>';
+    var html = '<div class="mp3-head">' + T('mp3.head').replace('{n}', MP3_TRACKS.length) + '</div>';
     for (var i = 0; i < order.length; i++) {
       var tr = MP3_TRACKS[order[i]];
       var on = i === cur;
@@ -39138,10 +39143,10 @@ document.addEventListener('DOMContentLoaded', () => {
           html += '<div class="mp3-mv"><iframe src="https://www.youtube.com/embed/' + tr.yt +
             '?autoplay=1" allowfullscreen allow="autoplay; fullscreen; encrypted-media"></iframe></div>';
         }
-        var note = MP3_NOTES[tr.f] || PLACEHOLDER;
+        var note = MP3_NOTES[tr.f] || T('mp3.note.soon');
         html += '<div class="mp3-note">' + note + '</div>';
         if (tr._missing) {
-          html += '<div class="mp3-note">这盘磁带还没塞进机器… (◠‿◠)\n把 ' + tr.f + '.mp3 放进 assets/music/ 它就会唱歌了</div>';
+          html += '<div class="mp3-note">' + T('mp3.tape').replace('{f}', tr.f) + '</div>';
         }
       }
     }
@@ -39202,27 +39207,90 @@ document.addEventListener('DOMContentLoaded', () => {
     cur = (cur + 1) % order.length;
     playCur();
   });
-  document.getElementById('mp3-vol').addEventListener('input', function (e) {
-    audio.volume = e.target.value / 100;
+  var volBar = document.getElementById('mp3-vol');
+  var volPct = document.getElementById('mp3-volpct');
+  var SEGS = 10;
+  (function () {
+    for (var i = 0; i < SEGS; i++) {
+      var sgel = document.createElement('span');
+      sgel.className = 'seg';
+      volBar.appendChild(sgel);
+    }
+  })();
+  function setVol(v) {
+    v = Math.max(0, Math.min(1, v));
+    audio.volume = v;
+    var lit = Math.round(v * SEGS);
+    var segs = volBar.children;
+    for (var i = 0; i < SEGS; i++) { segs[i].className = 'seg' + (i < lit ? ' on' : ''); }
+    volPct.textContent = Math.round(v * 100);
+    volBar.setAttribute('aria-valuenow', Math.round(v * 100));
+  }
+  volBar.addEventListener('click', function (e) {
+    var r = volBar.getBoundingClientRect();
+    setVol((e.clientX - r.left) / r.width);
   });
-  audio.volume = 0.7;
+  volBar.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowUp') { setVol(audio.volume + 0.1); e.preventDefault(); }
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') { setVol(audio.volume - 0.1); e.preventDefault(); }
+  });
+  setVol(0.7);
+
+  var bootTimers = [];
+  function bootLater(fn, ms) { bootTimers.push(setTimeout(fn, ms)); }
+  function bootCancel() { bootTimers.forEach(clearTimeout); bootTimers = []; }
 
   function boot() {
     booted = true;
-    screen.innerHTML = '<div class="mp3-splash"><b>欢迎来到yongshan的歌单！</b>' +
-      '<div>来跟yongshan一起听听音乐吧！</div><span class="mp3-cursor"></span></div>';
+    bootCancel();
     // fresh shuffle every open; keep the playing track pinned if music is on
     var playingTrack = playing && cur >= 0 ? order[cur] : -1;
     order = shuffle(MP3_TRACKS.map(function (_, i) { return i; }));
     if (playingTrack >= 0) { cur = order.indexOf(playingTrack); }
     else { cur = -1; }
-    setTimeout(function () { renderList(); }, 1500);
+
+    var n = MP3_TRACKS.length;
+    screen.innerHTML = '<div class="mp3-boot"></div>';
+    var log = screen.firstChild;
+    function line(txt) {
+      var el = document.createElement('div');
+      el.textContent = txt;
+      log.appendChild(el);
+      return el;
+    }
+    bootLater(function () { line(T('mp3.boot1')); }, 60);
+    bootLater(function () { line(T('mp3.boot2')); }, 440);
+    bootLater(function () { line(T('mp3.boot3')); }, 820);
+    var barEl;
+    bootLater(function () { barEl = line(''); }, 1150);
+    for (var k = 0; k <= n; k++) {
+      (function (k2) {
+        bootLater(function () {
+          if (!barEl) return;
+          var full = '';
+          var empty = '';
+          for (var q = 0; q < n; q++) { (q < k2) ? full += '\u2588' : empty += '\u2591'; }
+          barEl.textContent = T('mp3.boot4') + ' [' + full + empty + '] ' + k2 + '/' + n;
+        }, 1150 + k * 75);
+      })(k);
+    }
+    bootLater(function () { line(T('mp3.boot5')); }, 1250 + n * 75);
+    bootLater(function () {
+      screen.innerHTML = '<div class="mp3-splash"><b>' + T('mp3.welcome1') + '</b>' +
+        '<div>' + T('mp3.welcome2') + '</div><span class="mp3-cursor"></span></div>';
+    }, 1750 + n * 75);
+    bootLater(function () { renderList(); }, 3000 + n * 75);
   }
+
+  // language flips re-render the screen in place
+  new MutationObserver(function () {
+    if (!win.classList.contains('window-closed') && order.length && cur !== undefined) { renderList(); }
+  }).observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
 
   // boot on every open, however the window is opened
   new MutationObserver(function () {
     var open = !win.classList.contains('window-closed');
     if (open && !booted) { boot(); }
-    if (!open) { booted = false; }     // music keeps playing; next open reshuffles
+    if (!open) { booted = false; bootCancel(); }   // music keeps playing; next open reshuffles
   }).observe(win, { attributes: true, attributeFilter: ['class'] });
 })();

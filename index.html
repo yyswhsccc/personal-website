@@ -113,7 +113,7 @@
     })();
   </script>
 
-  <link rel="stylesheet" href="style.css?v=272">
+  <link rel="stylesheet" href="style.css?v=273">
 <script>/* wrist-sized screens get the wrist edition */(function(){try{if(screen.width<=340&&screen.height<=430)location.replace('watch.html');}catch(e){}})();</script>
 </head>
 <body>
@@ -420,7 +420,7 @@
               <rect x="9" y="20" width="2" height="4" fill="#a8e0ff"/>
               <rect x="21" y="20" width="2" height="4" fill="#a8e0ff"/>
             </svg>
-            <div class="icon-label">mp3_player.exe</div>
+            <div class="icon-label" data-i18n="file.mp3">mp3_player.exe</div>
           </button>
 
           <!-- Dreamlog: the dream journal — the icon only exists while the site dreams -->
@@ -1294,7 +1294,7 @@
         <div class="window-header drag-handle">
           <div class="window-title-container">
             <span class="window-icon">🎵</span>
-            <span class="window-title" id="title-mp3">mp3_player.exe</span>
+            <span class="window-title" id="title-mp3" data-i18n="file.mp3">mp3_player.exe</span>
           </div>
           <div class="window-controls">
             <button class="win-btn win-btn-minimize" aria-label="Minimize window">_</button>
@@ -1309,13 +1309,18 @@
               <button class="mp3-btn" id="mp3-prev" aria-label="previous track">⏮</button>
               <button class="mp3-btn mp3-btn-main" id="mp3-play" aria-label="play or pause">▶</button>
               <button class="mp3-btn" id="mp3-next" aria-label="next track">⏭</button>
-              <input class="mp3-vol" id="mp3-vol" type="range" min="0" max="100" value="70" aria-label="volume">
+              <div class="mp3-volwrap">
+                <span class="mp3-vollabel">VOL</span>
+                <div class="mp3-volbar" id="mp3-vol" role="slider" tabindex="0" aria-label="volume" aria-valuemin="0" aria-valuemax="100" aria-valuenow="70"></div>
+                <span class="mp3-volpct" id="mp3-volpct">70</span>
+              </div>
             </div>
+            <div class="mp3-plate">YS-2000 ♡ pocket jukebox</div>
           </div>
         </div>
         <div class="window-footer">
-          <span>yongshan's mixtape · 17 tracks</span>
-          <span>music keeps playing while you wander ♡</span>
+          <span data-i18n="mp3.footer.l">yongshan's mixtape · 17 tracks</span>
+          <span data-i18n="mp3.footer.r">music keeps playing while you wander ♡</span>
         </div>
       </section>
 
@@ -1561,7 +1566,7 @@
       setTimeout(rescue, RESCUE_MS);
     })();
   </script>
-  <script src="i18n.js?v=88"></script>
-  <script src="script.js?v=272"></script>
+  <script src="i18n.js?v=273"></script>
+  <script src="script.js?v=273"></script>
 </body>
 </html>
