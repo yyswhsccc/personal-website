@@ -14113,7 +14113,7 @@ body.mp3-cinema .mini-danmaku { display: none !important; }
 .mp3-liner { position: absolute; overflow: hidden; display: none; pointer-events: none; }
 .mp3-liner-roll {
   position: absolute; top: 100%; left: 0; right: 0;
-  animation: mp3credits 34s linear infinite;
+  animation: mp3credits 100s linear 10s 1 both;   /* 10s overture, one slow climb, no encore */
   text-align: center; font-family: 'Courier New', monospace; font-size: 11.5px;
   line-height: 2.0; color: #ffb7e2; text-shadow: 1px 1px 0 #2a0a20;
 }
