@@ -22,6 +22,9 @@ window.YOS_I18N = {
     'mp3.liner.hue': '<p class="ln-t">liner notes: HUE</p>' +
       '<p>the song i keep on loop<br>while playing Risk of Rain -<br>as beautiful as the Wandering Vagrant,<br>that giant jellyfish.</p>' +
       '<p class="ln-end">huntress only, highest difficulty,<br>everything cleared.<br>waiting for the next DLC.</p>',
+    'mp3.liner.hua-tuo': '<p class="ln-t">liner notes: HUA TUO</p>' +
+      '<p>a very interesting MV.</p>' +
+      '<p class="ln-end">(Hua Tuo was the most famous physician<br>of China\u2019s Eastern Han dynasty.<br>he invented mafeisan,<br>the world\u2019s earliest surgical anesthetic,<br>some 1,600 years before the West.<br>however, i still believe that<br>when you are sick,<br>scraping the poison off your bone<br>is inadvisable.)</p>',
     'mp3.liner.die-for-you': '<p class="ln-t">liner notes: DIE FOR YOU</p>' +
       '<p>the official anthem of VALORANT\u2019s<br>first world championship -<br>Champions 2021.<br>Grabbitz sings it<br>like a duelist\u2019s vow.</p>' +
       '<p class="ln-end">it is my sister\u2019s favourite game.<br>she plays it frighteningly well.</p>',
@@ -423,6 +426,9 @@ window.YOS_I18N = {
     'mp3.liner.hue': '<p class="ln-t">notes : HUE</p>' +
       '<p>la chanson que je laisse en boucle<br>en jouant \u00e0 Risk of Rain -<br>aussi belle que le Wandering Vagrant,<br>cette m\u00e9duse g\u00e9ante.</p>' +
       '<p class="ln-end">chasseresse uniquement, difficult\u00e9 maximale,<br>tout termin\u00e9.<br>en attendant le prochain DLC.</p>',
+    'mp3.liner.hua-tuo': '<p class="ln-t">notes : HUA TUO</p>' +
+      '<p>un MV tr\u00e8s int\u00e9ressant.</p>' +
+      '<p class="ln-end">(Hua Tuo \u00e9tait le m\u00e9decin le plus c\u00e9l\u00e8bre<br>de la dynastie des Han orientaux.<br>il a invent\u00e9 le mafeisan,<br>premier anesth\u00e9sique chirurgical au monde,<br>environ 1 600 ans avant l\u2019Occident.<br>cependant, je persiste \u00e0 croire que,<br>quand on est malade,<br>se faire racler le poison de l\u2019os<br>n\u2019est pas recommand\u00e9.)</p>',
     'mp3.liner.die-for-you': '<p class="ln-t">notes : DIE FOR YOU</p>' +
       '<p>l\u2019hymne officiel du premier<br>championnat du monde de VALORANT -<br>Champions 2021.<br>Grabbitz le chante<br>comme un serment de duelliste.</p>' +
       '<p class="ln-end">c\u2019est le jeu pr\u00e9f\u00e9r\u00e9 de ma petite s\u0153ur.<br>elle y joue terriblement bien.</p>',
