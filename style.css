@@ -14061,3 +14061,22 @@ body.y2k-quake #top { animation: y2k-quake 0.34s steps(2) infinite; } /* quake t
   background: rgba(42, 10, 32, 0.95); color: #ffb7e2;
   font: 700 12px 'Courier New', monospace; letter-spacing: 0.05em;
 }
+
+#mp3-mini {
+  position: fixed; right: 14px; bottom: 60px; z-index: 3000;
+  display: flex; align-items: center; padding: 9px 14px;
+  background: linear-gradient(135deg, var(--pink-hot), var(--purple) 75%, var(--blue));
+  border: 3px solid var(--pink-deep); cursor: var(--cursor-heart);
+  box-shadow: 0 0 0 2px #fff, 4px 4px 0 rgba(90, 61, 110, 0.5);
+}
+#mp3-mini .mq { width: 184px; overflow: hidden; display: block; }
+#mp3-mini .mq-inner, .mp3-excuse.mq-on .mq-inner {
+  display: inline-flex; white-space: nowrap; animation: mp3marquee 8s linear infinite;
+}
+#mp3-mini .mq-inner > span, .mp3-excuse.mq-on .mq-inner > span { padding-right: 42px; }
+#mp3-mini .mq-inner > span {
+  color: #fff; font: 700 12px 'Courier New', monospace; letter-spacing: 0.05em;
+  text-shadow: 1px 1px 0 rgba(90, 61, 110, 0.85);
+}
+.mp3-excuse.mq-on { overflow: hidden; }
+@keyframes mp3marquee { to { transform: translateX(-50%); } }

@@ -39369,12 +39369,23 @@ document.addEventListener('DOMContentLoaded', () => {
       var im = p.querySelector('img');
       if (im) { im.style.animation = ''; }
     }
+    function setSignText(sg, txt) {
+      sg.classList.remove('mq-on');
+      sg.textContent = txt;
+      var maxW = Math.max(90, crowd.clientWidth - 12);
+      sg.style.maxWidth = maxW + 'px';
+      if (sg.scrollWidth > maxW) {                 // too long: the line scrolls instead of clipping
+        sg.classList.add('mq-on');
+        sg.innerHTML = '<span class="mq-inner"><span></span><span></span></span>';
+        [].forEach.call(sg.querySelectorAll('.mq-inner > span'), function (e4) { e4.textContent = txt; });
+      }
+    }
     function attachSign(pik, keyOrText, showMs, literal) {
       var sg = document.createElement('span');
       sg.className = 'mp3-excuse follow';
-      if (literal) { sg.textContent = keyOrText; }
-      else { sg.textContent = T(keyOrText); sg.setAttribute('data-i18n-live', keyOrText); }
+      if (!literal) { sg.setAttribute('data-i18n-live', keyOrText); }
       crowd.appendChild(sg);
+      setSignText(sg, literal ? keyOrText : T(keyOrText));
       function place() {
         if (!sg.isConnected || !pik.isConnected) return;
         var cw = crowd.clientWidth;
@@ -39546,6 +39557,7 @@ document.addEventListener('DOMContentLoaded', () => {
       mp3Center();
       updatePlayGlyph();
       if (tr.mv) { armBiliClock(); scheduleBiliEnd(tr); }
+      if (document.getElementById('mp3-mini')) { miniChip(true); }
       setTimeout(function () { ytCmd('setVolume', [Math.round(audio.volume * 100)]); }, 900);
       setTimeout(applyMute, 1200);
       return;
@@ -39554,6 +39566,7 @@ document.addEventListener('DOMContentLoaded', () => {
     vidPlaying = false;
     audio.muted = siteMuted();
     audio.src = 'assets/music/' + tr.f + '.mp3';
+    if (document.getElementById('mp3-mini')) { miniChip(true); }
     setTimeout(mp3Center, 60);
     setTimeout(updatePlayGlyph, 10);
     var p = audio.play();
@@ -39883,20 +39896,73 @@ document.addEventListener('DOMContentLoaded', () => {
     var curtain = screen.querySelector('.mp3-curtain');
     if (curtain) { curtain.textContent = T('mp3.intermission'); }
     [].forEach.call(win.querySelectorAll('[data-i18n-live]'), function (el2) {
-      el2.textContent = T(el2.getAttribute('data-i18n-live'));
+      var k2 = T(el2.getAttribute('data-i18n-live'));
+      if (el2.classList.contains('mp3-excuse')) {
+        var cr2 = el2.parentNode;
+        if (cr2 && typeof cr2.clientWidth === 'number') {
+          el2.classList.remove('mq-on');
+          el2.textContent = k2;
+          var mw2 = Math.max(90, cr2.clientWidth - 12);
+          el2.style.maxWidth = mw2 + 'px';
+          if (el2.scrollWidth > mw2) {
+            el2.classList.add('mq-on');
+            el2.innerHTML = '<span class="mq-inner"><span></span><span></span></span>';
+            [].forEach.call(el2.querySelectorAll('.mq-inner > span'), function (e5) { e5.textContent = k2; });
+          }
+        }
+      } else {
+        el2.textContent = k2;
+      }
     });
     // only a plain list (no live stage) may re-render wholesale
     if (!screen.querySelector('.mp3-theater') && !screen.querySelector('#mp3disc') && !curtain) { renderList(); }
   }).observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
 
   // boot on every open, however the window is opened
+  function stopAllMusic() {
+    audio.pause();
+    playing = false;
+    vidPlaying = false;
+    ceremonyBusy = false;
+    clearInterval(biliWatch);
+    var fr2 = screen.querySelector('.mp3-mv iframe');
+    if (fr2) { fr2.remove(); }
+    updatePlayGlyph();
+  }
+
+  function miniChip(on) {
+    var chip = document.getElementById('mp3-mini');
+    var tr5 = cur >= 0 && MP3_TRACKS[order[cur]];
+    if (!on || !tr5 || !(playing || vidPlaying)) { if (chip) chip.remove(); return; }
+    var txt = '\u266a ' + tr5.t + ' \u2014 ' + tr5.a;
+    if (!chip) {
+      chip = document.createElement('button');
+      chip.id = 'mp3-mini';
+      chip.setAttribute('aria-label', 'restore music player');
+      chip.innerHTML = '<span class="mq"><span class="mq-inner"><span></span><span></span></span></span>';
+      chip.addEventListener('click', function () {
+        var icon = document.querySelector('[data-window="win-mp3"]');
+        if (icon) { icon.click(); }
+      });
+      document.body.appendChild(chip);
+    }
+    [].forEach.call(chip.querySelectorAll('.mq-inner > span'), function (e3) { e3.textContent = txt; });
+  }
+
   var mp3WasOpen = false, mp3WasMax = false;
   new MutationObserver(function () {
     var open = !win.classList.contains('window-closed');
+    var mini = win.classList.contains('window-minimized');
     var max = win.classList.contains('window-maximized');
     if (open && !booted) { boot(); }
-    if (!open) { booted = false; bootCancel(); }   // music keeps playing; next open reshuffles
-    // recenter ONLY on open / maximize-flip - focus flips must never yank the list
+    if (!open) {                                   // closed = the music stops, right now
+      booted = false;
+      bootCancel();
+      stopAllMusic();
+      miniChip(false);
+    } else {
+      miniChip(mini);                              // minimized = now-playing chip, bottom right
+    }
     if ((open && !mp3WasOpen) || (open && max !== mp3WasMax)) {
       setTimeout(function () { sizeTheater(); mp3Center(); }, 60);
     }
