@@ -39125,6 +39125,8 @@ document.addEventListener('DOMContentLoaded', () => {
   var MODE_GLYPH = { shuffle: '\ud83d\udd00', loop: '\ud83d\udd02', order: '\ud83d\udd01' };
   var mode = 'shuffle';
   var vidPlaying = false;
+  var biliStart = 0;        // wall-clock bookkeeping: bilibili has no API,
+  var biliOffset = 0;       // so we time the reel ourselves for resume
 
   function updatePlayGlyph() {
     var b = document.getElementById('mp3-play');
@@ -39256,25 +39258,29 @@ document.addEventListener('DOMContentLoaded', () => {
       cv2.width = 13; cv2.height = 14;
       var g = cv2.getContext('2d');
       var POP = ['#ffd400', '#fff6d8', '#ffffff'];
-      // popcorn dome, overflowing
-      for (var ry = 0; ry < 5; ry++) {
-        for (var rx = 0; rx < 13; rx++) {
-          var dx2 = rx - 6, dome = Math.abs(dx2) <= (ry < 2 ? 3 + ry : 6 - Math.floor(ry / 3));
-          if (ry === 0 ? Math.abs(dx2) <= 2 : dome) {
-            g.fillStyle = POP[(rx * 7 + ry * 5) % 3];
-            g.fillRect(rx, ry, 1, 1);
+      cv2._draw = function (level) {                    // level 5 = full dome, 0 = eaten clean
+        g.clearRect(0, 0, 13, 14);
+        for (var ry = 0; ry < 5; ry++) {
+          if (ry < 5 - level) continue;                 // eaten from the top down
+          for (var rx = 0; rx < 13; rx++) {
+            var dx2 = rx - 6, dome = Math.abs(dx2) <= (ry < 2 ? 3 + ry : 6 - Math.floor(ry / 3));
+            if (ry === 0 ? Math.abs(dx2) <= 2 : dome) {
+              g.fillStyle = POP[(rx * 7 + ry * 5) % 3];
+              g.fillRect(rx, ry, 1, 1);
+            }
           }
         }
-      }
-      g.fillStyle = '#f0509f';
-      g.fillRect(0, 5, 13, 1);                          // rim
-      for (var by = 6; by < 14; by++) {                 // tapered striped bucket
-        var inset = Math.floor((by - 6) / 4);
-        for (var bx = inset; bx < 13 - inset; bx++) {
-          g.fillStyle = (bx % 4 < 2) ? '#f0509f' : '#ffffff';
-          g.fillRect(bx, by, 1, 1);
+        g.fillStyle = '#f0509f';
+        g.fillRect(0, 5, 13, 1);
+        for (var by = 6; by < 14; by++) {
+          var inset = Math.floor((by - 6) / 4);
+          for (var bx = inset; bx < 13 - inset; bx++) {
+            g.fillStyle = (bx % 4 < 2) ? '#f0509f' : '#ffffff';
+            g.fillRect(bx, by, 1, 1);
+          }
         }
-      }
+      };
+      cv2._draw(5);
       return cv2;
     }
     function walkStop(p) {
@@ -39283,12 +39289,22 @@ document.addEventListener('DOMContentLoaded', () => {
       var im = p.querySelector('img');
       if (im) { im.style.animation = ''; }
     }
-    function saySign(pct, text) {
+    function attachSign(pik, text, showMs) {
       var sg = document.createElement('span');
-      sg.className = 'mp3-excuse';
+      sg.className = 'mp3-excuse follow';
       sg.textContent = text;
-      sg.style.left = pct + '%';
       crowd.appendChild(sg);
+      function place() {
+        if (!sg.isConnected || !pik.isConnected) return;
+        var x = pik.offsetLeft + pik.offsetWidth / 2 - sg.offsetWidth / 2;
+        x = Math.max(4, Math.min(crowd.clientWidth - sg.offsetWidth - 4, x));
+        sg.style.left = x + 'px';
+      }
+      place();
+      var iv = setInterval(place, 150);
+      var vis = Math.max(500, showMs);
+      setTimeout(function () { sg.style.opacity = '0'; }, vis);
+      setTimeout(function () { clearInterval(iv); sg.remove(); }, vis + 700);
       return sg;
     }
     function leaveEvent() {
@@ -39301,11 +39317,9 @@ document.addEventListener('DOMContentLoaded', () => {
       var ev = r < 0.35 ? 'bathroom' : r < 0.6 ? 'phone' : r < 0.85 ? 'popcorn' : 'scared';
       var exitDur = ev === 'scared' ? 2.6 : 9 + Math.random() * 3;   // cinema shuffle, not a sprint
       function doExit() {
-        var sign1 = saySign(startL, T('mp3.ex.' + ev));
         walkStart(p, exitL);
         slideTo(p, exitL, exitDur);
-        slideTo(sign1, exitL, exitDur);
-        setTimeout(function () { sign1.remove(); }, exitDur * 1000 + 300);
+        attachSign(p, T('mp3.ex.' + ev), exitDur * 560);
         var gone = 5000 + Math.random() * 5000;
         setTimeout(function () {
           if (!crowd.isConnected) return;
@@ -39316,13 +39330,13 @@ document.addEventListener('DOMContentLoaded', () => {
           var backL = 8 + Math.random() * 80;
           if (lefts.length >= 2) {
             var i2 = Math.floor(Math.random() * (lefts.length - 1));
-            backL = (lefts[i2] + lefts[i2 + 1]) / 2;
+            backL = (lefts[i2] + lefts[i2 + 1]) / 2 + (Math.random() * 10 - 5);
           }
+          backL = Math.max(6, Math.min(90, backL));
           var retDur = ev === 'scared' ? 8 : 6.5;
-          var sign2 = saySign(exitL, T('mp3.ex.' + ev + 'back'));
           walkStart(p, backL);
           slideTo(p, backL, retDur);
-          slideTo(sign2, backL, retDur);
+          attachSign(p, T('mp3.ex.' + ev + 'back'), retDur * 1000 + 1200);
           setTimeout(function () { walkStop(p); }, retDur * 1000 + 100);
           if (ev === 'popcorn') {
             var bucket = makeBucket();
@@ -39340,14 +39354,32 @@ document.addEventListener('DOMContentLoaded', () => {
               setTimeout(function () { kn.remove(); }, 2100);
             }, 360);
             setTimeout(function () { clearInterval(spill); }, retDur * 1000 + 300);
-            setTimeout(function () { bucket.remove(); }, retDur * 1000 + 12000);
+            setTimeout(function () {                    // seated now: snack time
+              var lvl = 5;
+              var eat = setInterval(function () {
+                if (!crowd.isConnected || !bucket.isConnected) { clearInterval(eat); return; }
+                lvl--;
+                bucket._draw(lvl);
+                var bl2 = parseFloat(getComputedStyle(bucket).left) || 0;
+                var crumb = document.createElement('span');
+                crumb.className = 'mp3-kernel';
+                crumb.style.left = (bl2 + 14 + Math.random() * 26) + 'px';
+                crumb.style.background = ['#ffd400', '#fff6d8'][lvl % 2];
+                crowd.appendChild(crumb);
+                setTimeout(function () { crumb.remove(); }, 2100);
+                if (lvl <= 0) {
+                  clearInterval(eat);
+                  setTimeout(function () { bucket.remove(); }, 2200);   // empty bucket lingers, then gone
+                }
+              }, 2300);
+            }, retDur * 1000 + 900);
           }
           setTimeout(function () { sign2.remove(); }, retDur * 1000 + 1800);
         }, exitDur * 1000 + gone);
       }
       if (ev === 'phone') {                          // the phone rings first. of course it does.
-        var ring = saySign(startL, '\u260e\ufe0f!!');
-        setTimeout(function () { ring.remove(); doExit(); }, 1700);
+        attachSign(p, '\u260e\ufe0f!!', 1300);
+        setTimeout(doExit, 1800);
       } else { doExit(); }
     }
     (function audienceLife() {
@@ -39421,6 +39453,7 @@ document.addEventListener('DOMContentLoaded', () => {
       playing = false;
       vidPlaying = true;
       ytEndedFor = -1;
+      if (tr.mv) { biliStart = Date.now(); biliOffset = 0; }
       renderList();
       mp3Center();
       updatePlayGlyph();
@@ -39489,6 +39522,8 @@ document.addEventListener('DOMContentLoaded', () => {
         say.textContent = T('mp3.thisone');
         say.style.top = (row ? row.offsetTop - 6 : 0) + 'px';
         screen.appendChild(say);
+        say.style.left = Math.max(6, Math.min(screen.clientWidth - say.offsetWidth - 10,
+          Math.round(screen.clientWidth * 0.55))) + 'px';
         setTimeout(function () {
           say.remove();
           bar.remove();
@@ -39563,12 +39598,16 @@ document.addEventListener('DOMContentLoaded', () => {
       var mvBox = screen.querySelector('.mp3-mv');
       if (!mvBox) return;
       if (vidPlaying) {
+        biliOffset += (Date.now() - biliStart) / 1000;
         var fr = mvBox.querySelector('iframe');
         var wpx = fr ? fr.style.width : '', hpx = fr ? fr.style.height : '';
         mvBox.setAttribute('data-w', wpx); mvBox.setAttribute('data-h', hpx);
         mvBox.innerHTML = '<div class="mp3-curtain" style="width:' + wpx + ';height:' + hpx + '">' + T('mp3.intermission') + '</div>';
       } else {
-        mvBox.innerHTML = '<iframe src="' + mvBox.getAttribute('data-embed') + '" allowfullscreen allow="autoplay; fullscreen; encrypted-media"></iframe>';
+        biliStart = Date.now();
+        mvBox.innerHTML = '<iframe src="' + mvBox.getAttribute('data-embed') +
+          '&t=' + Math.max(0, Math.floor(biliOffset)) +
+          '" allowfullscreen allow="autoplay; fullscreen; encrypted-media"></iframe>';
         sizeTheater();
       }
       vidPlaying = !vidPlaying;
@@ -39675,9 +39714,19 @@ document.addEventListener('DOMContentLoaded', () => {
     bootLater(function () { renderList(); }, 3000 + n * 75);
   }
 
-  // language flips re-render the screen in place
+  // language flips translate in place - never rebuild playing media
   new MutationObserver(function () {
-    if (!win.classList.contains('window-closed') && order.length && cur !== undefined) { renderList(); }
+    if (win.classList.contains('window-closed') || !order.length) return;
+    var head = screen.querySelector('.mp3-head');
+    if (head) { head.textContent = T('mp3.head').replace('{n}', MP3_TRACKS.length); }
+    var pickLbl = screen.querySelector('.mp3-picking span');
+    if (pickLbl) { pickLbl.textContent = T(mode === 'shuffle' ? 'mp3.picking' : 'mp3.pickingnext'); }
+    var mb2 = document.getElementById('mp3-mode');
+    if (mb2) { mb2.title = T('mp3.mode.' + mode); mb2.setAttribute('aria-label', T('mp3.mode.' + mode)); }
+    var curtain = screen.querySelector('.mp3-curtain');
+    if (curtain) { curtain.textContent = T('mp3.intermission'); }
+    // only a plain list (no live stage) may re-render wholesale
+    if (!screen.querySelector('.mp3-theater') && !screen.querySelector('#mp3disc') && !curtain) { renderList(); }
   }).observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
 
   // boot on every open, however the window is opened

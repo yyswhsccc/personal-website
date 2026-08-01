@@ -13911,7 +13911,7 @@ body.y2k-quake #top { animation: y2k-quake 0.34s steps(2) infinite; } /* quake t
 .mp3-crowd .mp3-pik { bottom: 0; }
 .mp3-pik.run { animation: mp3run 5s linear; }
 .mp3-excuse {
-  position: absolute; bottom: 52px; background: #fff; color: #2a0a20;
+  position: absolute; bottom: 52px; background: #fff; color: #2a0a20; transition: left 0.18s linear, opacity 0.6s;
   border: 2px solid var(--pink-hot); box-shadow: 2px 2px 0 rgba(42, 10, 32, 0.5);
   padding: 2px 8px; font: 700 10.5px 'Courier New', monospace; white-space: nowrap;
 }
