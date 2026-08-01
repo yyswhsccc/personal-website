@@ -39092,7 +39092,7 @@ document.addEventListener('DOMContentLoaded', () => {
     { t: 'Hue', a: 'Dave Thomas Junior', f: 'hue', mv: 'BV1gW4y1t71X' },
     { t: '八重海', a: '三十年前，五十年后', f: 'ba-chong-hai', mv: 'BV1Rg6bBzEMU' },
     { t: 'Cocopops', a: 'Ivoris', f: 'cocopops', mv: 'BV16m4y1E7pF' },
-    { t: '地尽头', a: 'Shirley Kwan', f: 'di-jin-tou', yt: 'WjY-jjbqKJw' },
+    { t: '地尽头', a: 'Shirley Kwan', f: 'di-jin-tou', mv: 'BV1tt4y1B7iw' },
     { t: '烟霞', a: '容祖儿', f: 'yan-xia', yt: '2B-VtFNtGeY' },
     { t: '小雨', a: '黄龄', f: 'xiao-yu', yt: '9IUXP4542UQ' },
     { t: '反正我愿意', a: '福梦（FUMON）', f: 'fan-zheng-wo-yuan-yi', yt: 'eUXLFgLwz4k' },
@@ -39131,7 +39131,7 @@ document.addEventListener('DOMContentLoaded', () => {
   var BILI_DUR = {
     BV1vg41157eW: 121, BV1yY4y1H7iC: 215, BV1h64y1C7C7: 248, BV1gW4y1t71X: 247,
     BV1Rg6bBzEMU: 156, BV16m4y1E7pF: 160, BV1xmNzzHELp: 212, BV1SP4y1G7x3: 219,
-    BV1hZGbzJE7U: 205, BV1wysWebEdR: 331,
+    BV1hZGbzJE7U: 205, BV1wysWebEdR: 331, BV1tt4y1B7iw: 255,
   };
   var biliWatch = 0;
   var biliManual = false;
