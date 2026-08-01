@@ -39801,10 +39801,17 @@ document.addEventListener('DOMContentLoaded', () => {
   }).observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
 
   // boot on every open, however the window is opened
+  var mp3WasOpen = false, mp3WasMax = false;
   new MutationObserver(function () {
     var open = !win.classList.contains('window-closed');
+    var max = win.classList.contains('window-maximized');
     if (open && !booted) { boot(); }
     if (!open) { booted = false; bootCancel(); }   // music keeps playing; next open reshuffles
-    setTimeout(function () { sizeTheater(); mp3Center(); }, 60);
+    // recenter ONLY on open / maximize-flip - focus flips must never yank the list
+    if ((open && !mp3WasOpen) || (open && max !== mp3WasMax)) {
+      setTimeout(function () { sizeTheater(); mp3Center(); }, 60);
+    }
+    mp3WasOpen = open;
+    mp3WasMax = max;
   }).observe(win, { attributes: true, attributeFilter: ['class'] });
 })();
