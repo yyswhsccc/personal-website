@@ -39137,12 +39137,13 @@ document.addEventListener('DOMContentLoaded', () => {
   var biliWatch = 0;
   var biliManual = false;
 
-  function mp3Toast(text) {
+  function mp3Toast(key) {
     var bar2 = document.getElementById('mp3-vol');
     if (!bar2) return;
     var tip = document.createElement('span');
     tip.className = 'mp3-voltip';
-    tip.textContent = text;
+    tip.textContent = T(key);
+    tip.setAttribute('data-i18n-live', key);
     bar2.parentNode.appendChild(tip);
     setTimeout(function () { tip.remove(); }, 3400);
   }
@@ -39158,7 +39159,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!trm || !trm.mv || biliManual) return;
       biliManual = true;
       clearInterval(biliWatch);                    // estimator retires: no early cut, ever
-      mp3Toast(T('mp3.manual'));
+      mp3Toast('mp3.manual');
     }, 0);
   });
 
@@ -39368,10 +39369,11 @@ document.addEventListener('DOMContentLoaded', () => {
       var im = p.querySelector('img');
       if (im) { im.style.animation = ''; }
     }
-    function attachSign(pik, text, showMs) {
+    function attachSign(pik, keyOrText, showMs, literal) {
       var sg = document.createElement('span');
       sg.className = 'mp3-excuse follow';
-      sg.textContent = text;
+      if (literal) { sg.textContent = keyOrText; }
+      else { sg.textContent = T(keyOrText); sg.setAttribute('data-i18n-live', keyOrText); }
       crowd.appendChild(sg);
       function place() {
         if (!sg.isConnected || !pik.isConnected) return;
@@ -39405,7 +39407,7 @@ document.addEventListener('DOMContentLoaded', () => {
       function doExit() {
         walkStart(p, exitL);
         slideTo(p, exitL, exitDur);
-        attachSign(p, T('mp3.ex.' + ev), exitDur * 560);
+        attachSign(p, 'mp3.ex.' + ev, exitDur * 560);
         var gone = 5000 + Math.random() * 5000;
         setTimeout(function () {
           if (!crowd.isConnected) return;
@@ -39422,7 +39424,7 @@ document.addEventListener('DOMContentLoaded', () => {
           var retDur = ev === 'scared' ? 8 : 6.5;
           walkStart(p, backL);
           slideTo(p, backL, retDur);
-          attachSign(p, T('mp3.ex.' + ev + 'back'), retDur * 1000 + 1200);
+          attachSign(p, 'mp3.ex.' + ev + 'back', retDur * 1000 + 1200);
           setTimeout(function () { walkStop(p); }, retDur * 1000 + 100);
           if (ev === 'popcorn') {
             var bucket = makeBucket();
@@ -39464,7 +39466,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }, exitDur * 1000 + gone);
       }
       if (ev === 'phone') {                          // the phone rings first. of course it does.
-        attachSign(p, '\u260e\ufe0f!!', 1300);
+        attachSign(p, '\u260e\ufe0f!!', 1300, true);
         setTimeout(doExit, 1800);
       } else { doExit(); }
     }
@@ -39614,6 +39616,7 @@ document.addEventListener('DOMContentLoaded', () => {
         var say = document.createElement('span');
         say.className = 'mp3-callout';
         say.textContent = T('mp3.thisone');
+        say.setAttribute('data-i18n-live', 'mp3.thisone');
         say.style.top = (row ? row.offsetTop - 6 : 0) + 'px';
         screen.appendChild(say);
         say.style.left = Math.max(6, Math.min(screen.clientWidth - say.offsetWidth - 10,
@@ -39724,7 +39727,15 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         mvBox.innerHTML = '<iframe src="' + mvBox.getAttribute('data-embed') +
           '&t=' + Math.max(0, Math.floor(biliOffset - 0.6)) +
-          '" allowfullscreen allow="autoplay; fullscreen; encrypted-media"></iframe>';
+          '" allowfullscreen allow="autoplay; fullscreen; encrypted-media"></iframe>' +
+          '<div class="mp3-reload" data-i18n-live="mp3.rethread">' + T('mp3.rethread') +
+          '<span class="mp3-cursor"></span></div>';
+        var nfr = mvBox.querySelector('iframe');
+        var rov = mvBox.querySelector('.mp3-reload');
+        nfr.addEventListener('load', function () {
+          setTimeout(function () { if (rov && rov.isConnected) rov.remove(); }, 600);
+        });
+        setTimeout(function () { if (rov && rov.isConnected) rov.remove(); }, 7000);
         armBiliClock();
         biliOffset = Math.max(0, biliOffset - 0.6);   // the reel actually resumes here
         sizeTheater();
@@ -39776,6 +39787,7 @@ document.addEventListener('DOMContentLoaded', () => {
     var tip = document.createElement('span');
     tip.className = 'mp3-voltip';
     tip.textContent = T('mp3.bilivol');
+    tip.setAttribute('data-i18n-live', 'mp3.bilivol');
     volBar.parentNode.appendChild(tip);
     setTimeout(function () { tip.remove(); }, 3200);
   }
@@ -39870,6 +39882,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (mb2) { mb2.title = T('mp3.mode.' + mode); mb2.setAttribute('aria-label', T('mp3.mode.' + mode)); }
     var curtain = screen.querySelector('.mp3-curtain');
     if (curtain) { curtain.textContent = T('mp3.intermission'); }
+    [].forEach.call(win.querySelectorAll('[data-i18n-live]'), function (el2) {
+      el2.textContent = T(el2.getAttribute('data-i18n-live'));
+    });
     // only a plain list (no live stage) may re-render wholesale
     if (!screen.querySelector('.mp3-theater') && !screen.querySelector('#mp3disc') && !curtain) { renderList(); }
   }).observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
