@@ -39080,22 +39080,22 @@ document.addEventListener('DOMContentLoaded', () => {
 // ————————————————— mp3_player.exe: yongshan's mixtape —————————————————
 (function () {
   var MP3_TRACKS = [
-    { t: '太聪明', a: '陈绮贞', f: 'tai-cong-ming' },
-    { t: '青山绿野', a: '渡边雅二', f: 'qing-shan-lv-ye' },
+    { t: '太聪明', a: '陈绮贞', f: 'tai-cong-ming', yt: '33rdx577PxY' },
+    { t: '青山绿野', a: '渡边雅二', f: 'qing-shan-lv-ye', yt: 'NzyMtd-InMA' },
     { t: '罪恶的银盘', a: 'NickTheWorld', f: 'zui-e-de-yin-pan' },
     { t: '我叫玛丽苏', a: 'Bobeep', f: 'wo-jiao-ma-li-su', mv: 'BV1vg41157eW' },
     { t: '水滴', a: 'Anti-General', f: 'shui-di' },
-    { t: '你啊你啊', a: '魏如萱', f: 'ni-a-ni-a' },
+    { t: '你啊你啊', a: '魏如萱', f: 'ni-a-ni-a', yt: 'M1tmYdeh6ZM' },
     { t: '华佗', a: 'GAI周延', f: 'hua-tuo', yt: 'ucQlUohMArg' },
-    { t: '初雪', a: 'EXO', f: 'chu-xue' },
+    { t: '初雪', a: 'EXO', f: 'chu-xue', yt: 'aWk3nbW96LU' },
     { t: 'Hue', a: 'Dave Thomas Junior', f: 'hue' },
     { t: '八重海', a: '三十年前，五十年后', f: 'ba-chong-hai' },
     { t: 'Cocopops', a: 'Ivoris', f: 'cocopops' },
-    { t: '地尽头', a: 'Shirley Kwan', f: 'di-jin-tou' },
-    { t: '烟霞', a: '容祖儿', f: 'yan-xia' },
-    { t: '小雨', a: '黄龄', f: 'xiao-yu' },
-    { t: '反正我愿意', a: '福梦（FUMON）', f: 'fan-zheng-wo-yuan-yi' },
-    { t: '锦鲤抄', a: '银临', f: 'jin-li-chao' },
+    { t: '地尽头', a: 'Shirley Kwan', f: 'di-jin-tou', yt: 'WjY-jjbqKJw' },
+    { t: '烟霞', a: '容祖儿', f: 'yan-xia', yt: '2B-VtFNtGeY' },
+    { t: '小雨', a: '黄龄', f: 'xiao-yu', yt: '9IUXP4542UQ' },
+    { t: '反正我愿意', a: '福梦（FUMON）', f: 'fan-zheng-wo-yuan-yi', yt: 'eUXLFgLwz4k' },
+    { t: '锦鲤抄', a: '银临', f: 'jin-li-chao', yt: 'YIsYi1Hd73w' },
     { t: '以剑试情长', a: '青龙捕快/镜予歌', f: 'yi-jian-shi-qing-chang' },
   ];
   // liner notes: yongshan will supply these per track (key = f)
@@ -39141,7 +39141,7 @@ document.addEventListener('DOMContentLoaded', () => {
             '&autoplay=1&danmaku=0&high_quality=1" allowfullscreen allow="autoplay; fullscreen"></iframe></div>';
         } else if (tr.yt) {
           html += '<div class="mp3-mv"><iframe src="https://www.youtube.com/embed/' + tr.yt +
-            '?autoplay=1" allowfullscreen allow="autoplay; fullscreen; encrypted-media"></iframe></div>';
+            '?autoplay=1&enablejsapi=1" allowfullscreen allow="autoplay; fullscreen; encrypted-media"></iframe></div>';
         }
         var note = MP3_NOTES[tr.f] || T('mp3.note.soon');
         html += '<div class="mp3-note">' + note + '</div>';
@@ -39155,10 +39155,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function playCur() {
     var tr = MP3_TRACKS[order[cur]];
-    if (tr.mv || tr.yt) {              // MV specials: video plays in-screen
+    if (tr.mv || tr.yt) {              // video sources play in-screen
       audio.pause();
       playing = false;
+      ytPaused = false;
       renderList();
+      setTimeout(function () { ytCmd('setVolume', [Math.round(audio.volume * 100)]); }, 900);
       return;
     }
     tr._missing = false;
@@ -39189,10 +39191,22 @@ document.addEventListener('DOMContentLoaded', () => {
     if (el && el.scrollIntoView) el.scrollIntoView({ block: 'nearest' });
   });
 
+  function ytCmd(func, args) {
+    var f = screen.querySelector('.mp3-mv iframe');
+    if (f && f.contentWindow) {
+      f.contentWindow.postMessage(JSON.stringify({ event: 'command', func: func, args: args || [] }), '*');
+    }
+  }
+  var ytPaused = false;
   document.getElementById('mp3-play').addEventListener('click', function () {
     if (cur < 0) { cur = 0; playCur(); return; }
     var tr = MP3_TRACKS[order[cur]];
-    if (tr.mv) return;                 // video owns its own controls
+    if (tr.yt) {
+      ytCmd(ytPaused ? 'playVideo' : 'pauseVideo');
+      ytPaused = !ytPaused;
+      return;
+    }
+    if (tr.mv) return;                 // bilibili owns its own controls
     if (playing) { audio.pause(); playing = false; }
     else { var p = audio.play(); if (p && p.catch) p.catch(function () {}); playing = true; }
     renderList();
@@ -39225,6 +39239,7 @@ document.addEventListener('DOMContentLoaded', () => {
     for (var i = 0; i < SEGS; i++) { segs[i].className = 'seg' + (i < lit ? ' on' : ''); }
     volPct.textContent = Math.round(v * 100);
     volBar.setAttribute('aria-valuenow', Math.round(v * 100));
+    if (typeof ytCmd === 'function') { ytCmd('setVolume', [Math.round(v * 100)]); }
   }
   volBar.addEventListener('click', function (e) {
     var r = volBar.getBoundingClientRect();
