@@ -39250,6 +39250,33 @@ document.addEventListener('DOMContentLoaded', () => {
       var im = p.querySelector('img');
       if (im) { im.style.animation = 'pik-bob 0.42s steps(2) infinite'; }   // the site's own gait
     }
+    function makeBucket() {
+      var cv2 = document.createElement('canvas');
+      cv2.className = 'mp3-bucket';
+      cv2.width = 13; cv2.height = 14;
+      var g = cv2.getContext('2d');
+      var POP = ['#ffd400', '#fff6d8', '#ffffff'];
+      // popcorn dome, overflowing
+      for (var ry = 0; ry < 5; ry++) {
+        for (var rx = 0; rx < 13; rx++) {
+          var dx2 = rx - 6, dome = Math.abs(dx2) <= (ry < 2 ? 3 + ry : 6 - Math.floor(ry / 3));
+          if (ry === 0 ? Math.abs(dx2) <= 2 : dome) {
+            g.fillStyle = POP[(rx * 7 + ry * 5) % 3];
+            g.fillRect(rx, ry, 1, 1);
+          }
+        }
+      }
+      g.fillStyle = '#f0509f';
+      g.fillRect(0, 5, 13, 1);                          // rim
+      for (var by = 6; by < 14; by++) {                 // tapered striped bucket
+        var inset = Math.floor((by - 6) / 4);
+        for (var bx = inset; bx < 13 - inset; bx++) {
+          g.fillStyle = (bx % 4 < 2) ? '#f0509f' : '#ffffff';
+          g.fillRect(bx, by, 1, 1);
+        }
+      }
+      return cv2;
+    }
     function walkStop(p) {
       p.style.animation = '';
       p.style.transform = '';
@@ -39298,13 +39325,22 @@ document.addEventListener('DOMContentLoaded', () => {
           slideTo(sign2, backL, retDur);
           setTimeout(function () { walkStop(p); }, retDur * 1000 + 100);
           if (ev === 'popcorn') {
-            var prop = document.createElement('span');
-            prop.className = 'mp3-prop';
-            prop.textContent = '\ud83c\udf7f';
-            prop.style.left = exitL + '%';
-            crowd.appendChild(prop);
-            slideTo(prop, backL, retDur);
-            setTimeout(function () { prop.remove(); }, retDur * 1000 + 12000);
+            var bucket = makeBucket();
+            bucket.style.left = exitL + '%';
+            crowd.appendChild(bucket);
+            slideTo(bucket, backL, retDur);
+            var spill = setInterval(function () {          // popcorn rains the whole walk home
+              if (!crowd.isConnected || !bucket.isConnected) { clearInterval(spill); return; }
+              var bl = parseFloat(getComputedStyle(bucket).left) || 0;
+              var kn = document.createElement('span');
+              kn.className = 'mp3-kernel';
+              kn.style.left = (bl + 8 + Math.random() * 40) + 'px';
+              kn.style.background = ['#ffd400', '#fff6d8', '#ffffff'][Math.floor(Math.random() * 3)];
+              crowd.appendChild(kn);
+              setTimeout(function () { kn.remove(); }, 2100);
+            }, 360);
+            setTimeout(function () { clearInterval(spill); }, retDur * 1000 + 300);
+            setTimeout(function () { bucket.remove(); }, retDur * 1000 + 12000);
           }
           setTimeout(function () { sign2.remove(); }, retDur * 1000 + 1800);
         }, exitDur * 1000 + gone);

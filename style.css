@@ -14017,3 +14017,18 @@ body.y2k-quake #top { animation: y2k-quake 0.34s steps(2) infinite; } /* quake t
 }
 
 .mp3-prop { position: absolute; bottom: 46px; font-size: 16px; pointer-events: none; text-shadow: 1px 1px 0 #2a0a20; }
+
+.mp3-bucket {
+  position: absolute; bottom: 2px; width: 52px; height: 56px; z-index: 4;
+  image-rendering: pixelated; pointer-events: none;
+  filter: drop-shadow(0 0 2px #ffffff) drop-shadow(0 0 6px rgba(255, 255, 255, 0.7));
+}
+.mp3-kernel {
+  position: absolute; bottom: 46px; width: 5px; height: 5px; pointer-events: none;
+  animation: mp3kfall 2s ease-in forwards;
+}
+@keyframes mp3kfall {
+  0% { opacity: 1; transform: translateY(0); }
+  70% { opacity: 1; transform: translate(4px, 36px); }
+  100% { opacity: 0; transform: translate(6px, 42px); }
+}
