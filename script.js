@@ -39128,6 +39128,16 @@ document.addEventListener('DOMContentLoaded', () => {
   var biliStart = 0;        // wall-clock bookkeeping: bilibili has no API,
   var biliOffset = 0;       // so we time the reel ourselves for resume
 
+  function armBiliClock() {
+    biliStart = Date.now() + 2500;               // pessimistic until the iframe reports in
+    var bfr = screen.querySelector('.mp3-mv iframe');
+    if (bfr) {
+      bfr.addEventListener('load', function () {
+        biliStart = Date.now() + 600;            // loaded: ~0.6s spin-up before frames roll
+      });
+    }
+  }
+
   function updatePlayGlyph() {
     var b = document.getElementById('mp3-play');
     if (!b) return;
@@ -39453,15 +39463,18 @@ document.addEventListener('DOMContentLoaded', () => {
       playing = false;
       vidPlaying = true;
       ytEndedFor = -1;
-      if (tr.mv) { biliStart = Date.now(); biliOffset = 0; }
+      if (tr.mv) { biliOffset = 0; }
       renderList();
       mp3Center();
       updatePlayGlyph();
+      if (tr.mv) { armBiliClock(); }
       setTimeout(function () { ytCmd('setVolume', [Math.round(audio.volume * 100)]); }, 900);
+      setTimeout(applyMute, 1200);
       return;
     }
     tr._missing = false;
     vidPlaying = false;
+    audio.muted = siteMuted();
     audio.src = 'assets/music/' + tr.f + '.mp3';
     setTimeout(mp3Center, 60);
     setTimeout(updatePlayGlyph, 10);
@@ -39585,6 +39598,30 @@ document.addEventListener('DOMContentLoaded', () => {
       f.contentWindow.postMessage(JSON.stringify({ event: 'command', func: func, args: args || [] }), '*');
     }
   }
+  var sndBtn = document.getElementById('btn-sound-toggle');
+  var mutedCurtain = false;
+  function siteMuted() { return !!(sndBtn && sndBtn.textContent === '\ud83d\udd07'); }
+  function applyMute() {
+    var m = siteMuted();
+    audio.muted = m;
+    var tr3 = cur >= 0 && MP3_TRACKS[order[cur]];
+    if (!tr3) return;
+    if (tr3.yt) { ytCmd(m ? 'mute' : 'unMute'); }
+    if (tr3.mv) {
+      var mvBox2 = screen.querySelector('.mp3-mv');
+      if (!mvBox2) return;
+      var hasCurtain = !!mvBox2.querySelector('.mp3-curtain');
+      if (m && vidPlaying && !hasCurtain) {          // silence = intermission (bilibili has no mute API)
+        document.getElementById('mp3-play').click();
+        mutedCurtain = true;
+      } else if (!m && mutedCurtain && hasCurtain) { // unmute reopens right where it left off
+        document.getElementById('mp3-play').click();
+        mutedCurtain = false;
+      }
+    }
+  }
+  if (sndBtn) { sndBtn.addEventListener('click', function () { setTimeout(applyMute, 0); }); }
+
   document.getElementById('mp3-play').addEventListener('click', function () {
     if (cur < 0) { cur = 0; playCur(); return; }
     var tr = MP3_TRACKS[order[cur]];
@@ -39598,16 +39635,17 @@ document.addEventListener('DOMContentLoaded', () => {
       var mvBox = screen.querySelector('.mp3-mv');
       if (!mvBox) return;
       if (vidPlaying) {
-        biliOffset += (Date.now() - biliStart) / 1000;
+        biliOffset += Math.max(0, (Date.now() - biliStart) / 1000);
         var fr = mvBox.querySelector('iframe');
         var wpx = fr ? fr.style.width : '', hpx = fr ? fr.style.height : '';
         mvBox.setAttribute('data-w', wpx); mvBox.setAttribute('data-h', hpx);
         mvBox.innerHTML = '<div class="mp3-curtain" style="width:' + wpx + ';height:' + hpx + '">' + T('mp3.intermission') + '</div>';
       } else {
-        biliStart = Date.now();
         mvBox.innerHTML = '<iframe src="' + mvBox.getAttribute('data-embed') +
-          '&t=' + Math.max(0, Math.floor(biliOffset)) +
+          '&t=' + Math.max(0, Math.floor(biliOffset - 0.6)) +
           '" allowfullscreen allow="autoplay; fullscreen; encrypted-media"></iframe>';
+        armBiliClock();
+        biliOffset = Math.max(0, biliOffset - 0.6);   // the reel actually resumes here
         sizeTheater();
       }
       vidPlaying = !vidPlaying;
