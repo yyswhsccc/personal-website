@@ -39245,13 +39245,20 @@ document.addEventListener('DOMContentLoaded', () => {
         var piks = crowd.querySelectorAll('.mp3-pik');
         var p3 = piks[Math.floor(Math.random() * piks.length)];
         if (p3) {
+          var keepDur = p3.style.animationDuration;
           p3.classList.add('run');
+          p3.style.animation = 'mp3run 5s linear';   // inline so the hop's inline duration cannot shrink the dash
           var say = document.createElement('span');
           say.className = 'mp3-excuse run';
           say.textContent = T('mp3.excuse');
           say.style.left = p3.style.left;
           crowd.appendChild(say);
-          setTimeout(function () { p3.classList.remove('run'); say.remove(); }, 5200);
+          setTimeout(function () {
+            p3.classList.remove('run');
+            p3.style.animation = '';
+            p3.style.animationDuration = keepDur;
+            say.remove();
+          }, 5200);
         }
         troublemaker();
       }, 8000 + Math.random() * 7000);
