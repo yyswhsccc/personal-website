@@ -499,6 +499,32 @@ export default {
       return hiShow(ctx);
     }
 
+    /* ---- GET /bili?bvid=BVxxx — video duration lookup (the player cannot ask bilibili itself) ---- */
+    if (req.method === 'GET' && path === '/bili') {
+      const bvid = (url.searchParams.get('bvid') || '').trim();
+      if (!/^BV[A-Za-z0-9]{5,14}$/.test(bvid)) {
+        return json(req, 400, { error: 'bad bvid' });
+      }
+      const ck = 'bili:' + bvid;
+      let dur = await env.WALL.get(ck);
+      if (dur === null || dur === '0') {
+        try {
+          const r = await fetch('https://api.bilibili.com/x/web-interface/view?bvid=' + bvid, {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+              'Referer': 'https://www.bilibili.com/',
+            },
+          });
+          const j = await r.json();
+          dur = j && j.code === 0 && j.data && j.data.duration ? String(j.data.duration) : '0';
+        } catch (e) {
+          dur = '0';
+        }
+        if (dur !== '0') { ctx.waitUntil(env.WALL.put(ck, dur, { expirationTtl: 604800 })); }
+      }
+      return json(req, 200, { bvid, duration: parseInt(dur, 10) || 0 });
+    }
+
     /* ---- GET /sh?c=<cmd> — slime-docker, the shell that is a curl ---- */
     if (req.method === 'GET' && (path === '/sh' || path.startsWith('/sh/'))) {
       const who = await ipHash(req, env);

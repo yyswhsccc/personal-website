@@ -39128,6 +39128,46 @@ document.addEventListener('DOMContentLoaded', () => {
   var biliStart = 0;        // wall-clock bookkeeping: bilibili has no API,
   var biliOffset = 0;       // so we time the reel ourselves for resume
 
+  var BILI_DUR = {
+    BV1vg41157eW: 121, BV1yY4y1H7iC: 215, BV1h64y1C7C7: 248, BV1gW4y1t71X: 247,
+    BV1Rg6bBzEMU: 156, BV16m4y1E7pF: 160, BV1xmNzzHELp: 212, BV1SP4y1G7x3: 219,
+    BV1hZGbzJE7U: 205, BV1wysWebEdR: 331,
+  };
+  var biliWatch = 0;
+
+  function scheduleBiliEnd(trb) {
+    clearInterval(biliWatch);
+    var dur = BILI_DUR[trb.mv] || 0;
+    if (!dur) {                                    // future tracks: ask the wall-worker (best effort)
+      fetch('https://yongshanos-wall.yongshanos.workers.dev/bili?bvid=' + trb.mv)
+        .then(function (r5) { return r5.json(); })
+        .then(function (j5) {
+          if (j5 && j5.duration > 0) { BILI_DUR[trb.mv] = j5.duration; scheduleBiliEnd(trb); }
+        })
+        .catch(function () {});
+      return;
+    }
+    biliWatch = setInterval(function () {
+      var trNow = cur >= 0 && MP3_TRACKS[order[cur]];
+      if (!trNow || trNow.mv !== trb.mv) { clearInterval(biliWatch); return; }
+      var played = biliOffset + (vidPlaying ? Math.max(0, (Date.now() - biliStart) / 1000) : 0);
+      if (played < dur - 0.5) return;
+      clearInterval(biliWatch);
+      if (mode === 'loop') {                       // encore, forever
+        biliOffset = 0;
+        var mvB2 = screen.querySelector('.mp3-mv');
+        if (mvB2) {
+          mvB2.innerHTML = '<iframe src="' + mvB2.getAttribute('data-embed') +
+            '&t=0" allowfullscreen allow="autoplay; fullscreen; encrypted-media"></iframe>';
+          armBiliClock();
+          sizeTheater();
+        }
+        return;
+      }
+      startCeremony();
+    }, 2000);
+  }
+
   function armBiliClock() {
     biliStart = Date.now() + 2500;               // pessimistic until the iframe reports in
     var bfr = screen.querySelector('.mp3-mv iframe');
@@ -39474,7 +39514,7 @@ document.addEventListener('DOMContentLoaded', () => {
       renderList();
       mp3Center();
       updatePlayGlyph();
-      if (tr.mv) { armBiliClock(); }
+      if (tr.mv) { armBiliClock(); scheduleBiliEnd(tr); }
       setTimeout(function () { ytCmd('setVolume', [Math.round(audio.volume * 100)]); }, 900);
       setTimeout(applyMute, 1200);
       return;
@@ -39516,6 +39556,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (ceremonyBusy || order.length < 2) return;
     ceremonyBusy = true;
     vidPlaying = false;
+    clearInterval(biliWatch);
+    audio.pause();
+    playing = false;
+    var oldFr = screen.querySelector('.mp3-mv iframe');
+    if (oldFr) { oldFr.remove(); }                 // the projector rests while the piks deliberate
     updatePlayGlyph();
     var bar = document.createElement('div');
     bar.className = 'mp3-picking';
@@ -39671,8 +39716,8 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   document.getElementById('mp3-next').addEventListener('click', function () {
     if (!order.length) return;
-    cur = (cur + 1) % order.length;
-    playCur();
+    if (cur < 0) { cur = 0; playCur(); return; }
+    startCeremony();                               // the piks handle every changeover
   });
   var modeBtn = document.getElementById('mp3-mode');
   modeBtn.addEventListener('click', function () {
