@@ -9,6 +9,9 @@ window.YOS_I18N = {
   en: {
     'file.mp3': 'mp3_player.exe',
     'mp3.intermission': 'intermission \u2661',
+    'mp3.picking': 'the piks are picking a random song\u2026',
+    'mp3.pickingnext': 'the piks fetch the next song\u2026',
+    'mp3.thisone': 'this one!!',
     'mp3.ex.bathroom': 'sorry!! bathroom run - coming through, coming through!!',
     'mp3.ex.bathroomback': "coming through, coming through - i'm back i'm back \u2661",
     'mp3.ex.phone': 'sorry!! phone call!! (it was on vibrate i swear)',
@@ -376,6 +379,9 @@ window.YOS_I18N = {
   fr: {
     'file.mp3': 'mp3_player.exe',
     'mp3.intermission': 'entracte \u2661',
+    'mp3.picking': 'les piks choisissent une chanson au hasard\u2026',
+    'mp3.pickingnext': 'les piks vont chercher la chanson suivante\u2026',
+    'mp3.thisone': 'celle-l\u00e0 !!',
     'mp3.ex.bathroom': 'pardon !! pause pipi - laissez passer, laissez passer !!',
     'mp3.ex.bathroomback': 'laissez passer, laissez passer - je suis revenu \u2661',
     'mp3.ex.phone': 'pardon !! le t\u00e9l\u00e9phone !! (en vibreur, promis)',

@@ -14032,3 +14032,16 @@ body.y2k-quake #top { animation: y2k-quake 0.34s steps(2) infinite; } /* quake t
   70% { opacity: 1; transform: translate(4px, 36px); }
   100% { opacity: 0; transform: translate(6px, 42px); }
 }
+
+.mp3-picking {
+  position: sticky; top: 0; z-index: 6; display: flex; align-items: center; gap: 10px;
+  background: rgba(42, 10, 32, 0.94); border-bottom: 2px solid var(--pink-hot);
+  padding: 7px 10px; color: #ffb7e2; font-weight: 700; font-size: 12px;
+}
+.mp3-picking .mp3-pik.mini { position: static; width: 22px; }
+.mp3-picking .mp3-pik.mini img { width: 22px; }
+.mp3-callout {
+  position: absolute; left: 58%; z-index: 6; background: #fff; color: #2a0a20;
+  border: 2px solid var(--pink-hot); box-shadow: 2px 2px 0 rgba(42, 10, 32, 0.5);
+  padding: 2px 8px; font: 700 11px 'Courier New', monospace; white-space: nowrap;
+}

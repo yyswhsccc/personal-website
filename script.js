@@ -39420,6 +39420,7 @@ document.addEventListener('DOMContentLoaded', () => {
       audio.pause();
       playing = false;
       vidPlaying = true;
+      ytEndedFor = -1;
       renderList();
       mp3Center();
       updatePlayGlyph();
@@ -39444,8 +39445,96 @@ document.addEventListener('DOMContentLoaded', () => {
     renderList();
   });
   audio.addEventListener('ended', function () {
-    if (mode !== 'loop') { cur = (cur + 1) % order.length; }
-    playCur();
+    if (mode === 'loop') { playCur(); return; }
+    startCeremony();
+  });
+
+  function glide(to, ms, done) {
+    var from = screen.scrollTop, t0 = Date.now();
+    var iv = setInterval(function () {
+      var f = Math.min(1, (Date.now() - t0) / ms);
+      screen.scrollTop = from + (to - from) * f;
+      if (f >= 1) { clearInterval(iv); if (done) done(); }
+    }, 40);
+  }
+
+  var ceremonyBusy = false;
+  function startCeremony() {
+    if (ceremonyBusy || order.length < 2) return;
+    ceremonyBusy = true;
+    vidPlaying = false;
+    updatePlayGlyph();
+    var bar = document.createElement('div');
+    bar.className = 'mp3-picking';
+    var lbl = document.createElement('span');
+    lbl.textContent = T(mode === 'shuffle' ? 'mp3.picking' : 'mp3.pickingnext');
+    bar.appendChild(lbl);
+    for (var k = 0; k < 2; k++) {
+      var mp = makePik(9);
+      mp.classList.add('mini');
+      var mim = mp.querySelector('img');
+      if (mim) { mim.style.animation = 'pik-bob 0.42s steps(2) infinite'; }
+      bar.appendChild(mp);
+    }
+    screen.insertBefore(bar, screen.firstChild);
+    var nextI = (cur + 1) % order.length;
+    var maxS = Math.max(0, screen.scrollHeight - screen.clientHeight);
+    function land() {
+      var rows = screen.querySelectorAll('.mp3-track');
+      var row = rows[nextI];
+      var target = row ? Math.max(0, row.offsetTop - screen.clientHeight / 2) : 0;
+      glide(target, 700, function () {
+        var say = document.createElement('span');
+        say.className = 'mp3-callout';
+        say.textContent = T('mp3.thisone');
+        say.style.top = (row ? row.offsetTop - 6 : 0) + 'px';
+        screen.appendChild(say);
+        setTimeout(function () {
+          say.remove();
+          bar.remove();
+          ceremonyBusy = false;
+          cur = nextI;
+          playCur();
+        }, 1000);
+      });
+    }
+    if (mode === 'shuffle') {                      // up, down, hesitating…
+      var hops = [Math.random(), Math.random(), Math.random()].map(function (r2) { return Math.round(r2 * maxS); });
+      glide(hops[0], 800, function () {
+        setTimeout(function () {
+          glide(hops[1], 700, function () {
+            setTimeout(function () {
+              glide(hops[2], 600, function () { setTimeout(land, 350); });
+            }, 420);
+          });
+        }, 420);
+      });
+    } else {
+      setTimeout(land, 250);                       // in-order: straight to business
+    }
+  }
+
+  // youtube tells us when the reel runs out
+  var ytEndedFor = -1;
+  window.addEventListener('message', function (ev2) {
+    if (typeof ev2.data !== 'string') return;
+    if (ev2.data.indexOf('playerState') < 0) return;
+    var d2;
+    try { d2 = JSON.parse(ev2.data); } catch (e2) { return; }
+    var st = d2 && d2.info && d2.info.playerState;
+    if (st !== 0) return;
+    if (cur < 0 || ytEndedFor === cur) return;
+    var tr2 = MP3_TRACKS[order[cur]];
+    if (!tr2 || !tr2.yt) return;
+    if (mode === 'loop') {
+      ytCmd('seekTo', [0, true]);
+      ytCmd('playVideo');
+      vidPlaying = true;
+      updatePlayGlyph();
+      return;
+    }
+    ytEndedFor = cur;
+    startCeremony();
   });
 
   screen.addEventListener('click', function (e) {
