@@ -17,7 +17,7 @@ window.YOS_I18N = {
       '<p>we mistook it for a holy relic of peace<br>and sent two thousand warships<br>in parade formation.<br>the Doomsday Battle took thirty minutes.</p>' +
       '<p class="ln-q">Ding Yi: "silly children\u2026 run!"<br>Zhang Beihai: "it\u2019s okay. it\u2019s all the same."</p>' +
       '<p class="ln-q">weakness and ignorance<br>are not barriers to survival.<br>arrogance is.</p>' +
-      '<p>this bassline is the doppler<br>of the probe passing the fleet.<br>Anti-General later scored<br>the Three-Body animation -<br>this droplet fell two years before it.</p>' +
+      '<p>Anti-General\u2019s dark-trap 808s<br>are the doppler of the probe<br>passing the fleet,<br>Lu Nan\u2019s guzheng the last signal<br>from two thousand ships.<br>he later scored<br>the Three-Body animation -<br>this droplet fell two years before it.</p>' +
       '<p class="ln-end">advance. advance.<br>by any means necessary.</p>',
     'mp3.picking': 'the piks are picking a random song\u2026',
     'mp3.pickingnext': 'the piks fetch the next song\u2026',
@@ -405,7 +405,7 @@ window.YOS_I18N = {
       '<p>nous l\u2019avons prise pour une relique de paix :<br>deux mille vaisseaux<br>en formation de parade.<br>la Bataille du Jugement dernier<br>a dur\u00e9 trente minutes.</p>' +
       '<p class="ln-q">Ding Yi : \u00ab courez, petits idiots\u2026 courez ! \u00bb<br>Zhang Beihai : \u00ab ce n\u2019est rien. c\u2019est pareil. \u00bb</p>' +
       '<p class="ln-q">la faiblesse et l\u2019ignorance<br>ne condamnent pas \u00e0 dispara\u00eetre.<br>l\u2019arrogance, si.</p>' +
-      '<p>cette basse, c\u2019est l\u2019effet doppler<br>de la sonde fr\u00f4lant la flotte.<br>Anti-General signera plus tard<br>la musique de l\u2019animation Three-Body -<br>cette goutte est tomb\u00e9e deux ans avant.</p>' +
+      '<p>les 808 dark-trap d\u2019Anti-General,<br>c\u2019est l\u2019effet doppler de la sonde<br>fr\u00f4lant la flotte \u2014<br>le guzheng de Lu Nan,<br>le dernier signal de deux mille vaisseaux.<br>il signera plus tard<br>la musique de l\u2019animation Three-Body -<br>cette goutte est tomb\u00e9e deux ans avant.</p>' +
       '<p class="ln-end">en avant. en avant.<br>par tous les moyens.</p>',
     'mp3.picking': 'les piks choisissent une chanson au hasard\u2026',
     'mp3.pickingnext': 'les piks vont chercher la chanson suivante\u2026',
