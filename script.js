@@ -39100,6 +39100,7 @@ document.addEventListener('DOMContentLoaded', () => {
     { t: 'Die For You', a: 'Grabbitz', f: 'die-for-you', mv: 'BV1SP4y1G7x3' },
     { t: '\u30c9\u30fc\u30ca\u30c4\u30db\u30fc\u30eb', a: '\u7c73\u6d25\u7384\u5e08', f: 'donut-hole', mv: 'BV1hZGbzJE7U' },
     { t: 'Blue Apple', a: '\u67ff\u539f\u6731\u7f8e', f: 'blue-apple', mv: 'BV1wysWebEdR' },
+    { t: 'Sweet Dream', a: 'yongshan \u00b7 original \u2661', f: 'sweet-dream' },
   ];
   // liner notes: yongshan will supply these per track (key = f)
   var MP3_NOTES = {};
