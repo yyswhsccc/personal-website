@@ -39738,6 +39738,7 @@ document.addEventListener('DOMContentLoaded', () => {
       var row = rows[nextI];
       var target = row ? Math.max(0, row.offsetTop - screen.clientHeight / 2) : 0;
       glide(target, 700, function () {
+        if (row) { row.classList.add('picked'); }    // the pink spotlight lands first
         var say = document.createElement('span');
         say.className = 'mp3-callout';
         say.textContent = T('mp3.thisone');
@@ -39751,8 +39752,8 @@ document.addEventListener('DOMContentLoaded', () => {
           bar.remove();
           ceremonyBusy = false;
           cur = nextI;
-          playCur();
-        }, 1000);
+          playCur();                                  // ...and only then the needle drops
+        }, 1200);
       });
     }
     if (mode === 'shuffle') {                      // up, down, hesitating…
@@ -40078,6 +40079,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if ((open && !mp3WasOpen) || (open && max !== mp3WasMax)) {
       setTimeout(function () { sizeTheater(); mp3Center(); }, 60);
     }
+    // cinema courtesy: fullscreen music = no popups, no chatter
+    document.body.classList.toggle('mp3-cinema', open && max && !mini);
     mp3WasOpen = open;
     mp3WasMax = max;
   }).observe(win, { attributes: true, attributeFilter: ['class'] });
