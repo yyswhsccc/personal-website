@@ -20,10 +20,10 @@ window.YOS_I18N = {
       '<p>she forgave me, of course.</p>' +
       '<p class="ln-end">this is the wordless version.<br>it is complete.<br>(some dreams refuse subtitles.)</p>',
     'mp3.liner.hue': '<p class="ln-t">liner notes: HUE</p>' +
-      '<p>the song i keep on loop<br>in Risk of Rain.<br>rain planets go well<br>with quiet pianos.</p>' +
-      '<p>it is beautiful the way<br>the Wandering Vagrant is beautiful:<br>an enormous jellyfish<br>drifting over the valley,<br>meaning no harm,<br>glowing anyway.</p>' +
-      '<p>i only ever play Huntress.<br>monsoon skies, every world cleared -<br>so now i drift too,<br>waiting for the next DLC.</p>' +
-      '<p class="ln-end">some storms<br>you learn to float in.</p>',
+      '<p>on the rain planet<br>i keep one quiet piano on loop.</p>' +
+      '<p>somewhere above the valley<br>a jellyfish the size of a cathedral<br>drifts past, glowing,<br>in no hurry to be a boss fight.<br>the game calls it the Wandering Vagrant.<br>i call it this song, floating.</p>' +
+      '<p>the huntress never stops moving -<br>that is her whole art -<br>but under monsoon skies,<br>with every world gone quiet,<br>even she looks up.</p>' +
+      '<p class="ln-end">we are both just waiting<br>for the weather to change.</p>',
     'mp3.liner.die-for-you': '<p class="ln-t">liner notes: DIE FOR YOU</p>' +
       '<p>the official anthem of VALORANT\u2019s<br>first world championship -<br>Champions 2021.<br>Grabbitz sings it<br>like a duelist\u2019s vow.</p>' +
       '<p>it is my sister\u2019s favourite game.<br>she plays it frighteningly well.<br>i have never installed it.</p>' +
@@ -425,10 +425,10 @@ window.YOS_I18N = {
       '<p>elle m\u2019a pardonn\u00e9, bien s\u00fbr.</p>' +
       '<p class="ln-end">voici la version sans paroles.<br>elle est compl\u00e8te.<br>(certains r\u00eaves refusent les sous-titres.)</p>',
     'mp3.liner.hue': '<p class="ln-t">notes : HUE</p>' +
-      '<p>la chanson que je laisse en boucle<br>dans Risk of Rain.<br>les plan\u00e8tes de pluie<br>vont bien aux pianos tranquilles.</p>' +
-      '<p>elle est belle comme<br>le Wandering Vagrant est beau :<br>une m\u00e9duse immense<br>qui d\u00e9rive au-dessus de la vall\u00e9e,<br>sans vouloir de mal,<br>lumineuse quand m\u00eame.</p>' +
-      '<p>je ne joue que la Chasseresse.<br>ciels de mousson, tous les mondes finis -<br>alors je d\u00e9rive moi aussi,<br>en attendant le prochain DLC.</p>' +
-      '<p class="ln-end">certaines temp\u00eates,<br>on apprend \u00e0 y flotter.</p>',
+      '<p>sur la plan\u00e8te de pluie<br>je laisse un piano tranquille en boucle.</p>' +
+      '<p>quelque part au-dessus de la vall\u00e9e<br>une m\u00e9duse grande comme une cath\u00e9drale<br>passe en d\u00e9rivant, lumineuse,<br>sans h\u00e2te d\u2019\u00eatre un boss.<br>le jeu l\u2019appelle le Wandering Vagrant.<br>moi, j\u2019appelle \u00e7a cette chanson, qui flotte.</p>' +
+      '<p>la chasseresse ne s\u2019arr\u00eate jamais -<br>c\u2019est tout son art -<br>mais sous les ciels de mousson,<br>quand tous les mondes se sont tus,<br>m\u00eame elle l\u00e8ve les yeux.</p>' +
+      '<p class="ln-end">nous attendons toutes les deux<br>que le temps change.</p>',
     'mp3.liner.die-for-you': '<p class="ln-t">notes : DIE FOR YOU</p>' +
       '<p>l\u2019hymne officiel du premier<br>championnat du monde de VALORANT -<br>Champions 2021.<br>Grabbitz le chante<br>comme un serment de duelliste.</p>' +
       '<p>c\u2019est le jeu pr\u00e9f\u00e9r\u00e9 de ma petite s\u0153ur.<br>elle y joue terriblement bien.<br>moi, je ne l\u2019ai jamais install\u00e9.</p>' +
