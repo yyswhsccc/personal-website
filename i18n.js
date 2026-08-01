@@ -26,9 +26,7 @@ window.YOS_I18N = {
       '<p class="ln-end">we are both just waiting<br>for the weather to change.</p>',
     'mp3.liner.die-for-you': '<p class="ln-t">liner notes: DIE FOR YOU</p>' +
       '<p>the official anthem of VALORANT\u2019s<br>first world championship -<br>Champions 2021.<br>Grabbitz sings it<br>like a duelist\u2019s vow.</p>' +
-      '<p>it is my sister\u2019s favourite game.<br>she plays it frighteningly well.<br>i have never installed it.</p>' +
-      '<p>some anthems reach you<br>from a stadium in Berlin.<br>this one reached me<br>through the wall<br>of the next room, on repeat.</p>' +
-      '<p class="ln-end">she would clutch the round for me.<br>i would die for you.</p>',
+      '<p class="ln-end">it is my sister\u2019s favourite game.<br>she plays it frighteningly well.</p>',
     'mp3.liner.shui-di': '<p class="ln-t">observation notes: THE DROPLET</p>' +
       '<p>a surface of absolute smoothness,<br>at absolute zero -<br>it refused to leave mankind<br>even a scratch.</p>' +
       '<p>we mistook it for a holy relic of peace<br>and sent two thousand warships<br>in parade formation.<br>the Doomsday Battle took thirty minutes.</p>' +
@@ -431,9 +429,7 @@ window.YOS_I18N = {
       '<p class="ln-end">nous attendons toutes les deux<br>que le temps change.</p>',
     'mp3.liner.die-for-you': '<p class="ln-t">notes : DIE FOR YOU</p>' +
       '<p>l\u2019hymne officiel du premier<br>championnat du monde de VALORANT -<br>Champions 2021.<br>Grabbitz le chante<br>comme un serment de duelliste.</p>' +
-      '<p>c\u2019est le jeu pr\u00e9f\u00e9r\u00e9 de ma petite s\u0153ur.<br>elle y joue terriblement bien.<br>moi, je ne l\u2019ai jamais install\u00e9.</p>' +
-      '<p>certains hymnes t\u2019arrivent<br>d\u2019un stade \u00e0 Berlin.<br>celui-ci m\u2019est arriv\u00e9<br>\u00e0 travers le mur<br>de la chambre d\u2019\u00e0 c\u00f4t\u00e9, en boucle.</p>' +
-      '<p class="ln-end">elle clutcherait la manche pour moi.<br>i would die for you.</p>',
+      '<p class="ln-end">c\u2019est le jeu pr\u00e9f\u00e9r\u00e9 de ma petite s\u0153ur.<br>elle y joue terriblement bien.</p>',
     'mp3.liner.shui-di': '<p class="ln-t">notes d\u2019observation : LA GOUTTE</p>' +
       '<p>une surface d\u2019un lisse absolu,<br>au z\u00e9ro absolu -<br>elle n\u2019a pas laiss\u00e9 \u00e0 l\u2019humanit\u00e9<br>la moindre rayure.</p>' +
       '<p>nous l\u2019avons prise pour une relique de paix :<br>deux mille vaisseaux<br>en formation de parade.<br>la Bataille du Jugement dernier<br>a dur\u00e9 trente minutes.</p>' +
