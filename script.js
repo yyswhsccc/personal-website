@@ -39097,6 +39097,7 @@ document.addEventListener('DOMContentLoaded', () => {
     { t: '反正我愿意', a: '福梦（FUMON）', f: 'fan-zheng-wo-yuan-yi', yt: 'eUXLFgLwz4k' },
     { t: '锦鲤抄', a: '银临', f: 'jin-li-chao', yt: 'YIsYi1Hd73w' },
     { t: '以剑试情长', a: '青龙捕快/镜予歌', f: 'yi-jian-shi-qing-chang', mv: 'BV1xmNzzHELp' },
+    { t: 'Die For You', a: 'Grabbitz', f: 'die-for-you', mv: 'BV1SP4y1G7x3' },
   ];
   // liner notes: yongshan will supply these per track (key = f)
   var MP3_NOTES = {};
