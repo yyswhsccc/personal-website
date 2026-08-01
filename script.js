@@ -39153,6 +39153,15 @@ document.addEventListener('DOMContentLoaded', () => {
     screen.innerHTML = html;
   }
 
+  function mp3Center() {
+    var mv = screen.querySelector('.mp3-mv');
+    var row = screen.querySelector('.mp3-track.on');
+    var target = mv || row;
+    if (!target) return;
+    var top = target.offsetTop - Math.max(0, (screen.clientHeight - target.offsetHeight) / 2);
+    screen.scrollTop = Math.max(0, top);
+  }
+
   function playCur() {
     var tr = MP3_TRACKS[order[cur]];
     if (tr.mv || tr.yt) {              // video sources play in-screen
@@ -39160,11 +39169,13 @@ document.addEventListener('DOMContentLoaded', () => {
       playing = false;
       ytPaused = false;
       renderList();
+      mp3Center();
       setTimeout(function () { ytCmd('setVolume', [Math.round(audio.volume * 100)]); }, 900);
       return;
     }
     tr._missing = false;
     audio.src = 'assets/music/' + tr.f + '.mp3';
+    setTimeout(mp3Center, 60);
     var p = audio.play();
     if (p && p.catch) { p.catch(function () {}); }
     playing = true;
@@ -39187,8 +39198,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!row) return;
     cur = parseInt(row.getAttribute('data-i'), 10);
     playCur();
-    var el = screen.querySelector('.mp3-track.on');
-    if (el && el.scrollIntoView) el.scrollIntoView({ block: 'nearest' });
   });
 
   function ytCmd(func, args) {
