@@ -39082,21 +39082,21 @@ document.addEventListener('DOMContentLoaded', () => {
   var MP3_TRACKS = [
     { t: '太聪明', a: '陈绮贞', f: 'tai-cong-ming', yt: '33rdx577PxY' },
     { t: '青山绿野', a: '渡边雅二', f: 'qing-shan-lv-ye', yt: 'NzyMtd-InMA' },
-    { t: '罪恶的银盘', a: 'NickTheWorld', f: 'zui-e-de-yin-pan' },
+    { t: '罪恶的银盘', a: 'NickTheWorld', f: 'zui-e-de-yin-pan', mv: 'BV1yY4y1H7iC' },
     { t: '我叫玛丽苏', a: 'Bobeep', f: 'wo-jiao-ma-li-su', mv: 'BV1vg41157eW' },
-    { t: '水滴', a: 'Anti-General', f: 'shui-di' },
+    { t: '水滴', a: 'Anti-General', f: 'shui-di', mv: 'BV1h64y1C7C7' },
     { t: '你啊你啊', a: '魏如萱', f: 'ni-a-ni-a', yt: 'M1tmYdeh6ZM' },
     { t: '华佗', a: 'GAI周延', f: 'hua-tuo', yt: 'ucQlUohMArg' },
     { t: '初雪', a: 'EXO', f: 'chu-xue', yt: 'aWk3nbW96LU' },
-    { t: 'Hue', a: 'Dave Thomas Junior', f: 'hue' },
-    { t: '八重海', a: '三十年前，五十年后', f: 'ba-chong-hai' },
-    { t: 'Cocopops', a: 'Ivoris', f: 'cocopops' },
+    { t: 'Hue', a: 'Dave Thomas Junior', f: 'hue', mv: 'BV1gW4y1t71X' },
+    { t: '八重海', a: '三十年前，五十年后', f: 'ba-chong-hai', mv: 'BV1Rg6bBzEMU' },
+    { t: 'Cocopops', a: 'Ivoris', f: 'cocopops', mv: 'BV16m4y1E7pF' },
     { t: '地尽头', a: 'Shirley Kwan', f: 'di-jin-tou', yt: 'WjY-jjbqKJw' },
     { t: '烟霞', a: '容祖儿', f: 'yan-xia', yt: '2B-VtFNtGeY' },
     { t: '小雨', a: '黄龄', f: 'xiao-yu', yt: '9IUXP4542UQ' },
     { t: '反正我愿意', a: '福梦（FUMON）', f: 'fan-zheng-wo-yuan-yi', yt: 'eUXLFgLwz4k' },
     { t: '锦鲤抄', a: '银临', f: 'jin-li-chao', yt: 'YIsYi1Hd73w' },
-    { t: '以剑试情长', a: '青龙捕快/镜予歌', f: 'yi-jian-shi-qing-chang' },
+    { t: '以剑试情长', a: '青龙捕快/镜予歌', f: 'yi-jian-shi-qing-chang', mv: 'BV1xmNzzHELp' },
   ];
   // liner notes: yongshan will supply these per track (key = f)
   var MP3_NOTES = {};
