@@ -13910,6 +13910,12 @@ body.y2k-quake #top { animation: y2k-quake 0.34s steps(2) infinite; } /* quake t
 .mp3-crowd { position: absolute; left: 0; right: 0; bottom: 2px; height: 54px; pointer-events: none; }
 .mp3-crowd .mp3-pik { bottom: 0; }
 .mp3-pik.run { animation: mp3run 5s linear; }
+.mp3-excuse {
+  position: absolute; bottom: 52px; background: #fff; color: #2a0a20;
+  border: 2px solid var(--pink-hot); box-shadow: 2px 2px 0 rgba(42, 10, 32, 0.5);
+  padding: 2px 8px; font: 700 10.5px 'Courier New', monospace; white-space: nowrap;
+}
+.mp3-excuse.run { animation: mp3run 5s linear; }
 @keyframes mp3run { 0% { transform: translateX(0); } 100% { transform: translateX(var(--runw, 900px)); } }
 .mp3-sing {
   position: absolute; bottom: 46px; color: #ffb7e2; font-size: 15px; font-weight: 700;

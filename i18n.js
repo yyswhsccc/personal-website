@@ -9,6 +9,7 @@ window.YOS_I18N = {
   en: {
     'file.mp3': 'mp3_player.exe',
     'mp3.intermission': 'intermission \u2661',
+    'mp3.excuse': 'sorry!! bathroom run - coming through, coming through!!',
     'mp3.mode.shuffle': 'shuffle play',
     'mp3.mode.loop': 'repeat one',
     'mp3.mode.order': 'in order',
@@ -368,6 +369,7 @@ window.YOS_I18N = {
   fr: {
     'file.mp3': 'mp3_player.exe',
     'mp3.intermission': 'entracte \u2661',
+    'mp3.excuse': 'pardon !! pause pipi - laissez passer, laissez passer !!',
     'mp3.mode.shuffle': 'lecture al\u00e9atoire',
     'mp3.mode.loop': 'r\u00e9p\u00e9ter le titre',
     'mp3.mode.order': "dans l'ordre",

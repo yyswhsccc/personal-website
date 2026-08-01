@@ -39242,7 +39242,12 @@ document.addEventListener('DOMContentLoaded', () => {
         var p3 = piks[Math.floor(Math.random() * piks.length)];
         if (p3) {
           p3.classList.add('run');
-          setTimeout(function () { p3.classList.remove('run'); }, 5200);
+          var say = document.createElement('span');
+          say.className = 'mp3-excuse run';
+          say.textContent = T('mp3.excuse');
+          say.style.left = p3.style.left;
+          crowd.appendChild(say);
+          setTimeout(function () { p3.classList.remove('run'); say.remove(); }, 5200);
         }
         troublemaker();
       }, 8000 + Math.random() * 7000);
