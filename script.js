@@ -39098,6 +39098,7 @@ document.addEventListener('DOMContentLoaded', () => {
     { t: '锦鲤抄', a: '银临', f: 'jin-li-chao', yt: 'YIsYi1Hd73w' },
     { t: '以剑试情长', a: '青龙捕快/镜予歌', f: 'yi-jian-shi-qing-chang', mv: 'BV1xmNzzHELp' },
     { t: 'Die For You', a: 'Grabbitz', f: 'die-for-you', mv: 'BV1SP4y1G7x3' },
+    { t: '\u30c9\u30fc\u30ca\u30c4\u30db\u30fc\u30eb', a: '\u7c73\u6d25\u7384\u5e08', f: 'donut-hole', mv: 'BV1hZGbzJE7U' },
   ];
   // liner notes: yongshan will supply these per track (key = f)
   var MP3_NOTES = {};
@@ -39144,8 +39145,9 @@ document.addEventListener('DOMContentLoaded', () => {
           html += '<div class="mp3-mv"><iframe src="https://www.youtube.com/embed/' + tr.yt +
             '?autoplay=1&enablejsapi=1" allowfullscreen allow="autoplay; fullscreen; encrypted-media"></iframe></div>';
         }
-        var note = MP3_NOTES[tr.f] || T('mp3.note.soon');
-        html += '<div class="mp3-note">' + note + '</div>';
+        if (MP3_NOTES[tr.f]) {
+          html += '<div class="mp3-note">' + MP3_NOTES[tr.f] + '</div>';
+        }
         if (tr._missing) {
           html += '<div class="mp3-note">' + T('mp3.tape').replace('{f}', tr.f) + '</div>';
         }
