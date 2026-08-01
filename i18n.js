@@ -8,6 +8,10 @@ window.YOS_I18N = {
 
   en: {
     'file.mp3': 'mp3_player.exe',
+    'mp3.intermission': 'intermission \u2661',
+    'mp3.mode.shuffle': 'shuffle play',
+    'mp3.mode.loop': 'repeat one',
+    'mp3.mode.order': 'in order',
     'mp3.boot1': 'YS-2000 BIOS v19.100 \u2661',
     'mp3.boot2': 'memory check: 1.44MB of feelings \u2026 ok',
     'mp3.boot3': 'waking the pocket jukebox \u2026',
@@ -363,6 +367,10 @@ window.YOS_I18N = {
 
   fr: {
     'file.mp3': 'mp3_player.exe',
+    'mp3.intermission': 'entracte \u2661',
+    'mp3.mode.shuffle': 'lecture al\u00e9atoire',
+    'mp3.mode.loop': 'r\u00e9p\u00e9ter le titre',
+    'mp3.mode.order': "dans l'ordre",
     'mp3.boot1': 'YS-2000 BIOS v19.100 \u2661',
     'mp3.boot2': 'test m\u00e9moire : 1.44MB de sentiments \u2026 ok',
     'mp3.boot3': 'r\u00e9veil du juke-box de poche \u2026',
