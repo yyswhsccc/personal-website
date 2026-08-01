@@ -39086,7 +39086,7 @@ document.addEventListener('DOMContentLoaded', () => {
     { t: '我叫玛丽苏', a: 'Bobeep', f: 'wo-jiao-ma-li-su', mv: 'BV1vg41157eW' },
     { t: '水滴', a: 'Anti-General', f: 'shui-di' },
     { t: '你啊你啊', a: '魏如萱', f: 'ni-a-ni-a' },
-    { t: '华佗', a: 'GAI周延', f: 'hua-tuo' },
+    { t: '华佗', a: 'GAI周延', f: 'hua-tuo', yt: 'ucQlUohMArg' },
     { t: '初雪', a: 'EXO', f: 'chu-xue' },
     { t: 'Hue', a: 'Dave Thomas Junior', f: 'hue' },
     { t: '八重海', a: '三十年前，五十年后', f: 'ba-chong-hai' },
@@ -39134,6 +39134,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (tr.mv) {
           html += '<div class="mp3-mv"><iframe src="https://player.bilibili.com/player.html?bvid=' + tr.mv +
             '&autoplay=1&danmaku=0&high_quality=1" allowfullscreen allow="autoplay; fullscreen"></iframe></div>';
+        } else if (tr.yt) {
+          html += '<div class="mp3-mv"><iframe src="https://www.youtube.com/embed/' + tr.yt +
+            '?autoplay=1" allowfullscreen allow="autoplay; fullscreen; encrypted-media"></iframe></div>';
         }
         var note = MP3_NOTES[tr.f] || PLACEHOLDER;
         html += '<div class="mp3-note">' + note + '</div>';
@@ -39147,7 +39150,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function playCur() {
     var tr = MP3_TRACKS[order[cur]];
-    if (tr.mv) {                       // the MV special: video plays in-screen
+    if (tr.mv || tr.yt) {              // MV specials: video plays in-screen
       audio.pause();
       playing = false;
       renderList();
