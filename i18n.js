@@ -9,6 +9,7 @@ window.YOS_I18N = {
   en: {
     'file.mp3': 'mp3_player.exe',
     'mp3.intermission': 'intermission \u2661',
+    'mp3.bilivol': 'bilibili mixes its own volume - use the speaker inside the player \u2661',
     'mp3.picking': 'the piks are picking a random song\u2026',
     'mp3.pickingnext': 'the piks fetch the next song\u2026',
     'mp3.thisone': 'this one!!',
@@ -379,6 +380,7 @@ window.YOS_I18N = {
   fr: {
     'file.mp3': 'mp3_player.exe',
     'mp3.intermission': 'entracte \u2661',
+    'mp3.bilivol': 'bilibili g\u00e8re son volume - utilise le haut-parleur du lecteur \u2661',
     'mp3.picking': 'les piks choisissent une chanson au hasard\u2026',
     'mp3.pickingnext': 'les piks vont chercher la chanson suivante\u2026',
     'mp3.thisone': 'celle-l\u00e0 !!',

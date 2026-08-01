@@ -39203,7 +39203,7 @@ document.addEventListener('DOMContentLoaded', () => {
     var row = screen.querySelector('.mp3-track.on');
     var avail = screen.clientHeight - (row ? row.offsetHeight : 0) - 10;
     th.style.height = Math.max(230, avail) + 'px';
-    var CROWD = 56;
+    var CROWD = 84;                                // room for piks AND their signs
     var ifr = th.querySelector('iframe');
     var maxH = th.clientHeight - CROWD - 18;
     var maxW = th.clientWidth * 0.96;
@@ -39306,8 +39306,15 @@ document.addEventListener('DOMContentLoaded', () => {
       crowd.appendChild(sg);
       function place() {
         if (!sg.isConnected || !pik.isConnected) return;
-        var x = pik.offsetLeft + pik.offsetWidth / 2 - sg.offsetWidth / 2;
-        x = Math.max(4, Math.min(crowd.clientWidth - sg.offsetWidth - 4, x));
+        var cw = crowd.clientWidth;
+        var pc = pik.offsetLeft + pik.offsetWidth / 2;
+        if (pc < -6 || pc > cw + 6) {              // speaker off-frame: the sign waits unseen
+          sg.style.visibility = 'hidden';
+          return;
+        }
+        sg.style.visibility = 'visible';
+        var x = pc - sg.offsetWidth / 2;
+        x = Math.max(4, Math.min(cw - sg.offsetWidth - 4, x));
         sg.style.left = x + 'px';
       }
       place();
@@ -39687,8 +39694,20 @@ document.addEventListener('DOMContentLoaded', () => {
       volBar.appendChild(sgel);
     }
   })();
+  var volCurtain = false;
+  var biliTipAt = 0;
+  function biliVolTip() {
+    if (Date.now() - biliTipAt < 6000) return;
+    biliTipAt = Date.now();
+    var tip = document.createElement('span');
+    tip.className = 'mp3-voltip';
+    tip.textContent = T('mp3.bilivol');
+    volBar.parentNode.appendChild(tip);
+    setTimeout(function () { tip.remove(); }, 3200);
+  }
   function setVol(v) {
     v = Math.max(0, Math.min(1, v));
+    if (v < 0.045) { v = 0; }                       // the left edge really means zero
     audio.volume = v;
     var lit = Math.round(v * SEGS);
     var segs = volBar.children;
@@ -39696,10 +39715,24 @@ document.addEventListener('DOMContentLoaded', () => {
     volPct.textContent = Math.round(v * 100);
     volBar.setAttribute('aria-valuenow', Math.round(v * 100));
     if (typeof ytCmd === 'function') { ytCmd('setVolume', [Math.round(v * 100)]); }
+    var trv = cur >= 0 && MP3_TRACKS[order[cur]];
+    if (trv && trv.mv) {                            // bilibili: zero = curtain, partial = honesty
+      var mvB = screen.querySelector('.mp3-mv');
+      var hasC = mvB && mvB.querySelector('.mp3-curtain');
+      if (v === 0 && vidPlaying && !hasC) {
+        document.getElementById('mp3-play').click();
+        volCurtain = true;
+      } else if (v > 0 && volCurtain && hasC) {
+        document.getElementById('mp3-play').click();
+        volCurtain = false;
+      } else if (v > 0 && vidPlaying) {
+        biliVolTip();
+      }
+    }
   }
   volBar.addEventListener('click', function (e) {
     var r = volBar.getBoundingClientRect();
-    setVol((e.clientX - r.left) / r.width);
+    setVol((e.clientX - r.left - 5) / Math.max(1, r.width - 10));
   });
   volBar.addEventListener('keydown', function (e) {
     if (e.key === 'ArrowRight' || e.key === 'ArrowUp') { setVol(audio.volume + 0.1); e.preventDefault(); }

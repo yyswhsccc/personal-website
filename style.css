@@ -13907,8 +13907,8 @@ body.y2k-quake #top { animation: y2k-quake 0.34s steps(2) infinite; } /* quake t
 }
 .mp3-mv { border: 2px solid var(--pink-hot); background: #000; }
 .mp3-mv iframe { display: block; border: 0; }
-.mp3-crowd { position: absolute; left: 0; right: 0; bottom: 2px; height: 54px; pointer-events: none; }
-.mp3-crowd .mp3-pik { bottom: 0; }
+.mp3-crowd { position: absolute; left: 0; right: 0; bottom: 2px; height: 82px; pointer-events: none; }
+.mp3-crowd .mp3-pik { bottom: 0; top: auto; }
 .mp3-pik.run { animation: mp3run 5s linear; }
 .mp3-excuse {
   position: absolute; bottom: 52px; background: #fff; color: #2a0a20; transition: left 0.18s linear, opacity 0.6s;
@@ -14045,3 +14045,11 @@ body.y2k-quake #top { animation: y2k-quake 0.34s steps(2) infinite; } /* quake t
   border: 2px solid var(--pink-hot); box-shadow: 2px 2px 0 rgba(42, 10, 32, 0.5);
   padding: 2px 8px; font: 700 11px 'Courier New', monospace; white-space: nowrap;
 }
+
+.mp3-voltip {
+  position: absolute; right: 8px; bottom: calc(100% + 8px); z-index: 7;
+  background: #fff; color: #2a0a20; border: 2px solid var(--pink-hot);
+  box-shadow: 2px 2px 0 rgba(42, 10, 32, 0.5); padding: 3px 8px;
+  font: 700 10.5px 'Courier New', monospace; white-space: nowrap;
+}
+.mp3-volwrap { position: relative; }
