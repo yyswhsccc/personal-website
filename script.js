@@ -39134,9 +39134,36 @@ document.addEventListener('DOMContentLoaded', () => {
     BV1hZGbzJE7U: 205, BV1wysWebEdR: 331,
   };
   var biliWatch = 0;
+  var biliManual = false;
+
+  function mp3Toast(text) {
+    var bar2 = document.getElementById('mp3-vol');
+    if (!bar2) return;
+    var tip = document.createElement('span');
+    tip.className = 'mp3-voltip';
+    tip.textContent = text;
+    bar2.parentNode.appendChild(tip);
+    setTimeout(function () { tip.remove(); }, 3400);
+  }
+
+  // side-channel: clicking inside a cross-origin iframe blurs US and focuses IT.
+  // we cannot know WHAT was clicked - so any touch hands the wheel to the human.
+  window.addEventListener('blur', function () {
+    setTimeout(function () {
+      var ae = document.activeElement;
+      if (!ae || ae.tagName !== 'IFRAME') return;
+      if (ae !== screen.querySelector('.mp3-mv iframe')) return;
+      var trm = cur >= 0 && MP3_TRACKS[order[cur]];
+      if (!trm || !trm.mv || biliManual) return;
+      biliManual = true;
+      clearInterval(biliWatch);                    // estimator retires: no early cut, ever
+      mp3Toast(T('mp3.manual'));
+    }, 0);
+  });
 
   function scheduleBiliEnd(trb) {
     clearInterval(biliWatch);
+    if (biliManual) return;
     var dur = BILI_DUR[trb.mv] || 0;
     if (!dur) {                                    // future tracks: ask the wall-worker (best effort)
       fetch('https://yongshanos-wall.yongshanos.workers.dev/bili?bvid=' + trb.mv)
@@ -39511,7 +39538,7 @@ document.addEventListener('DOMContentLoaded', () => {
       playing = false;
       vidPlaying = true;
       ytEndedFor = -1;
-      if (tr.mv) { biliOffset = 0; }
+      if (tr.mv) { biliOffset = 0; biliManual = false; }
       renderList();
       mp3Center();
       updatePlayGlyph();
