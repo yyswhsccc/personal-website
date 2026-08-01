@@ -39111,7 +39111,7 @@ document.addEventListener('DOMContentLoaded', () => {
   var MP3_NOTES = {};
 
   // cinema-side rolling credits, per track (key = f) - text lives in i18n
-  var MP3_LINERS = { 'shui-di': 1 };
+  var MP3_LINERS = { 'shui-di': 1, 'sweet-dream': 1 };
 
   function mp3Lang() { return String(document.documentElement.lang || 'en').indexOf('fr') === 0 ? 'fr' : 'en'; }
   function T(key) {
@@ -39262,7 +39262,9 @@ document.addEventListener('DOMContentLoaded', () => {
           html += '<div class="mp3-note">' + MP3_NOTES[tr.f] + '</div>';
         }
         if (!tr.mv && !tr.yt && !tr._missing) {
-          html += '<div class="mp3-disc" id="mp3disc"><div class="mp3-vinyl"></div></div>';
+          html += '<div class="mp3-disc" id="mp3disc"><div class="mp3-vinyl"></div>' +
+            (MP3_LINERS[tr.f] ? '<div class="mp3-liner"><div class="mp3-liner-roll" data-liner-key="mp3.liner.' + tr.f + '">' + T('mp3.liner.' + tr.f) + '</div></div>' : '') +
+            '</div>';
         }
         if (tr._missing) {
           html += '<div class="mp3-note">' + T('mp3.tape').replace('{f}', tr.f) + '</div>';
@@ -39648,6 +39650,17 @@ document.addEventListener('DOMContentLoaded', () => {
   function discInit() {
     var box = document.getElementById('mp3disc');
     if (!box) return;
+    var liner2 = box.querySelector('.mp3-liner');
+    if (liner2) {
+      var free = screen.clientWidth - 190;
+      if (free >= 240) {
+        liner2.style.display = 'block';
+        liner2.style.width = Math.min(300, Math.floor(screen.clientWidth * 0.34)) + 'px';
+        liner2.style.right = '10px';
+        liner2.style.top = '10px';
+        liner2.style.height = Math.max(180, box.clientHeight - 20) + 'px';
+      }
+    }
     var n = 3 + Math.floor(Math.random() * 2);
     for (var k = 0; k < n; k++) { box.appendChild(makePik(k)); }
     (function mischief() {
