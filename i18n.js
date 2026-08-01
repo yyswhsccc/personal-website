@@ -12,6 +12,13 @@ window.YOS_I18N = {
     'mp3.bilivol': 'bilibili mixes its own volume - use the speaker inside the player \u2661',
     'mp3.manual': 'you took the wheel - auto-next is off for this song \u2661',
     'mp3.rethread': 're-threading the reel\u2026 bilibili insists on a fresh start \u2661',
+    'mp3.liner.shui-di': '<p class="ln-t">observation notes: THE DROPLET</p>' +
+      '<p>a surface of absolute smoothness,<br>at absolute zero -<br>it refused to leave mankind<br>even a scratch.</p>' +
+      '<p>we mistook it for a holy relic of peace<br>and sent two thousand warships<br>in parade formation.<br>the Doomsday Battle took thirty minutes.</p>' +
+      '<p class="ln-q">Ding Yi: "silly children\u2026 run!"<br>Zhang Beihai: "it\u2019s okay. it\u2019s all the same."</p>' +
+      '<p class="ln-q">weakness and ignorance<br>are not barriers to survival.<br>arrogance is.</p>' +
+      '<p>this bassline is the doppler<br>of the probe passing the fleet.<br>Anti-General later scored<br>the Three-Body animation -<br>this droplet fell two years before it.</p>' +
+      '<p class="ln-end">advance. advance.<br>by any means necessary.</p>',
     'mp3.picking': 'the piks are picking a random song\u2026',
     'mp3.pickingnext': 'the piks fetch the next song\u2026',
     'mp3.thisone': 'this one!!',
@@ -393,6 +400,13 @@ window.YOS_I18N = {
     'mp3.bilivol': 'bilibili g\u00e8re son volume - utilise le haut-parleur du lecteur \u2661',
     'mp3.manual': "tu as pris le volant - l'encha\u00eenement auto est coup\u00e9 pour ce titre \u2661",
     'mp3.rethread': 'on r\u00e9enfile la bobine\u2026 bilibili exige un red\u00e9marrage \u2661',
+    'mp3.liner.shui-di': '<p class="ln-t">notes d\u2019observation : LA GOUTTE</p>' +
+      '<p>une surface d\u2019un lisse absolu,<br>au z\u00e9ro absolu -<br>elle n\u2019a pas laiss\u00e9 \u00e0 l\u2019humanit\u00e9<br>la moindre rayure.</p>' +
+      '<p>nous l\u2019avons prise pour une relique de paix :<br>deux mille vaisseaux<br>en formation de parade.<br>la Bataille du Jugement dernier<br>a dur\u00e9 trente minutes.</p>' +
+      '<p class="ln-q">Ding Yi : \u00ab courez, petits idiots\u2026 courez ! \u00bb<br>Zhang Beihai : \u00ab ce n\u2019est rien. c\u2019est pareil. \u00bb</p>' +
+      '<p class="ln-q">la faiblesse et l\u2019ignorance<br>ne condamnent pas \u00e0 dispara\u00eetre.<br>l\u2019arrogance, si.</p>' +
+      '<p>cette basse, c\u2019est l\u2019effet doppler<br>de la sonde fr\u00f4lant la flotte.<br>Anti-General signera plus tard<br>la musique de l\u2019animation Three-Body -<br>cette goutte est tomb\u00e9e deux ans avant.</p>' +
+      '<p class="ln-end">en avant. en avant.<br>par tous les moyens.</p>',
     'mp3.picking': 'les piks choisissent une chanson au hasard\u2026',
     'mp3.pickingnext': 'les piks vont chercher la chanson suivante\u2026',
     'mp3.thisone': 'celle-l\u00e0 !!',
