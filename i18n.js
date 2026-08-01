@@ -17,7 +17,7 @@ window.YOS_I18N = {
       '<p>she asked me for two things:<br>a piano to carry it,<br>and words to live inside it.</p>' +
       '<p>the piano was the easy half -<br>her tune was already a dream<br>that speaks without speaking.</p>' +
       '<p class="ln-q">but no sentence i wrote<br>deserved to wake it.<br>so i broke my promise.<br>the lyrics never came.</p>' +
-      '<p>she forgave me, of course.<br>shining forgives the way she writes:<br>quietly, at 3am.</p>' +
+      '<p>she forgave me, of course.</p>' +
       '<p class="ln-end">this is the wordless version.<br>it is complete.<br>(some dreams refuse subtitles.)</p>',
     'mp3.liner.shui-di': '<p class="ln-t">observation notes: THE DROPLET</p>' +
       '<p>a surface of absolute smoothness,<br>at absolute zero -<br>it refused to leave mankind<br>even a scratch.</p>' +
@@ -412,7 +412,7 @@ window.YOS_I18N = {
       '<p>elle m\u2019a demand\u00e9 deux choses :<br>un piano pour la porter,<br>et des mots pour l\u2019habiter.</p>' +
       '<p>le piano fut la moiti\u00e9 facile -<br>sa m\u00e9lodie \u00e9tait d\u00e9j\u00e0 un r\u00eave<br>qui parle sans parler.</p>' +
       '<p class="ln-q">mais aucune de mes phrases<br>ne m\u00e9ritait de le r\u00e9veiller.<br>alors j\u2019ai manqu\u00e9 \u00e0 ma promesse.<br>les paroles ne sont jamais venues.</p>' +
-      '<p>elle m\u2019a pardonn\u00e9, bien s\u00fbr.<br>shining pardonne comme elle \u00e9crit :<br>doucement, \u00e0 trois heures du matin.</p>' +
+      '<p>elle m\u2019a pardonn\u00e9, bien s\u00fbr.</p>' +
       '<p class="ln-end">voici la version sans paroles.<br>elle est compl\u00e8te.<br>(certains r\u00eaves refusent les sous-titres.)</p>',
     'mp3.liner.shui-di': '<p class="ln-t">notes d\u2019observation : LA GOUTTE</p>' +
       '<p>une surface d\u2019un lisse absolu,<br>au z\u00e9ro absolu -<br>elle n\u2019a pas laiss\u00e9 \u00e0 l\u2019humanit\u00e9<br>la moindre rayure.</p>' +
