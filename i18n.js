@@ -19,6 +19,16 @@ window.YOS_I18N = {
       '<p class="ln-q">but no sentence i wrote<br>deserved to wake it.<br>so i broke my promise.<br>the lyrics never came.</p>' +
       '<p>she forgave me, of course.</p>' +
       '<p class="ln-end">this is the wordless version.<br>it is complete.<br>(some dreams refuse subtitles.)</p>',
+    'mp3.liner.hue': '<p class="ln-t">liner notes: HUE</p>' +
+      '<p>the song i keep on loop<br>in Risk of Rain.<br>rain planets go well<br>with quiet pianos.</p>' +
+      '<p>it is beautiful the way<br>the Wandering Vagrant is beautiful:<br>an enormous jellyfish<br>drifting over the valley,<br>meaning no harm,<br>glowing anyway.</p>' +
+      '<p>i only ever play Huntress.<br>monsoon skies, every world cleared -<br>so now i drift too,<br>waiting for the next DLC.</p>' +
+      '<p class="ln-end">some storms<br>you learn to float in.</p>',
+    'mp3.liner.die-for-you': '<p class="ln-t">liner notes: DIE FOR YOU</p>' +
+      '<p>the official anthem of VALORANT\u2019s<br>first world championship -<br>Champions 2021.<br>Grabbitz sings it<br>like a duelist\u2019s vow.</p>' +
+      '<p>it is my sister\u2019s favourite game.<br>she plays it frighteningly well.<br>i have never installed it.</p>' +
+      '<p>some anthems reach you<br>from a stadium in Berlin.<br>this one reached me<br>through the wall<br>of the next room, on repeat.</p>' +
+      '<p class="ln-end">she would clutch the round for me.<br>i would die for you.</p>',
     'mp3.liner.shui-di': '<p class="ln-t">observation notes: THE DROPLET</p>' +
       '<p>a surface of absolute smoothness,<br>at absolute zero -<br>it refused to leave mankind<br>even a scratch.</p>' +
       '<p>we mistook it for a holy relic of peace<br>and sent two thousand warships<br>in parade formation.<br>the Doomsday Battle took thirty minutes.</p>' +
@@ -414,6 +424,16 @@ window.YOS_I18N = {
       '<p class="ln-q">mais aucune de mes phrases<br>ne m\u00e9ritait de le r\u00e9veiller.<br>alors j\u2019ai manqu\u00e9 \u00e0 ma promesse.<br>les paroles ne sont jamais venues.</p>' +
       '<p>elle m\u2019a pardonn\u00e9, bien s\u00fbr.</p>' +
       '<p class="ln-end">voici la version sans paroles.<br>elle est compl\u00e8te.<br>(certains r\u00eaves refusent les sous-titres.)</p>',
+    'mp3.liner.hue': '<p class="ln-t">notes : HUE</p>' +
+      '<p>la chanson que je laisse en boucle<br>dans Risk of Rain.<br>les plan\u00e8tes de pluie<br>vont bien aux pianos tranquilles.</p>' +
+      '<p>elle est belle comme<br>le Wandering Vagrant est beau :<br>une m\u00e9duse immense<br>qui d\u00e9rive au-dessus de la vall\u00e9e,<br>sans vouloir de mal,<br>lumineuse quand m\u00eame.</p>' +
+      '<p>je ne joue que la Chasseresse.<br>ciels de mousson, tous les mondes finis -<br>alors je d\u00e9rive moi aussi,<br>en attendant le prochain DLC.</p>' +
+      '<p class="ln-end">certaines temp\u00eates,<br>on apprend \u00e0 y flotter.</p>',
+    'mp3.liner.die-for-you': '<p class="ln-t">notes : DIE FOR YOU</p>' +
+      '<p>l\u2019hymne officiel du premier<br>championnat du monde de VALORANT -<br>Champions 2021.<br>Grabbitz le chante<br>comme un serment de duelliste.</p>' +
+      '<p>c\u2019est le jeu pr\u00e9f\u00e9r\u00e9 de ma petite s\u0153ur.<br>elle y joue terriblement bien.<br>moi, je ne l\u2019ai jamais install\u00e9.</p>' +
+      '<p>certains hymnes t\u2019arrivent<br>d\u2019un stade \u00e0 Berlin.<br>celui-ci m\u2019est arriv\u00e9<br>\u00e0 travers le mur<br>de la chambre d\u2019\u00e0 c\u00f4t\u00e9, en boucle.</p>' +
+      '<p class="ln-end">elle clutcherait la manche pour moi.<br>i would die for you.</p>',
     'mp3.liner.shui-di': '<p class="ln-t">notes d\u2019observation : LA GOUTTE</p>' +
       '<p>une surface d\u2019un lisse absolu,<br>au z\u00e9ro absolu -<br>elle n\u2019a pas laiss\u00e9 \u00e0 l\u2019humanit\u00e9<br>la moindre rayure.</p>' +
       '<p>nous l\u2019avons prise pour une relique de paix :<br>deux mille vaisseaux<br>en formation de parade.<br>la Bataille du Jugement dernier<br>a dur\u00e9 trente minutes.</p>' +
