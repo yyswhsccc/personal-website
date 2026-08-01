@@ -39239,39 +39239,99 @@ document.addEventListener('DOMContentLoaded', () => {
         sing();
       }, 2400 + Math.random() * 2800);
     })();
-    (function troublemaker() {
+    function slideTo(el, pct, durS) {
+      el.style.transition = 'left ' + durS + 's linear';
+      el.style.left = pct + '%';
+    }
+    function walkStart(p, toPct) {
+      var from = parseFloat(p.style.left) || 50;
+      p.style.animation = 'none';                       // idle hop yields to the walk
+      p.style.transform = toPct < from ? 'scaleX(-1)' : '';
+      var im = p.querySelector('img');
+      if (im) { im.style.animation = 'pik-bob 0.42s steps(2) infinite'; }   // the site's own gait
+    }
+    function walkStop(p) {
+      p.style.animation = '';
+      p.style.transform = '';
+      var im = p.querySelector('img');
+      if (im) { im.style.animation = ''; }
+    }
+    function saySign(pct, text) {
+      var sg = document.createElement('span');
+      sg.className = 'mp3-excuse';
+      sg.textContent = text;
+      sg.style.left = pct + '%';
+      crowd.appendChild(sg);
+      return sg;
+    }
+    function leaveEvent() {
+      var piks = crowd.querySelectorAll('.mp3-pik');
+      if (!piks.length) return;
+      var p = piks[Math.floor(Math.random() * piks.length)];
+      var startL = parseFloat(p.style.left) || 50;
+      var exitL = startL < 50 ? -14 : 112;
+      var r = Math.random();
+      var ev = r < 0.35 ? 'bathroom' : r < 0.6 ? 'phone' : r < 0.85 ? 'popcorn' : 'scared';
+      var exitDur = ev === 'scared' ? 2.6 : 9 + Math.random() * 3;   // cinema shuffle, not a sprint
+      function doExit() {
+        var sign1 = saySign(startL, T('mp3.ex.' + ev));
+        walkStart(p, exitL);
+        slideTo(p, exitL, exitDur);
+        slideTo(sign1, exitL, exitDur);
+        setTimeout(function () { sign1.remove(); }, exitDur * 1000 + 300);
+        var gone = 5000 + Math.random() * 5000;
+        setTimeout(function () {
+          if (!crowd.isConnected) return;
+          // squeeze back in between two companions
+          var lefts = [].map.call(crowd.querySelectorAll('.mp3-pik'), function (q) {
+            return parseFloat(q.style.left) || 50;
+          }).filter(function (l2) { return l2 > 0 && l2 < 100; }).sort(function (a, b) { return a - b; });
+          var backL = 8 + Math.random() * 80;
+          if (lefts.length >= 2) {
+            var i2 = Math.floor(Math.random() * (lefts.length - 1));
+            backL = (lefts[i2] + lefts[i2 + 1]) / 2;
+          }
+          var retDur = ev === 'scared' ? 8 : 6.5;
+          var sign2 = saySign(exitL, T('mp3.ex.' + ev + 'back'));
+          walkStart(p, backL);
+          slideTo(p, backL, retDur);
+          slideTo(sign2, backL, retDur);
+          setTimeout(function () { walkStop(p); }, retDur * 1000 + 100);
+          if (ev === 'popcorn') {
+            var prop = document.createElement('span');
+            prop.className = 'mp3-prop';
+            prop.textContent = '\ud83c\udf7f';
+            prop.style.left = exitL + '%';
+            crowd.appendChild(prop);
+            slideTo(prop, backL, retDur);
+            setTimeout(function () { prop.remove(); }, retDur * 1000 + 12000);
+          }
+          setTimeout(function () { sign2.remove(); }, retDur * 1000 + 1800);
+        }, exitDur * 1000 + gone);
+      }
+      if (ev === 'phone') {                          // the phone rings first. of course it does.
+        var ring = saySign(startL, '\u260e\ufe0f!!');
+        setTimeout(function () { ring.remove(); doExit(); }, 1700);
+      } else { doExit(); }
+    }
+    (function audienceLife() {
       setTimeout(function () {
         if (!crowd.isConnected) return;
-        var piks = crowd.querySelectorAll('.mp3-pik');
-        var p3 = piks[Math.floor(Math.random() * piks.length)];
-        if (p3) {
-          var keepDur = p3.style.animationDuration;
-          p3.classList.add('run');
-          p3.style.animation = 'mp3run 5s linear';   // inline so the hop's inline duration cannot shrink the dash
-          var say = document.createElement('span');
-          say.className = 'mp3-excuse run';
-          say.textContent = T('mp3.excuse');
-          say.style.left = p3.style.left;
-          crowd.appendChild(say);
-          setTimeout(function () {
-            p3.classList.remove('run');
-            p3.style.animation = '';
-            p3.style.animationDuration = keepDur;
-            say.remove();
-          }, 5200);
-        }
-        troublemaker();
-      }, 8000 + Math.random() * 7000);
+        leaveEvent();
+        audienceLife();
+      }, 26000 + Math.random() * 30000);
     })();
   }
   window.addEventListener('resize', sizeTheater);
 
   function makePik(k) {
+    var wrap = document.createElement('span');
+    wrap.className = 'mp3-pik p' + k;
     var img = document.createElement('img');
-    img.className = 'mp3-pik p' + k;
     img.alt = '';
+    wrap.appendChild(img);
     var Y = window.__yosPik;
-    if (!Y) return img;
+    if (!Y) return wrap;
     try {
       var stage = Math.floor(Math.random() * 3);
       var r = Math.random();
@@ -39284,7 +39344,7 @@ document.addEventListener('DOMContentLoaded', () => {
         img.src = Y.sprite(Y.hue(h), stage, null, false, form, 'w:' + Y.seg(h));
       }
     } catch (e) { /* renderer unavailable: empty img stays invisible */ }
-    return img;
+    return wrap;
   }
 
   function discInit() {

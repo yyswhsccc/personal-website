@@ -13991,7 +13991,11 @@ body.y2k-quake #top { animation: y2k-quake 0.34s steps(2) infinite; } /* quake t
 }
 .mp3-vinyl.scratch { animation: mp3spin 0.45s linear infinite; box-shadow: 0 0 0 5px rgba(108, 227, 247, 0.5), 4px 6px 0 rgba(0, 0, 0, 0.4); }
 @keyframes mp3spin { to { transform: rotate(360deg); } }
-.mp3-pik { position: absolute; width: 33px; height: 42px; image-rendering: pixelated; }
+.mp3-pik { position: absolute; width: 33px; }
+.mp3-pik img {
+  display: block; width: 33px; image-rendering: pixelated;
+  filter: drop-shadow(0 0 2px #ffffff) drop-shadow(0 0 6px rgba(255, 255, 255, 0.9));
+}
 .mp3-pik.p0 { left: 16%; bottom: 10%; animation: mp3hop 0.9s ease-in-out infinite alternate; }
 .mp3-pik.p1 { right: 14%; bottom: 22%; animation: mp3hop 1.25s ease-in-out infinite alternate; }
 .mp3-pik.p2 { left: 24%; top: 8%; animation: mp3hop 1.05s ease-in-out infinite alternate-reverse; }
@@ -14011,3 +14015,5 @@ body.y2k-quake #top { animation: y2k-quake 0.34s steps(2) infinite; } /* quake t
   color: #fff; font-family: 'Courier New', monospace; font-weight: 700;
   font-size: 14px; letter-spacing: 0.14em; text-shadow: 1px 1px 0 #2a0a20;
 }
+
+.mp3-prop { position: absolute; bottom: 46px; font-size: 16px; pointer-events: none; text-shadow: 1px 1px 0 #2a0a20; }
