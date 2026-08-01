@@ -13935,6 +13935,10 @@ body.y2k-quake #top { animation: y2k-quake 0.34s steps(2) infinite; } /* quake t
 }
 .mp3-btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 rgba(90, 61, 110, 0.45); }
 .mp3-btn-main { min-width: 58px; background: var(--pink-hot); color: #fff; }
+.mp3-btn-main.on {
+  background: var(--pink-deep); transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 rgba(90, 61, 110, 0.45), inset 0 2px 0 rgba(0, 0, 0, 0.25);
+}
 .mp3-volwrap { flex: 1 1 170px; min-width: 170px; display: flex; align-items: center; gap: 8px; }
 .mp3-vollabel, .mp3-volpct {
   font-family: 'Courier New', monospace; font-size: 11px; font-weight: 700;

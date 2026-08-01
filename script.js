@@ -35548,6 +35548,7 @@ document.addEventListener('DOMContentLoaded', () => {
      72 kinds (50 wheel segments + 22 species) each climb three forms at
      their own pace. duplicates stopped being waste the day this shipped. */
   function pikSegOfHue(h) { return Math.floor((((h % 360) + 360) % 360) / WHEEL_STEP) % WHEEL_SEGS; }
+  window.__yosPik = { sprite: pikSprite, hue: hueColor, seg: pikSegOfHue, entryColor: pikEntryColor, species: HIDDEN_SPECIES };
   function pikKindKey(e) { return e.ch ? 'ch' : (e.sp ? 's:' + e.sp : 'w:' + pikSegOfHue(e.h != null ? e.h : 300)); }
   function pikCounts() { const c = store.get('yos-pik-counts', null); return c && typeof c === 'object' && !Array.isArray(c) ? c : {}; }
   function pikCountsSave(c) { store.set('yos-pik-counts', c); }
@@ -39121,13 +39122,16 @@ document.addEventListener('DOMContentLoaded', () => {
   var playing = false;
   var booted = false;
   var MODES = ['shuffle', 'loop', 'order'];
-  var MODE_GLYPH = { shuffle: '\ud83d\udd00', loop: '\ud83d\udd02', order: '\u23e9' };
+  var MODE_GLYPH = { shuffle: '\ud83d\udd00', loop: '\ud83d\udd02', order: '\ud83d\udd01' };
   var mode = 'shuffle';
   var vidPlaying = false;
 
   function updatePlayGlyph() {
     var b = document.getElementById('mp3-play');
-    if (b) { b.textContent = (playing || vidPlaying) ? '\u23f8' : '\u25b6'; }
+    if (!b) return;
+    var on = playing || vidPlaying;
+    b.textContent = on ? '\u23f8' : '\u25b6';
+    b.classList.toggle('on', on);
   }
 
   function rebuildOrder(pin) {
@@ -39256,22 +39260,24 @@ document.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('resize', sizeTheater);
 
   function makePik(k) {
-    var cnv = document.createElement('canvas');
-    cnv.className = 'mp3-pik p' + k;
-    cnv.width = 11; cnv.height = 14;
-    var g = cnv.getContext('2d');
-    var hue = Math.floor(Math.random() * 360);
-    g.fillStyle = 'hsl(' + hue + ',74%,74%)';
-    g.fillRect(2, 7, 7, 6);
-    g.fillRect(3, 6, 5, 1);
-    g.fillStyle = '#2a0a20';
-    g.fillRect(4, 9, 1, 1); g.fillRect(7, 9, 1, 1);
-    g.fillRect(3, 13, 1, 1); g.fillRect(7, 13, 1, 1);
-    g.fillStyle = '#57c785';
-    g.fillRect(5, 3, 1, 3);
-    g.fillStyle = 'hsl(' + ((hue + 40) % 360) + ',80%,62%)';
-    g.fillRect(4, 1, 3, 2);
-    return cnv;
+    var img = document.createElement('img');
+    img.className = 'mp3-pik p' + k;
+    img.alt = '';
+    var Y = window.__yosPik;
+    if (!Y) return img;
+    try {
+      var stage = Math.floor(Math.random() * 3);
+      var r = Math.random();
+      var form = r < 0.62 ? 1 : (r < 0.9 ? 2 : 3);   // most casual, some starred, a few APEX
+      if (Math.random() < 0.3 && Y.species && Y.species.length) {
+        var sp = Y.species[Math.floor(Math.random() * Y.species.length)];
+        img.src = Y.sprite(Y.entryColor({ sp: sp.id }), stage, sp.id, false, form, 's:' + sp.id);
+      } else {
+        var h = Math.floor(5 + Math.random() * 354);
+        img.src = Y.sprite(Y.hue(h), stage, null, false, form, 'w:' + Y.seg(h));
+      }
+    } catch (e) { /* renderer unavailable: empty img stays invisible */ }
+    return img;
   }
 
   function discInit() {
