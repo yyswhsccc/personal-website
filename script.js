@@ -39103,6 +39103,7 @@ document.addEventListener('DOMContentLoaded', () => {
     { t: 'Blue Apple', a: '\u67ff\u539f\u6731\u7f8e', f: 'blue-apple', mv: 'BV1wysWebEdR' },
     { t: 'Sweet Dream', a: 'yongshan \u00b7 original \u2661', f: 'sweet-dream' },
     { t: 'I Love You So', a: 'The Walters', f: 'i-love-you-so', yt: 'NwFVSclD_uc' },
+    { t: 'Delete', a: 'Even\u4ec7\u4f9d\u6587', f: 'delete', yt: 'wQFQ7MvUgVI' },
   ];
   // liner notes: yongshan will supply these per track (key = f)
   var MP3_NOTES = {};
@@ -39363,6 +39364,81 @@ document.addEventListener('DOMContentLoaded', () => {
       cv2._draw(5);
       return cv2;
     }
+    function makeBoba() {
+      var cv3 = document.createElement('canvas');
+      cv3.className = 'mp3-carry';
+      cv3.width = 11; cv3.height = 16;
+      cv3.style.width = '44px';
+      var g = cv3.getContext('2d');
+      cv3._draw = function (level) {                 // level 5 = full cup, 0 = pearls history
+        g.clearRect(0, 0, 11, 16);
+        g.fillStyle = '#f0509f';                     // lid
+        g.fillRect(1, 3, 9, 2);
+        g.fillStyle = '#ffd400';                     // straw
+        g.fillRect(6, 0, 2, 4);
+        g.fillStyle = '#ffffff';                     // cup wall
+        g.fillRect(1, 5, 9, 10);
+        var liquidTop = 5 + (5 - level) * 2;
+        if (level > 0) {
+          g.fillStyle = '#f2ddba';                   // milk tea
+          g.fillRect(2, Math.min(14, liquidTop), 7, Math.max(0, 15 - Math.min(14, liquidTop)));
+        }
+        if (level > 1) {
+          g.fillStyle = '#3a2431';                   // pearls
+          g.fillRect(2, 13, 2, 2); g.fillRect(5, 13, 2, 2); g.fillRect(8, 13, 1, 2);
+        }
+        g.fillStyle = 'rgba(255,255,255,0.7)';       // shine
+        g.fillRect(2, 6, 1, 7);
+      };
+      cv3._draw(5);
+      return cv3;
+    }
+    function makeGlow() {
+      var cv4 = document.createElement('canvas');
+      cv4.className = 'mp3-carry mp3-glowsticks';
+      cv4.width = 15; cv4.height = 14;
+      cv4.style.width = '48px';
+      var g = cv4.getContext('2d');
+      function stick(x0, col, core) {
+        for (var k2 = 0; k2 < 9; k2++) {
+          g.fillStyle = col;
+          g.fillRect(x0 + Math.floor(k2 / 3), 11 - k2, 2, 1);
+        }
+        g.fillStyle = core;
+        g.fillRect(x0, 12, 2, 2);
+      }
+      stick(2, '#ff8fc7', '#ffffff');
+      stick(9, '#41e0ff', '#ffffff');
+      return cv4;
+    }
+    function makeCone() {
+      var cv5 = document.createElement('canvas');
+      cv5.className = 'mp3-carry';
+      cv5.width = 9; cv5.height = 14;
+      cv5.style.width = '36px';
+      var g = cv5.getContext('2d');
+      cv5._draw = function (level) {                 // 4 = two scoops, 0 = lonely cone
+        g.clearRect(0, 0, 9, 14);
+        if (level >= 3) {                            // strawberry scoop
+          g.fillStyle = '#ff9ec7';
+          g.fillRect(2, level >= 4 ? 0 : 2, 5, 2);
+          g.fillRect(1, level >= 4 ? 1 : 3, 7, 2);
+        }
+        if (level >= 1) {                            // mint scoop
+          g.fillStyle = '#9fe8c0';
+          g.fillRect(1, 4, 7, level >= 2 ? 3 : 2);
+        }
+        g.fillStyle = '#d9a066';                     // waffle cone
+        g.fillRect(1, 7, 7, 2);
+        g.fillRect(2, 9, 5, 2);
+        g.fillRect(3, 11, 3, 2);
+        g.fillRect(4, 13, 1, 1);
+        g.fillStyle = '#b97a44';
+        g.fillRect(3, 8, 1, 1); g.fillRect(5, 9, 1, 1); g.fillRect(4, 11, 1, 1);
+      };
+      cv5._draw(4);
+      return cv5;
+    }
     function walkStop(p) {
       p.style.animation = '';
       p.style.transform = '';
@@ -39412,9 +39488,10 @@ document.addEventListener('DOMContentLoaded', () => {
       var p = piks[Math.floor(Math.random() * piks.length)];
       var startL = parseFloat(p.style.left) || 50;
       var exitL = startL < 50 ? -14 : 112;
-      var r = Math.random();
-      var ev = r < 0.35 ? 'bathroom' : r < 0.6 ? 'phone' : r < 0.85 ? 'popcorn' : 'scared';
-      var exitDur = ev === 'scared' ? 2.6 : 9 + Math.random() * 3;   // cinema shuffle, not a sprint
+      var POOL2 = ['bathroom', 'bathroom', 'bathroom', 'phone', 'phone', 'popcorn', 'popcorn',
+        'boba', 'boba', 'glow', 'glow', 'icecream', 'icecream', 'stove', 'scared'];
+      var ev = POOL2[Math.floor(Math.random() * POOL2.length)];
+      var exitDur = ev === 'scared' ? 2.6 : ev === 'stove' ? 3.4 : 9 + Math.random() * 3;   // panic runs, everyone else shuffles
       function doExit() {
         walkStart(p, exitL);
         slideTo(p, exitL, exitDur);
@@ -39437,6 +39514,41 @@ document.addEventListener('DOMContentLoaded', () => {
           slideTo(p, backL, retDur);
           attachSign(p, 'mp3.ex.' + ev + 'back', retDur * 1000 + 1200);
           setTimeout(function () { walkStop(p); }, retDur * 1000 + 100);
+          var carry = null;
+          if (ev === 'boba') { carry = makeBoba(); }
+          if (ev === 'glow') { carry = makeGlow(); }
+          if (ev === 'icecream') { carry = makeCone(); }
+          if (carry) {
+            carry.style.left = exitL + '%';
+            crowd.appendChild(carry);
+            slideTo(carry, backL, retDur);
+            if (ev === 'glow') {                     // the concert begins on arrival
+              setTimeout(function () { carry.classList.add('wave'); }, retDur * 1000 + 200);
+              setTimeout(function () { carry.remove(); }, retDur * 1000 + 24000);
+            } else {                                 // snacks deplete bite by bite
+              var lvl2 = ev === 'icecream' ? 4 : 5;
+              setTimeout(function () {
+                var eat2 = setInterval(function () {
+                  if (!crowd.isConnected || !carry.isConnected) { clearInterval(eat2); return; }
+                  lvl2--;
+                  carry._draw(lvl2);
+                  var cl2 = parseFloat(getComputedStyle(carry).left) || 0;
+                  var drip = document.createElement('span');
+                  drip.className = 'mp3-kernel';
+                  drip.style.left = (cl2 + 6 + Math.random() * 22) + 'px';
+                  drip.style.background = ev === 'icecream'
+                    ? ['#ff9ec7', '#9fe8c0'][lvl2 % 2]
+                    : ['#f2ddba', '#3a2431'][lvl2 % 2];
+                  crowd.appendChild(drip);
+                  setTimeout(function () { drip.remove(); }, 2100);
+                  if (lvl2 <= 0) {
+                    clearInterval(eat2);
+                    setTimeout(function () { carry.remove(); }, 2400);
+                  }
+                }, ev === 'icecream' ? 2400 : 2700);
+              }, retDur * 1000 + 900);
+            }
+          }
           if (ev === 'popcorn') {
             var bucket = makeBucket();
             bucket.style.left = exitL + '%';

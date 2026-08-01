@@ -14080,3 +14080,17 @@ body.y2k-quake #top { animation: y2k-quake 0.34s steps(2) infinite; } /* quake t
 }
 .mp3-excuse.mq-on { overflow: hidden; }
 @keyframes mp3marquee { to { transform: translateX(-50%); } }
+
+.mp3-carry {
+  position: absolute; bottom: 2px; z-index: 4; image-rendering: pixelated;
+  pointer-events: none;
+  filter: drop-shadow(0 0 2px #ffffff) drop-shadow(0 0 6px rgba(255, 255, 255, 0.7));
+}
+.mp3-glowsticks {
+  filter: drop-shadow(0 0 3px #ff8fc7) drop-shadow(0 0 7px rgba(65, 224, 255, 0.9));
+}
+.mp3-glowsticks.wave { animation: mp3glowwave 0.62s steps(1) infinite; }
+@keyframes mp3glowwave {
+  0%, 49% { transform: rotate(-13deg); }
+  50%, 100% { transform: rotate(13deg); }
+}
