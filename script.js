@@ -39151,7 +39151,7 @@ document.addEventListener('DOMContentLoaded', () => {
       var trNow = cur >= 0 && MP3_TRACKS[order[cur]];
       if (!trNow || trNow.mv !== trb.mv) { clearInterval(biliWatch); return; }
       var played = biliOffset + (vidPlaying ? Math.max(0, (Date.now() - biliStart) / 1000) : 0);
-      if (played < dur - 0.5) return;
+      if (played < dur + 2.5) return;              // late beats early: never cut the last note
       clearInterval(biliWatch);
       if (mode === 'loop') {                       // encore, forever
         biliOffset = 0;
@@ -39161,6 +39161,7 @@ document.addEventListener('DOMContentLoaded', () => {
             '&t=0" allowfullscreen allow="autoplay; fullscreen; encrypted-media"></iframe>';
           armBiliClock();
           sizeTheater();
+          scheduleBiliEnd(trb);                    // the encore also gets an encore
         }
         return;
       }
