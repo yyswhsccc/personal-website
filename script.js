@@ -39104,6 +39104,7 @@ document.addEventListener('DOMContentLoaded', () => {
     { t: 'Sweet Dream', a: 'yongshan \u00b7 original \u2661', f: 'sweet-dream' },
     { t: 'I Love You So', a: 'The Walters', f: 'i-love-you-so', yt: 'NwFVSclD_uc' },
     { t: 'Delete', a: 'Even\u4ec7\u4f9d\u6587', f: 'delete', yt: 'wQFQ7MvUgVI' },
+    { t: '\u82ac\u68a8\u9053\u4e0a', a: '\u694a\u5343\u5b05', f: 'fen-li-dao-shang', yt: '5zrTA_nFrYE' },
   ];
   // liner notes: yongshan will supply these per track (key = f)
   var MP3_NOTES = {};
