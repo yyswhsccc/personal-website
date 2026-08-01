@@ -14108,3 +14108,17 @@ body.mp3-cinema .mini-danmaku { display: none !important; }
   0%, 49% { background: rgba(240, 80, 159, 0.8); }
   50%, 100% { background: rgba(255, 143, 199, 0.42); }
 }
+
+/* cinema-side rolling credits: the liner note climbs like end titles */
+.mp3-liner { position: absolute; overflow: hidden; display: none; pointer-events: none; }
+.mp3-liner-roll {
+  position: absolute; top: 100%; left: 0; right: 0;
+  animation: mp3credits 34s linear infinite;
+  text-align: center; font-family: 'Courier New', monospace; font-size: 11.5px;
+  line-height: 2.0; color: #ffb7e2; text-shadow: 1px 1px 0 #2a0a20;
+}
+.mp3-liner-roll p { margin: 0 0 26px; }
+.mp3-liner-roll .ln-t { color: #fff; letter-spacing: 0.3em; font-weight: 700; }
+.mp3-liner-roll .ln-q { color: #ffffff; font-weight: 700; }
+.mp3-liner-roll .ln-end { color: var(--pink-hot); font-weight: 700; letter-spacing: 0.12em; }
+@keyframes mp3credits { to { transform: translateY(calc(-100% - 420px)); } }

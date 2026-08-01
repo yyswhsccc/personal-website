@@ -39110,6 +39110,17 @@ document.addEventListener('DOMContentLoaded', () => {
   // liner notes: yongshan will supply these per track (key = f)
   var MP3_NOTES = {};
 
+  // cinema-side rolling credits, per track (key = f). content, not UI.
+  var MP3_LINERS = {
+    'shui-di': '<p class="ln-t">\u300e\u6c34\u6ef4\u300f\u89c2\u6d4b\u6279\u6ce8</p>' +
+      '<p>\u8868\u9762\u7edd\u5bf9\u5149\u6ed1\uff0c<br>\u7edd\u5bf9\u96f6\u5ea6\uff0c<br>\u8fde\u4e00\u9053\u5212\u75d5<br>\u90fd\u4e0d\u80af\u7559\u7ed9\u4eba\u7c7b\u3002</p>' +
+      '<p>\u6211\u4eec\u628a\u5b83\u5f53\u4f5c\u548c\u5e73\u7684\u5723\u7269\uff0c<br>\u4e24\u5343\u8258\u6218\u8230\u5217\u9635\u8fce\u63a5\u3002<br>\u672b\u65e5\u4e4b\u6218\uff0c\u4e09\u5341\u5206\u949f\u3002</p>' +
+      '<p class="ln-q">\u4e01\u4eea\uff1a\u201c\u50bb\u5b69\u5b50\u4eec\uff0c\u5feb\u8dd1\u554a\u3002\u201d<br>\u7ae0\u5317\u6d77\uff1a\u201c\u6ca1\u5173\u7cfb\u7684\uff0c\u90fd\u4e00\u6837\u3002\u201d</p>' +
+      '<p class="ln-q">\u5f31\u5c0f\u548c\u65e0\u77e5<br>\u4e0d\u662f\u751f\u5b58\u7684\u969c\u788d\uff0c<br>\u50b2\u6162\u624d\u662f\u3002</p>' +
+      '<p>Anti-General \u7684\u8fd9\u58f0\u4f4e\u97f3\uff0c<br>\u662f\u6c34\u6ef4\u63a0\u8fc7\u8230\u961f\u65f6\u7684\u591a\u666e\u52d2\u3002<br>\u4ed6\u540e\u6765\u6210\u4e86\u4e09\u4f53\u52a8\u753b\u539f\u58f0\u7684\u5236\u4f5c\u4eba\u2014\u2014<br>\u8fd9\u9897\u6c34\u6ef4\uff0c\u5148\u4e8e\u52a8\u753b\u4e24\u5e74\u843d\u4e0b\u3002</p>' +
+      '<p class="ln-end">\u524d\u8fdb\uff0c\u524d\u8fdb\uff0c<br>\u4e0d\u62e9\u624b\u6bb5\u5730\u524d\u8fdb\u3002</p>'
+  };
+
   function mp3Lang() { return String(document.documentElement.lang || 'en').indexOf('fr') === 0 ? 'fr' : 'en'; }
   function T(key) {
     var d = window.YOS_I18N;
@@ -39252,6 +39263,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (embed) {
           html += '<div class="mp3-theater"><div class="mp3-mv" data-embed="' + embed + '"><iframe src="' + embed +
             '" allowfullscreen allow="autoplay; fullscreen; encrypted-media"></iframe></div>' +
+            (MP3_LINERS[tr.f] ? '<div class="mp3-liner"><div class="mp3-liner-roll">' + MP3_LINERS[tr.f] + '</div></div>' : '') +
             '<div class="mp3-crowd"></div></div>';
         }
         if (MP3_NOTES[tr.f]) {
@@ -39284,6 +39296,19 @@ document.addEventListener('DOMContentLoaded', () => {
     ifr.style.width = Math.round(w) + 'px';
     ifr.style.height = Math.round(w * 9 / 16) + 'px';
     th.style.setProperty('--runw', (th.clientWidth + 90) + 'px');
+    var liner = th.querySelector('.mp3-liner');
+    if (liner) {
+      var band = Math.floor((th.clientWidth - parseInt(ifr.style.width, 10)) / 2);
+      if (band >= 150) {
+        liner.style.display = 'block';
+        liner.style.width = (band - 26) + 'px';
+        liner.style.right = '8px';
+        liner.style.top = '12px';
+        liner.style.height = ifr.style.height;
+      } else {
+        liner.style.display = 'none';
+      }
+    }
   }
 
   function theaterInit() {
