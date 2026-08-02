@@ -14207,3 +14207,7 @@ body.mp3-cinema #win-mp3 .win-btn:hover {
   background: #35243f; color: #ffb7e2; border-color: var(--pink-hot);
   box-shadow: 0 0 10px rgba(255, 143, 199, 0.85), 0 0 22px rgba(255, 143, 199, 0.4);
 }
+
+/* bulletproof glass: platform UI is display-only, our deck drives */
+.mp3-shield { position: absolute; inset: 0; z-index: 3; }
+.mp3-shield.grace { pointer-events: none; }   /* first 10s: the bili play button stays reachable */

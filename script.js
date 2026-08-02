@@ -39289,11 +39289,12 @@ document.addEventListener('DOMContentLoaded', () => {
         var embed = tr.mv
           ? 'https://player.bilibili.com/player.html?bvid=' + tr.mv + '&autoplay=1&danmaku=0&high_quality=1'
           : tr.yt
-            ? 'https://www.youtube.com/embed/' + tr.yt + '?autoplay=1&enablejsapi=1'
+            ? 'https://www.youtube.com/embed/' + tr.yt + '?autoplay=1&enablejsapi=1&controls=0&rel=0&iv_load_policy=3&disablekb=1&fs=0'
             : null;
         if (embed) {
           html += '<div class="mp3-theater"><div class="mp3-mv" data-embed="' + embed + '"><iframe src="' + embed +
-            '" allowfullscreen allow="autoplay; fullscreen; encrypted-media"></iframe></div>' +
+            '" allowfullscreen allow="autoplay; fullscreen; encrypted-media"></iframe>' +
+            '<span class="mp3-shield' + (tr.mv ? ' grace' : '') + '"></span></div>' +
             (MP3_LINERS[tr.f] ? '<div class="mp3-liner"><div class="mp3-liner-roll" data-liner-key="mp3.liner.' + tr.f + '"' +
               (MP3_LINER_DELAY[tr.f] ? ' style="animation-delay:' + MP3_LINER_DELAY[tr.f] + 's"' : '') + '>' + T('mp3.liner.' + tr.f) + '</div></div>' : '') +
             '<div class="mp3-crowd"></div></div>';
@@ -39361,6 +39362,12 @@ document.addEventListener('DOMContentLoaded', () => {
     var th = screen.querySelector('.mp3-theater');
     if (!th) return;
     sizeTheater();
+    var sh9 = th.querySelector('.mp3-shield.grace');
+    if (sh9) {
+      setTimeout(function () {
+        if (sh9.isConnected) { sh9.classList.remove('grace'); }
+      }, 10000);
+    }
     var fr = th.querySelector('iframe');
     if (fr && fr.src.indexOf('youtube') > -1) {
       fr.addEventListener('load', function () {
@@ -39990,6 +39997,7 @@ document.addEventListener('DOMContentLoaded', () => {
         mvBox.innerHTML = '<iframe src="' + mvBox.getAttribute('data-embed') +
           '&t=' + Math.max(0, Math.floor(biliOffset - 0.6)) +
           '" allowfullscreen allow="autoplay; fullscreen; encrypted-media"></iframe>' +
+          '<span class="mp3-shield"></span>' +
           '<div class="mp3-reload" data-i18n-live="mp3.rethread">' + T('mp3.rethread') +
           '<span class="mp3-cursor"></span></div>';
         var nfr = mvBox.querySelector('iframe');
