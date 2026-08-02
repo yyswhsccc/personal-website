@@ -39111,7 +39111,7 @@ document.addEventListener('DOMContentLoaded', () => {
   var MP3_NOTES = {};
 
   // cinema-side rolling credits, per track (key = f) - text lives in i18n
-  var MP3_LINERS = { 'shui-di': 1, 'sweet-dream': 1, 'die-for-you': 1, 'hue': 1, 'hua-tuo': 1 };
+  var MP3_LINERS = { 'shui-di': 1, 'sweet-dream': 1, 'die-for-you': 1, 'hue': 1, 'hua-tuo': 1, 'chu-xue': 1 };
 
   function mp3Lang() { return String(document.documentElement.lang || 'en').indexOf('fr') === 0 ? 'fr' : 'en'; }
   function T(key) {
