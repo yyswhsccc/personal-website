@@ -39336,20 +39336,20 @@ document.addEventListener('DOMContentLoaded', () => {
     var ifr = th.querySelector('iframe');
     var maxH = th.clientHeight - CROWD - 18;
     var maxW = th.clientWidth * 0.96;
-    maxH = Math.max(240, maxH - 100);              // uniform: every tape keeps a slim two-line band
+    maxH = Math.max(240, maxH - 160);              // uniform: every tape keeps a four-line band
     var w = Math.min(maxW, maxH * 16 / 9);
     ifr.style.width = Math.round(w) + 'px';
     ifr.style.height = Math.round(w * 9 / 16) + 'px';
     th.style.setProperty('--runw', (th.clientWidth + 90) + 'px');
     // the screen floats centered (nudged low) in the space above the band
     var vidH9 = Math.round(w * 9 / 16);
-    var padTop = Math.max(10, Math.round((th.clientHeight - CROWD - 84 - vidH9) / 2) + 10);
+    var padTop = Math.max(10, Math.round((th.clientHeight - CROWD - 140 - vidH9) / 2) + 10);
     var mv9 = th.querySelector('.mp3-mv');
     if (mv9) { mv9.style.marginTop = (padTop - 10) + 'px'; }
     var liner = th.querySelector('.mp3-liner');
     if (liner) {
       var vidBottom = padTop + vidH9 + 6;
-      var bandH = Math.min(64, th.clientHeight - vidBottom - CROWD - 30);   // two lines is plenty
+      var bandH = Math.min(122, th.clientHeight - vidBottom - CROWD - 30);  // four lines of headroom
       if (bandH >= 40) {
         var lw9 = Math.min(780, Math.round(th.clientWidth * 0.86));
         liner.style.display = 'block';
