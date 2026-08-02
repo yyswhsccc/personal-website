@@ -39106,12 +39106,14 @@ document.addEventListener('DOMContentLoaded', () => {
     { t: 'Delete', a: 'Even\u4ec7\u4f9d\u6587', f: 'delete', yt: 'wQFQ7MvUgVI' },
     { t: '\u82ac\u68a8\u9053\u4e0a', a: '\u694a\u5343\u5b05', f: 'fen-li-dao-shang', yt: '5zrTA_nFrYE' },
     { t: 'my leaving', a: 'Kenichiro Nishihara feat. mabanua', f: 'my-leaving', yt: 'HCRbay_EbMw' },
+    { t: 'The Coconut Song', a: 'Smokey Mountain', f: 'coconut', yt: 'PKQPey6L42M' },
+    { t: '\u6253\u958b\u592a\u967d (PaGui edition)', a: '\u8840\u8089\u679c\u6c41\u6a5f', f: 'da-kai-tai-yang', yt: 'no_L7sw_5sI' },
   ];
   // liner notes: yongshan will supply these per track (key = f)
   var MP3_NOTES = {};
 
   // cinema-side rolling credits, per track (key = f) - text lives in i18n
-  var MP3_LINERS = { 'shui-di': 1, 'sweet-dream': 1, 'die-for-you': 1, 'hue': 1, 'hua-tuo': 1, 'chu-xue': 1 };
+  var MP3_LINERS = { 'shui-di': 1, 'sweet-dream': 1, 'die-for-you': 1, 'hue': 1, 'hua-tuo': 1, 'chu-xue': 1, 'i-love-you-so': 1, 'coconut': 1, 'da-kai-tai-yang': 1 };
 
   function mp3Lang() { return String(document.documentElement.lang || 'en').indexOf('fr') === 0 ? 'fr' : 'en'; }
   function T(key) {
@@ -39220,6 +39222,7 @@ document.addEventListener('DOMContentLoaded', () => {
     var on = playing || vidPlaying;
     b.textContent = on ? '\u23f8' : '\u25b6';
     b.classList.toggle('on', on);
+    setTimeout(mp3Taskbar, 0);
   }
 
   function rebuildOrder(pin) {
@@ -39272,6 +39275,10 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
     screen.innerHTML = html;
+    [].forEach.call(screen.querySelectorAll('.ln-photo'), function (im9) {
+      im9.onerror = function () { this.style.display = 'none'; };
+      if (im9.complete && !im9.naturalWidth) { im9.style.display = 'none'; }
+    });
     discInit();
     theaterInit();
   }
@@ -39647,9 +39654,41 @@ document.addEventListener('DOMContentLoaded', () => {
     return wrap;
   }
 
+  var discAnim = null;
+  function discSpin(el, fromDeg) {
+    discAnim = el.animate(
+      [{ transform: 'rotate(' + fromDeg + 'deg)' }, { transform: 'rotate(' + (fromDeg + 360) + 'deg)' }],
+      { duration: 6500, iterations: Infinity });
+    discAnim._base = fromDeg;
+  }
+  function discAngleNow() {
+    if (!discAnim) return 0;
+    var t = discAnim.currentTime || 0;
+    return ((discAnim._base || 0) + (t % 6500) / 6500 * 360) % 360;
+  }
+  function discPause() {
+    var el = screen.querySelector('.mp3-vinyl');
+    if (!el || !discAnim) return;
+    var a = discAngleNow();
+    discAnim.cancel();
+    discAnim = null;
+    el.animate([{ transform: 'rotate(' + a + 'deg)' }, { transform: 'rotate(' + (a + 120) + 'deg)' }],
+      { duration: 1700, easing: 'cubic-bezier(0.12, 0.55, 0.25, 1)', fill: 'forwards' });
+    el._restDeg = (a + 120) % 360;
+  }
+  function discResume() {
+    var el = screen.querySelector('.mp3-vinyl');
+    if (!el) return;
+    var a = el._restDeg || 0;
+    var up = el.animate([{ transform: 'rotate(' + a + 'deg)' }, { transform: 'rotate(' + (a + 70) + 'deg)' }],
+      { duration: 850, easing: 'ease-in', fill: 'forwards' });
+    up.onfinish = function () { discSpin(el, (a + 70) % 360); };
+  }
   function discInit() {
     var box = document.getElementById('mp3disc');
     if (!box) return;
+    var vin = box.querySelector('.mp3-vinyl');
+    if (vin) { discSpin(vin, 0); }
     var liner2 = box.querySelector('.mp3-liner');
     if (liner2) {
       var free = screen.clientWidth - 190;
@@ -39671,8 +39710,15 @@ document.addEventListener('DOMContentLoaded', () => {
         var vinyl = box.querySelector('.mp3-vinyl');
         if (p && vinyl) {
           p.classList.add('dash');
-          setTimeout(function () { vinyl.classList.add('scratch'); }, 480);
-          setTimeout(function () { vinyl.classList.remove('scratch'); p.classList.remove('dash'); }, 1350);
+          setTimeout(function () {
+            vinyl.classList.add('scratch');
+            if (discAnim && discAnim.updatePlaybackRate) { discAnim.updatePlaybackRate(3); }
+          }, 480);
+          setTimeout(function () {
+            vinyl.classList.remove('scratch');
+            if (discAnim && discAnim.updatePlaybackRate) { discAnim.updatePlaybackRate(1); }
+            p.classList.remove('dash');
+          }, 1350);
         }
         mischief();
       }, 4200 + Math.random() * 4200);
@@ -39701,7 +39747,6 @@ document.addEventListener('DOMContentLoaded', () => {
       mp3Center();
       updatePlayGlyph();
       if (tr.mv) { armBiliClock(); scheduleBiliEnd(tr); }
-      if (document.getElementById('mp3-mini')) { miniChip(true); }
       setTimeout(function () { ytCmd('setVolume', [Math.round(audio.volume * 100)]); }, 900);
       setTimeout(applyMute, 1200);
       return;
@@ -39864,11 +39909,25 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   if (sndBtn) { sndBtn.addEventListener('click', function () { setTimeout(applyMute, 0); }); }
 
+  function showCurtain2() {
+    var st = screen.querySelector('.mp3-mv') || document.getElementById('mp3disc');
+    if (!st || st.querySelector('.mp3-curtain2')) return;
+    var cvt = document.createElement('div');
+    cvt.className = 'mp3-curtain2';
+    cvt.textContent = T('mp3.intermission');
+    cvt.setAttribute('data-i18n-live', 'mp3.intermission');
+    st.appendChild(cvt);
+  }
+  function hideCurtain2() {
+    var c2 = screen.querySelector('.mp3-curtain2');
+    if (c2) { c2.remove(); }
+  }
   document.getElementById('mp3-play').addEventListener('click', function () {
     if (cur < 0) { cur = 0; playCur(); return; }
     var tr = MP3_TRACKS[order[cur]];
-    if (tr.yt) {                       // real pause via the iframe API
-      ytCmd(vidPlaying ? 'pauseVideo' : 'playVideo');
+    if (tr.yt) {                       // real pause via the iframe API, curtain for the eyes
+      if (vidPlaying) { ytCmd('pauseVideo'); showCurtain2(); }
+      else { hideCurtain2(); ytCmd('playVideo'); }
       vidPlaying = !vidPlaying;
       updatePlayGlyph();
       return;
@@ -39902,10 +39961,9 @@ document.addEventListener('DOMContentLoaded', () => {
       updatePlayGlyph();
       return;
     }
-    if (playing) { audio.pause(); playing = false; }
-    else { var p = audio.play(); if (p && p.catch) p.catch(function () {}); playing = true; }
+    if (playing) { audio.pause(); playing = false; discPause(); }
+    else { discResume(); var p = audio.play(); if (p && p.catch) p.catch(function () {}); playing = true; }
     updatePlayGlyph();
-    renderList();
   });
   document.getElementById('mp3-prev').addEventListener('click', function () {
     if (!order.length) return;
@@ -40078,23 +40136,39 @@ document.addEventListener('DOMContentLoaded', () => {
     updatePlayGlyph();
   }
 
-  function miniChip(on) {
-    var chip = document.getElementById('mp3-mini');
-    var tr5 = cur >= 0 && MP3_TRACKS[order[cur]];
-    if (!on || !tr5 || !(playing || vidPlaying)) { if (chip) chip.remove(); return; }
-    var txt = '\u266a ' + tr5.t + ' \u2014 ' + tr5.a;
-    if (!chip) {
-      chip = document.createElement('button');
-      chip.id = 'mp3-mini';
-      chip.setAttribute('aria-label', 'restore music player');
-      chip.innerHTML = '<span class="mq"><span class="mq-inner"><span></span><span></span></span></span>';
-      chip.addEventListener('click', function () {
-        var icon = document.querySelector('[data-window="win-mp3"]');
-        if (icon) { icon.click(); }
-      });
-      document.body.appendChild(chip);
+  function mp3Taskbar() {
+    var btns = document.querySelectorAll('.taskbar-app-btn');
+    var btn = null;
+    for (var bi = 0; bi < btns.length; bi++) {
+      if (btns[bi].title === 'mp3_player.exe') { btn = btns[bi]; break; }
     }
-    [].forEach.call(chip.querySelectorAll('.mq-inner > span'), function (e3) { e3.textContent = txt; });
+    if (!btn) return;
+    var tr5 = cur >= 0 && MP3_TRACKS[order[cur]];
+    var on = tr5 && (playing || vidPlaying);
+    if (!on) {
+      if (btn.dataset.mp3orig) {
+        btn.innerHTML = btn.dataset.mp3orig;
+        btn.classList.remove('mp3-now');
+        delete btn.dataset.mp3orig;
+      }
+      return;
+    }
+    var txt = '\u2014  ' + tr5.a + '   \u266a ' + tr5.t + '  \u2014';
+    if (!btn.dataset.mp3orig) { btn.dataset.mp3orig = btn.innerHTML; }
+    btn.classList.add('mp3-now');
+    btn.innerHTML = '<span class="mq"><span class="mq-inner"><span></span><span></span></span></span>';
+    [].forEach.call(btn.querySelectorAll('.mq-inner > span'), function (e3) { e3.textContent = txt; });
+    var mqEl = btn.querySelector('.mq');
+    var inner = btn.querySelector('.mq-inner');
+    if (inner.children[0].offsetWidth + 10 <= mqEl.offsetWidth) {   // fits: hold still
+      inner.classList.add('still');
+      inner.children[1].style.display = 'none';
+    }
+  }
+  var tbApps = document.querySelector('.taskbar-apps');
+  if (tbApps) {
+    new MutationObserver(function () { setTimeout(mp3Taskbar, 0); })
+      .observe(tbApps, { childList: true });
   }
 
   var mp3WasOpen = false, mp3WasMax = false;
@@ -40107,10 +40181,8 @@ document.addEventListener('DOMContentLoaded', () => {
       booted = false;
       bootCancel();
       stopAllMusic();
-      miniChip(false);
-    } else {
-      miniChip(mini);                              // minimized = now-playing chip, bottom right
     }
+    setTimeout(mp3Taskbar, 0);                     // the taskbar button doubles as now-playing
     if ((open && !mp3WasOpen) || (open && max !== mp3WasMax)) {
       setTimeout(function () { sizeTheater(); mp3Center(); }, 60);
     }
@@ -40119,4 +40191,47 @@ document.addEventListener('DOMContentLoaded', () => {
     mp3WasOpen = open;
     mp3WasMax = max;
   }).observe(win, { attributes: true, attributeFilter: ['class'] });
+})();
+
+// ————————————————— moving day: reclaim saves stranded on the old origin —————————————————
+// the custom-domain move left every visitor's localStorage behind on
+// yyswhsccc.github.io. that origin still serves the doodlebuds pages, so a
+// tiny bridge page there can hand the old keys back via a one-time top-level
+// bounce (iframes won't do: third-party storage is partitioned these days).
+(function () {
+  var NEW_HOST = 'yongshan.is-a.dev';
+  var BRIDGE = 'https://yyswhsccc.github.io/doodlebuds/bridge/yos-bridge.html';
+  var FLAG = 'yos-migrated-ghio';
+  var testing = location.hostname === 'localhost' && location.search.indexOf('migtest') > -1;
+  if (location.hostname !== NEW_HOST && !testing) return;
+  if (window.top !== window.self) return;
+
+  // homecoming leg: the bridge sent us back with the old life in the fragment
+  var m = location.hash.match(/#yosimport=([A-Za-z0-9+/=]+)/);
+  if (m) {
+    var imported = 0;
+    try {
+      var keys = JSON.parse(decodeURIComponent(escape(atob(m[1]))));
+      for (var k in keys) {
+        if (!Object.prototype.hasOwnProperty.call(keys, k)) continue;
+        if (localStorage.getItem(k) === null) {   // fill gaps only, never clobber
+          localStorage.setItem(k, keys[k]);
+          imported++;
+        }
+      }
+    } catch (e) { /* torn luggage: arrive empty-handed */ }
+    try { localStorage.setItem(FLAG, '1'); } catch (e2) { /* private mode */ }
+    history.replaceState(null, '', location.pathname + location.search);
+    if (imported > 0) { location.reload(); }      // boot again as our old self
+    return;
+  }
+
+  // outbound leg: one bounce per browser, one per session even if storage fails
+  try {
+    if (localStorage.getItem(FLAG)) return;
+    if (sessionStorage.getItem(FLAG)) return;
+    sessionStorage.setItem(FLAG, '1');
+  } catch (e3) { return; }
+  if (testing) return;                            // localhost never actually bounces
+  location.replace(BRIDGE + '#return=' + encodeURIComponent(location.href.split('#')[0]));
 })();

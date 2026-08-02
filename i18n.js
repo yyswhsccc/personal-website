@@ -22,6 +22,16 @@ window.YOS_I18N = {
     'mp3.liner.hue': '<p class="ln-t">liner notes: HUE</p>' +
       '<p>the song i keep on loop<br>while playing Risk of Rain -<br>as beautiful as the Wandering Vagrant,<br>that giant jellyfish.</p>' +
       '<p class="ln-end">huntress only, highest difficulty,<br>everything cleared.<br>waiting for the next DLC.</p>',
+    'mp3.liner.da-kai-tai-yang': '<p class="ln-t">observation notes: OPEN THE SUN</p>' +
+      '<p>a game i love: PAGUI.<br>Taiwan, 1954.<br>an orphan raised by a temple<br>slips out at night to find his mother,<br>and the night is full of ghosts.</p>' +
+      '<p>the combat system is a religion,<br>literally: the generals you play<br>are demons a god forgave<br>and hired as security.<br>the green face docks the lifespans<br>of the wicked; the red and blue<br>extend the lifespans of the kind.<br>every step was motion-captured<br>from real temple performers -<br>steps that have actually been danced<br>in front of an actual god.</p>' +
+      '<p>this song is their deployment anthem:<br>a metal band in a pig mask,<br>suona over breakdowns.<br>and the title is the whole theology -<br>here, the sun does not rise by itself.<br>somebody paints their face,<br>picks up the trident,<br>and switches it on.</p>' +
+      '<p class="ln-end">(the story is half true.<br>the real orphan danced<br>for his temple all his life.<br>his mother found him<br>only at his funeral.<br>the game lets them meet.)</p>',
+    'mp3.liner.i-love-you-so': '<p class="ln-t">liner notes: I LOVE YOU SO</p>' +
+      '<p>walking under an edmonton<br>summer evening sky,<br>this song in my ears.<br>looked up -<br>the moon was beautiful.</p>' +
+      '<img class="ln-photo" src="assets/music/moon-edmonton.jpg" alt="a crescent moon over an edmonton evening">',
+    'mp3.liner.coconut': '<p class="ln-t">liner notes: THE COCONUT SONG</p>' +
+      '<p>I love Koookonut! \ud83d\ude0b<br>what about you?</p>',
     'mp3.liner.chu-xue': '<p class="ln-t">liner notes: FIRST SNOW</p>' +
       '<p>the first song i ever downloaded<br>onto an mp3 player.<br>from my first year of middle school<br>to now - thirteen years.</p>',
     'mp3.liner.hua-tuo': '<p class="ln-t">liner notes: HUA TUO</p>' +
@@ -69,7 +79,7 @@ window.YOS_I18N = {
     'mp3.head': "yongshan's playlist \u2661 {n} tracks",
     'mp3.note.soon': "(yongshan's liner notes for this song are on their way \u2661)",
     'mp3.tape': "this tape is still in the mail\u2026 (\u25e0\u203f\u25e0)\nyongshan is hunting down the audio \u2661",
-    'mp3.footer.l': "yongshan's mixtape \u00b7 25 tracks",
+    'mp3.footer.l': "yongshan's mixtape \u00b7 27 tracks",
     'mp3.footer.r': 'music keeps playing while you wander \u2661',
     'meta.title': 'YongshanOS ♡',
     'meta.desc': 'Personal portfolio of Yongshan Yu, AI/LMS Systems & Full-Stack Lead. A hand-built Y2K pixel desktop OS with a playable slime pet.',
@@ -428,6 +438,16 @@ window.YOS_I18N = {
     'mp3.liner.hue': '<p class="ln-t">notes : HUE</p>' +
       '<p>la chanson que je laisse en boucle<br>en jouant \u00e0 Risk of Rain -<br>aussi belle que le Wandering Vagrant,<br>cette m\u00e9duse g\u00e9ante.</p>' +
       '<p class="ln-end">chasseresse uniquement, difficult\u00e9 maximale,<br>tout termin\u00e9.<br>en attendant le prochain DLC.</p>',
+    'mp3.liner.da-kai-tai-yang': '<p class="ln-t">notes d\u2019observation : OPEN THE SUN</p>' +
+      '<p>un jeu que j\u2019aime : PAGUI.<br>Ta\u00efwan, 1954.<br>un orphelin \u00e9lev\u00e9 par un temple<br>s\u2019\u00e9chappe la nuit pour retrouver sa m\u00e8re,<br>et la nuit est pleine de fant\u00f4mes.</p>' +
+      '<p>le syst\u00e8me de combat est une religion,<br>litt\u00e9ralement : les g\u00e9n\u00e9raux qu\u2019on incarne<br>sont des d\u00e9mons qu\u2019un dieu a pardonn\u00e9s<br>puis embauch\u00e9s comme gardiens.<br>le visage vert raccourcit la vie<br>des m\u00e9chants ; le rouge et le bleu<br>allongent celle des bons.<br>chaque pas vient de la motion capture<br>de vrais danseurs de temple -<br>des pas qui ont vraiment \u00e9t\u00e9 dans\u00e9s<br>devant un vrai dieu.</p>' +
+      '<p>cette chanson est leur hymne de sortie :<br>un groupe de metal au masque de cochon,<br>du suona sur des breakdowns.<br>et le titre est toute la th\u00e9ologie -<br>ici, le soleil ne se l\u00e8ve pas tout seul.<br>quelqu\u2019un se peint le visage,<br>prend le trident,<br>et l\u2019allume.</p>' +
+      '<p class="ln-end">(l\u2019histoire est \u00e0 moiti\u00e9 vraie.<br>le vrai orphelin a dans\u00e9<br>pour son temple toute sa vie.<br>sa m\u00e8re ne l\u2019a retrouv\u00e9<br>qu\u2019\u00e0 ses fun\u00e9railles.<br>le jeu leur offre la rencontre.)</p>',
+    'mp3.liner.i-love-you-so': '<p class="ln-t">notes : I LOVE YOU SO</p>' +
+      '<p>marcher sous un ciel d\u2019\u00e9t\u00e9<br>d\u2019edmonton, le soir,<br>cette chanson dans les oreilles.<br>lever les yeux -<br>la lune \u00e9tait belle.</p>' +
+      '<img class="ln-photo" src="assets/music/moon-edmonton.jpg" alt="un croissant de lune sur un soir d\u2019edmonton">',
+    'mp3.liner.coconut': '<p class="ln-t">notes : THE COCONUT SONG</p>' +
+      '<p>j\u2019adore Koookonut ! \ud83d\ude0b<br>et toi ?</p>',
     'mp3.liner.chu-xue': '<p class="ln-t">notes : FIRST SNOW</p>' +
       '<p>la premi\u00e8re chanson que j\u2019ai t\u00e9l\u00e9charg\u00e9e<br>sur un lecteur mp3.<br>de ma premi\u00e8re ann\u00e9e de coll\u00e8ge<br>\u00e0 aujourd\u2019hui - treize ans.</p>',
     'mp3.liner.hua-tuo': '<p class="ln-t">notes : HUA TUO</p>' +
@@ -475,7 +495,7 @@ window.YOS_I18N = {
     'mp3.head': 'la playlist de yongshan \u2661 {n} titres',
     'mp3.note.soon': '(les petites pens\u00e9es de yongshan sur ce titre arrivent bient\u00f4t \u2661)',
     'mp3.tape': "cette cassette est encore dans le courrier\u2026 (\u25e0\u203f\u25e0)\nyongshan cherche la bande sonore \u2661",
-    'mp3.footer.l': 'la mixtape de yongshan \u00b7 25 titres',
+    'mp3.footer.l': 'la mixtape de yongshan \u00b7 27 titres',
     'mp3.footer.r': 'la musique continue pendant ta balade \u2661',
     'meta.title': 'YongshanOS ♡',
     'meta.desc': 'Portfolio personnel de Yongshan Yu, responsable systèmes IA/LMS et développement full-stack. Un bureau pixel Y2K fait main, avec un slime de compagnie jouable.',
