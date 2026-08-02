@@ -39295,7 +39295,7 @@ document.addEventListener('DOMContentLoaded', () => {
           html += '<div class="mp3-theater"><div class="mp3-mv" data-embed="' + embed + '"><iframe src="' + embed +
             '" allowfullscreen allow="autoplay; fullscreen; encrypted-media"></iframe>' +
             '<span class="mp3-shield' + (tr.mv ? ' grace' : '') + '"></span>' +
-            '<div class="mp3-boot" data-i18n-live="mp3.threading">' + T('mp3.threading') +
+            '<div class="mp3-reelveil" data-i18n-live="mp3.threading">' + T('mp3.threading') +
             '<span class="mp3-cursor"></span></div></div>' +
             (MP3_LINERS[tr.f] ? '<div class="mp3-liner"><div class="mp3-liner-roll" data-liner-key="mp3.liner.' + tr.f + '"' +
               (MP3_LINER_DELAY[tr.f] ? ' style="animation-delay:' + MP3_LINER_DELAY[tr.f] + 's"' : '') + '>' + T('mp3.liner.' + tr.f) + '</div></div>' : '') +
@@ -39371,7 +39371,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }, 10000);
     }
     // the boot veil hides both platforms' intro chrome, then lifts
-    var bv9 = th.querySelector('.mp3-boot');
+    var bv9 = th.querySelector('.mp3-reelveil');
     if (bv9) {
       var fr9 = th.querySelector('iframe');
       var lift = function (ms) { setTimeout(function () { if (bv9.isConnected) { bv9.remove(); } }, ms); };
