@@ -39289,7 +39289,7 @@ document.addEventListener('DOMContentLoaded', () => {
         tr.t + ' <span class="artist">— ' + tr.a + '</span></div>';
       if (on) {
         var embed = tr.mv
-          ? 'https://player.bilibili.com/player.html?bvid=' + tr.mv + '&autoplay=1&danmaku=0&high_quality=1'
+          ? 'https://www.bilibili.com/blackboard/html5mobileplayer.html?bvid=' + tr.mv + '&autoplay=1&danmaku=0&hideCoverInfo=1'
           : tr.yt
             ? 'https://www.youtube.com/embed/' + tr.yt + '?autoplay=1&enablejsapi=1&controls=0&rel=0&iv_load_policy=3&disablekb=1&fs=0'
             : null;
@@ -39336,24 +39336,27 @@ document.addEventListener('DOMContentLoaded', () => {
     var ifr = th.querySelector('iframe');
     var maxH = th.clientHeight - CROWD - 18;
     var maxW = th.clientWidth * 0.96;
-    if (th.querySelector('.mp3-liner')) {          // annotated tapes keep a bottom band
-      maxH = Math.max(240, maxH - 190);
-    }
+    maxH = Math.max(240, maxH - 100);              // uniform: every tape keeps a slim two-line band
     var w = Math.min(maxW, maxH * 16 / 9);
     ifr.style.width = Math.round(w) + 'px';
     ifr.style.height = Math.round(w * 9 / 16) + 'px';
     th.style.setProperty('--runw', (th.clientWidth + 90) + 'px');
+    // the screen floats centered (nudged low) in the space above the band
+    var vidH9 = Math.round(w * 9 / 16);
+    var padTop = Math.max(10, Math.round((th.clientHeight - CROWD - 84 - vidH9) / 2) + 10);
+    var mv9 = th.querySelector('.mp3-mv');
+    if (mv9) { mv9.style.marginTop = (padTop - 10) + 'px'; }
     var liner = th.querySelector('.mp3-liner');
     if (liner) {
-      var vidBottom = 10 + (parseInt(ifr.style.height, 10) || 0);
-      var bandH = th.clientHeight - vidBottom - CROWD - 40;   // breathing room above the crowd
-      if (bandH >= 96) {
+      var vidBottom = padTop + vidH9 + 6;
+      var bandH = Math.min(64, th.clientHeight - vidBottom - CROWD - 30);   // two lines is plenty
+      if (bandH >= 40) {
         var lw9 = Math.min(780, Math.round(th.clientWidth * 0.86));
         liner.style.display = 'block';
         liner.style.width = lw9 + 'px';
         liner.style.left = Math.round((th.clientWidth - lw9) / 2) + 'px';
         liner.style.right = 'auto';
-        liner.style.top = (vidBottom + 14) + 'px';
+        liner.style.top = (vidBottom + 10) + 'px';
         liner.style.height = bandH + 'px';
         var roll9 = liner.querySelector('.mp3-liner-roll');
         if (roll9 && !roll9._paced) {
