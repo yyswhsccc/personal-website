@@ -39152,6 +39152,7 @@ document.addEventListener('DOMContentLoaded', () => {
   var MODE_GLYPH = { shuffle: '\ud83d\udd00', loop: '\ud83d\udd02', order: '\ud83d\udd01' };
   var mode = 'shuffle';
   var vidPlaying = false;
+  var playedSet = {};                              // tracks actually started this session
   var biliStart = 0;        // wall-clock bookkeeping: bilibili has no API,
   var biliOffset = 0;       // so we time the reel ourselves for resume
 
@@ -39335,8 +39336,8 @@ document.addEventListener('DOMContentLoaded', () => {
     var ifr = th.querySelector('iframe');
     var maxH = th.clientHeight - CROWD - 18;
     var maxW = th.clientWidth * 0.96;
-    if (th.querySelector('.mp3-liner')) {          // annotated tapes reserve the side band
-      maxW = Math.max(320, Math.min(maxW, th.clientWidth - 520));
+    if (th.querySelector('.mp3-liner')) {          // annotated tapes keep a bottom band
+      maxH = Math.max(240, maxH - 190);
     }
     var w = Math.min(maxW, maxH * 16 / 9);
     ifr.style.width = Math.round(w) + 'px';
@@ -39344,13 +39345,16 @@ document.addEventListener('DOMContentLoaded', () => {
     th.style.setProperty('--runw', (th.clientWidth + 90) + 'px');
     var liner = th.querySelector('.mp3-liner');
     if (liner) {
-      var band = Math.floor((th.clientWidth - parseInt(ifr.style.width, 10)) / 2);
-      if (band >= 150) {
+      var vidBottom = 10 + (parseInt(ifr.style.height, 10) || 0);
+      var bandH = th.clientHeight - vidBottom - CROWD - 40;   // breathing room above the crowd
+      if (bandH >= 96) {
+        var lw9 = Math.min(780, Math.round(th.clientWidth * 0.86));
         liner.style.display = 'block';
-        liner.style.width = (band - 26) + 'px';
-        liner.style.right = '8px';
-        liner.style.top = '12px';
-        liner.style.height = ifr.style.height;
+        liner.style.width = lw9 + 'px';
+        liner.style.left = Math.round((th.clientWidth - lw9) / 2) + 'px';
+        liner.style.right = 'auto';
+        liner.style.top = (vidBottom + 14) + 'px';
+        liner.style.height = bandH + 'px';
         var roll9 = liner.querySelector('.mp3-liner-roll');
         if (roll9 && !roll9._paced) {
           // constant crawl speed, measured only once the reel is visible:
@@ -39814,6 +39818,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function playCur() {
     var tr = MP3_TRACKS[order[cur]];
+    playedSet[order[cur]] = 1;
     if (tr.mv || tr.yt) {              // video sources play in-screen
       audio.pause();
       playing = false;
@@ -39887,11 +39892,19 @@ document.addEventListener('DOMContentLoaded', () => {
       updatePlayGlyph();                           // drops mp3-cinema via cinemaSync
     }, 2600);
     var st = screen.querySelector('.mp3-theater') || screen;
+    var played = 0;
+    for (var pk in playedSet) { if (playedSet.hasOwnProperty(pk)) { played++; } }
+    var total = order.length;
+    var finKey = played >= total ? 'mp3.fin2all' : played <= 1 ? 'mp3.fin2one' : 'mp3.fin2some';
+    var finVars = played >= total ? {} : played <= 1 ? { rest: total - 1 } : { n: played, total: total };
+    var finTxt = T(finKey);
+    for (var v9 in finVars) { finTxt = finTxt.replace('{' + v9 + '}', finVars[v9]); }
     var fin = document.createElement('div');
     fin.className = 'mp3-finale';
     fin.innerHTML = '<div class="fin-reel"></div>' +
       '<div class="fin-t" data-i18n-live="mp3.fin1">' + T('mp3.fin1') + '</div>' +
-      '<div class="fin-s" data-i18n-live="mp3.fin2">' + T('mp3.fin2') + '</div>';
+      '<div class="fin-s" data-fin-key="' + finKey + '" data-fin-vars="' +
+      encodeURIComponent(JSON.stringify(finVars)) + '">' + finTxt + '</div>';
     st.appendChild(fin);
     if (typeof mp3Finale === 'function') { mp3Finale(); }
     setTimeout(function () { finaleBusy = false; }, 4000);
@@ -39922,6 +39935,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     screen.insertBefore(bar, screen.firstChild);
     var nextI = (cur + 1) % order.length;
+    if (mode === 'shuffle') {
+      nextI = -1;
+      for (var st9 = 1; st9 <= order.length; st9++) {
+        var cand9 = (cur + st9) % order.length;
+        if (!playedSet[order[cand9]]) { nextI = cand9; break; }
+      }
+      if (nextI < 0) { finaleShow(); return; }     // every tape spent: roll credits
+    }
     var maxS = Math.max(0, screen.scrollHeight - screen.clientHeight);
     function land() {
       var rows = screen.querySelectorAll('.mp3-track');
@@ -40214,6 +40235,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (mb2) { mb2.title = T('mp3.mode.' + mode); mb2.setAttribute('aria-label', T('mp3.mode.' + mode)); }
     var curtain = screen.querySelector('.mp3-curtain');
     if (curtain) { curtain.textContent = T('mp3.intermission'); }
+    [].forEach.call(win.querySelectorAll('[data-fin-key]'), function (fe) {
+      var t9 = T(fe.getAttribute('data-fin-key'));
+      var vars9 = {};
+      try { vars9 = JSON.parse(decodeURIComponent(fe.getAttribute('data-fin-vars') || '%7B%7D')); } catch (e9) {}
+      for (var w9 in vars9) { t9 = t9.replace('{' + w9 + '}', vars9[w9]); }
+      fe.textContent = t9;
+    });
     [].forEach.call(win.querySelectorAll('[data-liner-key]'), function (lr) {
       lr.innerHTML = T(lr.getAttribute('data-liner-key'));
     });
