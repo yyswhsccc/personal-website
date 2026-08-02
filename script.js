@@ -39294,7 +39294,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (embed) {
           html += '<div class="mp3-theater"><div class="mp3-mv" data-embed="' + embed + '"><iframe src="' + embed +
             '" allowfullscreen allow="autoplay; fullscreen; encrypted-media"></iframe>' +
-            '<span class="mp3-shield' + (tr.mv ? ' grace' : '') + '"></span>' +
+            '<span class="mp3-shield"></span>' +
             '<div class="mp3-reelveil" data-i18n-live="mp3.threading">' + T('mp3.threading') +
             '<span class="mp3-cursor"></span></div></div>' +
             (MP3_LINERS[tr.f] ? '<div class="mp3-liner"><div class="mp3-liner-roll" data-liner-key="mp3.liner.' + tr.f + '"' +
@@ -39364,12 +39364,6 @@ document.addEventListener('DOMContentLoaded', () => {
     var th = screen.querySelector('.mp3-theater');
     if (!th) return;
     sizeTheater();
-    var sh9 = th.querySelector('.mp3-shield.grace');
-    if (sh9) {
-      setTimeout(function () {
-        if (sh9.isConnected) { sh9.classList.remove('grace'); }
-      }, 10000);
-    }
     // the boot veil hides both platforms' intro chrome, then lifts
     var bv9 = th.querySelector('.mp3-reelveil');
     if (bv9) {
@@ -40246,6 +40240,10 @@ document.addEventListener('DOMContentLoaded', () => {
       stopAllMusic();
     }
     setTimeout(mp3Taskbar, 0);                     // the taskbar button doubles as now-playing
+    if (open && !mp3WasOpen && !max) {
+      win.classList.add('window-maximized');       // the jukebox only does fullscreen
+      max = true;
+    }
     if ((open && !mp3WasOpen) || (open && max !== mp3WasMax)) {
       setTimeout(function () { sizeTheater(); mp3Center(); }, 60);
     }

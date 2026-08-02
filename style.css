@@ -14210,4 +14210,26 @@ body.mp3-cinema #win-mp3 .win-btn:hover {
 
 /* bulletproof glass: platform UI is display-only, our deck drives */
 .mp3-shield { position: absolute; inset: 0; z-index: 3; }
-.mp3-shield.grace { pointer-events: none; }   /* first 10s: the bili play button stays reachable */
+
+/* ——— the jukebox goes full-bleed: no frame, no bezel, three keys top-right ——— */
+.window-mp3.window-maximized {
+  position: fixed !important; inset: 0 !important;
+  width: 100vw !important; height: 100vh !important; max-height: 100vh !important;
+  border: 0 !important; box-shadow: none !important; z-index: 5500 !important;
+}
+.window-mp3.window-maximized .window-header {
+  position: absolute; top: 8px; right: 10px; left: auto; width: auto;
+  background: transparent; border: 0; box-shadow: none; z-index: 30; padding: 4px;
+}
+.window-mp3.window-maximized .window-header .window-title-container { display: none; }
+.window-mp3.window-maximized .window-body { height: 100vh; padding: 0; }
+.window-mp3.window-maximized .mp3-device {
+  height: 100%; display: flex; flex-direction: column;
+  border: 0; padding: 0; box-shadow: none;
+}
+.window-mp3.window-maximized .mp3-screen {
+  height: auto; flex: 1; border-left: 0; border-right: 0; border-top: 0;
+}
+.window-mp3.window-maximized .mp3-controls { margin: 10px 14px 12px; }
+.window-mp3.window-maximized .mp3-plate { display: none; }
+.window-mp3.window-maximized .window-footer { display: none; }
