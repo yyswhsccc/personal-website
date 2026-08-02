@@ -14135,3 +14135,36 @@ body.mp3-cinema .mini-danmaku { display: none !important; }
   display: block; width: 92%; margin: 4px auto 26px;
   border: 2px solid var(--pink-hot); box-shadow: 3px 3px 0 rgba(42, 10, 32, 0.55);
 }
+
+/* ——— cinema mode: the house lights actually go down ——— */
+body.mp3-cinema #top::after {
+  content: ''; position: fixed; inset: 0; z-index: 5000;
+  background: rgba(7, 4, 12, 0.82); pointer-events: none;
+  animation: mp3houselights 0.8s ease;
+}
+@keyframes mp3houselights { from { opacity: 0; } to { opacity: 1; } }
+body.mp3-cinema #win-mp3 { z-index: 6000 !important; }
+body.mp3-cinema #win-mp3 .window-header {
+  background: linear-gradient(90deg, #241226, #191024 65%, #121018);
+  color: #b9a3c9;
+}
+body.mp3-cinema #win-mp3 .window-header .window-title { color: #b9a3c9; text-shadow: none; }
+body.mp3-cinema #win-mp3 .win-btn { background: #241a2e; color: #8a7796; border-color: #3a2740; }
+body.mp3-cinema .mp3-device {
+  background: #150f1d; border-color: #33203c;
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.05);
+}
+body.mp3-cinema .mp3-screen { border-color: #33203c; box-shadow: inset 0 0 0 2px rgba(255, 183, 226, 0.08); }
+body.mp3-cinema .mp3-controls { background: rgba(255, 255, 255, 0.03); border: 0; }
+body.mp3-cinema .mp3-btn {
+  background: #201627; color: #c78bab; border-color: #3a2740;
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.6);
+}
+body.mp3-cinema .mp3-btn-main { background: #7e2a55; color: #f5d7e6; }
+body.mp3-cinema .mp3-btn-main.on { background: #5d1f40; }
+body.mp3-cinema .mp3-volbar { background: #120c18; border-color: #3a2740; box-shadow: inset 0 2px 0 rgba(0, 0, 0, 0.6); }
+body.mp3-cinema .mp3-volbar .seg { background: rgba(255, 183, 226, 0.07); }
+body.mp3-cinema .mp3-volbar .seg.on { background: #7e2a55; box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.12), inset 0 -2px 0 rgba(0, 0, 0, 0.4); }
+body.mp3-cinema .mp3-vollabel, body.mp3-cinema .mp3-volpct, body.mp3-cinema .mp3-plate { color: #6f5e7d; text-shadow: none; }
+body.mp3-cinema #win-mp3 .window-footer { background: #121018; color: #6f5e7d; border-color: #33203c; }
+body.mp3-cinema #win-mp3 .window-footer span { color: #6f5e7d; }

@@ -39219,12 +39219,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  function cinemaSync() {
+    // lights down only while something is actually rolling, fullscreen;
+    // picking a song, pausing, browsing = intermission = house lights up
+    var open = !win.classList.contains('window-closed');
+    var mini = win.classList.contains('window-minimized');
+    var max = win.classList.contains('window-maximized');
+    document.body.classList.toggle('mp3-cinema', open && max && !mini && (playing || vidPlaying));
+  }
   function updatePlayGlyph() {
     var b = document.getElementById('mp3-play');
     if (!b) return;
     var on = playing || vidPlaying;
     b.textContent = on ? '\u23f8' : '\u25b6';
     b.classList.toggle('on', on);
+    cinemaSync();
     setTimeout(mp3Taskbar, 0);
   }
 
@@ -40191,8 +40200,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if ((open && !mp3WasOpen) || (open && max !== mp3WasMax)) {
       setTimeout(function () { sizeTheater(); mp3Center(); }, 60);
     }
-    // cinema courtesy: fullscreen music = no popups, no chatter
-    document.body.classList.toggle('mp3-cinema', open && max && !mini);
+    cinemaSync();
     mp3WasOpen = open;
     mp3WasMax = max;
   }).observe(win, { attributes: true, attributeFilter: ['class'] });
