@@ -39114,6 +39114,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // cinema-side rolling credits, per track (key = f) - text lives in i18n
   var MP3_LINERS = { 'shui-di': 1, 'sweet-dream': 1, 'die-for-you': 1, 'hue': 1, 'hua-tuo': 1, 'chu-xue': 1, 'i-love-you-so': 1, 'coconut': 1, 'da-kai-tai-yang': 1 };
+  // per-track roll delay: PAGUI's video spends 2:02 on the muster cinematic
+  // before the song lands - the notes wait for the drop
+  var MP3_LINER_DELAY = { 'da-kai-tai-yang': 124 };
 
   function mp3Lang() { return String(document.documentElement.lang || 'en').indexOf('fr') === 0 ? 'fr' : 'en'; }
   function T(key) {
@@ -39258,7 +39261,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (embed) {
           html += '<div class="mp3-theater"><div class="mp3-mv" data-embed="' + embed + '"><iframe src="' + embed +
             '" allowfullscreen allow="autoplay; fullscreen; encrypted-media"></iframe></div>' +
-            (MP3_LINERS[tr.f] ? '<div class="mp3-liner"><div class="mp3-liner-roll" data-liner-key="mp3.liner.' + tr.f + '">' + T('mp3.liner.' + tr.f) + '</div></div>' : '') +
+            (MP3_LINERS[tr.f] ? '<div class="mp3-liner"><div class="mp3-liner-roll" data-liner-key="mp3.liner.' + tr.f + '"' +
+              (MP3_LINER_DELAY[tr.f] ? ' style="animation-delay:' + MP3_LINER_DELAY[tr.f] + 's"' : '') + '>' + T('mp3.liner.' + tr.f) + '</div></div>' : '') +
             '<div class="mp3-crowd"></div></div>';
         }
         if (MP3_NOTES[tr.f]) {
@@ -39266,7 +39270,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (!tr.mv && !tr.yt && !tr._missing) {
           html += '<div class="mp3-disc" id="mp3disc"><div class="mp3-vinyl"></div>' +
-            (MP3_LINERS[tr.f] ? '<div class="mp3-liner"><div class="mp3-liner-roll" data-liner-key="mp3.liner.' + tr.f + '">' + T('mp3.liner.' + tr.f) + '</div></div>' : '') +
+            (MP3_LINERS[tr.f] ? '<div class="mp3-liner"><div class="mp3-liner-roll" data-liner-key="mp3.liner.' + tr.f + '"' +
+              (MP3_LINER_DELAY[tr.f] ? ' style="animation-delay:' + MP3_LINER_DELAY[tr.f] + 's"' : '') + '>' + T('mp3.liner.' + tr.f) + '</div></div>' : '') +
             '</div>';
         }
         if (tr._missing) {
