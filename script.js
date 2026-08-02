@@ -39308,7 +39308,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (!tr.mv && !tr.yt && !tr._missing) {
           html += '<div class="mp3-disc" id="mp3disc"><div class="mp3-vinyl"></div>' +
-            (MP3_LINERS[tr.f] ? '<div class="mp3-liner"><div class="mp3-liner-roll" data-liner-key="mp3.liner.' + tr.f + '"' +
+            (MP3_LINERS[tr.f] ? '<div class="mp3-liner below"><div class="mp3-liner-roll" data-liner-key="mp3.liner.' + tr.f + '"' +
               (MP3_LINER_DELAY[tr.f] ? ' style="animation-delay:' + MP3_LINER_DELAY[tr.f] + 's"' : '') + '>' + T('mp3.liner.' + tr.f) + '</div></div>' : '') +
             '</div>';
         }
@@ -39771,19 +39771,13 @@ document.addEventListener('DOMContentLoaded', () => {
   function discInit() {
     var box = document.getElementById('mp3disc');
     if (!box) return;
+    var roll8 = box.querySelector('.mp3-liner-roll');
+    if (roll8 && !roll8._paced) {
+      roll8._paced = true;
+      roll8.style.animationDuration = Math.max(60, Math.round((roll8.scrollHeight + 420) / 10)) + 's';
+    }
     var vin = box.querySelector('.mp3-vinyl');
     if (vin) { discSpin(vin, 0); }
-    var liner2 = box.querySelector('.mp3-liner');
-    if (liner2) {
-      var free = screen.clientWidth - 190;
-      if (free >= 240) {
-        liner2.style.display = 'block';
-        liner2.style.width = Math.min(300, Math.floor(screen.clientWidth * 0.34)) + 'px';
-        liner2.style.right = '10px';
-        liner2.style.top = '10px';
-        liner2.style.height = Math.max(180, box.clientHeight - 20) + 'px';
-      }
-    }
     var n = 3 + Math.floor(Math.random() * 2);
     for (var k = 0; k < n; k++) { box.appendChild(makePik(k)); }
     (function mischief() {
