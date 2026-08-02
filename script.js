@@ -9056,6 +9056,10 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function dreamBegin(w, remainMs, resumed) {
+    if (document.body.classList.contains('mp3-open')) {            // the cinema outranks every dream,
+      setTimeout(function () { dreamBegin(w, remainMs, resumed); }, 30000); // resumed ones included
+      return;
+    }
     if (dreamWorld) return;
     const dur = remainMs || (10 + Math.random() * 5) * 60000; // the requested 10–15 min
     dreamWorld = { id: w.id, w, until: Date.now() + dur, total: remainMs ? 15 * 60000 : dur, timers: [], nodes: [], flags: { removers: [] } };
@@ -17437,6 +17441,9 @@ document.addEventListener('DOMContentLoaded', () => {
       sleepwalkTimer = setTimeout(() => { if (ghostHidden()) startSleepwalk(); }, 30000);
     }
   }
+  window.__yosDreamEnd = dreamEnd;
+  window.__yosDreamActive = function () { return !!dreamWorld; };
+
 
   function dreamArmCooldown() {
     // owner decree v126: fifteen minutes of ACTIVE time between dreams
@@ -39234,6 +39241,9 @@ document.addEventListener('DOMContentLoaded', () => {
     var mini = win.classList.contains('window-minimized');
     var max = win.classList.contains('window-maximized');
     document.body.classList.toggle('mp3-open', open);   // open deck = total quiet on the lot
+    if (open && window.__yosDreamActive && window.__yosDreamActive()) {
+      try { window.__yosDreamEnd('cinema'); } catch (e9) { /* the dream resists; the veil still holds */ }
+    }
     document.body.classList.toggle('mp3-cinema', open && max && !mini && (playing || vidPlaying));
   }
   function updatePlayGlyph() {

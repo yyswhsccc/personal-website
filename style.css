@@ -14190,3 +14190,14 @@ body.mp3-cinema .mp3-volbar:hover {
   box-shadow: inset 0 2px 0 rgba(0, 0, 0, 0.6), 0 0 12px rgba(255, 143, 199, 0.85), 0 0 26px rgba(255, 143, 199, 0.4);
 }
 body.mp3-cinema .mp3-volbar:hover .seg.on { background: #a03468; }
+
+/* cinema: the window's own ring goes dark too */
+body.mp3-cinema #win-mp3 {
+  border-color: #2b1b33 !important;
+  box-shadow: 0 0 0 2px rgba(16, 10, 22, 0.9), 6px 6px 0 rgba(0, 0, 0, 0.55), 11px 11px 0 rgba(0, 0, 0, 0.35) !important;
+}
+body.mp3-cinema .mp3-track.on {
+  background: rgba(240, 80, 159, 0.2); border-color: #5d2b47; color: #d9b7cb;
+}
+body.mp3-cinema .mp3-track.on .no { color: #6f95a8; }
+body.mp3-cinema .mp3-mv { border-color: #6b3355; }
