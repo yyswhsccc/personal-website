@@ -39225,6 +39225,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return;
       }
+      if (atLastInOrder()) { finaleShow(); return; }
       startCeremony();
     }, 2000);
   }
@@ -39334,6 +39335,9 @@ document.addEventListener('DOMContentLoaded', () => {
     var ifr = th.querySelector('iframe');
     var maxH = th.clientHeight - CROWD - 18;
     var maxW = th.clientWidth * 0.96;
+    if (th.querySelector('.mp3-liner')) {          // annotated tapes reserve the side band
+      maxW = Math.max(320, Math.min(maxW, th.clientWidth - 520));
+    }
     var w = Math.min(maxW, maxH * 16 / 9);
     ifr.style.width = Math.round(w) + 'px';
     ifr.style.height = Math.round(w * 9 / 16) + 'px';
@@ -39359,6 +39363,9 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
   }
+
+  var mp3Scare = null;
+  var mp3Finale = null;
 
   function theaterInit() {
     var th = screen.querySelector('.mp3-theater');
@@ -39566,15 +39573,15 @@ document.addEventListener('DOMContentLoaded', () => {
       setTimeout(function () { clearInterval(iv); sg.remove(); }, vis + 700);
       return sg;
     }
-    function leaveEvent() {
+    function leaveEvent(forcedEv) {
       var piks = crowd.querySelectorAll('.mp3-pik');
       if (!piks.length) return;
       var p = piks[Math.floor(Math.random() * piks.length)];
       var startL = parseFloat(p.style.left) || 50;
       var exitL = startL < 50 ? -14 : 112;
       var POOL2 = ['bathroom', 'bathroom', 'bathroom', 'phone', 'phone', 'popcorn', 'popcorn',
-        'boba', 'boba', 'glow', 'glow', 'icecream', 'icecream', 'stove', 'scared'];
-      var ev = POOL2[Math.floor(Math.random() * POOL2.length)];
+        'boba', 'boba', 'glow', 'glow', 'icecream', 'icecream', 'stove'];
+      var ev = forcedEv || POOL2[Math.floor(Math.random() * POOL2.length)];
       var exitDur = ev === 'scared' ? 2.6 : ev === 'stove' ? 3.4 : 9 + Math.random() * 3;   // panic runs, everyone else shuffles
       function doExit() {
         walkStart(p, exitL);
@@ -39677,6 +39684,20 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(doExit, 1800);
       } else { doExit(); }
     }
+    mp3Scare = function () { leaveEvent('scared'); };
+    mp3Finale = function () {
+      var piks = crowd.querySelectorAll('.mp3-pik');
+      [].forEach.call(piks, function (p9, i9) {
+        setTimeout(function () {
+          if (!p9.isConnected) return;
+          attachSign(p9, 'mp3.chat' + (1 + (i9 % 4)), 9000);
+          walkStop(p9);
+          var exit9 = (parseFloat(p9.style.left) || 50) < 50 ? -14 : 112;
+          setTimeout(function () { slideTo(p9, exit9, 11 + Math.random() * 4); }, 2200 + i9 * 900);
+          setTimeout(function () { if (p9.isConnected) { p9.remove(); } }, 17000 + i9 * 900);
+        }, 600 + i9 * 1100);
+      });
+    };
     (function audienceLife() {
       setTimeout(function () {
         if (!crowd.isConnected) return;
@@ -39803,6 +39824,14 @@ document.addEventListener('DOMContentLoaded', () => {
       mp3Center();
       updatePlayGlyph();
       if (tr.mv) { armBiliClock(); scheduleBiliEnd(tr); }
+      if (tr.f === 'da-kai-tai-yang' && Math.random() < 0.45) {
+        var scareToken = order[cur];               // 0:35 - the ghost king takes the boy
+        setTimeout(function () {
+          if (cur >= 0 && order[cur] === scareToken && vidPlaying && typeof mp3Scare === 'function') {
+            mp3Scare();
+          }
+        }, 36500);
+      }
       setTimeout(function () { ytCmd('setVolume', [Math.round(audio.volume * 100)]); }, 900);
       setTimeout(applyMute, 1200);
       return;
@@ -39828,6 +39857,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   audio.addEventListener('ended', function () {
     if (mode === 'loop') { playCur(); return; }
+    if (atLastInOrder()) { finaleShow(); return; }
     startCeremony();
   });
 
@@ -39838,6 +39868,33 @@ document.addEventListener('DOMContentLoaded', () => {
       screen.scrollTop = from + (to - from) * f;
       if (f >= 1) { clearInterval(iv); if (done) done(); }
     }, 40);
+  }
+
+  function atLastInOrder() {
+    return mode === 'order' && cur === order.length - 1;
+  }
+
+  var finaleBusy = false;
+  function finaleShow() {
+    if (finaleBusy) return;
+    finaleBusy = true;
+    audio.pause();
+    playing = false;
+    vidPlaying = false;
+    document.body.classList.add('mp3-houseup');    // house lights rise slowly
+    setTimeout(function () {
+      document.body.classList.remove('mp3-houseup');
+      updatePlayGlyph();                           // drops mp3-cinema via cinemaSync
+    }, 2600);
+    var st = screen.querySelector('.mp3-theater') || screen;
+    var fin = document.createElement('div');
+    fin.className = 'mp3-finale';
+    fin.innerHTML = '<div class="fin-reel"></div>' +
+      '<div class="fin-t" data-i18n-live="mp3.fin1">' + T('mp3.fin1') + '</div>' +
+      '<div class="fin-s" data-i18n-live="mp3.fin2">' + T('mp3.fin2') + '</div>';
+    st.appendChild(fin);
+    if (typeof mp3Finale === 'function') { mp3Finale(); }
+    setTimeout(function () { finaleBusy = false; }, 4000);
   }
 
   var ceremonyBusy = false;
@@ -39874,8 +39931,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (row) { row.classList.add('picked'); }    // the pink spotlight lands first
         var say = document.createElement('span');
         say.className = 'mp3-callout';
-        say.textContent = T('mp3.thisone');
-        say.setAttribute('data-i18n-live', 'mp3.thisone');
+        var sayKey = mode === 'order' ? 'mp3.nextone' : 'mp3.thisone';
+        say.textContent = T(sayKey);
+        say.setAttribute('data-i18n-live', sayKey);
         say.style.top = (row ? row.offsetTop - 6 : 0) + 'px';
         screen.appendChild(say);
         say.style.left = Math.max(6, Math.min(screen.clientWidth - say.offsetWidth - 10,
@@ -39925,6 +39983,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     ytEndedFor = cur;
+    if (atLastInOrder()) { finaleShow(); return; }
     startCeremony();
   });
 
