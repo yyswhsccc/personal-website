@@ -39162,6 +39162,7 @@ document.addEventListener('DOMContentLoaded', () => {
   };
   var biliWatch = 0;
   var biliManual = false;
+  var biliArmAt = 0;
 
   function mp3Toast(key) {
     var bar2 = document.getElementById('mp3-vol');
@@ -39183,6 +39184,10 @@ document.addEventListener('DOMContentLoaded', () => {
       if (ae !== screen.querySelector('.mp3-mv iframe')) return;
       var trm = cur >= 0 && MP3_TRACKS[order[cur]];
       if (!trm || !trm.mv || biliManual) return;
+      if (Date.now() - biliArmAt < 10000) {        // that was the PLAY button, not a takeover:
+        biliStart = Date.now() + 600;              // re-sync the stopwatch to the real start
+        return;
+      }
       biliManual = true;
       clearInterval(biliWatch);                    // estimator retires: no early cut, ever
       mp3Toast('mp3.manual');
@@ -39782,7 +39787,7 @@ document.addEventListener('DOMContentLoaded', () => {
       playing = false;
       vidPlaying = true;
       ytEndedFor = -1;
-      if (tr.mv) { biliOffset = 0; biliManual = false; }
+      if (tr.mv) { biliOffset = 0; biliManual = false; biliArmAt = Date.now(); }
       renderList();
       mp3Center();
       updatePlayGlyph();
