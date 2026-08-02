@@ -14088,9 +14088,9 @@ body.y2k-quake #top { animation: y2k-quake 0.34s steps(2) infinite; } /* quake t
 }
 
 /* fullscreen mp3 = cinema: the house lights are down, ushers hold all interruptions */
-body.mp3-cinema .game-invite,
-body.mp3-cinema .watch-hint-banner,
-body.mp3-cinema .mini-danmaku { display: none !important; }
+body.mp3-cinema .game-invite, body.mp3-open .game-invite,
+body.mp3-cinema .watch-hint-banner, body.mp3-open .watch-hint-banner,
+body.mp3-cinema .mini-danmaku, body.mp3-open .mini-danmaku { display: none !important; }
 
 .mp3-track.picked {
   background: rgba(255, 143, 199, 0.5); border-color: #fff; color: #fff;

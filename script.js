@@ -67,6 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('focus', () => setTimeout(yosAutoMute, 40));
 
   function playTone(freq, type, duration, delay = 0, volume = 0.08) {
+    if (document.body.classList.contains('mp3-open')) return;      // the jukebox holds the floor
     if (!soundEnabled) return;
     if (document.hidden || !document.hasFocus()) return; // muted while away
     try {
@@ -7295,7 +7296,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function startSleepwalk() {
     if (document.body.classList.contains('terminal-only')) return; // the door hates popups
-    if (document.body.classList.contains('mp3-cinema')) return;    // the cinema is sacred: no dreams leak in
+    if (document.body.classList.contains('mp3-open')) return;      // player open = no dreams leak in, at all
     // sleepwalks also launch from a maximized live room: a sleeping
     // streamer on stage is still a sleeping streamer
     const asleepOnStage = typeof liveOpen !== 'undefined' && liveOpen && pet.sleeping;
@@ -17608,7 +17609,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function skyFlipNow(toDark) {
-    if (document.body.classList.contains('mp3-cinema')) {          // no ceremony over the movie -
+    if (document.body.classList.contains('mp3-open')) {            // no ceremony while the deck is out -
       skyFlipTimers.push(setTimeout(() => skyFlipNow(toDark), 120000)); // the sky waits its turn
       return;
     }
@@ -29029,6 +29030,7 @@ document.addEventListener('DOMContentLoaded', () => {
   var wxAudioEl = null, wxSfxKind = null;
   try { if (navigator.audioSession) navigator.audioSession.type = 'ambient'; } catch (e) { /* older WebKit */ }
   function wxSfx(kind) {
+    if (document.body.classList.contains('mp3-open')) return;      // weather hums along silently
     if (!wxAudioEl) { wxAudioEl = new Audio(); wxAudioEl.loop = true; }
     const list = WX_SFX[kind];
     if (!list || !liveOpen || !soundEnabled) { try { wxAudioEl.pause(); } catch (e) {} wxSfxKind = null; return; }
@@ -29248,6 +29250,7 @@ document.addEventListener('DOMContentLoaded', () => {
   ];
   var gooseAudioEl = null, gooseFadeTimer = null;
   function gooseCallPlay() {
+    if (document.body.classList.contains('mp3-open')) return;      // the geese respect the setlist
     if (!soundEnabled || document.hidden || !document.hasFocus()) return;
     const pick = GOOSE_CALLS[Math.floor(Math.random() * GOOSE_CALLS.length)];
     if (!gooseAudioEl) { gooseAudioEl = new Audio(); gooseAudioEl.preload = 'auto'; }
@@ -39230,6 +39233,7 @@ document.addEventListener('DOMContentLoaded', () => {
     var open = !win.classList.contains('window-closed');
     var mini = win.classList.contains('window-minimized');
     var max = win.classList.contains('window-maximized');
+    document.body.classList.toggle('mp3-open', open);   // open deck = total quiet on the lot
     document.body.classList.toggle('mp3-cinema', open && max && !mini && (playing || vidPlaying));
   }
   function updatePlayGlyph() {
