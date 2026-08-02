@@ -39339,6 +39339,13 @@ document.addEventListener('DOMContentLoaded', () => {
         liner.style.right = '8px';
         liner.style.top = '12px';
         liner.style.height = ifr.style.height;
+        var roll9 = liner.querySelector('.mp3-liner-roll');
+        if (roll9 && !roll9._paced) {
+          // constant crawl speed, measured only once the reel is visible:
+          // long notes get long reels, never a fast-forward
+          roll9._paced = true;
+          roll9.style.animationDuration = Math.max(60, Math.round((roll9.scrollHeight + 420) / 10)) + 's';
+        }
       } else {
         liner.style.display = 'none';
       }
