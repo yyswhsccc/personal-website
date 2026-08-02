@@ -39128,7 +39128,7 @@ document.addEventListener('DOMContentLoaded', () => {
   var MP3_NOTES = {};
 
   // cinema-side rolling credits, per track (key = f) - text lives in i18n
-  var MP3_LINERS = { 'shui-di': 1, 'sweet-dream': 1, 'die-for-you': 1, 'hue': 1, 'hua-tuo': 1, 'chu-xue': 1, 'i-love-you-so': 1, 'coconut': 1, 'da-kai-tai-yang': 1 };
+  var MP3_LINERS = { 'shui-di': 1, 'sweet-dream': 1, 'die-for-you': 1, 'hue': 1, 'hua-tuo': 1, 'chu-xue': 1, 'i-love-you-so': 1, 'coconut': 1, 'da-kai-tai-yang': 1, 'zui-e-de-yin-pan': 1 };
   // per-track roll delay: PAGUI's video spends 2:02 on the muster cinematic
   // before the song lands - the notes wait for the drop
   var MP3_LINER_DELAY = { 'da-kai-tai-yang': 124 };
