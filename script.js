@@ -7295,6 +7295,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function startSleepwalk() {
     if (document.body.classList.contains('terminal-only')) return; // the door hates popups
+    if (document.body.classList.contains('mp3-cinema')) return;    // the cinema is sacred: no dreams leak in
     // sleepwalks also launch from a maximized live room: a sleeping
     // streamer on stage is still a sleeping streamer
     const asleepOnStage = typeof liveOpen !== 'undefined' && liveOpen && pet.sleeping;
@@ -17607,6 +17608,10 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function skyFlipNow(toDark) {
+    if (document.body.classList.contains('mp3-cinema')) {          // no ceremony over the movie -
+      skyFlipTimers.push(setTimeout(() => skyFlipNow(toDark), 120000)); // the sky waits its turn
+      return;
+    }
     scheduleSkyFlips(); // re-book tomorrow FIRST — theatre may misbehave
     if (themePref !== 'auto') return;
     const want = toDark ? 'dark' : 'light';
