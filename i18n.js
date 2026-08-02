@@ -12,6 +12,7 @@ window.YOS_I18N = {
     'mp3.bilivol': 'bilibili mixes its own volume - use the speaker inside the player \u2661',
     'mp3.manual': 'you took the wheel - auto-next is off for this song \u2661',
     'mp3.rethread': 're-threading the reel\u2026 bilibili insists on a fresh start \u2661',
+    'mp3.threading': 'threading the reel\u2026',
     'mp3.liner.sweet-dream': '<p class="ln-t">liner notes: SWEET DREAM</p>' +
       '<p>my friend shining<br>is a collector of sleepless nights.<br>on one of them, a guitar melody<br>slipped out of her hands<br>and refused to leave.</p>' +
       '<p>she asked me for two things:<br>a piano to carry it,<br>and words to live inside it.</p>' +
@@ -437,6 +438,7 @@ window.YOS_I18N = {
     'mp3.bilivol': 'bilibili g\u00e8re son volume - utilise le haut-parleur du lecteur \u2661',
     'mp3.manual': "tu as pris le volant - l'encha\u00eenement auto est coup\u00e9 pour ce titre \u2661",
     'mp3.rethread': 'on r\u00e9enfile la bobine\u2026 bilibili exige un red\u00e9marrage \u2661',
+    'mp3.threading': 'on enfile la bobine\u2026',
     'mp3.liner.sweet-dream': '<p class="ln-t">notes : SWEET DREAM</p>' +
       '<p>mon amie shining<br>collectionne les nuits blanches.<br>sur l\u2019une d\u2019elles, une m\u00e9lodie de guitare<br>a gliss\u00e9 de ses mains<br>et n\u2019est plus repartie.</p>' +
       '<p>elle m\u2019a demand\u00e9 deux choses :<br>un piano pour la porter,<br>et des mots pour l\u2019habiter.</p>' +

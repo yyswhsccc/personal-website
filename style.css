@@ -14055,8 +14055,8 @@ body.y2k-quake #top { animation: y2k-quake 0.34s steps(2) infinite; } /* quake t
 .mp3-volwrap { position: relative; }
 
 .mp3-mv { position: relative; }
-.mp3-reload {
-  position: absolute; inset: 0; z-index: 3; display: flex; align-items: center;
+.mp3-reload, .mp3-boot {
+  position: absolute; inset: 0; z-index: 4; display: flex; align-items: center;
   justify-content: center; gap: 9px; padding: 10px; text-align: center;
   background: rgba(42, 10, 32, 0.95); color: #ffb7e2;
   font: 700 12px 'Courier New', monospace; letter-spacing: 0.05em;
