@@ -20,8 +20,10 @@ window.YOS_I18N = {
       '<p>she forgave me, of course.</p>' +
       '<p class="ln-end">this is the wordless version.<br>it is complete.<br>(some dreams refuse subtitles.)</p>',
     'mp3.liner.hue': '<p class="ln-t">liner notes: HUE</p>' +
-      '<p>the song i keep on loop<br>while playing Risk of Rain -<br>as beautiful as the Wandering Vagrant,<br>that giant jellyfish.</p>' +
-      '<p class="ln-end">huntress only, highest difficulty,<br>everything cleared.<br>waiting for the next DLC.</p>',
+      '<p>on the rain planet<br>i keep one quiet piano on loop.</p>' +
+      '<p>somewhere above the valley<br>a jellyfish the size of a cathedral<br>drifts past, glowing,<br>in no hurry to be a boss fight.<br>the game calls it the Wandering Vagrant.<br>i call it this song, floating.</p>' +
+      '<p>the huntress never stops moving -<br>that is her whole art -<br>but under monsoon skies,<br>with every world gone quiet,<br>even she looks up.</p>' +
+      '<p class="ln-end">we are both just waiting<br>for the weather to change.</p>',
     'mp3.liner.da-kai-tai-yang': '<p class="ln-t">observation notes: OPEN THE SUN</p>' +
       '<p>a game i love: PAGUI.<br>Taiwan, 1954.<br>an orphan raised by a temple<br>slips out at night to find his mother,<br>and the night is full of ghosts.</p>' +
       '<p>the combat system is a religion,<br>literally: the generals you play<br>are demons a god forgave<br>and hired as security.<br>the green face docks the lifespans<br>of the wicked; the red and blue<br>extend the lifespans of the kind.<br>every step was motion-captured<br>from real temple performers -<br>steps that have actually been danced<br>in front of an actual god.</p>' +
@@ -436,8 +438,10 @@ window.YOS_I18N = {
       '<p>elle m\u2019a pardonn\u00e9, bien s\u00fbr.</p>' +
       '<p class="ln-end">voici la version sans paroles.<br>elle est compl\u00e8te.<br>(certains r\u00eaves refusent les sous-titres.)</p>',
     'mp3.liner.hue': '<p class="ln-t">notes : HUE</p>' +
-      '<p>la chanson que je laisse en boucle<br>en jouant \u00e0 Risk of Rain -<br>aussi belle que le Wandering Vagrant,<br>cette m\u00e9duse g\u00e9ante.</p>' +
-      '<p class="ln-end">chasseresse uniquement, difficult\u00e9 maximale,<br>tout termin\u00e9.<br>en attendant le prochain DLC.</p>',
+      '<p>sur la plan\u00e8te de pluie<br>je laisse un piano tranquille en boucle.</p>' +
+      '<p>quelque part au-dessus de la vall\u00e9e<br>une m\u00e9duse grande comme une cath\u00e9drale<br>passe en d\u00e9rivant, lumineuse,<br>sans h\u00e2te d\u2019\u00eatre un boss.<br>le jeu l\u2019appelle le Wandering Vagrant.<br>moi, j\u2019appelle \u00e7a cette chanson, qui flotte.</p>' +
+      '<p>la chasseresse ne s\u2019arr\u00eate jamais -<br>c\u2019est tout son art -<br>mais sous les ciels de mousson,<br>quand tous les mondes se sont tus,<br>m\u00eame elle l\u00e8ve les yeux.</p>' +
+      '<p class="ln-end">nous attendons toutes les deux<br>que le temps change.</p>',
     'mp3.liner.da-kai-tai-yang': '<p class="ln-t">notes d\u2019observation : OPEN THE SUN</p>' +
       '<p>un jeu que j\u2019aime : PAGUI.<br>Ta\u00efwan, 1954.<br>un orphelin \u00e9lev\u00e9 par un temple<br>s\u2019\u00e9chappe la nuit pour retrouver sa m\u00e8re,<br>et la nuit est pleine de fant\u00f4mes.</p>' +
       '<p>le syst\u00e8me de combat est une religion,<br>litt\u00e9ralement : les g\u00e9n\u00e9raux qu\u2019on incarne<br>sont des d\u00e9mons qu\u2019un dieu a pardonn\u00e9s<br>puis embauch\u00e9s comme gardiens.<br>le visage vert raccourcit la vie<br>des m\u00e9chants ; le rouge et le bleu<br>allongent celle des bons.<br>chaque pas vient de la motion capture<br>de vrais danseurs de temple -<br>des pas qui ont vraiment \u00e9t\u00e9 dans\u00e9s<br>devant un vrai dieu.</p>' +
