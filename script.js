@@ -40352,6 +40352,10 @@ document.addEventListener('DOMContentLoaded', () => {
       win.classList.add('window-maximized');       // desktop jukebox does fullscreen;
       max = true;                                  // phones keep the pocket-sized window
     }
+    if (open && max && window.innerWidth <= 700) { // phones never fullscreen, via ANY door
+      win.classList.remove('window-maximized');
+      max = false;
+    }
     if ((open && !mp3WasOpen) || (open && max !== mp3WasMax)) {
       setTimeout(function () { sizeTheater(); mp3Center(); }, 60);
     }

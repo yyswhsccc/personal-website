@@ -14281,3 +14281,8 @@ body.mp3-cinema.mp3-houseup #top::after { animation: mp3houseup 2.4s ease forwar
   62% { transform: scale(0.9, 1.08); }
   100% { transform: scale(1, 1); }
 }
+
+/* phones: the jukebox has no fullscreen - the button goes away entirely */
+@media (max-width: 700px) {
+  #win-mp3 .win-btn-maximize { display: none; }
+}
