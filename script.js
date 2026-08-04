@@ -39934,7 +39934,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   var ceremonyBusy = false;
-  function startCeremony() {
+  function startCeremony(dir) {
+    dir = dir === -1 ? -1 : 1;
     if (ceremonyBusy || order.length < 2) return;
     ceremonyBusy = true;
     vidPlaying = false;
@@ -39947,7 +39948,7 @@ document.addEventListener('DOMContentLoaded', () => {
     var bar = document.createElement('div');
     bar.className = 'mp3-picking';
     var lbl = document.createElement('span');
-    lbl.textContent = T(mode === 'shuffle' ? 'mp3.picking' : 'mp3.pickingnext');
+    lbl.textContent = T(dir === -1 ? 'mp3.pickingprev' : mode === 'shuffle' ? 'mp3.picking' : 'mp3.pickingnext');
     bar.appendChild(lbl);
     for (var k = 0; k < 2; k++) {
       var mp = makePik(9);
@@ -39957,8 +39958,10 @@ document.addEventListener('DOMContentLoaded', () => {
       bar.appendChild(mp);
     }
     screen.insertBefore(bar, screen.firstChild);
-    var nextI = (cur + 1) % order.length;
-    if (mode === 'shuffle') {
+    var nextI = dir === -1
+      ? (cur - 1 + order.length) % order.length
+      : (cur + 1) % order.length;
+    if (dir === 1 && mode === 'shuffle') {
       nextI = -1;
       for (var st9 = 1; st9 <= order.length; st9++) {
         var cand9 = (cur + st9) % order.length;
@@ -39975,7 +39978,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (row) { row.classList.add('picked'); }    // the pink spotlight lands first
         var say = document.createElement('span');
         say.className = 'mp3-callout';
-        var sayKey = mode === 'order' ? 'mp3.nextone' : 'mp3.thisone';
+        var sayKey = dir === -1 ? 'mp3.lastone' : mode === 'order' ? 'mp3.nextone' : 'mp3.thisone';
         say.textContent = T(sayKey);
         say.setAttribute('data-i18n-live', sayKey);
         say.style.top = (row ? row.offsetTop - 6 : 0) + 'px';
@@ -39991,7 +39994,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 1200);
       });
     }
-    if (mode === 'shuffle') {                      // up, down, hesitating…
+    if (dir === 1 && mode === 'shuffle') {         // up, down, hesitating…
       var hops = [Math.random(), Math.random(), Math.random()].map(function (r2) { return Math.round(r2 * maxS); });
       glide(hops[0], 800, function () {
         setTimeout(function () {
@@ -40128,8 +40131,8 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   document.getElementById('mp3-prev').addEventListener('click', function () {
     if (!order.length) return;
-    cur = (cur - 1 + order.length) % order.length;
-    playCur();
+    if (cur < 0) { cur = 0; playCur(); return; }
+    startCeremony(-1);                             // rewinds get the full ceremony too
   });
   document.getElementById('mp3-next').addEventListener('click', function () {
     if (!order.length) return;
