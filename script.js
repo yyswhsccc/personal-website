@@ -39316,7 +39316,7 @@ document.addEventListener('DOMContentLoaded', () => {
             : null;
         if (embed) {
           html += '<div class="mp3-theater"><div class="mp3-mv" data-embed="' + embed + '"><iframe src="' + embed +
-            '" allowfullscreen allow="autoplay; fullscreen; encrypted-media"></iframe>' +
+            '"' + (tr.mv ? ' credentialless' : '') + ' allowfullscreen allow="autoplay; fullscreen; encrypted-media"></iframe>' +
             '<span class="mp3-shield"></span>' +
             '<div class="mp3-reelveil" data-i18n-live="mp3.threading">' + T('mp3.threading') +
             '<span class="mp3-cursor"></span></div></div>' +
@@ -40107,7 +40107,7 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         mvBox.innerHTML = '<iframe src="' + mvBox.getAttribute('data-embed') +
           '&t=' + Math.max(0, Math.floor(biliOffset - 0.6)) +
-          '" allowfullscreen allow="autoplay; fullscreen; encrypted-media"></iframe>' +
+          '" credentialless allowfullscreen allow="autoplay; fullscreen; encrypted-media"></iframe>' +
           '<span class="mp3-shield"></span>' +
           '<div class="mp3-reload" data-i18n-live="mp3.rethread">' + T('mp3.rethread') +
           '<span class="mp3-cursor"></span></div>';
