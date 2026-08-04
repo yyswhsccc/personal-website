@@ -32,7 +32,7 @@ window.YOS_I18N = {
       '<p>the customer survives the pitch -<br>not through virtue, through pettiness:<br>"i think it is fake."<br>"this definitely cannot go<br>in the microwave."<br>the devil has no counter-move<br>against a careful shopper.</p>' +
       '<p class="ln-end">and the closing sneer -<br>laughable mortals, too obedient,<br>never daring to turn their lives over -<br>is the oldest trick in the trade:<br>wrap one true sentence<br>inside a predatory loan.<br>the scary part is not that it lies.<br>it is that it is half right.</p>' +
       '<p class="ln-q">so - your turn at the counter.<br>the platter is 20% off today.<br>what do you choose?</p>',
-    'mp3.liner.da-kai-tai-yang': '<p class="ln-t">observation notes: OPEN THE SUN</p>' +
+    'mp3.liner.da-kai-tai-yang': '<p class="ln-t">observation notes: TURN ON THE SUN</p>' +
       '<p>a game i love: PAGUI.<br>Taiwan, 1954.<br>an orphan raised by a temple<br>slips out at night to find his mother,<br>and the night is full of ghosts.</p>' +
       '<p>the combat system is a religion,<br>literally: the generals you play<br>are demons a god forgave<br>and hired as security.<br>the green face docks the lifespans<br>of the wicked; the red and blue<br>extend the lifespans of the kind.<br>every step was motion-captured<br>from real temple performers -<br>steps that have actually been danced<br>in front of an actual god.</p>' +
       '<p>this song is their deployment anthem:<br>a metal band in a pig mask,<br>suona over breakdowns.<br>and the title is the whole theology -<br>here, the sun does not rise by itself.<br>somebody paints their face,<br>picks up the trident,<br>and switches it on.</p>' +
@@ -42,7 +42,7 @@ window.YOS_I18N = {
       '<img class="ln-photo" src="assets/music/moon-edmonton.jpg" alt="a crescent moon over an edmonton evening">',
     'mp3.liner.coconut': '<p class="ln-t">liner notes: THE COCONUT SONG</p>' +
       '<p>I love Koookonut! \ud83d\ude0b<br>what about you?</p>',
-    'mp3.liner.chu-xue': '<p class="ln-t">liner notes: FIRST SNOW</p>' +
+    'mp3.liner.chu-xue': '<p class="ln-t">liner notes: THE FIRST SNOW</p>' +
       '<p>the first song i ever downloaded<br>onto an mp3 player.<br>from my first year of middle school<br>to now - thirteen years.</p>',
     'mp3.liner.hua-tuo': '<p class="ln-t">liner notes: HUA TUO</p>' +
       '<p>a very interesting MV.</p>' +
@@ -469,7 +469,7 @@ window.YOS_I18N = {
       '<p>le client survit au boniment -<br>pas par vertu, par mesquinerie :<br>\u00ab je crois que c\u2019est faux. \u00bb<br>\u00ab \u00e7a ne va s\u00fbrement pas au micro-ondes. \u00bb<br>le diable n\u2019a aucune parade<br>contre un acheteur prudent.</p>' +
       '<p class="ln-end">et le ricanement final -<br>mortels risibles, trop ob\u00e9issants,<br>qui n\u2019osent jamais retourner leurs vies -<br>c\u2019est le plus vieux tour du m\u00e9tier :<br>glisser une phrase vraie<br>dans un pr\u00eat pr\u00e9dateur.<br>l\u2019effrayant, ce n\u2019est pas qu\u2019il mente.<br>c\u2019est qu\u2019il ait \u00e0 moiti\u00e9 raison.</p>' +
       '<p class="ln-q">alors - \u00e0 vous le comptoir.<br>le plateau est \u00e0 -20 % aujourd\u2019hui.<br>que choisissez-vous ?</p>',
-    'mp3.liner.da-kai-tai-yang': '<p class="ln-t">notes d\u2019observation : OPEN THE SUN</p>' +
+    'mp3.liner.da-kai-tai-yang': '<p class="ln-t">notes d\u2019observation : TURN ON THE SUN</p>' +
       '<p>un jeu que j\u2019aime : PAGUI.<br>Ta\u00efwan, 1954.<br>un orphelin \u00e9lev\u00e9 par un temple<br>s\u2019\u00e9chappe la nuit pour retrouver sa m\u00e8re,<br>et la nuit est pleine de fant\u00f4mes.</p>' +
       '<p>le syst\u00e8me de combat est une religion,<br>litt\u00e9ralement : les g\u00e9n\u00e9raux qu\u2019on incarne<br>sont des d\u00e9mons qu\u2019un dieu a pardonn\u00e9s<br>puis embauch\u00e9s comme gardiens.<br>le visage vert raccourcit la vie<br>des m\u00e9chants ; le rouge et le bleu<br>allongent celle des bons.<br>chaque pas vient de la motion capture<br>de vrais danseurs de temple -<br>des pas qui ont vraiment \u00e9t\u00e9 dans\u00e9s<br>devant un vrai dieu.</p>' +
       '<p>cette chanson est leur hymne de sortie :<br>un groupe de metal au masque de cochon,<br>du suona sur des breakdowns.<br>et le titre est toute la th\u00e9ologie -<br>ici, le soleil ne se l\u00e8ve pas tout seul.<br>quelqu\u2019un se peint le visage,<br>prend le trident,<br>et l\u2019allume.</p>' +
@@ -479,7 +479,7 @@ window.YOS_I18N = {
       '<img class="ln-photo" src="assets/music/moon-edmonton.jpg" alt="un croissant de lune sur un soir d\u2019edmonton">',
     'mp3.liner.coconut': '<p class="ln-t">notes : THE COCONUT SONG</p>' +
       '<p>j\u2019adore Koookonut ! \ud83d\ude0b<br>et toi ?</p>',
-    'mp3.liner.chu-xue': '<p class="ln-t">notes : FIRST SNOW</p>' +
+    'mp3.liner.chu-xue': '<p class="ln-t">notes : THE FIRST SNOW</p>' +
       '<p>la premi\u00e8re chanson que j\u2019ai t\u00e9l\u00e9charg\u00e9e<br>sur un lecteur mp3.<br>de ma premi\u00e8re ann\u00e9e de coll\u00e8ge<br>\u00e0 aujourd\u2019hui - treize ans.</p>',
     'mp3.liner.hua-tuo': '<p class="ln-t">notes : HUA TUO</p>' +
       '<p>un MV tr\u00e8s int\u00e9ressant.</p>' +
