@@ -39383,8 +39383,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (bv9) {
       var fr9 = th.querySelector('iframe');
       var lift = function (ms) { setTimeout(function () { if (bv9.isConnected) { bv9.remove(); } }, ms); };
-      if (fr9) { fr9.addEventListener('load', function () { lift(2600); }); }
-      lift(6000);                                  // failsafe: never outstay the grace window
+      if (fr9) {
+        var introMs = fr9.src.indexOf('youtube') > -1 ? 2200 : 900;   // the mobile bili player has no intro chrome
+        fr9.addEventListener('load', function () { lift(introMs); });
+      }
+      lift(4500);                                  // failsafe: never outstay the grace window
     }
     var fr = th.querySelector('iframe');
     if (fr && fr.src.indexOf('youtube') > -1) {
@@ -40197,11 +40200,11 @@ document.addEventListener('DOMContentLoaded', () => {
       log.appendChild(el);
       return el;
     }
-    bootLater(function () { line(T('mp3.boot1')); }, 60);
-    bootLater(function () { line(T('mp3.boot2')); }, 440);
-    bootLater(function () { line(T('mp3.boot3')); }, 820);
+    bootLater(function () { line(T('mp3.boot1')); }, 40);
+    bootLater(function () { line(T('mp3.boot2')); }, 220);
+    bootLater(function () { line(T('mp3.boot3')); }, 400);
     var barEl;
-    bootLater(function () { barEl = line(''); }, 1150);
+    bootLater(function () { barEl = line(''); }, 560);
     for (var k = 0; k <= n; k++) {
       (function (k2) {
         bootLater(function () {
@@ -40210,15 +40213,15 @@ document.addEventListener('DOMContentLoaded', () => {
           var empty = '';
           for (var q = 0; q < n; q++) { (q < k2) ? full += '\u2588' : empty += '\u2591'; }
           barEl.textContent = T('mp3.boot4') + ' [' + full + empty + '] ' + k2 + '/' + n;
-        }, 1150 + k * 75);
+        }, 560 + k * 22);
       })(k);
     }
-    bootLater(function () { line(T('mp3.boot5')); }, 1250 + n * 75);
+    bootLater(function () { line(T('mp3.boot5')); }, 640 + n * 22);
     bootLater(function () {
       screen.innerHTML = '<div class="mp3-splash"><b>' + T('mp3.welcome1') + '</b>' +
         '<div>' + T('mp3.welcome2') + '</div><span class="mp3-cursor"></span></div>';
-    }, 1750 + n * 75);
-    bootLater(function () { renderList(); }, 3000 + n * 75);
+    }, 950 + n * 22);
+    bootLater(function () { renderList(); }, 1850 + n * 22);
   }
 
   // language flips translate in place - never rebuild playing media

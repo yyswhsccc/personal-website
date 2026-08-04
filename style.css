@@ -14267,3 +14267,9 @@ body.mp3-cinema.mp3-houseup #top::after { animation: mp3houseup 2.4s ease forwar
   position: relative; display: block; left: auto; right: auto; top: auto;
   width: min(780px, 86%); height: 122px; margin: 14px auto 0; overflow: hidden;
 }
+
+/* the BIOS boot log sits dead-center of the big dark screen */
+.mp3-screen > .mp3-boot {
+  min-height: 100%; display: flex; flex-direction: column;
+  justify-content: center; align-items: center; gap: 7px; text-align: center;
+}
