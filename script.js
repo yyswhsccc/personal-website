@@ -40228,11 +40228,11 @@ document.addEventListener('DOMContentLoaded', () => {
       log.appendChild(el);
       return el;
     }
-    bootLater(function () { line(T('mp3.boot1')); }, 40);
-    bootLater(function () { line(T('mp3.boot2')); }, 220);
-    bootLater(function () { line(T('mp3.boot3')); }, 400);
+    bootLater(function () { line(T('mp3.boot1')); }, 60);
+    bootLater(function () { line(T('mp3.boot2')); }, 440);
+    bootLater(function () { line(T('mp3.boot3')); }, 820);
     var barEl;
-    bootLater(function () { barEl = line(''); }, 560);
+    bootLater(function () { barEl = line(''); }, 1150);
     for (var k = 0; k <= n; k++) {
       (function (k2) {
         bootLater(function () {
@@ -40241,15 +40241,15 @@ document.addEventListener('DOMContentLoaded', () => {
           var empty = '';
           for (var q = 0; q < n; q++) { (q < k2) ? full += '\u2588' : empty += '\u2591'; }
           barEl.textContent = T('mp3.boot4') + ' [' + full + empty + '] ' + k2 + '/' + n;
-        }, 560 + k * 22);
+        }, 1150 + k * 75);
       })(k);
     }
-    bootLater(function () { line(T('mp3.boot5')); }, 640 + n * 22);
+    bootLater(function () { line(T('mp3.boot5')); }, 1250 + n * 75);
     bootLater(function () {
       screen.innerHTML = '<div class="mp3-splash"><b>' + T('mp3.welcome1') + '</b>' +
         '<div>' + T('mp3.welcome2') + '</div><span class="mp3-cursor"></span></div>';
-    }, 950 + n * 22);
-    bootLater(function () { renderList(); }, 1850 + n * 22);
+    }, 1750 + n * 75);
+    bootLater(function () { renderList(); }, 3000 + n * 75);
   }
 
   // language flips translate in place - never rebuild playing media
