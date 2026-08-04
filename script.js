@@ -31895,6 +31895,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // random pikmin (any of 72 kinds, any form, hidden kinds favored)
     // strolls the paperwork at site walking pace, telling terrible jokes
     let ghost = null;
+    let pokes = 0;                       // escalation survives ghost shift-changes
+    const POKE_LINES = [
+      ['ahem. i am a bullet point.', 'hum. je suis une puce de liste.'],
+      ['please stop. you are making the recruiter suspicious.', 'arr\u00eate. tu rends le recruteur soup\u00e7onneux.'],
+      ['ok BUT have you seen section 3? gorgeous formatting.', 'ok MAIS as-tu vu la section 3 ? mise en page superbe.'],
+      ['(whisper) one more click and i show you what this r\u00e9sum\u00e9 is hiding.', '(chuchote) encore un clic et je te montre ce que ce CV cache.'],
+    ];
     function spawnGhost() {
       if (sh.dataset.crashing || ghost || !sh.isConnected) return;
       const pick = boringRandomPik();
@@ -31912,7 +31919,21 @@ document.addEventListener('DOMContentLoaded', () => {
       gw.style.top = st.y + 'px';
       sh.appendChild(gw);
       ghost = gw;
-      gw.addEventListener('click', crash);
+      gw.addEventListener('click', (ev9) => {
+        if (sh.dataset.crashing) return;
+        if (pokes >= POKE_LINES.length) { crash(); return; }
+        const pl = POKE_LINES[pokes];
+        pokes++;
+        gw.classList.remove('is-poked'); void gw.offsetWidth; gw.classList.add('is-poked');
+        const oldBub = gw.querySelector('.boring-pik-bubble');
+        if (oldBub) oldBub.remove();
+        const bub = document.createElement('div');
+        bub.className = 'boring-pik-bubble';
+        bub.textContent = trT(pl[0], pl[1]);
+        gw.appendChild(bub);
+        T(() => { try { const r = bub.getBoundingClientRect(); if (r.left < 4) bub.style.marginLeft = (4 - r.left) + 'px'; else if (r.right > vw() - 4) bub.style.marginLeft = (-(r.right - vw() + 4)) + 'px'; } catch (e) { /* unmeasured */ } }, 30);
+        T(() => { try { bub.remove(); } catch (e) { /* laughed off */ } }, 4200);
+      });
       const walk = I(() => {
         if (sh.dataset.crashing || !gw.isConnected) return;
         const d = st.tx - st.x;
