@@ -39896,8 +39896,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 40);
   }
 
+  var orderAnchor = 0;                             // where this in-order lap began
   function atLastInOrder() {
-    return mode === 'order' && cur === order.length - 1;
+    // the lap is complete when the NEXT stop would be the starting line
+    return mode === 'order' && cur >= 0 && ((cur + 1) % order.length) === orderAnchor;
   }
 
   var finaleBusy = false;
@@ -40033,6 +40035,7 @@ document.addEventListener('DOMContentLoaded', () => {
     var row = e.target.closest ? e.target.closest('.mp3-track') : null;
     if (!row) return;
     cur = parseInt(row.getAttribute('data-i'), 10);
+    if (mode === 'order') { orderAnchor = cur; }
     playCur();
   });
 
@@ -40137,6 +40140,7 @@ document.addEventListener('DOMContentLoaded', () => {
   modeBtn.addEventListener('click', function () {
     mode = MODES[(MODES.indexOf(mode) + 1) % MODES.length];
     rebuildOrder(cur >= 0 ? order[cur] : -1);
+    if (mode === 'order') { orderAnchor = cur >= 0 ? cur : 0; }
     modeBtn.textContent = MODE_GLYPH[mode];
     modeBtn.title = T('mp3.mode.' + mode);
     modeBtn.setAttribute('aria-label', T('mp3.mode.' + mode));
