@@ -40348,9 +40348,9 @@ document.addEventListener('DOMContentLoaded', () => {
       stopAllMusic();
     }
     setTimeout(mp3Taskbar, 0);                     // the taskbar button doubles as now-playing
-    if (open && !mp3WasOpen && !max) {
-      win.classList.add('window-maximized');       // the jukebox only does fullscreen
-      max = true;
+    if (open && !mp3WasOpen && !max && window.innerWidth > 700) {
+      win.classList.add('window-maximized');       // desktop jukebox does fullscreen;
+      max = true;                                  // phones keep the pocket-sized window
     }
     if ((open && !mp3WasOpen) || (open && max !== mp3WasMax)) {
       setTimeout(function () { sizeTheater(); mp3Center(); }, 60);
