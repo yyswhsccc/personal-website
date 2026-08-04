@@ -39289,7 +39289,7 @@ document.addEventListener('DOMContentLoaded', () => {
         tr.t + ' <span class="artist">— ' + tr.a + '</span></div>';
       if (on) {
         var embed = tr.mv
-          ? 'https://www.bilibili.com/blackboard/html5mobileplayer.html?bvid=' + tr.mv + '&autoplay=1&danmaku=0&hideCoverInfo=1'
+          ? 'https://www.bilibili.com/blackboard/html5mobileplayer.html?bvid=' + tr.mv + '&autoplay=1&danmaku=0&hideCoverInfo=1&qn=32'
           : tr.yt
             ? 'https://www.youtube.com/embed/' + tr.yt + '?autoplay=1&enablejsapi=1&controls=0&rel=0&iv_load_policy=3&disablekb=1&fs=0'
             : null;
