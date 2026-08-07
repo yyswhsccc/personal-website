@@ -174,7 +174,7 @@ function hiShow(ctx) {
       await out(B + 'ok — here is what you found:' + R + '\n');
       await t('a pixel meadow. a slime that streams. and a locked DOOR full of puzzles.\n', 40);
       await sleep(350);
-      await t('the door is at ' + C + 'https://yyswhsccc.github.io/pers' + R, 24);
+      await t('the door is at ' + C + 'https://yongshan.is-a.dev/#ter' + R, 24);
       await sleep(1100);
       await out(D + '  …wait. you decoded base64 to get HERE. plaintext would insult you.' + R);
       await sleep(700);
@@ -182,7 +182,7 @@ function hiShow(ctx) {
       await t('right. the OFFICIAL tour guide, keep-able and copy-pasteable:\n', 38);
       await sleep(300);
       // the tutorial proper — printed crisply so it survives in the scrollback
-      const DOOR_B64 = 'aHR0cHM6Ly95eXN3aHNjY2MuZ2l0aHViLmlvL3BlcnNvbmFsLXdlYnNpdGUvI3Rlcm1pbmFsCg==';
+      const DOOR_B64 = 'aHR0cHM6Ly95b25nc2hhbi5pcy1hLmRldi8jdGVybWluYWwK';
       await out('\n' + P + '━━ HOW TO ENTER ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━' + R + '\n');
       await out(B + 'STEP 1' + R + ' · decode the address (it prints a URL):\n\n');
       await out('    ' + C + 'echo ' + DOOR_B64 + ' | base64 -d' + R + '\n\n');
@@ -193,7 +193,7 @@ function hiShow(ctx) {
       await out('    survivors are told the key ♡ (' + C + 'hint' + R + ' helps. flailing summons a hero.)\n\n');
       await sleep(400);
       await out(B + 'BONUS' + R + ' · pikmin trading cards, dealt by YOUR shell\'s own dice:\n\n');
-      await out('    ' + C + 'curl -sL "https://yyswhsccc.github.io/personal-website/pik/$((RANDOM % 5))"' + R + '\n\n');
+      await out('    ' + C + 'curl -sL "https://yongshan.is-a.dev/pik/$((RANDOM % 5))"' + R + '\n\n');
       await out(D + '(everything here only prints. nothing executes. your shell is safe.)' + R + '\n');
       await out(P + '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━' + R + '\n\n');
       await sleep(600);
@@ -237,8 +237,8 @@ function hiShow(ctx) {
    visitor's machine — it is curl, cosplaying as a shell. ---- */
 const SH_URL = 'https://yongshanos-wall.yongshanos.workers.dev/sh';
 const SSH_B64 = 'c3NoOi8vc2xpbWVAMy45OC4yMTcuMTU3OjIyMjI='; // ssh://slime@3.98.217.157:2222 — the REAL container
-const DOOR_B64 = 'aHR0cHM6Ly95eXN3aHNjY2MuZ2l0aHViLmlvL3BlcnNvbmFsLXdlYnNpdGUvI3Rlcm1pbmFsCg==';
-const DOOR_URL = 'https://yyswhsccc.github.io/personal-website/#terminal';
+const DOOR_B64 = 'aHR0cHM6Ly95b25nc2hhbi5pcy1hLmRldi8jdGVybWluYWwK';
+const DOOR_URL = 'https://yongshan.is-a.dev/#terminal';
 // strip every terminal-hijack codepoint before echoing user text back:
 // C0 + DEL, C1 (incl. U+009B single-byte CSI), and bidi overrides/isolates/marks.
 function shClean(raw) {
@@ -453,7 +453,7 @@ function shShow(ctx, rawCmd, visitorN) {
         await out(P + 'flag{cur1_c0splay1ng_as_a_sh3ll}' + R + '\n' + D + 'the on-site flag (🚩 ctfslime) waits behind the door. different flag. cuter.' + R + '\n');
       } else if (head === 'pikmin' || head === 'pik' || head === 'cards') {
         await out(prompt + 'the card dealer lives one URL over:\n');
-        await out('  ' + C + 'curl -sL "https://yyswhsccc.github.io/personal-website/pik/$((RANDOM % 5))"' + R + '\n');
+        await out('  ' + C + 'curl -sL "https://yongshan.is-a.dev/pik/$((RANDOM % 5))"' + R + '\n');
       } else if (head === 'door' || head === 'exit' || head === 'logout' || head === 'quit' || head === 'q') {
         await out(prompt + (head === 'door' ? 'yes!! THE door:' : 'you were never locked in — only welcomed. the door:') + '\n');
         await out('  ' + C + 'echo ' + DOOR_B64 + ' | base64 -d' + R + '\n');

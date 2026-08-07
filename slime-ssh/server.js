@@ -41,8 +41,8 @@ const SESSION_MS = 30 * 60 * 1000;
 
 /* ---------- shared constants (identical to the Worker) ---------- */
 const G = '\x1b[92m', P = '\x1b[95m', C = '\x1b[96m', D = '\x1b[2m', B = '\x1b[1m', RD = '\x1b[91m', Y = '\x1b[93m', R = '\x1b[0m';
-const DOOR_B64 = 'aHR0cHM6Ly95eXN3aHNjY2MuZ2l0aHViLmlvL3BlcnNvbmFsLXdlYnNpdGUvI3Rlcm1pbmFsCg==';
-const DOOR_URL = 'https://yyswhsccc.github.io/personal-website/#terminal';
+const DOOR_B64 = 'aHR0cHM6Ly95b25nc2hhbi5pcy1hLmRldi8jdGVybWluYWwK';
+const DOOR_URL = 'https://yongshan.is-a.dev/#terminal';
 const DOOR_LINK = '\x1b]8;;' + DOOR_URL + '\x07' + DOOR_URL + '\x1b]8;;\x07'; // OSC 8: cmd-clickable where supported, plain text elsewhere
 
 /* strip every terminal-hijack codepoint before echoing user text back:
@@ -299,7 +299,7 @@ async function respond(rawCmd, io) {
     await out(P + 'flag{cur1_c0splay1ng_as_a_sh3ll}' + R + '\n' + D + 'the on-site flag (🚩 ctfslime) waits behind the door. different flag. cuter.' + R + '\n');
   } else if (head === 'pikmin' || head === 'pik' || head === 'cards') {
     await out('the card dealer lives one URL over:\n');
-    await out('  ' + C + 'curl -sL "https://yyswhsccc.github.io/personal-website/pik/$((RANDOM % 5))"' + R + '\n');
+    await out('  ' + C + 'curl -sL "https://yongshan.is-a.dev/pik/$((RANDOM % 5))"' + R + '\n');
   } else if (head === 'door' || head === 'exit' || head === 'logout' || head === 'quit' || head === 'q') {
     await out(P + (head === 'door' ? '🚪 yes!! THE door — click to enter ♡' : 'you were never locked in — only welcomed. click the door ♡') + R + '\n\n');
     await out('   ' + C + B + DOOR_LINK + R + '\n\n');
@@ -366,7 +366,7 @@ async function intro(io) {
   await out(B + 'ok — here is what you found:' + R + '\n');
   await t('a pixel meadow. a slime that streams. and a locked DOOR full of puzzles.\n', 40);
   await sleep(350);
-  await t('the door is at ' + C + 'https://yyswhsccc.github.io/pers' + R, 24);
+  await t('the door is at ' + C + 'https://yongshan.is-a.dev/#ter' + R, 24);
   await sleep(1100);
   await out(D + '  …wait. you deserve the ceremony. plaintext would insult you.' + R);
   await sleep(700);
@@ -384,7 +384,7 @@ async function intro(io) {
   await out('    survivors are told the key ♡ (' + C + 'hint' + R + ' helps. flailing summons a hero.)\n\n');
   await sleep(400);
   await out(B + 'BONUS' + R + ' · pikmin trading cards, dealt by YOUR shell\'s own dice:\n\n');
-  await out('    ' + C + 'curl -sL "https://yyswhsccc.github.io/personal-website/pik/$((RANDOM % 5))"' + R + '\n\n');
+  await out('    ' + C + 'curl -sL "https://yongshan.is-a.dev/pik/$((RANDOM % 5))"' + R + '\n\n');
   await out(D + '(everything here only prints. nothing executes on your machine. ever.)' + R + '\n');
   await out(P + '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━' + R + '\n\n');
   await sleep(600);

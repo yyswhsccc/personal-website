@@ -1,7 +1,7 @@
 # yongshanOS ♡
 
 **A hand-built Y2K desktop operating system that happens to be a portfolio.**
-Live at **[yyswhsccc.github.io/personal-website](https://yyswhsccc.github.io/personal-website/)** — by [Yongshan Yu](http://www.linkedin.com/in/yongshan-yu-b9a713227), AI/LMS Systems & Full-Stack Lead.
+Live at **[yongshan.is-a.dev](https://yongshan.is-a.dev/)** — by [Yongshan Yu](http://www.linkedin.com/in/yongshan-yu-b9a713227), AI/LMS Systems & Full-Stack Lead.
 
 No frameworks. No build step. No dependencies. `view-source` **is** the documentation.
 

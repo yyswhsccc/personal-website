@@ -29,16 +29,16 @@
 
   the address is base64. decode it, open it in any browser:
 
-    [96mecho aHR0cHM6Ly95eXN3aHNjY2MuZ2l0aHViLmlvL3BlcnNvbmFsLXdlYnNpdGUvI3Rlcm1pbmFsCg== | base64 -d[0m
+    [96mecho aHR0cHM6Ly95b25nc2hhbi5pcy1hLmRldi8jdGVybWluYWwK | base64 -d[0m
 
-  [92mmacOS shortcut:[0m open "$(echo aHR0cHM6Ly95eXN3aHNjY2MuZ2l0aHViLmlvL3BlcnNvbmFsLXdlYnNpdGUvI3Rlcm1pbmFsCg== | base64 -d)"
+  [92mmacOS shortcut:[0m open "$(echo aHR0cHM6Ly95b25nc2hhbi5pcy1hLmRldi8jdGVybWluYWwK | base64 -d)"
 
 inside: the door is [95mLOCKED[0m — a short chain of little puzzles,
 freshly shuffled every visit. survivors are told the key ♡ ([96mhint[0m helps.)
 
 [1mBONUS — pikmin trading cards, dealt by YOUR shell:[0m
 
-  curl -sL "https://yyswhsccc.github.io/personal-website/pik/$((RANDOM % 5))"
+  curl -sL "https://yongshan.is-a.dev/pik/$((RANDOM % 5))"
 
   [2m(yes — $((RANDOM % 5)) is computed by your own shell. we simply
   cannot see your dice. collect all five.)[0m

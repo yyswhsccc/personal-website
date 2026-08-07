@@ -5387,6 +5387,130 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     termLine(trT(`git: '${sub}' — not here. \`git help\` shows the whole toolbox`, `git : '${sub}' — pas ici. \`git help\` montre toute la boîte`), 't-err');
   }
+  /* =====================================================
+     v86 — THE POLYGLOT SWITCHBOARD 🌍
+     every hello on earth (and a few from off it) gets a
+     hello back. the slime collects languages like stamps —
+     ten distinct tongues and it declares itself polyglot.
+     ===================================================== */
+  const TERM_HELLOS = {
+    hello: ['english', 'anglais'], hi: ['english', 'anglais'], hey: ['english', 'anglais'],
+    hiya: ['english', 'anglais'], howdy: ['english (texas remix)', 'anglais (remix texan)'],
+    yo: ['english (street protocol)', 'anglais (protocole street)'], sup: ['english (minimalist)', 'anglais (minimaliste)'],
+    wassup: ['english (late 90s)', 'anglais (fin des années 90)'], gday: ['australian', 'australien'],
+    "g'day": ['australian', 'australien'], ahoy: ['pirate', 'pirate'],
+    'hello there': { l: ['jedi', 'jedi'], r: ['GENERAL KENOBI!! (the slime has seen the memes. all of them.)', 'GÉNÉRAL KENOBI !! (le slime a vu les mèmes. tous.)'] },
+    bonjour: ['french', 'français'], salut: ['french', 'français'], coucou: ['french', 'français'], bonsoir: ['french (evening cut)', 'français (version du soir)'],
+    bonjou: ['haitian creole', 'créole haïtien'],
+    hola: ['spanish', 'espagnol'], 'buenos dias': ['spanish', 'espagnol'], 'buenos días': ['spanish', 'espagnol'], buenas: ['spanish (casual)', 'espagnol (décontracté)'],
+    'bon dia': ['catalan', 'catalan'], kaixo: ['basque', 'basque'],
+    'olá': ['portuguese', 'portugais'], ola: ['portuguese/galician', 'portugais/galicien'], oi: ['portuguese (brazil)', 'portugais (brésil)'], 'bom dia': ['portuguese', 'portugais'],
+    ciao: ['italian', 'italien'], salve: ['italian/latin', 'italien/latin'], buongiorno: ['italian', 'italien'], ave: ['latin (imperial)', 'latin (impérial)'],
+    hallo: ['german/dutch', 'allemand/néerlandais'], moin: ['german (hamburg dialect)', 'allemand (dialecte de hambourg)'],
+    servus: ['bavarian/austrian', 'bavarois/autrichien'], gruezi: ['swiss german', 'suisse allemand'], 'grüezi': ['swiss german', 'suisse allemand'],
+    'guten tag': ['german', 'allemand'], hoi: ['dutch', 'néerlandais'],
+    hej: ['swedish/danish', 'suédois/danois'], hejsan: ['swedish', 'suédois'], tjena: ['swedish (casual)', 'suédois (décontracté)'],
+    hei: ['norwegian/finnish', 'norvégien/finnois'], moi: ['finnish', 'finnois'], terve: ['finnish', 'finnois'],
+    'halló': ['icelandic', 'islandais'], 'привет': ['russian', 'russe'], 'здравствуйте': ['russian (formal)', 'russe (formel)'], 'приветик': ['russian (cute)', 'russe (mignon)'],
+    'привіт': ['ukrainian', 'ukrainien'], 'добрий день': ['ukrainian', 'ukrainien'],
+    'cześć': ['polish', 'polonais'], czesc: ['polish', 'polonais'], siema: ['polish (casual)', 'polonais (décontracté)'], 'dzień dobry': ['polish', 'polonais'], 'dzien dobry': ['polish', 'polonais'],
+    ahoj: ['czech/slovak', 'tchèque/slovaque'], 'dobrý den': ['czech', 'tchèque'], 'dobry den': ['czech', 'tchèque'],
+    szia: ['hungarian', 'hongrois'], 'jó napot': ['hungarian', 'hongrois'], 'jo napot': ['hungarian', 'hongrois'],
+    'bună': ['romanian', 'roumain'], buna: ['romanian', 'roumain'],
+    'γεια': ['greek', 'grec'], 'γεια σου': ['greek', 'grec'], 'γεια σας': ['greek (formal)', 'grec (formel)'], yassou: ['greek', 'grec'], 'καλημέρα': ['greek', 'grec'], kalimera: ['greek', 'grec'],
+    merhaba: ['turkish', 'turc'], selam: ['turkish', 'turc'],
+    'مرحبا': ['arabic', 'arabe'], marhaba: ['arabic', 'arabe'], salam: ['arabic/persian/azeri', 'arabe/persan/azéri'],
+    'السلام عليكم': ['arabic (formal)', 'arabe (formel)'], 'salam alaikum': ['arabic (formal)', 'arabe (formel)'], 'assalamu alaikum': ['arabic (formal)', 'arabe (formel)'],
+    'שלום': ['hebrew', 'hébreu'], shalom: ['hebrew', 'hébreu'], 'سلام': ['persian', 'persan'], salaam: ['persian', 'persan'], salom: ['uzbek', 'ouzbek'],
+    'नमस्ते': ['hindi', 'hindi'], namaste: ['hindi', 'hindi'], 'नमस्कार': ['hindi/nepali', 'hindi/népalais'], namaskar: ['hindi/nepali', 'hindi/népalais'],
+    'নমস্কার': ['bengali', 'bengali'], 'வணக்கம்': ['tamil', 'tamoul'], vanakkam: ['tamil', 'tamoul'], 'నమస్కారం': ['telugu', 'télougou'],
+    'สวัสดี': ['thai', 'thaï'], sawasdee: ['thai', 'thaï'], sawadee: ['thai', 'thaï'], 'สวัสดีครับ': ['thai', 'thaï'], 'สวัสดีค่ะ': ['thai', 'thaï'],
+    'xin chào': ['vietnamese', 'vietnamien'], 'xin chao': ['vietnamese', 'vietnamien'], 'chào': ['vietnamese', 'vietnamien'], 'chào bạn': ['vietnamese', 'vietnamien'],
+    halo: ['indonesian', 'indonésien'], 'apa kabar': ['indonesian', 'indonésien'], 'selamat pagi': ['indonesian/malay', 'indonésien/malais'],
+    kamusta: ['tagalog', 'tagalog'], mabuhay: ['tagalog', 'tagalog'],
+    'こんにちは': ['japanese', 'japonais'], konnichiwa: ['japanese', 'japonais'], 'おはよう': ['japanese (morning)', 'japonais (matin)'], ohayo: ['japanese (morning)', 'japonais (matin)'], 'こんばんは': ['japanese (evening)', 'japonais (soir)'], 'やあ': ['japanese (casual)', 'japonais (décontracté)'],
+    '안녕': ['korean', 'coréen'], '안녕하세요': ['korean (polite)', 'coréen (poli)'], annyeong: ['korean', 'coréen'], annyeonghaseyo: ['korean (polite)', 'coréen (poli)'],
+    '您好': ['chinese (polite)', 'chinois (poli)'], '哈喽': ['chinese (loanword)', 'chinois (emprunté)'], '嗨': ['chinese (casual)', 'chinois (décontracté)'], '早上好': ['chinese (morning)', 'chinois (matin)'], '早安': ['chinese (morning)', 'chinois (matin)'], '大家好': ['chinese (to everyone)', 'chinois (à tout le monde)'],
+    '哈囉': ['cantonese', 'cantonais'], '你好呀': ['cantonese (cute)', 'cantonais (mignon)'],
+    jambo: ['swahili', 'swahili'], habari: ['swahili', 'swahili'], hujambo: ['swahili', 'swahili'],
+    sannu: ['hausa', 'haoussa'], bawo: ['yoruba', 'yoruba'], sawubona: ['zulu', 'zoulou'], 'ሰላም': ['amharic', 'amharique'], salama: ['malagasy', 'malgache'],
+    aloha: ['hawaiian', 'hawaïen'], 'kia ora': ['māori', 'maori'], talofa: ['samoan', 'samoan'], bula: ['fijian', 'fidjien'], 'malo e lelei': ['tongan', 'tongien'],
+    saluton: ['esperanto', 'espéranto'],
+    'dia dhuit': ['irish', 'irlandais'], 'dia duit': ['irish', 'irlandais'], helo: ['welsh', 'gallois'], shwmae: ['welsh', 'gallois'],
+    labas: ['lithuanian', 'lituanien'], sveiki: ['latvian/lithuanian', 'letton/lituanien'], tere: ['estonian', 'estonien'],
+    zdravo: ['serbian/croatian', 'serbe/croate'], 'здраво': ['serbian/macedonian', 'serbe/macédonien'], 'dobar dan': ['croatian/bosnian', 'croate/bosnien'], bok: ['croatian', 'croate'],
+    'здравей': ['bulgarian', 'bulgare'], zdravei: ['bulgarian', 'bulgare'], 'živjo': ['slovenian', 'slovène'], zivjo: ['slovenian', 'slovène'],
+    tungjatjeta: ['albanian', 'albanais'], tung: ['albanian (casual)', 'albanais (décontracté)'],
+    'բարև': ['armenian', 'arménien'], barev: ['armenian', 'arménien'], 'გამარჯობა': ['georgian', 'géorgien'], gamarjoba: ['georgian', 'géorgien'],
+    'сайн байна уу': ['mongolian', 'mongol'], 'sain baina uu': ['mongolian', 'mongol'], 'сәлем': ['kazakh', 'kazakh'], salem: ['kazakh', 'kazakh'],
+    ayubowan: ['sinhala', 'cingalais'], mingalaba: ['burmese', 'birman'], 'susadei': ['khmer', 'khmer'], suosdey: ['khmer', 'khmer'], sabaidee: ['lao', 'lao'], 'ສະບາຍດີ': ['lao', 'lao'],
+    'tashi delek': ['tibetan', 'tibétain'], osiyo: ['cherokee', 'cherokee'], yateeh: ['navajo', 'navajo'],
+    'iska warran': ['somali', 'somali'], 'goeie dag': ['afrikaans', 'afrikaans'],
+    toki: { l: ['toki pona', 'toki pona'], r: ['toki!! pona!! (the slime speaks the language of good. it has 120 words. the slime knows 3.)', 'toki !! pona !! (le slime parle la langue du bien. elle a 120 mots. le slime en connaît 3.)'] },
+    coi: { l: ['lojban', 'lojban'], r: ['coi!! .ui (the slime emits genuine happiness, logically annotated)', 'coi !! .ui (le slime émet du bonheur authentique, logiquement annoté)'] },
+    nuqneh: { l: ['klingon', 'klingon'], r: ["nuqneH!! (the slime answers: today is a good day to NAP. Qapla' ♡)", "nuqneH !! (le slime répond : c'est un bon jour pour la SIESTE. Qapla' ♡)"] },
+    'beep boop': { l: ['robot', 'robot'], r: ['boop beep beep ♡ (translation: hello, fellow machine. your firmware is beautiful.)', 'boop bip bip ♡ (traduction : bonjour, camarade machine. ton firmware est magnifique.)'] },
+    '01101000 01101001': { l: ['binary', 'binaire'], r: ['01101000 01101001 00100000 11100010 10011001 10100001 (hi ♡ — the slime replies in UTF-8, from memory)', '01101000 01101001 00100000 11100010 10011001 10100001 (salut ♡ — le slime répond en UTF-8, de mémoire)'] },
+    '.... ..': { l: ['morse code', 'code morse'], r: ['.... .. / ♡ (the slime taps back on the table. dot dot dot heart.)', '.... .. / ♡ (le slime tapote la table en retour. point point point cœur.)'] }
+  };
+  function termHello(rawIn) {
+    const soft = rawIn.toLowerCase().normalize('NFC').trim().replace(/\s+/g, ' ');
+    // pass 1: exact (so morse dots survive) · pass 2: punctuation shaken off
+    const hard = soft.replace(/[!?,~、。！？♡♥😀-🙏]+$/gu, '').trim() || soft;
+    const key = Object.prototype.hasOwnProperty.call(TERM_HELLOS, soft) ? soft
+      : (Object.prototype.hasOwnProperty.call(TERM_HELLOS, hard) ? hard : null);
+    if (!key) return false;
+    const hit = TERM_HELLOS[key];
+    const lang = Array.isArray(hit) ? hit : hit.l;
+    if (Array.isArray(hit)) {
+      const echo = rawIn.trim().replace(/[!?.,~\s]+$/g, '');
+      termLine(`${echo}!! ♡ — ` + trT(`${lang[0]} detected. the slime waves back, fluently.`, `${lang[1]} détecté. le slime te salue en retour, couramment.`), 't-ok');
+    } else {
+      termLine(trT(hit.r[0], hit.r[1]), 't-ok');
+    }
+    try { burstAtSlime(['👋', '♡'], 3); playSparkleSound(); } catch (e) { /* the wave is implied */ }
+    try { // stamp collection — one stamp per language label
+      const bag = store.get('yos-hellos', {});
+      if (!bag[lang[0]]) {
+        bag[lang[0]] = 1;
+        store.set('yos-hellos', bag);
+        const n = Object.keys(bag).length;
+        termLine(trT(`🌍 greetings collected: ${n} language${n > 1 ? 's' : ''}`, `🌍 salutations collectionnées : ${n} langue${n > 1 ? 's' : ''}`), 't-dim');
+        if (n === 10) {
+          cheatFall(['🌍', '👋', '♡'], 14);
+          playFanfare();
+          termLine(trT('🌍 TEN TONGUES. the slime is now certifiably polyglot. it still cannot type.', '🌍 DIX LANGUES. le slime est officiellement polyglotte. il ne sait toujours pas taper.'), 't-accent');
+        }
+      }
+    } catch (e) { /* stamps are optional */ }
+    // v86.1: every language family is its own hidden achievement
+    try { achvUnlock(termHelloSlug(lang)); } catch (e) { /* the trophy shelf wobbled */ }
+    return true;
+  }
+  // v86.1 (owner decree): saying hello in a language IS an achievement —
+  // one hidden 👋 badge per language family, minted straight from the map
+  function termHelloSlug(pair) {
+    return 'hello-' + pair[0].replace(/\s*\(.*$/, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  }
+  (() => {
+    const seen = {};
+    Object.keys(TERM_HELLOS).forEach((k) => {
+      const v = TERM_HELLOS[k];
+      const pair = Array.isArray(v) ? v : v.l;
+      const slug = termHelloSlug(pair);
+      if (seen[slug]) return;
+      seen[slug] = true;
+      const en = pair[0].replace(/\s*\(.*$/, '');
+      const fr = pair[1].replace(/\s*\(.*$/, '');
+      ACHV.push({
+        id: slug, icon: '👋',
+        n: ['Hello, ' + en + '!', 'Hello en ' + fr + ' !'],
+        d: ['greeted the terminal in ' + en + '. it waved back, fluently.', 'a salué le terminal en ' + fr + '. il a répondu d\'un signe, couramment.'],
+        t: ['the shell answers every hello on earth. this one is spoken somewhere specific.', 'le shell répond à tous les bonjours du monde. celui-ci se dit quelque part de précis.']
+      });
+    });
+  })();
+
   // v85.1: the chariot interlock — a full spread about to shove yongshan's
   // soul card off the table demands explicit eye contact first
   var termTarotPending = null;
@@ -6040,6 +6164,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const handler = Object.prototype.hasOwnProperty.call(TERM_COMMANDS, cmd) ? TERM_COMMANDS[cmd] : null;
     if (handler) handler();
     else if (tryFuzzyCheat(lower)) { /* the slime god heard a near-spell and took over */ }
+    else if (!document.body.classList.contains('terminal-only') && termHello(input)) { /* v86: a hello in ANY tongue gets a wave back (the DOOR keeps its own greeting rituals) */ }
     else {
       termLine(trT(`${cmd}: command not found — try \`help\``, `${cmd} : commande introuvable — essayez \`help\``), 't-err');
       // mercy protocol: a visitor flailing at the door gets RESCUED, cinematically
@@ -6467,6 +6592,16 @@ document.addEventListener('DOMContentLoaded', () => {
     return slimeBody && slimeBody.classList.contains('is-ghost-hidden');
   }
 
+  // ---- the ONE cinema question, answered in one place ----
+  // house rule (by decree): the moment the mp3 deck is OPEN — fullscreen,
+  // windowed, even minimized to the taskbar — every popup on the lot is
+  // PAUSED. deferred acts replay only after the deck actually CLOSES.
+  // 'mp3-open' tracks exactly that (cinemaSync keeps it on while
+  // minimized, off only when the window closes), so it IS the ban.
+  function mp3CinemaHolds() {
+    return document.body.classList.contains('mp3-open');
+  }
+
   function ghostVanish() {
     if (resolvedTheme() !== 'dark') return;
     if (pet.busy || pet.sleeping || isGrabbing) return;
@@ -6562,6 +6697,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // → the slime spends 60%+ of dark mode in bed, as required by slime law
   function nightRetireNow() {
     if (resolvedTheme() !== 'dark' || ghostHidden()) return;
+    if (mp3CinemaHolds()) return; // fullscreen cinema: bedtime holds its line — nightLoop re-offers it later
     showBubble(awayLine('retire'), 2200);
     nightRetireTimer = setTimeout(() => { nightRetireTimer = null; ghostVanish(); }, 1900);
   }
@@ -6623,6 +6759,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // v6.0: while a dream world holds the site, the sleeper sleeps ON —
       // the countdown narrator owns the microphone until the dream pops
       if (dreamActive()) { nightLoop(); return; }
+      if (mp3CinemaHolds()) { nightLoop(); return; } // house lights are down — the night waits in the wings
       if (resolvedTheme() === 'dark' && !pet.busy && !pet.sleeping && !isGrabbing && !sleepwalkActive) {
         if (ghostHidden()) {
           if (gameActive()) nightWakeNarrated(false); // dream narrates the wake-up
@@ -6735,7 +6872,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // right after the dive settles (allowWhileAway: it IS asleep)
     const why = SW_CURFEW_WHY[Math.floor(Math.random() * SW_CURFEW_WHY.length)];
     setTimeout(() => {
-      if (resolvedTheme() !== 'dark' || document.body.classList.contains('terminal-only')) return;
+      if (resolvedTheme() !== 'dark' || document.body.classList.contains('terminal-only') || mp3CinemaHolds()) return;
       showBubble(trT(...why), 9500, true);
     }, 4200);
   }
@@ -6785,7 +6922,8 @@ document.addEventListener('DOMContentLoaded', () => {
     swTrickUntil = Date.now() + 7 * 60 * 1000;
     store.set('yos-sw-trick', swTrickUntil);
     // no audience, no ceremony — but the curfew still lifts quietly
-    if (resolvedTheme() !== 'dark' || document.body.classList.contains('terminal-only') || sleepwalkActive) return;
+    // (a running cinema counts as "no audience": lift + gremlin state are already saved above)
+    if (resolvedTheme() !== 'dark' || document.body.classList.contains('terminal-only') || sleepwalkActive || mp3CinemaHolds()) return;
     // the ceremony: the sleeper bursts out of bed waving a tiny permit
     ghostAppear(0, false);
     const pickL = SW_LIFT_LINES[Math.floor(Math.random() * SW_LIFT_LINES.length)];
@@ -6803,7 +6941,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // act two: the gremlin-hour manifesto (a separate bubble so the
     // permit joke lands first, then the mask goes on)
     setTimeout(() => {
-      if (resolvedTheme() !== 'dark' || !swTricksterOn()) return;
+      if (resolvedTheme() !== 'dark' || !swTricksterOn() || mp3CinemaHolds()) return;
       const g = SW_GREMLIN_LINES[Math.floor(Math.random() * SW_GREMLIN_LINES.length)];
       showBubble(trT(...g), 8500, true);
       burstAtSlime(['😈', '✦', '💤'], 7);
@@ -7282,7 +7420,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // first-timers only board if no curfew is running (the curfew pipeline
     // delivers their dream with ceremony instead)
     if (nightStayMs >= 120000 && !nightDreamDone && !dreamWorld && !sleepwalkActive
-        && dreamAcdLeft <= 0 && !gameActive() && window.innerWidth >= 560) {
+        && dreamAcdLeft <= 0 && !gameActive() && window.innerWidth >= 560 && !mp3CinemaHolds()) {
       if (swCurfewOn()) {
         if (!NIGHT_RETURNING) return; // let the curfew flow deliver it
         swCurfewLeft = 0; swLiftDone = true; // regulars ride past the checkpoint, quietly
@@ -7296,7 +7434,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function startSleepwalk() {
     if (document.body.classList.contains('terminal-only')) return; // the door hates popups
-    if (document.body.classList.contains('mp3-open')) return;      // player open = no dreams leak in, at all
+    if (mp3CinemaHolds()) return;                                  // fullscreen cinema = no dreams leak in (a minimized deck lets the night play)
     // sleepwalks also launch from a maximized live room: a sleeping
     // streamer on stage is still a sleeping streamer
     const asleepOnStage = typeof liveOpen !== 'undefined' && liveOpen && pet.sleeping;
@@ -8943,6 +9081,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function startDreamWalk(forceW) {
     const w = forceW || dreamPick();
     if (!w || dreamWorld) return;
+    if (mp3CinemaHolds()) return; // the cinema outranks every dream — no ritual, no announcement, no matter who called
     // a feature-tour walk in progress yields the stage — otherwise its
     // orphaned sprite keeps gliding while the ritual hijacks the swEl var
     if (swEl || sleepwalkActive) cancelSleepwalk();
@@ -9056,7 +9195,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function dreamBegin(w, remainMs, resumed) {
-    if (document.body.classList.contains('mp3-open')) {            // the cinema outranks every dream,
+    if (mp3CinemaHolds()) {                                        // the cinema outranks every dream,
       setTimeout(function () { dreamBegin(w, remainMs, resumed); }, 30000); // resumed ones included
       return;
     }
@@ -17443,6 +17582,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   window.__yosDreamEnd = dreamEnd;
   window.__yosDreamActive = function () { return !!dreamWorld; };
+  window.__yosSleepwalkCancel = cancelSleepwalk; // the mp3 IIFE lives in another scope — the cinema needs a bell to clear the stage
 
 
   function dreamArmCooldown() {
@@ -17547,9 +17687,10 @@ document.addEventListener('DOMContentLoaded', () => {
         && window.innerWidth >= 560 && !document.body.classList.contains('terminal-only')) {
         nightExpressArmed = true;
         if (nightExpressTimer) clearTimeout(nightExpressTimer);
-        nightExpressTimer = setTimeout(() => {
+        nightExpressTimer = setTimeout(function expressTry() {
           nightExpressTimer = null;
           if (resolvedTheme() !== 'dark' || dreamActive() || document.body.classList.contains('terminal-only')) return;
+          if (mp3CinemaHolds()) { nightExpressTimer = setTimeout(expressTry, 15000); return; } // the cinema outranks the express — hold the train, don't cancel it
           store.set('yos-dream-cd', 0); // veterans don't wait for cooldowns
           const w = DREAM_WORLDS[Math.floor(Math.random() * DREAM_WORLDS.length)];
           if (slimeBody) slimeBody.classList.add('is-ghost-hidden');
@@ -17616,7 +17757,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function skyFlipNow(toDark) {
-    if (document.body.classList.contains('mp3-open')) {            // no ceremony while the deck is out -
+    if (mp3CinemaHolds()) {                                        // no ceremony while the cinema holds -
       skyFlipTimers.push(setTimeout(() => skyFlipNow(toDark), 120000)); // the sky waits its turn
       return;
     }
@@ -27655,7 +27796,7 @@ document.addEventListener('DOMContentLoaded', () => {
     beam.className = 'live-beam-btn';
     beam.textContent = trT('📡 beam it to a nearby device', '📡 téléporter vers un appareil proche');
     beam.addEventListener('click', () => {
-      const url = 'https://yyswhsccc.github.io/personal-website/#live';
+      const url = 'https://yongshan.is-a.dev/#live';
       if (navigator.share) {
         navigator.share({ title: 'yongshanOS · slime live', text: trT('the slime is live — open me on the big screen ♡', 'le slime est en direct — ouvre-moi sur le grand écran ♡'), url })
           .then(() => { tip.remove(); showToast(trT('📡 beamed — it opens straight into the live room ♡', '📡 téléporté — ça ouvre direct dans le salon live ♡')); })
@@ -31885,7 +32026,6 @@ document.addEventListener('DOMContentLoaded', () => {
       '<h2>' + L('SKILLS', 'COMPÉTENCES') + '</h2>',
       '<p>' + L('Full-stack web engineering · AWS operations · accessibility (WCAG 2.1 AA) · AI agents & applied ML · bilingual EN/FR product copy', 'Ingénierie web full-stack · exploitation AWS · accessibilité (WCAG 2.1 AA) · agents IA & ML appliqué · rédaction produit bilingue EN/FR') + '</p>',
       '<p class="boring-refs">' + L('References available upon request.', 'Références disponibles sur demande.') + '</p>',
-      '<p class="boring-door"><a href="#" id="boring-door">⚠ ' + L('An interactive version of this résumé exists. Please do not click here during work hours.', 'Une version interactive de ce CV existe. Merci de ne pas cliquer ici pendant les heures de travail.') + '</a></p>',
       '<p class="boring-foot">' + L('Last saved 4:03 PM · Page 1 of 1', 'Enregistré à 16 h 03 · Page 1 sur 1') + '</p>',
     ].join('');
     doc.appendChild(body);
@@ -31925,6 +32065,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const pl = POKE_LINES[pokes];
         pokes++;
         gw.classList.remove('is-poked'); void gw.offsetWidth; gw.classList.add('is-poked');
+        // squish ends → class OFF, or it shadows .is-walking's waddle
+        // forever (same `animation` slot) and the stroll turns into a glide
+        T(() => { try { gw.classList.remove('is-poked'); } catch (e) { /* already gone */ } }, 500);
         const oldBub = gw.querySelector('.boring-pik-bubble');
         if (oldBub) oldBub.remove();
         const bub = document.createElement('div');
@@ -32069,7 +32212,10 @@ document.addEventListener('DOMContentLoaded', () => {
       boringShellShow();
     });
     chromeX.addEventListener('click', crash);
-    body.querySelector('#boring-door').addEventListener('click', (e) => { e.preventDefault(); crash(); });
+    // (the printed "interactive version" link is GONE by owner decree —
+    // the only door back is poking the pikmin until it snaps)
+    const doorEl = body.querySelector('#boring-door');
+    if (doorEl) doorEl.addEventListener('click', (e) => { e.preventDefault(); crash(); });
   }
 
 
@@ -38918,8 +39064,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // — pairing (works for first pairing AND re-pairing) —
     shell.appendChild(mk('p', '', trT('1 · open this on the watch:', '1 · ouvre ceci sur la montre :')));
     const urlRow = mk('div', 'wp-row');
-    const WATCH_URL = 'https://yyswhsccc.github.io/personal-website/watch.html';
-    const url = mk('p', 'wp-url', 'yyswhsccc.github.io/personal-website/watch.html');
+    const WATCH_URL = 'https://yongshan.is-a.dev/watch.html';
+    const url = mk('p', 'wp-url', 'yongshan.is-a.dev/watch.html');
     url.title = trT('click to copy', 'clic : copier');
     const copyBtn = mk('button', 'wp-btn wp-copy', '📋');
     copyBtn.type = 'button';
@@ -39269,10 +39415,16 @@ document.addEventListener('DOMContentLoaded', () => {
     var mini = win.classList.contains('window-minimized');
     var max = win.classList.contains('window-maximized');
     document.body.classList.toggle('mp3-open', open);   // open deck = total quiet on the lot
-    if (open && window.__yosDreamActive && window.__yosDreamActive()) {
+    var holds = open && !mini;                          // the popup ban tracks the VISIBLE deck — minimized lets the night play on
+    if (holds && window.__yosDreamActive && window.__yosDreamActive()) {
       try { window.__yosDreamEnd('cinema'); } catch (e9) { /* the dream resists; the veil still holds */ }
     }
-    document.body.classList.toggle('mp3-cinema', open && max && !mini && (playing || vidPlaying));
+    if (holds && window.__yosSleepwalkCancel) {         // (re)engaging mid-walk: the walker exits, stage left
+      try { window.__yosSleepwalkCancel(); } catch (e10) { /* the walker naps where it stood */ }
+    }
+    // phones never maximize (pocket window) but their cinema dims too —
+    // ≤700px the pocket IS the big screen
+    document.body.classList.toggle('mp3-cinema', open && !mini && (playing || vidPlaying) && (max || window.innerWidth <= 700));
   }
   function updatePlayGlyph() {
     var b = document.getElementById('mp3-play');
@@ -39312,7 +39464,7 @@ document.addEventListener('DOMContentLoaded', () => {
         var embed = tr.mv
           ? 'https://www.bilibili.com/blackboard/html5mobileplayer.html?bvid=' + tr.mv + '&autoplay=1&danmaku=0&hideCoverInfo=1&qn=32'
           : tr.yt
-            ? 'https://www.youtube.com/embed/' + tr.yt + '?autoplay=1&enablejsapi=1&controls=0&rel=0&iv_load_policy=3&disablekb=1&fs=0'
+            ? 'https://www.youtube.com/embed/' + tr.yt + '?autoplay=1&playsinline=1&enablejsapi=1&controls=0&rel=0&iv_load_policy=3&disablekb=1&fs=0'
             : null;
         if (embed) {
           html += '<div class="mp3-theater"><div class="mp3-mv" data-embed="' + embed + '"><iframe src="' + embed +
@@ -39413,11 +39565,16 @@ document.addEventListener('DOMContentLoaded', () => {
     var fr = th.querySelector('iframe');
     if (fr && fr.src.indexOf('youtube') > -1) {
       fr.addEventListener('load', function () {
-        setTimeout(function () {
-          if (fr.contentWindow) {
-            fr.contentWindow.postMessage(JSON.stringify({ event: 'listening', id: 'ysmp3' }), '*');
+        var kick = function () {
+          if (!fr.contentWindow) return;
+          fr.contentWindow.postMessage(JSON.stringify({ event: 'listening', id: 'ysmp3' }), '*');
+          // mobile parks autoplay=1: re-issue play while the opening tap is still warm
+          if (!screen.querySelector('.mp3-curtain2')) {
+            fr.contentWindow.postMessage(JSON.stringify({ event: 'command', func: 'playVideo', args: [] }), '*');
           }
-        }, 300);
+        };
+        setTimeout(kick, 300);
+        setTimeout(kick, 1400);                    // second nudge once the player is surely ready
       });
     }
     var crowd = th.querySelector('.mp3-crowd');
@@ -40012,12 +40169,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // youtube tells us when the reel runs out
   var ytEndedFor = -1;
+  var ytStall = 0;
   window.addEventListener('message', function (ev2) {
     if (typeof ev2.data !== 'string') return;
     if (ev2.data.indexOf('playerState') < 0) return;
     var d2;
     try { d2 = JSON.parse(ev2.data); } catch (e2) { return; }
     var st = d2 && d2.info && d2.info.playerState;
+    var trY = cur >= 0 && MP3_TRACKS[order[cur]];
+    if (trY && trY.yt) {                           // the glyph mirrors the reel, not our hopes
+      if (st === 1 || st === 3) {
+        clearTimeout(ytStall);
+        if (!vidPlaying) { vidPlaying = true; updatePlayGlyph(); }
+      } else if ((st === -1 || st === 5) && vidPlaying) {
+        clearTimeout(ytStall);                     // debounced: desktop passes -1 for a blink
+        var stallTok = order[cur];
+        ytStall = setTimeout(function () {
+          if (cur >= 0 && order[cur] === stallTok && vidPlaying) {
+            vidPlaying = false;                    // autoplay stayed parked: show ▶ honestly
+            updatePlayGlyph();
+          }
+        }, 900);
+      }
+    }
     if (st !== 0) return;
     if (cur < 0 || ytEndedFor === cur) return;
     var tr2 = MP3_TRACKS[order[cur]];
