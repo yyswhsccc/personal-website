@@ -139,10 +139,13 @@ input {
 /* ================= LOADER SCREEN ================= */
 .loading-screen {
   position: fixed;
-  top: 0;
-  left: 0;
+  /* inset:0 stretches to the layout viewport even where dvh is unknown;
+     100dvh tracks iOS Safari's shape-shifting toolbar so the boot veil
+     never lets the desktop peek out the bottom */
+  inset: 0;
   width: 100vw;
   height: 100vh;
+  height: 100dvh;
   background:
     radial-gradient(circle at 50% 42%, rgba(240, 80, 159, 0.16), transparent 55%),
     #14081f;
