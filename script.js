@@ -5453,12 +5453,106 @@ document.addEventListener('DOMContentLoaded', () => {
     '01101000 01101001': { l: ['binary', 'binaire'], r: ['01101000 01101001 00100000 11100010 10011001 10100001 (hi ♡ — the slime replies in UTF-8, from memory)', '01101000 01101001 00100000 11100010 10011001 10100001 (salut ♡ — le slime répond en UTF-8, de mémoire)'] },
     '.... ..': { l: ['morse code', 'code morse'], r: ['.... .. / ♡ (the slime taps back on the table. dot dot dot heart.)', '.... .. / ♡ (le slime tapote la table en retour. point point point cœur.)'] }
   };
+  // v86.2 — THE GREAT EXPANSION: more of earth, all of the machines.
+  // human tongues by the continent, programming languages that each
+  // answer in their own idiom, ciphers, protocols, and a few languages
+  // from places that do not exist. every family still mints its badge.
+  Object.assign(TERM_HELLOS, {
+    // — more europe —
+    moien: ['luxembourgish', 'luxembourgeois'], demat: ['breton', 'breton'], 'dydh da': ['cornish', 'cornique'],
+    bongu: ['maltese', 'maltais'], witaj: ['sorbian', 'sorabe'], goeie: ['frisian', 'frison'],
+    'прывітанне': ['belarusian', 'biélorusse'], 'вітаю': ['belarusian', 'biélorusse'],
+    awrite: ['scots', 'écossais'], 'ey up': ['yorkshire english', 'anglais du yorkshire'],
+    'top of the morning': ['irish english', 'anglais irlandais'], adishatz: ['occitan', 'occitan'],
+    // — more asia —
+    'ਸਤ ਸ੍ਰੀ ਅਕਾਲ': ['punjabi', 'pendjabi'], 'sat sri akal': ['punjabi', 'pendjabi'],
+    'kem cho': ['gujarati', 'goudjarati'], namaskara: ['kannada', 'kannada'], namaskaram: ['malayalam', 'malayalam'],
+    'салом': ['tajik', 'tadjik'], yaxshimusiz: ['uyghur', 'ouïghour'], 'саламатсызбы': ['kyrgyz', 'kirghize'],
+    'nyob zoo': ['hmong', 'hmong'], sugeng: ['javanese', 'javanais'],
+    haisai: ['okinawan', 'okinawaïen'], irankarapte: ['ainu', 'aïnou'], '侬好': ['shanghainese', 'shanghaïen'],
+    'li ho': ['taiwanese hokkien', 'hokkien taïwanais'], silav: ['kurdish', 'kurde'], shlomo: ['aramaic', 'araméen'],
+    // — more africa —
+    ndewo: ['igbo', 'igbo'], mbote: ['lingala', 'lingala'], muraho: ['kinyarwanda', 'kinyarwanda'],
+    dumela: ['setswana/sesotho', 'tswana/sotho'], molo: ['xhosa', 'xhosa'], mhoro: ['shona', 'shona'],
+    moni: ['chichewa', 'chichewa'], akkam: ['oromo', 'oromo'], 'nanga def': ['wolof', 'wolof'],
+    // — the americas —
+    niltze: ['nahuatl', 'nahuatl'], allillanchu: ['quechua', 'quechua'], kamisaraki: ['aymara', 'aymara'],
+    boozhoo: ['ojibwe', 'ojibwé'], tansi: ['cree', 'cri'], hau: ['lakota', 'lakota'],
+    aluu: ['greenlandic', 'groenlandais'], atelihai: ['inuktitut', 'inuktitut'],
+    'wah gwaan': ['jamaican patois', 'patois jamaïcain'], 'kon ta bai': ['papiamento', 'papiamento'], odi: ['sranan', 'sranan'],
+    // — the pacific —
+    'ia orana': ['tahitian', 'tahitien'], 'hafa adai': ['chamorro', 'chamorro'], iokwe: ['marshallese', 'marshallais'],
+    alii: ['palauan', 'palaosien'], gude: ['tok pisin', 'tok pisin'],
+    // — the internet dialects —
+    henlo: { l: ['internet doggo', 'doggo d\'internet'], r: ['HENLO FREN!!! (the slime\'s heart did a backflip. 10/10 greeting. very hello. much fren.)', 'HENLO L\'AMI !!! (le cœur du slime a fait un salto. salut 10/10. very hello. much copain.)'] },
+    hewwo: { l: ['uwu dialect', 'dialecte uwu'], r: ['hewwo?? *notices your greeting* OwO (the slime cannot legally continue this sentence)', 'hewwo ?? *remarque ta salutation* OwO (le slime n\'a légalement pas le droit de finir cette phrase)'] },
+    gm: { l: ['crypto twitter', 'crypto twitter'], r: ['gm. wagmi ♡ (the slime holds no coins. only hearts. diamond hands since 1998.)', 'gm. wagmi ♡ (le slime ne détient aucun coin. que des cœurs. mains de diamant depuis 1998.)'] },
+    'o/': { l: ['emoticon', 'émoticône'], r: ['\\o (the slime waves back with its whole body. it has no arms. it used everything it has.)', '\\o (le slime salue de tout son corps. il n\'a pas de bras. il a utilisé tout ce qu\'il a.)'] },
+    // — languages from places that do not exist —
+    aiya: ['quenya', 'quenya'], 'mae govannen': ['sindarin', 'sindarin'],
+    "m'athchomaroon": ['dothraki', 'dothraki'], mathchomaroon: ['dothraki', 'dothraki'], rytsas: ['high valyrian', 'haut valyrien'],
+    kaltxi: ['na\'vi', 'na\'vi'], 'sul sul': { l: ['simlish', 'simlish'], r: ['sul sul!! dag dag ♡ (the slime speaks fluent simlish. its needs bars are all green today.)', 'sul sul !! dag dag ♡ (le slime parle couramment simlish. toutes ses jauges sont vertes aujourd\'hui.)'] },
+    bello: { l: ['minionese', 'minionais'], r: ['BELLO!! poopaye ♡ (banana levels: critical. the slime relates to minions on a molecular level.)', 'BELLO !! poopaye ♡ (niveau banane : critique. le slime se reconnaît dans les minions au niveau moléculaire.)'] },
+    'i am groot': { l: ['groot', 'groot'], r: ['I am Groot. (the slime understood ALL of that. it is also, spiritually, Groot.)', 'Je s\'appelle Groot. (le slime a TOUT compris. il est aussi, spirituellement, Groot.)'] },
+    'pika pika': { l: ['pokémon', 'pokémon'], r: ['pik pik!! ♡ (the meadow pikmin heard that and are VERY excited about the possible family reunion)', 'pik pik !! ♡ (les pikmin de la prairie ont entendu et sont TRÈS émus par cette possible réunion de famille)'] },
+    // — the machines: each answers in its own idiom —
+    'print("hello")': { i: '💻', l: ['python/swift/lua', 'python/swift/lua'], r: ['hello ♡ — python? swift? lua? one syntax, three fandoms. executed in 0.00001s for all of them. no semicolons were harmed.', 'hello ♡ — python ? swift ? lua ? une syntaxe, trois fandoms. exécuté en 0,00001 s pour les trois. aucun point-virgule n\'a été blessé.'] },
+    'print("hello world")': { i: '💻', l: ['python/swift/lua', 'python/swift/lua'], r: ['hello world ♡ — the full incantation!! somewhere, a 1974 teletype smiles.', 'hello world ♡ — l\'incantation complète !! quelque part, un télétype de 1974 sourit.'] },
+    'console.log("hello")': { i: '💻', l: ['javascript', 'javascript'], r: ['▶ hello    undefined ♡ (javascript says hello AND undefined. it cannot help itself. it never could.)', '▶ hello    undefined ♡ (javascript dit hello ET undefined. c\'est plus fort que lui. depuis toujours.)'] },
+    'printf("hello, world\\n")': { i: '💻', l: ['c', 'c'], r: ['hello, world — typeset 1978, K&R page 6, still warm. the slime keeps a first edition under its bed. return 0;', 'hello, world — composé en 1978, K&R page 6, encore tiède. le slime garde une première édition sous son lit. return 0;'] },
+    'printf("hello")': { i: '💻', l: ['c', 'c'], r: ['hello (no \\n — the prompt is now glued to your greeting. a classic C rite of passage ♡)', 'hello (pas de \\n — le prompt est maintenant collé à ta salutation. un rite de passage du C ♡)'] },
+    'system.out.println("hello")': { i: '💻', l: ['java', 'java'], r: ['hello ♡ — JVM warmed, 3 factories instantiated, 512MB allocated, one AbstractGreetingSingletonProxyBean retired. java sends regards.', 'hello ♡ — JVM chauffée, 3 factories instanciées, 512 Mo alloués, un AbstractGreetingSingletonProxyBean parti en retraite. java te salue.'] },
+    'println!("hello")': { i: '💻', l: ['rust', 'rust'], r: ['hello ♡ — the borrow checker confirms: this greeting has exactly one owner, and it is you. zero-cost affection.', 'hello ♡ — le borrow checker confirme : cette salutation a exactement un propriétaire, et c\'est toi. affection à coût zéro.'] },
+    'fmt.println("hello")': { i: '💻', l: ['go', 'go'], r: ['hello ♡ — if err != nil { /* there was no err. there is only hello */ }', 'hello ♡ — if err != nil { /* il n\'y avait pas d\'err. il n\'y a que hello */ }'] },
+    'puts "hello"': { i: '💻', l: ['ruby', 'ruby'], r: ['hello ♡ => nil (ruby made it beautiful and asked for nothing in return. matz would be proud.)', 'hello ♡ => nil (ruby l\'a rendu beau sans rien demander en retour. matz serait fier.)'] },
+    'cout << "hello"': { i: '💻', l: ['c++', 'c++'], r: ['hello ♡ — operator<< chained successfully. only 4,000 template errors were narrowly avoided.', 'hello ♡ — operator<< chaîné avec succès. seulement 4 000 erreurs de template évitées de justesse.'] },
+    'select "hello"': { i: '💻', l: ['sql', 'sql'], r: ['┌────────┐ │ hello  │ └────────┘ 1 row in set (0.001 sec) — the database greets you back, fully normalized ♡', '┌────────┐ │ hello  │ └────────┘ 1 ligne (0,001 s) — la base de données te salue, parfaitement normalisée ♡'] },
+    'putstrln "hello"': { i: '💻', l: ['haskell', 'haskell'], r: ['hello :: IO () ♡ — the greeting was performed inside a monad. it felt everything (purely).', 'hello :: IO () ♡ — la salutation a été exécutée dans une monade. elle a tout ressenti (purement).'] },
+    '(print "hello")': { i: '💻', l: ['lisp', 'lisp'], r: ['"hello" ♡ (the parentheses are load-bearing. one escaped in 1985 and was never found.)', '"hello" ♡ (les parenthèses sont porteuses. une s\'est échappée en 1985, jamais retrouvée.)'] },
+    'console.writeline("hello")': { i: '💻', l: ['c#', 'c#'], r: ['hello ♡ — sealed partial greeting delivered via dependency injection. enterprise-grade warmth.', 'hello ♡ — salutation sealed partial livrée par injection de dépendances. chaleur de niveau entreprise.'] },
+    'println("hello")': { i: '💻', l: ['kotlin/scala/julia', 'kotlin/scala/julia'], r: ['hello ♡ — kotlin? scala? julia? one println, three elegant fandoms. the family reunion says hi.', 'hello ♡ — kotlin ? scala ? julia ? un println, trois fandoms élégants. toute la réunion de famille te salue.'] },
+    '10 print "hello"': { i: '💻', l: ['basic', 'basic'], r: ['RUN ⏎ HELLO HELLO HELLO HELLO HELLO… (20 GOTO 10 was implied. it always is. Ctrl+C when you\'ve had enough joy.)', 'RUN ⏎ HELLO HELLO HELLO HELLO… (20 GOTO 10 était sous-entendu. comme toujours. Ctrl+C quand tu auras eu ta dose de joie.)'] },
+    'display "hello"': { i: '💻', l: ['cobol', 'cobol'], r: ['HELLO. (IDENTIFICATION DIVISION waived, this once. the mainframe remembers when this was cutting-edge. it still is, at banks.)', 'HELLO. (IDENTIFICATION DIVISION dispensée, pour cette fois. le mainframe se souvient quand c\'était le futur. ça l\'est encore, dans les banques.)'] },
+    "writeln('hello')": { i: '💻', l: ['pascal', 'pascal'], r: ['hello ♡ — begin…end blocks stand at attention. professor Wirth nods once, precisely.', 'hello ♡ — les blocs begin…end sont au garde-à-vous. le professeur Wirth hoche la tête une fois, précisément.'] },
+    '?- hello': { i: '💻', l: ['prolog', 'prolog'], r: ['true. (prolog believed in you all along. it just needed the facts.)', 'true. (prolog a toujours cru en toi. il lui fallait juste les faits.)'] },
+    'io:format("hello")': { i: '💻', l: ['erlang', 'erlang'], r: ['hello ♡ ok — delivered by a supervised process. if it had crashed, nine million others were ready. let it greet.', 'hello ♡ ok — livré par un processus supervisé. s\'il avait planté, neuf millions d\'autres étaient prêts. let it greet.'] },
+    'io.puts "hello"': { i: '💻', l: ['elixir', 'elixir'], r: ['hello ♡ :ok — piped through |> with love. the BEAM hums approvingly.', 'hello ♡ :ok — passé par |> avec amour. la BEAM ronronne d\'approbation.'] },
+    'transcript show: "hello"': { i: '💻', l: ['smalltalk', 'smalltalk'], r: ['hello ♡ — everything is an object, including this greeting, including the slime, including you (a very good object).', 'hello ♡ — tout est objet, y compris cette salutation, y compris le slime, y compris toi (un très bon objet).'] },
+    'nslog(@"hello")': { i: '💻', l: ['objective-c', 'objective-c'], r: ['2026-08-06 hello ♡ — one @ for respect. objective-c bows in square brackets.', '2026-08-06 hello ♡ — un @ en signe de respect. objective-c s\'incline entre crochets.'] },
+    'msgbox "hello"': { i: '💻', l: ['visual basic', 'visual basic'], r: ['[ hello ]  [ OK ]  ← the slime clicked OK for you. office 97 lives on in our hearts.', '[ hello ]  [ OK ]  ← le slime a cliqué OK pour toi. office 97 vit encore dans nos cœurs.'] },
+    "disp('hello')": { i: '💻', l: ['matlab', 'matlab'], r: ['hello ♡ — ans = warmth. license check passed (this once, free of charge).', 'hello ♡ — ans = chaleur. vérification de licence passée (pour cette fois, gratuitement).'] },
+    'cat("hello")': { i: '💻', l: ['r', 'r'], r: ['hello ♡ — p < 0.001, the greeting is statistically significant. error bars: all hearts.', 'hello ♡ — p < 0,001, la salutation est statistiquement significative. barres d\'erreur : que des cœurs.'] },
+    'write-host "hello"': { i: '💻', l: ['powershell', 'powershell'], r: ['hello ♡ (in blue. it insists on the blue.)', 'hello ♡ (en bleu. il insiste sur le bleu.)'] },
+    'std.debug.print("hello", .{})': { i: '💻', l: ['zig', 'zig'], r: ['hello ♡ — comptime-verified, allocator explicitly thanked. zig sees you and respects your taste.', 'hello ♡ — vérifié à la comptime, allocateur explicitement remercié. zig te voit et respecte tes goûts.'] },
+    'int 0x80': { i: '💻', l: ['assembly', 'assembleur'], r: ['syscall received. the kernel says hello back. (it never does this. you are special.)', 'syscall reçu. le noyau répond hello. (il ne fait jamais ça. tu es spécial·e.)'] },
+    '+[----->+++<]>.': { i: '💻', l: ['brainfuck', 'brainfuck'], r: ['h (the rest of "hello" costs 47 more cells. the slime respects a tight memory budget.)', 'h (le reste de « hello » coûte 47 cellules de plus. le slime respecte un budget mémoire serré.)'] },
+    '<h1>hello</h1>': { i: '💻', l: ['html', 'html'], r: ['rendered: 𝗵𝗲𝗹𝗹𝗼 — maximum heading energy, semantically perfect, screen-reader approved ♡', 'rendu : 𝗵𝗲𝗹𝗹𝗼 — énergie de titre maximale, sémantiquement parfait, validé par les lecteurs d\'écran ♡'] },
+    'content: "hello"': { i: '💻', l: ['css', 'css'], r: ['::before the slime, hello appears. (specificity: (0,0,♡). !important was not needed. it never is, between friends.)', '::before le slime, hello apparaît. (spécificité : (0,0,♡). !important inutile. comme toujours, entre amis.)'] },
+    '# hello': { i: '💻', l: ['markdown', 'markdown'], r: ['H1 received ♡ — maximum heading, zero closing tags. markdown remains undefeated.', 'H1 reçu ♡ — titre maximal, zéro balise fermante. markdown reste invaincu.'] },
+    '\\begin{hello}': { i: '💻', l: ['latex', 'latex'], r: ['…missing \\end{hello} — the slime will hold the environment open for you. forever, if needed ♡', '…\\end{hello} manquant — le slime garde l\'environnement ouvert pour toi. pour toujours, s\'il le faut ♡'] },
+    '/^hello$/': { i: '💻', l: ['regex', 'regex'], r: ['match: this exact hello, anchored on both sides. greedy? no. devoted? completely.', 'match : ce hello exact, ancré des deux côtés. gourmand ? non. dévoué ? complètement.'] },
+    '{"hello": "world"}': { i: '💻', l: ['json', 'json'], r: ['parsed ♡ — 1 key, 1 world, 0 trailing commas. beautiful. (the trailing comma lobby has been notified.)', 'parsé ♡ — 1 clé, 1 monde, 0 virgule traînante. magnifique. (le lobby de la virgule traînante a été prévenu.)'] },
+    '{"hello":"world"}': { i: '💻', l: ['json', 'json'], r: ['parsed ♡ — minified AND heartfelt. rare combination.', 'parsé ♡ — minifié ET sincère. combinaison rare.'] },
+    'hello: world': { i: '💻', l: ['yaml', 'yaml'], r: ['valid YAML ♡ (everything is valid YAML. that is both its gift and its curse. mind the indentation on the way out.)', 'YAML valide ♡ (tout est du YAML valide. c\'est à la fois son don et sa malédiction. attention à l\'indentation en sortant.)'] },
+    'get /hello': { i: '💻', l: ['http', 'http'], r: ['HTTP/1.1 200 OK · content-type: affection/plain · x-powered-by: slime ♡', 'HTTP/1.1 200 OK · content-type: affection/plain · x-powered-by: slime ♡'] },
+    syn: { i: '💻', l: ['tcp', 'tcp'], r: ['SYN received → SYN-ACK sent ♡ — the slime awaits your ACK. it will wait forever. it believes in the handshake.', 'SYN reçu → SYN-ACK envoyé ♡ — le slime attend ton ACK. il attendra pour toujours. il croit au handshake.'] },
+    uryyb: { i: '💻', l: ['rot13', 'rot13'], r: ['ROT13 decoded: hello ♡ — your secret is safe with the slime. (the secret was "hello". still: safe.)', 'ROT13 décodé : hello ♡ — ton secret est en sécurité avec le slime. (le secret était « hello ». mais quand même : en sécurité.)'] },
+    'agvsbg8=': { i: '💻', l: ['base64', 'base64'], r: ['base64 decoded: hello ♡ — the slime\'s true mother tongue at this point. it dreams in =padding.', 'base64 décodé : hello ♡ — la vraie langue maternelle du slime à ce stade. il rêve en =padding.'] },
+    '68 65 6c 6c 6f': { i: '💻', l: ['hexadecimal', 'hexadécimal'], r: ['hex decoded: hello ♡ (the slime reads hex at breakfast. little-endian on weekends, for fun.)', 'hex décodé : hello ♡ (le slime lit l\'hexa au petit-déjeuner. little-endian le week-end, pour le plaisir.)'] },
+    'when green flag clicked': { i: '💻', l: ['scratch', 'scratch'], r: ['🟩⚑ → say [ hello!! ♡ ] for (2) seconds — scratch cat approves this program. every programmer started somewhere this pure.', '🟩⚑ → dire [ hello !! ♡ ] pendant (2) secondes — le chat scratch approuve ce programme. chaque dev a commencé quelque part d\'aussi pur.'] },
+    'cq cq': { i: '💻', l: ['ham radio', 'radioamateur'], r: ['CQ CQ de SLIME ♡ — QSL, copy 5-9. 73s and one extra heart, over.', 'CQ CQ de SLIME ♡ — QSL, reçu 5-9. 73 et un cœur en plus, à vous.'] },
+    atdt: { i: '💻', l: ['modem', 'modem'], r: ['*screeeech-hiss-boing* CONNECT 56000 ♡ — the slime answers anyone who still speaks AT. it remembers the song.', '*criiiii-pshhh-boing* CONNECT 56000 ♡ — le slime répond à quiconque parle encore AT. il se souvient de la chanson.'] }
+  });
   function termHello(rawIn) {
     const soft = rawIn.toLowerCase().normalize('NFC').trim().replace(/\s+/g, ' ');
     // pass 1: exact (so morse dots survive) · pass 2: punctuation shaken off
     const hard = soft.replace(/[!?,~、。！？♡♥😀-🙏]+$/gu, '').trim() || soft;
+    // code-folding pass: trailing semicolons off, ' quotes folded to " —
+    // so print('hello');  console.log("hello");  SELECT 'hello'; all land
+    const code = hard.replace(/;+$/, '').trim().replace(/'/g, '"');
     const key = Object.prototype.hasOwnProperty.call(TERM_HELLOS, soft) ? soft
-      : (Object.prototype.hasOwnProperty.call(TERM_HELLOS, hard) ? hard : null);
+      : (Object.prototype.hasOwnProperty.call(TERM_HELLOS, hard) ? hard
+        : (Object.prototype.hasOwnProperty.call(TERM_HELLOS, code) ? code : null));
     if (!key) return false;
     const hit = TERM_HELLOS[key];
     const lang = Array.isArray(hit) ? hit : hit.l;
@@ -5480,6 +5574,10 @@ document.addEventListener('DOMContentLoaded', () => {
           cheatFall(['🌍', '👋', '♡'], 14);
           playFanfare();
           termLine(trT('🌍 TEN TONGUES. the slime is now certifiably polyglot. it still cannot type.', '🌍 DIX LANGUES. le slime est officiellement polyglotte. il ne sait toujours pas taper.'), 't-accent');
+        } else if (n === 42) {
+          cheatFall(['🌌', '👋', '✦'], 20);
+          playFanfare();
+          termLine(trT('🌌 FORTY-TWO. hello, universe — the answer was a greeting all along. don\'t panic; bring a towel.', '🌌 QUARANTE-DEUX. hello, univers — la réponse était une salutation depuis le début. pas de panique ; prends une serviette.'), 't-accent');
         }
       }
     } catch (e) { /* stamps are optional */ }
@@ -5503,7 +5601,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const en = pair[0].replace(/\s*\(.*$/, '');
       const fr = pair[1].replace(/\s*\(.*$/, '');
       ACHV.push({
-        id: slug, icon: '👋',
+        id: slug, icon: (!Array.isArray(v) && v.i) ? v.i : '👋',
         n: ['Hello, ' + en + '!', 'Hello en ' + fr + ' !'],
         d: ['greeted the terminal in ' + en + '. it waved back, fluently.', 'a salué le terminal en ' + fr + '. il a répondu d\'un signe, couramment.'],
         t: ['the shell answers every hello on earth. this one is spoken somewhere specific.', 'le shell répond à tous les bonjours du monde. celui-ci se dit quelque part de précis.']
