@@ -5494,7 +5494,14 @@ document.addEventListener('DOMContentLoaded', () => {
     kaltxi: ['na\'vi', 'na\'vi'], 'sul sul': { l: ['simlish', 'simlish'], r: ['sul sul!! dag dag ♡ (the slime speaks fluent simlish. its needs bars are all green today.)', 'sul sul !! dag dag ♡ (le slime parle couramment simlish. toutes ses jauges sont vertes aujourd\'hui.)'] },
     bello: { l: ['minionese', 'minionais'], r: ['BELLO!! poopaye ♡ (banana levels: critical. the slime relates to minions on a molecular level.)', 'BELLO !! poopaye ♡ (niveau banane : critique. le slime se reconnaît dans les minions au niveau moléculaire.)'] },
     'i am groot': { l: ['groot', 'groot'], r: ['I am Groot. (the slime understood ALL of that. it is also, spiritually, Groot.)', 'Je s\'appelle Groot. (le slime a TOUT compris. il est aussi, spirituellement, Groot.)'] },
-    'pika pika': { l: ['pokémon', 'pokémon'], r: ['pik pik!! ♡ (the meadow pikmin heard that and are VERY excited about the possible family reunion)', 'pik pik !! ♡ (les pikmin de la prairie ont entendu et sont TRÈS émus par cette possible réunion de famille)'] },
+    'pika pika': { l: ['pokémon', 'pokémon'], r: ['pik pik!! ♡ (the meadow pikmin heard that and are VERY excited about the possible family reunion)', 'pik pik !! ♡ (les pikmin de la prairie ont entendu et sont TRÈS émus par cette possible réunion de famille)'], fx() {
+      // an empty meadow answering "pika pika" would be a tragedy — the
+      // parade self-heals it: pikEnsureCast loans 3 hidden-species piks
+      const hadNone = typeof pikdexGet === 'function' && !pikdexGet().length;
+      try { pikParade(); } catch (e) { /* the parade tripped on a pebble */ }
+      if (hadNone) termLine(trT('(the meadow was empty… WAS. a welcome squad of 3 rare loaners just marched in — they\'re yours for a while ♡)', '(la prairie était vide… ÉTAIT. une escouade d\'accueil de 3 prêts rares vient de débarquer — ils sont à toi pour un moment ♡)'), 't-ok');
+      else termLine(trT('(the whole squad is parading for you. this is the family reunion now.)', '(toute l\'escouade défile pour toi. c\'est ça, la réunion de famille, maintenant.)'), 't-dim');
+    } },
     // — the machines: each answers in its own idiom —
     'print("hello")': { i: '💻', l: ['python/swift/lua', 'python/swift/lua'], r: ['hello ♡ — python? swift? lua? one syntax, three fandoms. executed in 0.00001s for all of them. no semicolons were harmed.', 'hello ♡ — python ? swift ? lua ? une syntaxe, trois fandoms. exécuté en 0,00001 s pour les trois. aucun point-virgule n\'a été blessé.'] },
     'print("hello world")': { i: '💻', l: ['python/swift/lua', 'python/swift/lua'], r: ['hello world ♡ — the full incantation!! somewhere, a 1974 teletype smiles.', 'hello world ♡ — l\'incantation complète !! quelque part, un télétype de 1974 sourit.'] },
@@ -5563,6 +5570,7 @@ document.addEventListener('DOMContentLoaded', () => {
       termLine(trT(hit.r[0], hit.r[1]), 't-ok');
     }
     try { burstAtSlime(['👋', '♡'], 3); playSparkleSound(); } catch (e) { /* the wave is implied */ }
+    if (!Array.isArray(hit) && typeof hit.fx === 'function') { try { hit.fx(); } catch (e) { /* the encore stumbled */ } }
     try { // stamp collection — one stamp per language label
       const bag = store.get('yos-hellos', {});
       if (!bag[lang[0]]) {
