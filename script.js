@@ -4370,6 +4370,7 @@ document.addEventListener('DOMContentLoaded', () => {
     { id: 'showgoer', icon: '🎟️', n: ['Opening Night', 'Soir de Première'], d: ['witnessed 10 different pikmin shows. the desktop is a theatre now.', 'a vu 10 spectacles de pikmin différents. le bureau est un théâtre.'], t: ['APEX pikmin perform. stay a while.', 'les pikmin APEX jouent. reste un peu.'] },
     { id: 'frontrow', icon: '🍿', n: ['Front Row Forever', 'Premier Rang à Vie'], d: ['witnessed 40 different shows. the pikmin recognize you at the door.', 'a vu 40 spectacles différents. les pikmin te reconnaissent à l’entrée.'], t: ['every name has its own act.', 'chaque nom a son propre numéro.'] },
     { id: 'seasonticket', icon: '🎭', n: ['Season Ticket Holder', 'Abonné·e à la Saison'], d: ['witnessed 100 different shows — duets, disasters, dial-up and all.', 'a vu 100 spectacles — duos, désastres, 56k et tout le reste.'], t: ['the bill reshuffles every dawn. collect it all.', 'l’affiche change à l’aube. collectionne tout.'] },
+    { id: 'dreambug', icon: '🐛', n: ['Wild BUG Whisperer', 'Chuchoteur·se de BUG Sauvage'], d: ['defeated a wild BUG inside the gameboy dream. it dropped 1 nostalgia.', 'a vaincu un BUG sauvage dans le rêve gameboy. il a lâché 1 nostalgie.'], t: ['tall grass rustles inside one dream.', 'les hautes herbes bruissent dans un des rêves.'] },
     { id: 'undercover', icon: '🕴️', n: ['Past the Boring Firewall', 'Passé le Pare-feu de l’Ennui'], d: ['clicked the forbidden link in the fake résumé. HR never knew.', 'a cliqué le lien interdit du faux CV. Les RH n’ont rien vu.'], t: ['the résumé has a door. it says not to.', 'le CV a une porte. elle dit de ne pas.'] },
   ];
 
@@ -4614,7 +4615,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const SAVE_B_FN = 4398046511104;  // 2^42 — bits 35-41: cheats found
   const SAVE_CAP = { hi: 131000, ch: 100, fn: 2000 };
 
-  var cloudSlot = store.get('yos-cloud', null); // { uid, key }
+  var cloudSlot = (function () { // { uid, key } — but only if it still LOOKS like one
+    const c = store.get('yos-cloud', null);
+    return (c && typeof c.uid === 'string' && /^[A-Z0-9]{6}$/.test(c.uid) && typeof c.key === 'string' && c.key.length >= 10) ? c : null;
+  })();
   var cloudState = 'idle'; // idle | creating | synced | offline | error
   var cloudTimer = null;
   var cloudLastPacked = -1;
@@ -6271,7 +6275,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const n = Object.keys(bag).length;
         termLine(trT(`souvenirs: ${n}/7 — every dream drops one shiny keepsake ♡`, `souvenirs : ${n}/7 — chaque rêve laisse tomber une babiole brillante ♡`), n >= 7 ? 't-ok' : 't-dim');
         termLine(trT('usage: `dream <name>` — or just let it sleepwalk after curfew', 'usage : `dream <nom>` — ou laissez-le somnambuler après le couvre-feu'), 't-dim');
-        termLine(trT('⚠ inside a dream, this shell forgets its own commands — each world speaks 21 secret words instead', '⚠ dans un rêve, ce shell oublie ses propres commandes — chaque monde parle 21 mots secrets à la place'), 't-accent');
+        termLine(trT('⚠ inside a dream, this shell forgets its own commands — each world speaks its own secret dialect: 21 words (site-19 runs on just 2)', '⚠ dans un rêve, ce shell oublie ses propres commandes — chaque monde parle son propre dialecte secret : 21 mots (site-19 n\'en connaît que 2)'), 't-accent');
         return;
       }
       const w = dreamPick(dreamQuery);
@@ -9886,14 +9890,18 @@ document.addEventListener('DOMContentLoaded', () => {
     bsod: { 'win-career': 'career_quest.dmp', 'win-skills': 'inventory.dmp', 'win-ama': 'errorlog.chat', 'win-terminal': 'SAFE MODE (with feelings)', 'win-search': 'search.dmp', 'win-live': 'CRASH CAM — LIVE', 'win-education': 'education.dmp', 'win-pikdex': 'process_list.dmp', 'win-dreamlog': 'dreamdump.dmp (recovered)' },
     amber: { 'win-career': 'CAREER.JCL', 'win-skills': 'INVENTRY.COB', 'win-ama': 'ELIZA.CHAT', 'win-terminal': 'TSO/370', 'win-search': 'BATCH QUERY', 'win-live': 'OPERATOR CAM (est. 1974)', 'win-education': 'RECORDS.TAPE', 'win-pikdex': 'PUNCHDECK', 'win-dreamlog': 'ENGINEERING LOGBOOK — EST. 1947' }
   };
-  function dreamApplyTitles(map) {
+  function dreamApplyTitles(map, worldId) {
     if (!map) return;
     if (!dreamTitleBackup) dreamTitleBackup = {};
     Object.keys(map).forEach((winId) => {
       const el = document.querySelector('#' + winId + ' .window-title');
       if (!el) return;
       if (!(winId in dreamTitleBackup)) dreamTitleBackup[winId] = el.textContent;
-      el.textContent = map[winId];
+      // the journal's title is the one the META already translates — FR
+      // readers get the FR name; gag maps (SMITH, toaster) pass no worldId
+      el.textContent = (winId === 'win-dreamlog' && worldId && typeof DREAMLOG_META !== 'undefined' && DREAMLOG_META[worldId])
+        ? trT(map[winId], DREAMLOG_META[worldId].name[1])
+        : map[winId];
     });
   }
   function dreamRestoreTitles() {
@@ -9947,7 +9955,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function dreamAdaptOn(w) {
-    dreamApplyTitles(DREAM_TITLES[w.id]);
+    dreamApplyTitles(DREAM_TITLES[w.id], w.id);
     dreamAmaDecor = DREAM_AMA_VOICE[w.id] || null; // scp swaps in its entity's voice below
     const stamp = DREAM_SEARCH_STAMP[w.id];
     dreamSearchFlavor = stamp ? () => trT(...stamp) : null;
@@ -10519,7 +10527,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } },
         format: { d: ['format C: (your feelings are write-protected)', 'formater C: (tes sentiments sont protégés en écriture)'], fx() {
           dsL('WARNING: ALL FEELINGS ON DRIVE C: WILL BE LOST. Proceed? (the dream answers for you: Y)', 'ATTENTION : TOUS LES SENTIMENTS DU LECTEUR C: SERONT PERDUS. Continuer ? (le rêve répond pour toi : O)', 't-err');
-          dsBar('formatting C:', 2600, (el) => {
+          dsBar(trT('formatting C:', 'formatage de C:'), 2600, (el) => {
             if (el) el.textContent = trT('format halted at 62% — FEELINGS.DAT is write-protected ♡', 'formatage stoppé à 62 % — FEELINGS.DAT est protégé en écriture ♡');
             playSparkleSound();
             dsL('drive C: stays exactly as messy as you left it. this is called "home".', 'le lecteur C: reste exactement aussi bordélique que tu l\'as laissé. ça s\'appelle « chez soi ».', 't-ok');
@@ -10534,7 +10542,7 @@ document.addEventListener('DOMContentLoaded', () => {
           }, 1500);
         } },
         scandisk: { d: ['check the heart sectors', 'vérifier les secteurs du cœur'], fx() {
-          dsBar('ScanDisk: surface scan of ♥', 2200, () => {
+          dsBar(trT('ScanDisk: surface scan of ♥', 'ScanDisk : analyse de surface du ♥'), 2200, () => {
             gainFollowers(1);
             dsL('0 bad sectors. 3 good boys. 1 cluster of pure nostalgia (kept).', '0 secteur défectueux. 3 bons garçons. 1 cluster de pure nostalgie (conservé).', 't-ok');
           });
@@ -10557,7 +10565,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } },
         dialup: { d: ['dial the internet (the song of our people)', 'appeler internet (le chant de notre peuple)'], fx() {
           [400, 800, 1200, 2400, 1800, 2600].forEach((f, i) => playTone(f, i % 2 ? 'square' : 'sawtooth', 0.14, i * 0.16, 0.05));
-          dsBar('dialing 1-800-DREAM', 2400, () => {
+          dsBar(trT('dialing 1-800-DREAM', 'numérotation du 1-800-RÊVE'), 2400, () => {
             gainFollowers(1);
             dsL('CONNECT 56000 — the internet smells like this exact sound.', 'CONNECT 56000 — internet sent exactement comme ce bruit.', 't-ok');
             dsL('(please nobody pick up the phone. mom. MOM.)', '(que personne ne décroche le téléphone. maman. MAMAN.)', 't-dim');
@@ -10619,7 +10627,7 @@ document.addEventListener('DOMContentLoaded', () => {
           dsL('a fatal exception 0E has— wait. wrong dream. that one\'s down the hall (💙 says hi).', 'une exception fatale 0E s\'est— attends. mauvais rêve. c\'est au fond du couloir (💙 te salue).');
         } },
         ie: { d: ['install internet explorer (it installs itself)', 'installer internet explorer (il s\'installe tout seul)'], fx() {
-          dsBar('installing Internet Explorer 4.0', 2800, () => {
+          dsBar(trT('installing Internet Explorer 4.0', 'installation d\'Internet Explorer 4.0'), 2800, () => {
             dsL('IE installed. it is now the default browser. it asked zero (0) times.', 'IE installé. c\'est le navigateur par défaut désormais. il a demandé zéro (0) fois.', 't-err');
             dsL('(it also became your default personality. e.)', '(il est aussi devenu ta personnalité par défaut. e.)', 't-dim');
           });
@@ -10631,7 +10639,7 @@ document.addEventListener('DOMContentLoaded', () => {
           dT(() => { dreamSay(['*deploy.sys* ok!! ready to dream professionally ♡', '*deploy.sys* ok !! prêt à rêver professionnellement ♡'], 3400); burstAtSlime(['✦', '♡'], 4); }, 7400);
         } },
         win98: { d: ['upgrade to windows 98 (reboot required = wake up)', 'passer à windows 98 (redémarrage requis = réveil)'], fx() {
-          dsBar('upgrading to Windows 98', 2200, () => {
+          dsBar(trT('upgrading to Windows 98', 'mise à niveau vers Windows 98'), 2200, () => {
             dsWake('upgrade complete. REBOOT REQUIRED. rebooting the entire dream…', 'mise à niveau terminée. REDÉMARRAGE REQUIS. redémarrage du rêve entier…');
           });
         } }
@@ -10699,7 +10707,7 @@ document.addEventListener('DOMContentLoaded', () => {
           dsL('there is no spoon. inventory updated: 1 fork (there IS a fork. nobody talks about the fork.)', 'il n\'y a pas de cuillère. inventaire mis à jour : 1 fourchette (il y a UNE fourchette. personne n\'en parle.)', 't-ok');
         } },
         kungfu: { d: ['download kung fu (and CSS)', 'télécharger le kung-fu (et le CSS)'], fx() {
-          dsBar('uploading: kung_fu.pkg + flexbox.pkg', 2000, () => {
+          dsBar(trT('uploading: kung_fu.pkg + flexbox.pkg', 'téléversement : kung_fu.pkg + flexbox.pkg'), 2000, () => {
             burstAtSlime(['🥋', '✦'], 5);
             playSparkleSound();
             dreamSay(['I know kung fu. also centering divs. mostly the divs.', 'je connais le kung-fu. et centrer des divs. surtout les divs.'], 4600);
@@ -10761,7 +10769,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } },
         jackin: { d: ['jack in and learn something instantly', 'se brancher et apprendre un truc instantanément'], fx() {
           playTone(200, 'sawtooth', 0.3, 0, 0.05); playTone(600, 'sine', 0.2, 0.3, 0.04);
-          dsBar('uploading: how_to_pilot_a_boba_straw.pkg', 1800, () => {
+          dsBar(trT('uploading: how_to_pilot_a_boba_straw.pkg', 'téléversement : piloter_une_paille_a_boba.pkg'), 1800, () => {
             dsL('you know boba now. sip technique: masterful. the pearls fear you (lovingly).', 'tu connais le boba maintenant. technique de slurp : magistrale. les perles te craignent (avec amour).', 't-ok');
           });
         } },
@@ -10811,7 +10819,7 @@ document.addEventListener('DOMContentLoaded', () => {
           dsL(first ? '⭐ 30 LIVES → converted to 30 fans (exchange rate: love). Kazuhisa Hashimoto, thank you forever.' : '⭐ the code still works. +3 fans (the bank knows you already).', first ? '⭐ 30 VIES → converties en 30 fans (taux de change : l\'amour). Kazuhisa Hashimoto, merci pour toujours.' : '⭐ le code marche encore. +3 fans (la banque te connaît déjà).', 't-ok');
         } },
         save: { d: ['save the game (DO NOT TURN OFF THE POWER)', 'sauvegarder (N\'ÉTEIGNEZ PAS LA CONSOLE)'], fx() {
-          dsBar('SAVING… DO NOT TURN OFF THE POWER', 2800, () => {
+          dsBar(trT('SAVING… DO NOT TURN OFF THE POWER', 'SAUVEGARDE… N\'ÉTEIGNEZ PAS LA CONSOLE'), 2800, () => {
             playSparkleSound();
             dsL('saved. you may turn off the power. (don\'t though. stay a bit.)', 'sauvegardé. tu peux éteindre. (mais non. reste un peu.)', 't-ok');
           }, 't-err');
@@ -10864,7 +10872,7 @@ document.addEventListener('DOMContentLoaded', () => {
           dsL('♪ line clear ×4. the dopamine is 35 years old and fresh as ever.', '♪ ligne ×4. la dopamine a 35 ans et reste toute fraîche.', 't-ok');
         } },
         link: { d: ['plug in the link cable (find player 2)', 'brancher le câble link (trouver le joueur 2)'], fx() {
-          dsBar('LINK CABLE: searching for player 2', 2400, () => {
+          dsBar(trT('LINK CABLE: searching for player 2', 'CÂBLE LINK : recherche du joueur 2'), 2400, () => {
             dsL('player 2 found: YOU, from a 20-year-old save file. trade complete: 1 nostalgia ↔ 1 smile.', 'joueur 2 trouvé : TOI, depuis une sauvegarde de 20 ans. échange conclu : 1 nostalgie ↔ 1 sourire.', 't-ok');
             gainFollowers(1);
           });
@@ -10926,7 +10934,7 @@ document.addEventListener('DOMContentLoaded', () => {
           dsL('(the webmaster will read this 40 times and smile every time.)', '(le webmaster relira ça 40 fois et sourira à chaque fois.)', 't-dim');
         } },
         hits: { d: ['inspect the hit counter (it lies beautifully)', 'inspecter le compteur de visites (il ment magnifiquement)'], fx() {
-          dsBar('hit counter recalibrating', 1600, () => {
+          dsBar(trT('hit counter recalibrating', 'recalibrage du compteur de visites'), 1600, () => {
             const target = 1000000 + Math.floor(Math.random() * 337);
             dsL('☆ counter now reads: ' + String(target).padStart(8, '0') + ' — technically true if you count dreams.', '☆ le compteur affiche : ' + String(target).padStart(8, '0') + ' — techniquement vrai si on compte les rêves.', 't-ok');
             // the badge in the corner backs the story up for a few seconds
@@ -10993,7 +11001,7 @@ document.addEventListener('DOMContentLoaded', () => {
           dT(() => dsL('(theme removed. your eyes send a thank-you card.)', '(thème retiré. tes yeux envoient une carte de remerciement.)', 't-ok'), 4200);
         } },
         mp3: { d: ['download song.mp3 (3.5MB, ETA: heartbreak)', 'télécharger chanson.mp3 (3,5 Mo, ETA : chagrin)'], fx() {
-          dsBar('downloading song.mp3 (56k)', 3400, (el) => {
+          dsBar(trT('downloading song.mp3 (56k)', 'téléchargement de chanson.mp3 (56k)'), 3400, (el) => {
             if (el) el.textContent = trT('song.mp3 — 99%… 99%… 99%… ☎ CARRIER LOST (mom picked up the phone)', 'chanson.mp3 — 99 %… 99 %… 99 %… ☎ CONNEXION PERDUE (maman a décroché)');
             playGlitchSound();
             dsL('start over? (1998 answer: yes. always yes. the song was worth it.)', 'recommencer ? (réponse de 1998 : oui. toujours oui. la chanson en valait la peine.)', 't-dim');
@@ -11015,7 +11023,7 @@ document.addEventListener('DOMContentLoaded', () => {
           gainFollowers(1);
         } },
         fanpage: { d: ['publish THE official slime fanpage', 'publier LA page de fans officielle du slime'], fx() {
-          dsBar('uploading fanpage.htm via FTP', 2200, () => {
+          dsBar(trT('uploading fanpage.htm via FTP', 'téléversement de fanpage.htm par FTP'), 2200, () => {
             playSparkleSound(); gainFollowers(3);
             dsL('🌟 THE OFFICIAL SLIME FANCLUB is live!! hit counter: already broken from traffic (3 visits).', '🌟 LE FANCLUB OFFICIEL DU SLIME est en ligne !! compteur : déjà cassé par le trafic (3 visites).', 't-ok');
             dreamSay(['a FANPAGE?? for ME?? *saves it to floppy forever*', 'une PAGE DE FANS ?? pour MOI ?? *la sauvegarde sur disquette pour toujours*'], 4600);
@@ -11058,7 +11066,7 @@ document.addEventListener('DOMContentLoaded', () => {
           dsL('bugcheck complete. the bug checks out. it\'s a good bug.', 'bugcheck terminé. le bug est en règle. c\'est un bon bug.', 't-ok');
         } },
         dump: { d: ['collect the memory dump (it\'s memories)', 'collecter le dump mémoire (ce sont des souvenirs)'], fx() {
-          dsBar('collecting memory dump', 2600, () => {
+          dsBar(trT('collecting memory dump', 'collecte du dump mémoire'), 2600, () => {
             dsL('dump complete: 3 memories about snacks, 1 about a sunset, 1 about you (it\'s a nice one).', 'dump terminé : 3 souvenirs de snacks, 1 de coucher de soleil, 1 de toi (il est très réussi).', 't-ok');
           });
         } },
@@ -11067,7 +11075,7 @@ document.addEventListener('DOMContentLoaded', () => {
           dsL('SAFE MODE — drivers loaded: vibes.sys only. everything is gray and nothing can hurt you.', 'MODE SANS ÉCHEC — pilotes chargés : vibes.sys uniquement. tout est gris et rien ne peut te blesser.', 't-ok');
         } },
         driver: { d: ['find the faulty driver', 'trouver le pilote défectueux'], fx() {
-          dsBar('scanning drivers', 2000, () => {
+          dsBar(trT('scanning drivers', 'analyse des pilotes'), 2000, () => {
             dsL('faulty driver found: emotions.sys (version 3am). rolling back to vibes.sys… done.', 'pilote défectueux trouvé : emotions.sys (version 3h du matin). retour à vibes.sys… fait.', 't-ok');
           });
         } },
@@ -11091,7 +11099,7 @@ document.addEventListener('DOMContentLoaded', () => {
           }, 1100);
         } },
         sfc: { d: ['verify the integrity of all feelings', 'vérifier l\'intégrité de tous les sentiments'], fx() {
-          dsBar('sfc /scanfeelings', 2800, () => {
+          dsBar(trT('sfc /scanfeelings', 'sfc /scansentiments'), 2800, () => {
             dsL('verification 100% complete. all feelings are valid. no repairs needed (they were never broken, just loud).', 'vérification 100 % terminée. tous les sentiments sont valides. aucune réparation (ils n\'étaient pas cassés, juste bruyants).', 't-ok');
           });
         } },
@@ -11134,7 +11142,7 @@ document.addEventListener('DOMContentLoaded', () => {
           dsL('the screen cries it out. mop deployed. hydration: important, even for monitors.', 'l\'écran pleure un bon coup. serpillière déployée. l\'hydratation : importante, même pour les moniteurs.', 't-ok');
         } },
         update: { d: ['install updates (1 of 1, forever)', 'installer les mises à jour (1 sur 1, pour toujours)'], fx() {
-          dsBar('installing update 1 of 1 — DO NOT TURN OFF', 3600, (el) => {
+          dsBar(trT('installing update 1 of 1 — DO NOT TURN OFF', 'installation de la mise à jour 1 sur 1 — NE PAS ÉTEINDRE'), 3600, (el) => {
             if (el) el.textContent = trT('update 1 of 1 — 100%… configuring… 30%?? (it counts backwards now. it does that.)', 'mise à jour 1 sur 1 — 100 %… configuration… 30 % ?? (ça compte à rebours maintenant. c\'est son truc.)');
             dsL('update will finish tomorrow. or never. schrödinger\'s progress bar.', 'la mise à jour finira demain. ou jamais. barre de progression de schrödinger.', 't-dim');
           }, 't-err');
@@ -11272,7 +11280,7 @@ document.addEventListener('DOMContentLoaded', () => {
           dsL('(the mainframe pretends not to be impressed. it is impressed.)', '(le mainframe fait semblant de ne pas être impressionné. il l\'est.)', 't-dim');
         } },
         vacuum: { d: ['replace a vacuum tube (1 of 18,000)', 'remplacer un tube à vide (1 sur 18 000)'], fx() {
-          dsBar('replacing tube #4 of 18,000', 2400, () => {
+          dsBar(trT('replacing tube #4 of 18,000', 'remplacement du tube nº4 sur 18 000'), 2400, () => {
             playTone(520, 'sine', 0.2, 0, 0.04);
             dsL('tube replaced. estimated remaining: yes. the warm glow returns. moths (see `bug`) take notice.', 'tube remplacé. restant estimé : oui. la lueur chaude revient. les mites (voir `bug`) sont intéressées.', 't-ok');
           });
@@ -14197,7 +14205,7 @@ document.addEventListener('DOMContentLoaded', () => {
       playFanfare();
       gainFollowers(2);
       try { cheatFall(['🌸', '💮', '✿', '🌷'], 14); } catch (e) { /* petals jam */ }
-      try { const dmap = DREAMLOG_CMDMAP.win95; if (dmap && dmap.mine) dreamlogAdd('win95', dmap.mine); } catch (e) { /* the log naps */ }
+      try { dreamlogAdd('win95', 'solitaire'); } catch (e) { /* the log naps */ }
       achvUnlock('cardshark');
       dwmSay('win', 5200);
       dT(() => dwmClose(), 6200);
@@ -14320,7 +14328,7 @@ document.addEventListener('DOMContentLoaded', () => {
     playFanfare();
     gainFollowers(game === 'hearts' ? 4 : 3);
     achvUnlock('cardshark');
-    try { dreamlogAdd('win95', 'sol'); } catch (e) { /* the log naps */ }
+    try { dreamlogAdd('win95', 'solitaire'); } catch (e) { /* the log naps */ }
     dwcSay(game === 'sol' ? 'winSol' : game === 'free' ? 'winFree' : 'winHearts', 5200);
     // the cascade is EARNED now — a full-desktop victory lap
     dT(() => { try { dwSolCascade(); } catch (e) { /* deck stuck */ } }, 900);
@@ -15065,7 +15073,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const body = d.querySelector('.dream-dlg-body');
           if (hp > 0) { if (body) body.children[0].textContent = trT('BUG lv.404  ' + '♥'.repeat(hp), 'BUG niv.404  ' + '♥'.repeat(hp)); }
           else {
-            achvUnlock('dreamscp'); // (reuse: any dream feat is a feat)
+            achvUnlock('dreambug'); // the wild BUG earns its OWN card
             cheatFall(['💥', '⭐', '🪙'], 14); playFanfare(); gainFollowers(2);
             if (body) { body.children[0].textContent = trT('BUG fainted!! +2 fans, +XP', 'le BUG s\'évanouit !! +2 fans, +XP'); if (body.children[1]) body.children[1].textContent = trT('> it dropped a coin ♡', '> il a lâché une pièce ♡'); }
             dT(() => { try { d.remove(); } catch (e) { /* fled */ } }, 1800);
@@ -27012,7 +27020,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // echo visibly yanks back fans the HUD already granted
     const hop = Math.max(-1, Math.min(5, n));
     const rest = n > 5 ? n - 5 : 0;
-    fetch(wallApi + '/bump', {
+    fetch(wallApi + '/bump', { keepalive: true,
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ key: key, n: hop })
@@ -27058,7 +27066,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function statBumpReplay(key, n) {
     const hop = Math.max(-1, Math.min(5, n));
     const rest = n > 5 ? n - 5 : 0;
-    fetch(wallApi + '/bump', {
+    fetch(wallApi + '/bump', { keepalive: true,
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ key: key, n: hop })
@@ -38151,7 +38159,7 @@ document.addEventListener('DOMContentLoaded', () => {
     try { gNmWin = wrap(gNmWin, () => achvBump('nmwins')); } catch (e) {}
     try {
       gGiveWeapon = wrap(gGiveWeapon, (id) => {
-        achvUnlock('w_' + id);
+        if (!gPackWeapon(id)) achvUnlock('w_' + id); // dream-pack loaners never mint phantom cards
         const w = store.get('yos-wpn-seen', {});
         w[id] = 1;
         store.set('yos-wpn-seen', w);
