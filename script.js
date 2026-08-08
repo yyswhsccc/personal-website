@@ -7722,6 +7722,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (swLingerTimer) { clearTimeout(swLingerTimer); swLingerTimer = null; }
     if (swDiveTimer) { clearTimeout(swDiveTimer); swDiveTimer = null; }
     if (swEl) { swEl.remove(); swEl = null; }
+    // a cancelled express walk must not leave its one-shot armed — a later
+    // ordinary dive would auto-press START on a run nobody asked for
+    swExpressDive = false;
     sleepwalkActive = false;
   }
 
@@ -9220,7 +9223,9 @@ document.addEventListener('DOMContentLoaded', () => {
     let tick = 0;
     const el = swEl; // identity badge — woken OR upstaged, the ritual stops
     const glide = setInterval(() => {
-      if (swEl !== el) { clearInterval(glide); sleepwalkActive = false; return; } // woken mid-ritual
+      // stale-identity abort: only stop DRIVING — the flag belongs to
+      // whoever owns swEl now (cancelSleepwalk/swFinish reset it)
+      if (swEl !== el) { clearInterval(glide); return; } // woken mid-ritual
       const p = Math.min(1, (Date.now() - t0) / walkMs);
       const ease = p * p * (3 - 2 * p);
       swEl.style.left = (from.x + (to.x - from.x) * ease) + 'px';
@@ -9236,13 +9241,13 @@ document.addEventListener('DOMContentLoaded', () => {
           if (bb) bb.textContent = trT('zzz… the dream is getting… BIG…', 'zzz… le rêve devient… GRAND…');
         }
         setTimeout(() => {
-          if (swEl !== el) { sleepwalkActive = false; return; }
+          if (swEl !== el) return; // upstaged — the successor owns the flag
           try { w.sfx(); } catch (e) { /* silent dreams are legal */ }
           dreamFlashIn(w);
           setTimeout(() => {
             // woken during the flash: the dream never lands (the flash
             // overlay self-removes, so aborting here leaves no debris)
-            if (swEl !== el) { sleepwalkActive = false; return; }
+            if (swEl !== el) return; // upstaged — the successor owns the flag
             swFinish(false);
             dreamBegin(w);
           }, 700);
