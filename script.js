@@ -2583,9 +2583,17 @@ document.addEventListener('DOMContentLoaded', () => {
   let toastTimer = null;
   let toastHideTimer = null; // the 300ms fade tail — stale, it re-hides a fresh toast
 
+  var toastQueue = [];
   function showToast(text, opts) {
     if (!emailToast) return;
     opts = opts || {};
+    // marquee etiquette: a scroll-toast mid-scroll is READING material —
+    // another scroll-toast waits its turn instead of clobbering it.
+    // (non-scroll toasts keep latest-wins so click feedback stays instant.)
+    if (opts.scroll && toastTimer && emailToast.classList.contains('toast-marquee') && emailToast.classList.contains('toast-show')) {
+      if (toastQueue.length < 4 && (!toastQueue.length || toastQueue[toastQueue.length - 1].text !== text)) toastQueue.push({ text, opts });
+      return;
+    }
     if (toastHideTimer) { clearTimeout(toastHideTimer); toastHideTimer = null; }
     // scroll mode: long lines (dream logs, printer slips) no longer clip to
     // "…" — the full text marquees past and only THEN retires
@@ -2610,7 +2618,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (toastTimer) clearTimeout(toastTimer);
     toastTimer = setTimeout(() => {
       emailToast.classList.remove('toast-show');
-      toastHideTimer = setTimeout(() => { emailToast.classList.add('toast-hidden'); emailToast.classList.remove('toast-marquee'); }, 300);
+      toastHideTimer = setTimeout(() => {
+        emailToast.classList.add('toast-hidden');
+        emailToast.classList.remove('toast-marquee');
+        const nxt = toastQueue.shift();
+        if (nxt) showToast(nxt.text, nxt.opts); // the queue drains one marquee at a time
+      }, 300);
     }, dur);
   }
 
@@ -17699,6 +17712,7 @@ document.addEventListener('DOMContentLoaded', () => {
     (dreamWorld.flags.removers || []).forEach((fn) => { try { fn(); } catch (e) { /* already unplugged */ } });
     try { dreamAdaptOff(); } catch (e) { /* the theme leaves anyway */ }
     dreamWorld.timers.forEach((t) => { clearTimeout(t); clearInterval(t); });
+    try { toastQueue.length = 0; } catch (e) { /* queued dream toasts die with the dream */ }
     if (w.exit) { try { w.exit(); } catch (e) { /* the dream keeps its secrets */ } }
     // fold the card table properly: node teardown alone leaves dwcState
     // dangling, and the hearts fidget intervals idle forever against it
