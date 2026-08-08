@@ -1255,6 +1255,7 @@ html[data-theme="dark"].dreaming .follower-star { color: var(--lite, var(--yello
   border-bottom: 2px solid var(--border);
   user-select: none;
   cursor: grab;
+  touch-action: manipulation; /* dblclick-maximize, not Safari double-tap zoom */
 }
 
 .window-header:active {
@@ -2582,14 +2583,15 @@ html.dreaming .start-menu-item:focus .item-icon { filter: none; }
 }
 
 /* ================= RESPONSIVE ================= */
+/* running-app buttons deserve iPad Mini portrait + Split View too:
+   641px aligns with the phone-sheet boundary, not the old 768 gate */
+@media (min-width: 641px) {
+  .taskbar-apps { display: flex; }
+}
 @media (min-width: 768px) {
   .desktop-icons-container {
     grid-template-columns: repeat(4, 1fr);
     gap: 20px;
-  }
-
-  .taskbar-apps {
-    display: flex;
   }
 }
 
@@ -3170,7 +3172,10 @@ html.dreaming .start-menu-item:focus .item-icon { filter: none; }
   background-size: 16px 16px, 16px 16px, auto;
   border: 3px solid var(--border);
   box-shadow: inset 0 -4px 0 rgba(154, 111, 224, 0.25);
-  touch-action: manipulation;
+  /* none, not manipulation: the nightmare's drag-steer needs sustained
+     pointermove — a browser pan would pointercancel it mid-fight.
+     no effect on mouse; the game window never needs to scroll. */
+  touch-action: none;
 }
 .game-hint {
   font-family: var(--font-pixel);
@@ -3799,9 +3804,9 @@ html.is-booting body {
    halo does the catching, so nothing in those tight rows actually resizes.
    the d-pad and window buttons, which have room, grow for real. */
 @media (pointer: coarse) {
-  .win-btn { width: 30px; height: 30px; font-size: 1.05rem; }
+  .win-btn { width: 30px; height: 30px; font-size: 1.05rem; position: relative; }
   .tray-btn, .fan-wall-toggle { position: relative; }
-  .tray-btn::before, .fan-wall-toggle::before {
+  .tray-btn::before, .fan-wall-toggle::before, .win-btn::before {
     content: '';
     position: absolute;
     left: 50%; top: 50%;
@@ -4234,7 +4239,7 @@ body:has(.start-menu.show) .mini-danmaku {
   animation: window-pop-in 0.22s ease-out;
 }
 
-.window-leaderboard { max-width: 520px; min-height: 420px; }
+.window-leaderboard { max-width: 520px; min-height: min(420px, calc(100dvh - 190px)); }
 .lb-shell { display: flex; flex-direction: column; gap: 12px; }
 .lb-global {
   font-family: var(--font-pixel);
@@ -4315,7 +4320,7 @@ body:has(.start-menu.show) .mini-danmaku {
 }
 .lb-keep-btn:hover { background: var(--yellow); }
 
-.window-interview { max-width: 560px; min-height: 430px; }
+.window-interview { max-width: 560px; min-height: min(430px, calc(100dvh - 190px)); }
 .interview-shell { display: flex; flex-direction: column; gap: 12px; }
 .interview-intro {
   font-size: 0.9rem;
@@ -8437,7 +8442,7 @@ html.dreaming .wp-url { color: #14020e; border-color: #14020e; }
 }
 
 /* ============ wrist_link.exe window + worldwide meadow ladder ============ */
-.window-watchlink { max-width: 480px; min-height: 400px; }
+.window-watchlink { max-width: 480px; min-height: min(400px, calc(100dvh - 190px)); }
 .watch-shell { display: flex; flex-direction: column; gap: 10px; font-size: 0.88rem; line-height: 1.5; }
 .watch-status {
   display: flex;
@@ -8999,6 +9004,7 @@ body.rescue-quake-big { animation: rescue-quake-big 1s; }
 .photo-float img { display: block; max-width: min(70vw, 420px); max-height: 50vh; }
 .photo-float-bar { display: flex; gap: 8px; justify-content: center; padding-top: 6px; opacity: 0; transition: opacity 0.25s; }
 .photo-float:hover .photo-float-bar, .photo-float:active .photo-float-bar { opacity: 1; }
+@media (hover: none) { .photo-float-bar { opacity: 1; } } /* phones: no hover, always visible */
 .photo-float.is-leaving { opacity: 0; transform: translate(-50%, -50%) rotate(-2deg) scale(0.6); transition: all 0.7s; }
 .window-album { max-width: 560px; }
 .album-shell { display: flex; flex-direction: column; gap: 10px; }
@@ -12223,8 +12229,14 @@ html.scp-form-2521 #slime-pet img, html.scp-form-2521 #slime-pet canvas { filter
   font-weight: 700;
   font-style: normal;
 }
-.scp-redact:hover .scp-redact-bar, .scp-redact-on .scp-redact-bar { display: none; }
-.scp-redact:hover .scp-redact-txt, .scp-redact-on .scp-redact-txt { display: inline; }
+/* hover-reveal only where hover is REAL — iPadOS emulates hover on first
+   tap, which desyncs with the click toggle and locks text un-hideable */
+@media (hover: hover) {
+  .scp-redact:hover .scp-redact-bar { display: none; }
+  .scp-redact:hover .scp-redact-txt { display: inline; }
+}
+.scp-redact-on .scp-redact-bar { display: none; }
+.scp-redact-on .scp-redact-txt { display: inline; }
 .scp-stamp {
   --stamp-rot: -11deg;
   position: absolute;
@@ -12889,6 +12901,7 @@ html[data-theme="dark"].dreaming .console-btn-eject .console-btn-icon { text-sha
   top: 50%;
   transform: translate(-50%, -50%);
   width: min(560px, calc(100vw - 20px));
+  max-height: calc(100vh - 20px); max-height: calc(100dvh - 20px); overflow-y: auto;
   background: #c0c0c0;
   border: 3px solid #14020e;
   box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.55), inset 1px 1px 0 #ffffff;
@@ -14223,6 +14236,7 @@ body.mp3-cinema #win-mp3 .win-btn:hover {
 .window-mp3.window-maximized {
   position: fixed !important; inset: 0 !important;
   width: 100vw !important; height: 100vh !important; max-height: 100vh !important;
+  height: 100dvh !important; max-height: 100dvh !important; /* iOS toolbar-proof */
   border: 0 !important; box-shadow: none !important; z-index: 5500 !important;
 }
 .window-mp3.window-maximized .window-header {
@@ -14230,7 +14244,7 @@ body.mp3-cinema #win-mp3 .win-btn:hover {
   background: transparent; border: 0; box-shadow: none; z-index: 30; padding: 4px;
 }
 .window-mp3.window-maximized .window-header .window-title-container { display: none; }
-.window-mp3.window-maximized .window-body { height: 100vh; padding: 0; }
+.window-mp3.window-maximized .window-body { height: 100vh; height: 100dvh; padding: 0; }
 .window-mp3.window-maximized .mp3-device {
   height: 100%; display: flex; flex-direction: column;
   border: 0; padding: 0; box-shadow: none;

@@ -278,7 +278,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!activeWin || !isSheet()) return;
       const top = activeWin.getBoundingClientRect().top; // ~66px from the sheet CSS
       const avail = vv.height - Math.max(top, 8) - 10; // a hair above the keyboard
-      if (avail > 120) activeWin.style.maxHeight = avail + 'px';
+      if (avail > 120) { activeWin.style.maxHeight = avail + 'px'; activeWin.style.minHeight = '0'; } // min-height too, or the CSS floor defeats the cap
     }
     document.addEventListener('focusin', (e) => {
       const el = e.target;
@@ -295,7 +295,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const leaving = activeWin;
       activeWin = null;
       // if focus jumped to another input the focusin re-arms activeWin first
-      setTimeout(() => { if (!activeWin && leaving) leaving.style.maxHeight = ''; }, 60);
+      setTimeout(() => { if (!activeWin && leaving) { leaving.style.maxHeight = ''; leaving.style.minHeight = ''; } }, 60);
     });
     vv.addEventListener('resize', fitSheet);
     vv.addEventListener('scroll', fitSheet);
@@ -447,7 +447,10 @@ document.addEventListener('DOMContentLoaded', () => {
       // viewport-top expressed in desktop-area coordinates
       const viewportTopInArea = Math.max(12, -areaRect.top + 14);
       win.style.top = `${viewportTopInArea + Math.random() * 24}px`;
-      win.style.left = `${30 + Math.random() * 60}px`;
+      // clamp the left edge so the ✕ never opens past the clipped desk
+      // (iPad portrait: the desk is wider than the viewport)
+      const openAreaW = area ? area.clientWidth : window.innerWidth;
+      win.style.left = `${Math.max(8, Math.min(30 + Math.random() * 60, openAreaW - win.offsetWidth - 12))}px`;
     }
 
     // keyboard users land inside the window they just opened
@@ -568,6 +571,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (Number.isFinite(left)) win.style.left = `${Math.max(40 - win.offsetWidth, Math.min(left, pw - 40))}px`;
     if (Number.isFinite(top)) win.style.top = `${Math.max(0, Math.min(top, ph - 48))}px`;
   }
+  // an iPad rotation must not strand title bars off-desk: every rotation/
+  // resize re-runs the 40px-reachability clamp on all open floaters
+  window.addEventListener('resize', () => {
+    if (window.innerWidth <= 640) return; // the phone sheet has its own physics
+    document.querySelectorAll('.window:not(.window-closed):not(.window-minimized):not(.window-maximized):not(.window-game-big):not(.window-itv-modal)').forEach(keepWindowOnScreen);
+  });
 
   function toggleMaximizeWindow(win, btn) {
     playClickSound();
@@ -642,12 +651,21 @@ document.addEventListener('DOMContentLoaded', () => {
       let dragBoundW, dragBoundH, dragWinW; // measured once per grab, not per pixel
 
       header.addEventListener('mousedown', dragStart);
-      document.addEventListener('mousemove', dragMove);
-      document.addEventListener('mouseup', dragEnd);
-
       header.addEventListener('touchstart', dragStart, { passive: true });
-      document.addEventListener('touchmove', dragMove, { passive: false });
-      document.addEventListener('touchend', dragEnd);
+      // document-level listeners exist only WHILE a drag is live — 17
+      // permanent non-passive touchmove hooks were taxing every scroll
+      function bindDragDoc() {
+        document.addEventListener('mousemove', dragMove);
+        document.addEventListener('mouseup', dragEnd);
+        document.addEventListener('touchmove', dragMove, { passive: false });
+        document.addEventListener('touchend', dragEnd);
+      }
+      function unbindDragDoc() {
+        document.removeEventListener('mousemove', dragMove);
+        document.removeEventListener('mouseup', dragEnd);
+        document.removeEventListener('touchmove', dragMove);
+        document.removeEventListener('touchend', dragEnd);
+      }
 
       function dragStart(e) {
         // primary button only: right-press opens the custom context menu,
@@ -661,6 +679,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const clientY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
 
         isDragging = true;
+        bindDragDoc();
         startX = clientX;
         startY = clientY;
 
@@ -699,6 +718,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       function dragEnd() {
         isDragging = false;
+        unbindDragDoc();
       }
     }
   });
@@ -5596,7 +5616,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // v86.1 (owner decree): saying hello in a language IS an achievement —
   // one hidden 👋 badge per language family, minted straight from the map
   function termHelloSlug(pair) {
-    return 'hello-' + pair[0].replace(/\s*\(.*$/, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    return 'hello-' + pair[0].replace(/\s*\(.*$/, '').replace(/\+/g, 'plus').replace(/#/g, 'sharp').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
   }
   (() => {
     const seen = {};
@@ -8314,6 +8334,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const cols = Math.floor(cv.width / cell);
     const drops = Array.from({ length: cols }, () => Math.random() * -60);
     dI(() => {
+      if (document.hidden) return; // no rain for closed eyes
       /* v98.1: fade by ERASING old paint, not by adding dark paint.
          the old rgba fill accumulated into an ~85% black glass over the
          whole UI — and no window z-index could escape it, because the
@@ -8332,8 +8353,11 @@ document.addEventListener('DOMContentLoaded', () => {
       });
       // summoned windows are sacred ground: the rain parts around every
       // open window (game console included), leaving it at full brightness
-      document.querySelectorAll('.window:not(.window-closed):not(.window-minimized)').forEach((w) => {
-        const r = w.getBoundingClientRect();
+      if (!cv._winRects || Date.now() - (cv._winRectsAt || 0) > 350) {
+        cv._winRectsAt = Date.now();
+        cv._winRects = Array.from(document.querySelectorAll('.window:not(.window-closed):not(.window-minimized)'), (w) => w.getBoundingClientRect());
+      }
+      cv._winRects.forEach((r) => {
         x.clearRect(r.left - 6, r.top - 6, r.width + 12, r.height + 12);
       });
     }, 70);
@@ -9307,7 +9331,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function dreamBegin(w, remainMs, resumed) {
     if (mp3CinemaHolds()) {                                        // the cinema outranks every dream,
-      setTimeout(function () { dreamBegin(w, remainMs, resumed); }, 30000); // resumed ones included
+      setTimeout(function () { if (resolvedTheme() !== 'dark' || document.body.classList.contains('terminal-only')) { store.set('yos-dream', null); return; } dreamBegin(w, remainMs, resumed); }, 30000); // re-validate the night before every retry — the deck may outlive the dark
       return;
     }
     if (dreamWorld) return;
@@ -30614,7 +30638,7 @@ document.addEventListener('DOMContentLoaded', () => {
      window rotates 90° (pure CSS transform — no permissions needed). */
   var gameRotated = false;
   function gameNeedsRotate() {
-    return window.innerHeight > window.innerWidth && window.innerWidth < 820;
+    return window.innerHeight > window.innerWidth && window.innerWidth < 700; // 700: phones only — iPad portrait stays upright (matches the stacked-console breakpoint)
   }
   function gameMaybeRotate(win) {
     if (!gameNeedsRotate() || gameRotated || document.getElementById('rotate-cd')) return;
@@ -31334,6 +31358,16 @@ document.addEventListener('DOMContentLoaded', () => {
     return gWin && !gWin.classList.contains('window-closed') && !gWin.classList.contains('window-minimized');
   }
 
+  // pointer → game-space, fake-landscape aware: the rotated pocket arcade
+  // carries rotate(90deg) translateY(-100%) origin top-left, so the canvas
+  // AABB is swapped (r.width = layout height). local x ← screen +y,
+  // local y ← screen −x — hence clientY−r.top and r.right−clientX.
+  function gPointerToGame(e, r) {
+    if (gCanvas.closest('.game-rotated')) {
+      return { gx: (e.clientY - r.top) * (G_W / r.height), gy: (r.right - e.clientX) * (G_H / r.width) };
+    }
+    return { gx: (e.clientX - r.left) * (G_W / r.width), gy: (e.clientY - r.top) * (G_H / r.height) };
+  }
   if (gCanvas) {
     gCanvas.addEventListener('pointerdown', (e) => {
       e.preventDefault();
@@ -31346,7 +31380,8 @@ document.addEventListener('DOMContentLoaded', () => {
       if (GAME.state === 'ad') return; // sponsored seconds are sacred
       if (GAME.event) {
         const r = gCanvas.getBoundingClientRect();
-        gEventTap((e.clientX - r.left) * (G_W / r.width), (e.clientY - r.top) * (G_H / r.height));
+        const p = gPointerToGame(e, r);
+        gEventTap(p.gx, p.gy);
         return;
       }
       if (GAME.state === 'over' && !GAME.adUsed && !GAME.event) {
@@ -31355,7 +31390,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // gets a much taller band — a thumb-miss there permanently forfeits
         // the one-shot revive, which is a lousy way to lose it.
         const r = gCanvas.getBoundingClientRect();
-        const ly = (e.clientY - r.top) * (G_H / r.height);
+        const ly = gPointerToGame(e, r).gy;
         const coarse = window.matchMedia('(pointer: coarse)').matches;
         if (coarse ? (ly > 58 && ly < 112) : (ly > 74 && ly < 96)) { gAdStart(); return; }
       }
@@ -31365,7 +31400,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // weak heart and dodge instead of being pinned at x=46.
       if (GAME.nm && GAME.state === 'run') {
         const r = gCanvas.getBoundingClientRect();
-        const tx = (e.clientX - r.left) * (G_W / r.width);
+        const tx = gPointerToGame(e, r).gx;
         if (tx < G_W / 3) { GAME.nmPx = Math.max(14, GAME.nmPx - 16); return; }
         if (tx > (G_W * 2) / 3) { GAME.nmPx = Math.min(G_W - 60, GAME.nmPx + 16); return; }
         gJump(); return; // middle third leaps
@@ -31379,7 +31414,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!(e.buttons & 1)) return; // only while held / mid-drag
       e.preventDefault();
       const r = gCanvas.getBoundingClientRect();
-      const tx = (e.clientX - r.left) * (G_W / r.width) - G_SLIME_S / 2;
+      const tx = gPointerToGame(e, r).gx - G_SLIME_S / 2;
       GAME.nmPx = Math.max(14, Math.min(G_W - 60, tx));
     });
     gCanvas.addEventListener('blur', () => gCanvas.classList.remove('ring-on'));
@@ -40006,6 +40041,12 @@ document.addEventListener('DOMContentLoaded', () => {
     })();
   }
   window.addEventListener('resize', sizeTheater);
+  // rotate/resize re-checks the "phones never fullscreen" rule — a deck
+  // maximized in landscape must drop to pocket size when the phone turns
+  window.addEventListener('resize', function () {
+    if (window.innerWidth <= 700 && win.classList.contains('window-maximized')) win.classList.remove('window-maximized');
+    cinemaSync();
+  });
 
   function makePik(k) {
     var wrap = document.createElement('span');
