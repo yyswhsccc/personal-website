@@ -1740,10 +1740,20 @@ html[data-theme="dark"] .quest-rank {
 /* ================= STREAM CHAT ================= */
 .window-chat {
   max-width: 560px;
-  /* FIXED height by owner decree: the window must never grow with the
-     chat — growth eventually ducked under the taskbar. the log scrolls
-     inside; !hire / send-love stay on stage forever */
-  height: min(560px, calc(100dvh - 190px));
+}
+/* BOTTOM-DOCKED (owner decree, final form): the chat window FLOATS on
+   the taskbar — viewport-fixed, bottom pinned above it with !important,
+   so the FIRST painted frame is already correct. no JS correction pass,
+   no shrink-flash, no butt in the taskbar. ever. vertical drag is
+   deliberately locked (it lives on the bar); horizontal drag still works.
+   phones (≤640px) keep their own sheet physics. */
+@media (min-width: 641px) {
+  .window-chat {
+    position: fixed !important;
+    top: auto !important;
+    bottom: calc(var(--taskbar-avoid-bottom, 68px) + 4px) !important;
+    height: min(560px, calc(100dvh - var(--taskbar-avoid-bottom, 68px) - 170px));
+  }
 }
 .window-chat .window-body { overflow: hidden; }
 

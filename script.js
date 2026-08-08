@@ -231,21 +231,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const windows = document.querySelectorAll('.window');
   const taskbarApps = document.querySelector('.taskbar-apps');
   const desktopTaskbar = document.querySelector('.desktop-taskbar');
-  // the chat window's height is measured against REALITY, not a constant:
-  // whatever chrome/padding sits above it, the bottom buttons must clear
-  // the sticky taskbar. runs on open, boot, and resize.
-  function chatFitStage() {
-    const cw = document.getElementById('win-chat');
-    if (!cw || window.innerWidth <= 640) return;
-    if (cw.classList.contains('window-closed') || cw.classList.contains('window-minimized') || cw.classList.contains('window-maximized')) return;
-    const tbTop = desktopTaskbar ? desktopTaskbar.getBoundingClientRect().top : window.innerHeight;
-    const top = cw.getBoundingClientRect().top;
-    const room = Math.floor(tbTop - top - 14);
-    if (room > 220) cw.style.height = Math.min(560, room) + 'px';
-  }
-  window.addEventListener('resize', () => setTimeout(chatFitStage, 80));
-  setTimeout(chatFitStage, 1200); // boot layout settles first
-  setTimeout(chatFitStage, 3500); // and once more after the opening cinematics
+  // (chat window docking is pure CSS now — bottom-pinned above the
+  // taskbar with !important, correct from the first painted frame.
+  // no JS correction pass = no shrink-flash. see .window-chat in css.)
 
   function syncViewportChromeVars() {
     if (!desktopTaskbar) return;
@@ -385,7 +373,6 @@ document.addEventListener('DOMContentLoaded', () => {
       // v7.0: while a dream world holds the site, every opened window
       // gets an in-theme reception (defined far below with the dreams)
       if (typeof dreamOnWindowOpen === 'function') { try { dreamOnWindowOpen(winId); } catch (e) { /* the usher tripped */ } }
-      if (winId === 'win-chat') { try { setTimeout(chatFitStage, 60); } catch (e) { /* measured in spirit */ } }
     }
 
     if (winId === 'win-chat' && typeof clearDanmaku === 'function') clearDanmaku();
