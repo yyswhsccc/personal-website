@@ -55,6 +55,7 @@ echo "→ 4/5 building + running the container"
 $SSH "cd /opt/slime-ssh && docker build -t slime-ssh . && \
   docker rm -f slime-ssh 2>/dev/null; \
   docker run -d --name slime-ssh --restart unless-stopped \
+    --memory=256m --memory-swap=256m --cpus=0.5 --pids-limit=128 \
     -p $PORT:2222 -v slime-ssh-data:/data slime-ssh && sleep 2 && docker logs slime-ssh | tail -2"
 
 echo "→ 5/5 smoke test (one-shot whoami, as a visitor would)"

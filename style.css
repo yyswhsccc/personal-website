@@ -1740,11 +1740,10 @@ html[data-theme="dark"] .quest-rank {
 /* ================= STREAM CHAT ================= */
 .window-chat {
   max-width: 560px;
-  /* never taller than the room: the taskbar eats the bottom ~50px and the
-     cascade drops us ~100px from the top — clamp so !hire / send-love
-     always stay on stage (the log scrolls instead) */
-  min-height: min(420px, calc(100dvh - 170px));
-  max-height: calc(100dvh - 170px);
+  /* FIXED height by owner decree: the window must never grow with the
+     chat — growth eventually ducked under the taskbar. the log scrolls
+     inside; !hire / send-love stay on stage forever */
+  height: min(560px, calc(100dvh - 190px));
 }
 .window-chat .window-body { overflow: hidden; }
 
@@ -5038,7 +5037,6 @@ html[data-theme="dark"] .live-stage.wx-fog::before {
     drop-shadow(0 0 2px #ffffff)
     drop-shadow(0 0 6px rgba(255, 255, 255, 0.95))
     drop-shadow(0 0 12px rgba(255, 255, 255, 0.8));
-  animation: pik-halo 1.8s ease-in-out infinite;
 }
 /* sprouts are clip-pathed (only the head pokes out), so drop-shadow
    turns blocky — they get a soft round halo underneath instead */
@@ -5067,7 +5065,6 @@ html[data-theme="dark"] .pik-buddy img {
     drop-shadow(0 0 2px #ffffff)
     drop-shadow(0 0 7px #ffd400)
     drop-shadow(0 0 13px rgba(255, 212, 0, 0.95));
-  animation: pik-halo-dark 1.8s ease-in-out infinite;
 }
 @keyframes pik-halo-dark {
   50% {

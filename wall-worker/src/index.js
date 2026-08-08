@@ -24,6 +24,23 @@ const ALLOW_ORIGINS = [
 ];
 const MAX_BYTES = 130 * 1024;   // one framed selfie, comfortably
 const PAGE_SIZE = 24;
+// in-memory rate limiter: atomic within the isolate (the real burst
+// vector) and ZERO KV writes — the 1000/day free-tier budget goes to
+// actual content, not to counting requests. isolate recycling resets
+// the counters; for a toy wall that is an acceptable amnesty.
+const rlMem = new Map();
+function rlBump(key, max) {
+  const now = Date.now();
+  const e = rlMem.get(key);
+  if (!e || e.exp < now) {
+    if (rlMem.size > 10000) rlMem.clear();
+    rlMem.set(key, { n: 1, exp: now + 3600000 });
+    return true;
+  }
+  if (e.n >= max) return false;
+  e.n += 1;
+  return true;
+}
 const RATE_MAX = 5;             // uploads / hour / visitor
 const WALL_CAP = 600;           // the wall is big. not infinite.
 
@@ -77,7 +94,11 @@ async function getPhotoIndex(env) {
       } while (cursor);
       idx.sort((a, b) => String(b.t || '').localeCompare(String(a.t || '')));
       await env.WALL.put('idx:photos', JSON.stringify(idx));
-    } catch (e) { /* list throttled/failed — serve empty now, migrate later */ }
+    } catch (e) {
+      // list throttled/failed — serve what we have but TAG it, so no
+      // caller ever persists this partial view over the real index
+      Object.defineProperty(idx, '__unmigrated', { value: true, enumerable: false });
+    }
   }
   return idx;
 }
@@ -505,9 +526,11 @@ export default {
       if (!/^BV[A-Za-z0-9]{5,14}$/.test(bvid)) {
         return json(req, 400, { error: 'bad bvid' });
       }
+      const whoB = await ipHash(req, env);
+      if (!rlBump('rlbili:' + whoB, 30)) return json(req, 429, { error: 'later ♡' });
       const ck = 'bili:' + bvid;
       let dur = await env.WALL.get(ck);
-      if (dur === null || dur === '0') {
+      if (dur === null) {
         try {
           const r = await fetch('https://api.bilibili.com/x/web-interface/view?bvid=' + bvid, {
             headers: {
@@ -520,7 +543,8 @@ export default {
         } catch (e) {
           dur = '0';
         }
-        if (dur !== '0') { ctx.waitUntil(env.WALL.put(ck, dur, { expirationTtl: 604800 })); }
+        // failures negative-cache for 5 min — no open relay to upstream
+        ctx.waitUntil(env.WALL.put(ck, dur, { expirationTtl: dur !== '0' ? 604800 : 300 }));
       }
       return json(req, 200, { bvid, duration: parseInt(dur, 10) || 0 });
     }
@@ -528,12 +552,9 @@ export default {
     /* ---- GET /sh?c=<cmd> — slime-docker, the shell that is a curl ---- */
     if (req.method === 'GET' && (path === '/sh' || path.startsWith('/sh/'))) {
       const who = await ipHash(req, env);
-      const rlKey = 'rls:' + who;
-      const used = parseInt(await env.WALL.get(rlKey) || '0', 10);
-      if (used >= 120) {
+      if (!rlBump('rls:' + who, 120)) {
         return new Response('slime-docker: the container is napping for you (120 cmds/hour). the door never naps:\n  echo ' + DOOR_B64 + ' | base64 -d\n', { status: 429, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
       }
-      ctx.waitUntil(env.WALL.put(rlKey, String(used + 1), { expirationTtl: 3600 }));
       // resolve the command from ?c= or the /sh/<cmd> path (malformed %-escapes forgiven)
       let c = url.searchParams.get('c');
       if (c == null) { try { c = decodeURIComponent(path.slice(4)); } catch (e) { c = path.slice(4); } }
@@ -597,9 +618,7 @@ export default {
         return json(req, 503, { error: 'the wall is frozen — try again another day ♡' });
       }
       const who = await ipHash(req, env);
-      const rlKey = 'rl:' + who;
-      const used = parseInt(await env.WALL.get(rlKey) || '0', 10);
-      if (used >= RATE_MAX) {
+      if (!rlBump('rl:' + who, RATE_MAX)) {
         return json(req, 429, { error: 'the wall loves you but needs a breather (5/hour)' });
       }
       const count = parseInt(await env.WALL.get('cfg:count') || '0', 10);
@@ -617,11 +636,13 @@ export default {
       if (!isJpeg(bytes)) return json(req, 415, { error: 'that is not a real JPEG' });
       const id = newId();
       const t = new Date().toISOString().slice(0, 16).replace('T', ' ');
-      await env.WALL.put('p:' + id, bytes.buffer, { metadata: { t } });
+      // index FIRST: a partial (unmigrated) index must refuse the post
+      // BEFORE any photo bytes land, or the whole wall gets buried
       const idx = await getPhotoIndex(env);
+      if (idx.__unmigrated) return json(req, 503, { error: 'the wall is mid-move — try again in a minute ♡' });
+      await env.WALL.put('p:' + id, bytes.buffer, { metadata: { t } });
       idx.unshift({ id, t });
       await env.WALL.put('idx:photos', JSON.stringify(idx.slice(0, WALL_CAP)));
-      await env.WALL.put(rlKey, String(used + 1), { expirationTtl: 3600 });
       await env.WALL.put('cfg:count', String(count + 1));
       return json(req, 200, { ok: true, id, n: count + 1 });
     }
@@ -632,10 +653,12 @@ export default {
       const id = path.slice(7);
       // the count only moves for photos that exist — a typo'd or repeated
       // id used to report ok AND ghost-decrement the wall total
+      const cur = await getPhotoIndex(env);
+      if (cur.__unmigrated) return json(req, 503, { error: 'the wall is mid-move — try again in a minute ♡' });
       const existed = await env.WALL.get('p:' + id);
       if (existed === null) return json(req, 404, { error: 'no such photo (nothing removed, count untouched)' });
       await env.WALL.delete('p:' + id);
-      const idx = (await getPhotoIndex(env)).filter((e) => e.id !== id);
+      const idx = cur.filter((e) => e.id !== id);
       await env.WALL.put('idx:photos', JSON.stringify(idx));
       const count = parseInt(await env.WALL.get('cfg:count') || '1', 10);
       await env.WALL.put('cfg:count', String(Math.max(0, count - 1)));
@@ -678,9 +701,7 @@ export default {
       if (!isFinite(n) || n === 0) n = 1;
       n = Math.max(-1, Math.min(STAT_BUMP_MAX, n)); // -1 permits an un-vote
       const who = await ipHash(req, env);
-      const rlKey = 'rlb:' + who;
-      const used = parseInt(await env.WALL.get(rlKey) || '0', 10);
-      if (used >= STAT_RATE_MAX) return json(req, 429, { error: 'the counters need a breather ♡' });
+      if (!rlBump('rlb:' + who, STAT_RATE_MAX)) return json(req, 429, { error: 'the counters need a breather ♡' });
       const blob = await getStatsBlob(env);
       // never persist the failure-fallback blob: that would bury the very
       // legacy counters the migration guard is protecting. try again later.
@@ -689,7 +710,6 @@ export default {
       const next = Math.max(0, (parseInt(blob[key], 10) || 0) + n);
       blob[key] = next;
       await env.WALL.put('idx:stats', JSON.stringify(blob));
-      ctx.waitUntil(env.WALL.put(rlKey, String(used + 1), { expirationTtl: 3600 }));
       return json(req, 200, { ok: true, key, value: next });
     }
 
@@ -715,9 +735,7 @@ export default {
        are either cheats or legends, and both get the same polite no. ---- */
     if (req.method === 'POST' && path === '/hall') {
       const who = await ipHash(req, env);
-      const rlKey = 'rlh:' + who;
-      const used = parseInt(await env.WALL.get(rlKey) || '0', 10);
-      if (used >= 10) return json(req, 429, { error: 'the hall admires the enthusiasm (10 signatures/hour)' });
+      if (!rlBump('rlh:' + who, 10)) return json(req, 429, { error: 'the hall admires the enthusiasm (10 signatures/hour)' });
       let payload;
       try { payload = await req.json(); } catch (e) { return json(req, 400, { error: 'json only' }); }
       // v117: worldwide names keep their letters in every script — the old

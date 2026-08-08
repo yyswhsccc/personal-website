@@ -569,7 +569,12 @@ function main() {
     client.on('request', (accept, reject) => { if (reject) reject(); });             // ssh -R (tcpip-forward) + every other global request
 
     client.on('ready', () => {
-      client.on('session', (accept) => {
+      // per-connection ceilings: a client may legitimately open a few
+      // channels (ControlMaster), but 8 sessions / MAX_CMDS execs is the
+      // roof — past that the multiplexer is a flood, not a friend
+      let chans = 0, execN = 0;
+      client.on('session', (accept, reject) => {
+        if (++chans > 8) { if (reject) reject(); return; }
         const session = accept();
         let ptyInfo = null;
         session.on('pty', (a, r, info) => { ptyInfo = info; if (a) a(); });
@@ -578,6 +583,7 @@ function main() {
         session.on('auth-agent', (a, r) => { if (r) r(); });   // no agent forwarding
         session.on('subsystem', (a, r) => { if (r) r(); }); // no sftp/scp. the container has 6 files and they are feelings.
         session.on('exec', (a, r, execInfo) => {
+          if (++execN > MAX_CMDS) { try { const sN = a(); sN.exit(1); sN.end(); } catch (e) { /* flooded and gone */ } return; }
           // one-shot: ssh -p 2222 host 'ls' — answer, then close THIS channel
           // only (never the whole connection: a client may run several exec
           // channels, e.g. ControlMaster, and killing the connection after

@@ -2405,7 +2405,8 @@ document.addEventListener('DOMContentLoaded', () => {
   if (chatFeed) {
 
     setInterval(() => {
-      const windowVisible = chatWindow &&
+      if (document.hidden) return; // nobody is watching the stream — save the words
+    const windowVisible = chatWindow &&
         !chatWindow.classList.contains('window-closed') &&
         !chatWindow.classList.contains('window-minimized');
       const lurkerMode = chatWindow && chatWindow.classList.contains('window-closed') &&
@@ -4426,6 +4427,28 @@ document.addEventListener('DOMContentLoaded', () => {
     achvToastTimer = setTimeout(() => el.classList.remove('achv-show'), 4200);
   }
 
+  var achvHitFlushing = false;
+  function achvHitFlush() {
+    if (achvHitFlushing || !navigator.onLine) return;
+    const q = store.get('yos-achv-hit-pending', []);
+    if (!q.length) return;
+    achvHitFlushing = true;
+    const step = (i) => {
+      if (i >= q.length) { achvHitFlushing = false; return; }
+      fetch(`${ACHV_API}/hit/${ACHV_NS}/achv-${q[i]}`)
+        .then((r) => {
+          if (r.ok) {
+            const cur = store.get('yos-achv-hit-pending', []);
+            const at = cur.indexOf(q[i]);
+            if (at >= 0) { cur.splice(at, 1); store.set('yos-achv-hit-pending', cur); }
+          }
+        })
+        .catch(() => { /* still owed — retry next flush */ })
+        .then(() => setTimeout(() => step(i + 1), 350)); // the counter API 429s under burst
+    };
+    step(0);
+  }
+  setTimeout(achvHitFlush, 12000); // drain debts left by a previous session
   function achvUnlock(id, quiet, skipRemote) {
     if (!ACHV) return;
     const a = ACHV.find((x) => x.id === id);
@@ -4449,7 +4472,16 @@ document.addEventListener('DOMContentLoaded', () => {
     if (fit && !quiet) setTimeout(() => showToast(trT(fit[0], fit[1])), 2600);
     if (achvCounts && typeof achvCounts[id] === 'number') achvCounts[id]++;
     // skipRemote: cloud-restored unlocks were already counted on the original device
-    if (navigator.onLine && !skipRemote) fetch(`${ACHV_API}/hit/${ACHV_NS}/achv-${id}`).catch(() => {});
+    // v88: the census is owed, not optional — offline/429 hits queue and
+    // drain later, so the global counter stops undercounting real unlocks
+    if (!skipRemote) {
+      const hitFail = () => {
+        const q = store.get('yos-achv-hit-pending', []);
+        if (q.indexOf(id) < 0) { q.push(id); store.set('yos-achv-hit-pending', q); }
+      };
+      if (navigator.onLine) fetch(`${ACHV_API}/hit/${ACHV_NS}/achv-${id}`).then((r) => { if (!r.ok) hitFail(); }).catch(hitFail);
+      else hitFail();
+    }
     cloudQueueSync();
     const lb = document.getElementById('win-leaderboard');
     if (lb && !lb.classList.contains('window-closed')) renderAchievements();
@@ -18090,7 +18122,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (document.documentElement.getAttribute('data-theme') !== 'dark') return;
       // a hidden sky (dreams, terminal door) mints no meteors — display:none
       // never fires animationend, so they'd pile up and all replay at once
-      if (!sky.getClientRects().length) return;
+      if (document.hidden || !sky.getClientRects().length) return; // hidden tab: paused animations never fire animationend either
       if (Math.random() < 0.45) return;
       const shoot = document.createElement('span');
       shoot.className = 'ns-shoot';
@@ -27064,7 +27096,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!document.hidden && Date.now() - yosStatsAt > 5000) statsRefresh();
   });
   // #64: the net just came back — flush the owed bumps, then resync
-  window.addEventListener('online', () => { statBumpFlush(); statsRefresh(); });
+  window.addEventListener('online', () => { statBumpFlush(); statsRefresh(); achvHitFlush(); });
   var albumVideos = []; // session-only: blobs don't fit localStorage
   function albumGet() { const a = store.get('yos-album', []); return Array.isArray(a) ? a : []; }
   function albumAdd(entry) {
@@ -29197,7 +29229,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function gardenTick() {
-    if (!liveOpen || !liveStage) return;
+    if (!liveOpen || !liveStage || document.hidden) return;
     const now = Date.now();
     // all layout reads happen HERE, in one batch, before any DOM writes —
     // three rects sprinkled between style writes cost ~11 forced reflows/s
@@ -29670,6 +29702,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function liveWeather() {
+    if (document.hidden) return; // parked tab: the sky can wait — reopen/next tick refetches
     const cached = store.get('yos-wx', null);
     if (cached && Date.now() - cached.t < 55000) { applyWx(cached.k); return; } // <1min: the sky is basically live
     fetch('https://api.open-meteo.com/v1/forecast?latitude=53.55&longitude=-113.49&current=weather_code,wind_speed_10m,temperature_2m')
@@ -36313,6 +36346,7 @@ document.addEventListener('DOMContentLoaded', () => {
      hidden species (or the chameleon), yours for exactly 5 minutes ♡ */
   const PIK_LOAN_MS = 5 * 60 * 1000;
   function pikLoanSweep() {
+    if (document.hidden) return; // loaners go home when someone is around to wave
     const dex = pikdexGet();
     const now = Date.now();
     const keep = dex.filter((p) => !p.loan || p.loan > now);
@@ -37168,6 +37202,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // while the desktop twins are curtained off (live room / game open /
     // shy mode), time FREEZES for them: no walking, no sprouting, no trails —
     // the curtain lifts on the exact scene it fell on
+    if (document.hidden) return; // hidden tab: the curtain falls — same freeze as pik-float-hidden
     if (DESK_PIK.layer && DESK_PIK.layer.classList.contains('pik-float-hidden')) return;
     // audit: the BSOD crash dream hides the desk — shows must not leak onto it
     if (document.documentElement.classList.contains('dream-bsod')) {
@@ -39278,7 +39313,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   var watchPullBusy = false;
   function watchPullSync() {
-    if (watchPullBusy || !navigator.onLine || !cloudSlot || !store.get('yos-watch-paired', 0)) return;
+    if (watchPullBusy || document.hidden || !navigator.onLine || !cloudSlot || !store.get('yos-watch-paired', 0)) return;
     if (Date.now() < store.get('yos-wpull-next', 0)) return; // v195: dormant-wrist backoff — no fetches while the ledger sleeps
     // cross-tab lock: watchPullBusy only guards THIS tab — two tabs of the
     // same save reading the ledger in the same breath each granted the same
