@@ -53,6 +53,15 @@ python3 -m http.server 8000
 
 Deploys as-is to GitHub Pages. The backend lives in [`wall-worker/`](wall-worker/) (`npx wrangler deploy`).
 
+## License
+
+Two licenses, because this repo is half engineering and half drawing.
+
+- **The code** — window manager, theme engine, i18n, terminal, game engines, worker — is [MIT](LICENSE). Take it, learn from it, build on it.
+- **The creative work** — the 72 pikmin, the slime, the writing, the music, the photographs — is [CC BY-NC-ND 4.0](LICENSE-CONTENT.md). Read it, quote it with credit, [ask me](mailto:yuyongshan573@gmail.com) before anything commercial.
+
+⚠️ The character designs live *inside* `script.js` as pixel templates. They're artwork that happens to be stored as source — the MIT grant doesn't reach them. Third-party goose recordings, weather ambience, fonts and embedded videos keep their own terms; the details are in [`LICENSE-CONTENT.md`](LICENSE-CONTENT.md).
+
 ---
 
 *Best experienced with sound on, curiosity high, and at least one baguette.* 🥖
