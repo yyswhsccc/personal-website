@@ -19,17 +19,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
----
-
-SCOPE NOTE
-
-The MIT grant above covers the SOFTWARE in this repository: the window
-manager, theme engine, i18n machinery, terminal, game engines, rendering
-code, the Cloudflare Worker, and the HTML/CSS/JS that makes it all run.
-
-It does NOT cover the creative work that ships alongside the code —
-the characters, artwork, writing, music and photographs. Those are
-licensed separately in LICENSE-CONTENT.md, and some third-party assets
-carry their own terms. Please read that file before reusing anything
-that is drawn, written, sung or photographed.

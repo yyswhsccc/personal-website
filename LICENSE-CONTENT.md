@@ -3,8 +3,12 @@
 **Creative work in this repository © 2026 Yongshan Yu — licensed under
 [CC BY-NC-ND 4.0](https://creativecommons.org/licenses/by-nc-nd/4.0/).**
 
-The *code* is MIT (see [`LICENSE`](LICENSE)). This file covers everything
-that was drawn, written, composed or photographed.
+The *code* is MIT (see [`LICENSE`](LICENSE)) — that grant covers the window
+manager, theme engine, i18n machinery, terminal, game engines, rendering code,
+the Cloudflare Worker, and the HTML/CSS/JS that makes it all run.
+
+This file covers everything else: what was drawn, written, composed or
+photographed. The MIT grant does not reach any of it.
 
 ---
 
